@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { nip19 } from 'nostr-tools'
-import { healthIdentifier, healthRecordFor, HEALTH_KIND, HEALTH_RELAY_URL } from '@/utils/healthRecord'
+import { healthIdentifier, healthRecordFor, healthPublishedLine, HEALTH_KIND, HEALTH_RELAY_URL } from '@/utils/healthRecord'
 import { njumpNaddrUrl } from '@/utils/nostrLinks'
 import { ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC } from '@/utils/healthAssertionConstants'
 import { healthIdentifier as backendIdentifier, HEALTH_KIND as BACKEND_KIND } from '../../backend/src/healthAssertions'
@@ -46,5 +46,24 @@ describe('Signed health record', () => {
   it('gives no record for a URL that gets no event', () => {
     expect(healthRecordFor('https://abc.onion')).toBeNull()
     expect(healthRecordFor('https://10.1.2.3')).toBeNull()
+  })
+})
+
+describe('healthPublishedLine ("Last published ...")', () => {
+  const NOW = Date.parse('2026-11-03T12:00:00Z')
+  it('relative time with the absolute UTC time as the title', () => {
+    expect(healthPublishedLine('2026-11-03T10:00:00.000Z', NOW)).toEqual({ text: 'Last published 2h ago', title: '3 Nov 2026, 10:00 UTC' })
+    expect(healthPublishedLine('2026-11-03T11:40:00.000Z', NOW)?.text).toBe('Last published 20 min ago')
+    expect(healthPublishedLine('2026-11-01T12:00:00.000Z', NOW)?.text).toBe('Last published 2d ago')
+  })
+  it('null, missing or unreadable shows nothing', () => {
+    for (const v of [null, undefined, '', 'not a date']) expect(healthPublishedLine(v, NOW), String(v)).toBeNull()
+  })
+  it('a time slightly in the future (clock difference) never reads as a negative age', () => {
+    expect(healthPublishedLine('2026-11-03T12:00:30.000Z', NOW)?.text).toBe('Last published 0s ago')
+  })
+  it('says nothing about health or freshness of the mint', () => {
+    const t = healthPublishedLine('2026-11-03T10:00:00.000Z', NOW)!.text
+    expect(t).not.toMatch(/fresh|current|healthy|verified|up to date|ok/i)
   })
 })

@@ -270,6 +270,25 @@ export function publishReason(prev: PublishedState | null | undefined, next: Pub
   return null
 }
 
+/**
+ * When the mint's current health record (kind 30385) was last published, as an ISO 8601 UTC string, for the website's
+ * /api/mints/known (`healthRecordPublishedAt`). `lastCreatedAt` is attestation_state.last_created_at: the `created_at` (unix
+ * seconds) of the last event that at least one relay accepted (saveAttestationState runs on the first acceptance), so it is the
+ * time the event was signed and published, not a later relay time. null when there is no CURRENT record: an archived mint,
+ * no stored score, a URL that may not appear in an event (healthIdentifier), or no / an unreadable stored time (never published,
+ * or the feature is off and the table is empty).
+ */
+export function healthRecordPublishedAtIso(lastCreatedAt: unknown, mint: { url: string; archived: boolean; score: unknown }): string | null {
+  if (mint.archived) return null
+  if (typeof mint.score !== 'number' || !Number.isFinite(mint.score)) return null
+  if (healthIdentifier(mint.url) === null) return null
+  if (lastCreatedAt === null || lastCreatedAt === undefined || lastCreatedAt === '') return null
+  const sec = Number(lastCreatedAt)
+  if (!Number.isFinite(sec) || sec <= 0) return null
+  const d = new Date(sec * 1000)
+  return Number.isFinite(d.getTime()) ? d.toISOString() : null
+}
+
 // ── Key handling ─────────────────────────────────────────────────────────────
 
 export interface KeyLog {

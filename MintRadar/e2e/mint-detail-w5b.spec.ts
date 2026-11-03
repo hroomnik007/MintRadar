@@ -261,6 +261,47 @@ test.describe('W5b D: Signed health record', () => {
     await expect(row.getByRole('link', { name: 'About signed health records' })).toBeVisible()
   })
 
+  // Task H1: "Last published <relative time>" (title: the absolute UTC time) from /api/mints/known `healthRecordPublishedAt`.
+  for (const width of [1440, 390]) {
+    test(`${width} px: the row says when the record was last published, with the UTC time as the title; nothing extra without the time`, async ({ page }) => {
+      await open(page, ALPHA, { healthRecordPublishedAt: ago(2 * H + 5 * 60_000) }, { width, height: 844 })
+      const row = page.locator('.md-hr-row')
+      const line = row.getByTestId('hr-published')
+      await expect(line).toHaveText('Last published 2h ago')
+      await expect(line.locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
+      // plain text: no link, no button, no icon in it; at least 12px; the other controls of the row are still there
+      await expect(line.locator('a, button, svg, img')).toHaveCount(0)
+      expect(await line.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12)
+      await expect(row.getByRole('link', { name: /View on Nostr/ })).toBeVisible()
+      await expect(row.getByRole('button', { name: /Nostr address \(naddr\)/ })).toBeVisible()
+      await expect(row.locator('details.md-hr-dev')).toHaveCount(1)
+    })
+  }
+
+  test('without healthRecordPublishedAt (null or missing) nothing is added to the row', async ({ page }) => {
+    await open(page, ALPHA, { healthRecordPublishedAt: null })
+    await expect(page.locator('.md-hr-row .md-hr-view')).toBeVisible()
+    await expect(page.getByTestId('hr-published')).toHaveCount(0)
+    await expect(page.locator('.md-hr-row')).not.toContainText('Last published')
+  })
+
+  test('an archived mint keeps "No current record" and shows no publish time, whatever the field says', async ({ page }) => {
+    await open(page, GONE, { ...UNAVAILABLE.archived, healthRecordPublishedAt: ago(H) }, { probeOffline: true })
+    await expect(page.locator('.md-hr-row')).toContainText('No current record')
+    await expect(page.getByTestId('hr-published')).toHaveCount(0)
+  })
+
+  test('320 px: the publish line wraps inside the row, nothing clips or overflows', async ({ page }) => {
+    await open(page, ALPHA, { healthRecordPublishedAt: ago(26 * H) }, { width: 320, height: 844 })
+    const line = page.getByTestId('hr-published')
+    await expect(line).toHaveText('Last published 1d ago')
+    const box = (await line.boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(320)
+    expect(await line.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+
   for (const width of [390, 320]) {
     test(`${width} px: the row and the opened disclosure stay inside the viewport, text at least 12px, targets at least as large as before`, async ({ page }) => {
       await open(page, ALPHA, {}, { width, height: 844 })

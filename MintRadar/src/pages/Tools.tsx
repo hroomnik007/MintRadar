@@ -18,7 +18,7 @@ import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Sear
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe } from '@/utils/reliabilityScore'
-import { weightsFor, reviewsScore, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
+import { weightsFor, reviewsScore, softwarePreferenceCredit, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
 import { softwareChoices, rankWizardRecs, wizardReasonText, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
@@ -797,7 +797,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
     // Software preference (a score credit, nobody removed) and the latency limit (only measured mints under it) are applied here, after
     // the measurement the wizard always takes: choosing a limit starts no connection of its own.
-    const ranking = rankWizardRecs(scoredAll, { preferred: effectivePreferred, latencyLimit })
+    const ranking = rankWizardRecs(scoredAll, { preferred: effectivePreferred, latencyLimit, bonus: softwarePreferenceCredit(w) })
 
     setRecs(ranking.top)
     setRecsCtx({ checks: new Set(checks), preferred: effectivePreferred, limit: latencyLimit, measured: ranking.measured, total: ranking.total })

@@ -29,6 +29,7 @@ import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isTestMint } from './testMints.js'
 import { isArchivedMint } from './archived.js'
+import { healthRecordPublishedAtIso } from './healthAssertions.js'
 import { LEARN_MODULES } from './shared/learnModules.js'
 import { loadSpaTemplate, renderSpaHtml, resolveSpaHead, type SpaKnownMint } from './spaHtml.js'
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
@@ -1508,7 +1509,7 @@ function computeKnownMints(): Promise<Snapshot> {
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
-        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, (SELECT a.value FROM app_state a WHERE a.key = 'discovery_last_success_at') AS nostr_checked_at, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
+        m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, (SELECT a.value FROM app_state a WHERE a.key = 'discovery_last_success_at') AS nostr_checked_at, (SELECT s.last_created_at FROM attestation_state s WHERE s.mint_url = m.url) AS health_published_at, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_operator_count, m.review_rated_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
         m.contact_nostr, m.contact_checks,
         -- Only while the rollup is missing (review_rated_count IS NULL: before the first recount after a deploy or
@@ -1666,6 +1667,14 @@ function computeKnownMints(): Promise<Snapshot> {
           // Additive: time of the last discovery run in which a relay completed the kind:38172 query (app_state
           // discovery_last_success_at); null until the first such run. Same value on every row.
           nostrCheckedAt: appStateTimeIso(r.nostr_checked_at),
+          // Additive (Task H1): when the signed health record (kind 30385) of this mint was last published
+          // (attestation_state.last_created_at, read in this same query); null without a current record (archived, no stored
+          // score, URL not allowed in an event) or while nothing was published. Website only: the wallet API does not read it.
+          healthRecordPublishedAt: healthRecordPublishedAtIso(r.health_published_at, {
+            url: r.url as string,
+            archived: isArchivedMint(r.last_online_at as Date | string | null, r.latest_online as boolean | null),
+            score: r.last_reliability_score,
+          }),
           reliabilityScore: (r.last_reliability_score as number | null) ?? null,
           // Additive: the per-component points stored with reliabilityScore (mints.score_breakdown, written in the same
           // UPDATE by prober.ts), so Mint Detail's score modal shows the points the stored score used, not a live

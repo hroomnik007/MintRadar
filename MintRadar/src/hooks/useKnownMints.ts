@@ -61,6 +61,8 @@ export interface KnownMint {
   // Time of the last discovery run that reached the relays (app_state discovery_last_success_at); null until the first one.
   nostrCheckedAt?: string | null
   reliabilityScore?: number | null
+  /** When the signed health record (Nostr kind 30385) of this mint was last published (attestation_state.last_created_at, ISO 8601 UTC); null without a current record or before anything was published. Website only. */
+  healthRecordPublishedAt?: string | null
   /** What the stored score used at its last computation (backend scoreBreakdown.ts); null until the first probe that wrote it. */
   scoreBreakdown?: StoredScoreBreakdown | null
   lastError?: string | null

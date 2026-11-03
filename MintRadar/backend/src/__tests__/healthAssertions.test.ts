@@ -9,7 +9,7 @@ import {
   ATTESTATION_AUDIT_MAX_AGE_MS, ATTESTATION_EXPIRY_S, ATTESTATION_MAX_EVENTS_PER_RUN, ATTESTATION_MIN_INTERVAL_MS,
   ATTESTATION_MIN_RANK_DELTA, ATTESTATION_STATE_CHANGE_MAX_PER_HOUR, ATTESTATION_STATE_CHANGE_MIN_GAP_MS, ATTESTATION_PROFILE, ATTESTATION_PROFILE_PICTURE_URL, ATTESTATION_PUBKEY_HEX, ATTESTATION_REFRESH_MS, ATTESTATION_RELAYS,
   HEALTH_CONTENT, HEALTH_KIND, METHODOLOGY_URL, buildHealthEvent, buildProfileTemplate, healthIdentifier,
-  publishReason, resolveAttestationKey, sanitizeSoftware, shouldPublish,
+  healthRecordPublishedAtIso, publishReason, resolveAttestationKey, sanitizeSoftware, shouldPublish,
   type HealthInput, type PublishedState,
 } from '../healthAssertions.js'
 import type { WalletKeyset } from '../walletApi.js'
@@ -626,5 +626,22 @@ describe('resolveAttestationKey', () => {
     expect(got).not.toBeNull()
     expect(bytesToHex(got!)).toBe(bytesToHex(sk))
     expect(lines).toEqual([])
+  })
+})
+
+describe('healthRecordPublishedAtIso (the website\'s "last published")', () => {
+  const ok = { url: 'https://mint.example.com', archived: false, score: 87 }
+  it('is the created_at of the last accepted event as ISO UTC; BIGINT arrives from pg as a string', () => {
+    expect(healthRecordPublishedAtIso(1_793_000_000, ok)).toBe(new Date(1_793_000_000_000).toISOString())
+    expect(healthRecordPublishedAtIso('1793000000', ok)).toBe(new Date(1_793_000_000_000).toISOString())
+  })
+  it('null without a current record: archived, no stored score, a URL that may not appear in an event', () => {
+    expect(healthRecordPublishedAtIso(1_793_000_000, { ...ok, archived: true })).toBeNull()
+    expect(healthRecordPublishedAtIso(1_793_000_000, { ...ok, score: null })).toBeNull()
+    expect(healthRecordPublishedAtIso(1_793_000_000, { ...ok, url: 'https://abcdefghijklmnop.onion' })).toBeNull()
+    expect(healthRecordPublishedAtIso(1_793_000_000, { ...ok, url: 'https://10.0.0.1' })).toBeNull()
+  })
+  it('null when nothing was published or the stored value is unreadable', () => {
+    for (const v of [null, undefined, '', 0, -5, 'abc', NaN, Infinity, 1e20]) expect(healthRecordPublishedAtIso(v, ok), String(v)).toBeNull()
   })
 })

@@ -5,20 +5,12 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import { cardLightningLabel } from '@/utils/mintFormatting'
 import { passesWizardNutChecks } from '@/utils/nutFilters'
 import { softwareFamily, softwareGroups, SOFTWARE_OTHER, SOFTWARE_UNKNOWN } from '@/utils/softwareFilter'
-import { REVIEWS_WEIGHT, type WizardCheck } from '@/utils/wizardScoring'
+import { type WizardCheck } from '@/utils/wizardScoring'
 import { pluralize } from '@/utils/plural'
 
 /** The latency limits the wizard offers, in ms (strictly under). */
 export const LATENCY_LIMITS = [300, 600] as const
 export type LatencyLimit = typeof LATENCY_LIMITS[number]
-
-/**
- * Score credit of a mint of the preferred software. The wizard's yes/no priorities (Lightning, restore, locked payments, live
- * updates) are FILTERS and add no score, so there is no existing per-priority credit to copy; the preference gets the same small
- * share as the community reviews (REVIEWS_WEIGHT): enough to put a matching mint ahead of an otherwise close one, never enough
- * to override a clear difference in latency or reliability (the score is on a 0..1 scale).
- */
-export const PREFERRED_SOFTWARE_BONUS = REVIEWS_WEIGHT
 
 export const FACT_SEPARATOR = ' · '
 const SOFTWARE_NAME_MAX = 32
@@ -56,14 +48,14 @@ export interface WizardRanking<T> {
 }
 
 /**
- * The preference adds PREFERRED_SOFTWARE_BONUS to a matching mint's score before sorting; nobody is removed by it. A latency
+ * The preference adds `opts.bonus` (softwarePreferenceCredit of this search's weights, about 3 Reliability points) to a matching mint's score before sorting; nobody is removed by it. A latency
  * limit keeps only the candidates whose measurement exists and is under the limit (an unmeasured or failed one is not shown);
  * it changes no score. Ties keep their order.
  */
-export function rankWizardRecs<T extends WizardRankable>(recs: readonly T[], opts: { preferred: string | null; latencyLimit: number | null; limit?: number }): WizardRanking<T> {
+export function rankWizardRecs<T extends WizardRankable>(recs: readonly T[], opts: { preferred: string | null; latencyLimit: number | null; bonus: number; limit?: number }): WizardRanking<T> {
   const measured = recs.filter(r => r.latencyMs !== null).length
   const kept = opts.latencyLimit === null ? [...recs] : recs.filter(r => r.latencyMs !== null && r.latencyMs < opts.latencyLimit!)
-  const bonus = (r: T) => (matchesPreferredSoftware(r.mint, opts.preferred) ? PREFERRED_SOFTWARE_BONUS : 0)
+  const bonus = (r: T) => (matchesPreferredSoftware(r.mint, opts.preferred) ? opts.bonus : 0)
   const top = kept.map((r, i) => ({ r, i, s: r.score + bonus(r) })).sort((a, b) => b.s - a.s || a.i - b.i).map(x => x.r).slice(0, opts.limit ?? 3)
   return { top, measured, total: recs.length }
 }
