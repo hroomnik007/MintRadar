@@ -244,36 +244,43 @@ export function OverviewTab({
             </div>
           )}
           <div className="md-info-row md-hr-row">
-            <span className="md-info-label">Signed health record</span>
-            <span className="md-info-value md-hr-value">
-              {healthRecord ? (
-                <>
-                  {healthRecord.njumpUrl && (
-                    <a
-                      href={healthRecord.njumpUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="md-hr-view"
-                      aria-label="View on Nostr (opens njump.me, an external site, in a new tab)"
-                    >View on Nostr<ExternalLink size={12} aria-hidden="true" /></a>
-                  )}
-                  <CopyTextButton label="Copy naddr" what="the Nostr address (naddr) of the signed health record" value={healthRecord.naddr} />
-                </>
-              ) : (
-                <span className="md-hr-none">No current record</span>
-              )}
-              <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
-            </span>
-            {healthRecord && (() => {
-              const published = healthPublishedLine(knownMint?.healthRecordPublishedAt, now)
-              return published ? <div className="md-hr-published" data-testid="hr-published"><span title={published.title}>{published.text}</span></div> : null
-            })()}
+            <div className="md-hr-head">
+              <span className="md-info-label">Signed health record</span>
+              {(() => {
+                const published = healthRecord ? healthPublishedLine(knownMint?.healthRecordPublishedAt, now) : null
+                return (
+                  <div className="md-hr-fact">
+                    {healthRecord ? (
+                      published && <div className="md-hr-published" data-testid="hr-published"><span title={published.title}>{published.text}</span></div>
+                    ) : (
+                      <span className="md-hr-none">No current record</span>
+                    )}
+                    {(!healthRecord || published) && <span className="md-hr-sep" aria-hidden="true">·</span>}
+                    <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
+                  </div>
+                )
+              })()}
+            </div>
+            {healthRecord?.njumpUrl && (
+              <span className="md-info-value md-hr-value">
+                <a
+                  href={healthRecord.njumpUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="md-hr-view"
+                  aria-label="View on Nostr (opens njump.me, an external site, in a new tab)"
+                >View on Nostr<ExternalLink size={12} aria-hidden="true" /></a>
+              </span>
+            )}
             {healthRecord && (
               <details className="md-hr-dev">
                 <summary>For developers</summary>
                 <div className="md-hr-dev-body">
                   <div className="md-hr-dev-relay">Relay <code>{HEALTH_RELAY_URL}</code></div>
-                  <CopyTextButton label="Copy nak command" what="a nak command that fetches the signed health record" value={healthRecord.nakCommand} />
+                  <div className="md-hr-dev-actions">
+                    <CopyTextButton label="Copy naddr" what="the Nostr address (naddr) of the signed health record" value={healthRecord.naddr} />
+                    <CopyTextButton label="Copy nak command" what="a nak command that fetches the signed health record" value={healthRecord.nakCommand} />
+                  </div>
                   <p className="md-hr-dev-note">Requires the nak command-line tool (<a href="https://github.com/fiatjaf/nak" target="_blank" rel="noopener noreferrer">github.com/fiatjaf/nak</a>).</p>
                 </div>
               </details>

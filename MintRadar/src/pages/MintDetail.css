@@ -2746,19 +2746,30 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-ua-link { display: inline-block; padding: 4px 0; font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
 .md-hr-row { flex-wrap: wrap; gap: 6px 12px; align-items: center; }
-.md-hr-value { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 8px; max-width: 100%; word-break: normal; font-family: var(--font-body, inherit); font-size: 13px; }
-.md-hr-none { font-size: 13px; color: var(--text3); }
+.md-hr-value { display: flex; flex: none; align-items: center; justify-content: flex-end; max-width: 100%; word-break: normal; font-family: var(--font-body, inherit); font-size: 13px; }
+/* Left of the row: the title, and under it one fact line "Last published <time> ago · About signed health records". */
+.md-hr-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex: 1 1 0; min-width: 0; }
+.md-hr-fact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; min-width: 0; max-width: 100%; font-size: 12px; line-height: 1.4; color: var(--text3); }
+.md-hr-sep { color: var(--text3); }
+.md-hr-none { font-size: 12px; color: var(--text3); }
 .md-hr-link { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
-@media (max-width: 640px) { .md-hr-value { flex-basis: 100%; justify-content: flex-start; } }
-/* "View on Nostr" (njump.me, external) is the primary action of the row; same size and touch target as the copy buttons. */
+/* Phones: the title and the fact on top, "View on Nostr" under them on the full width, the link under the fact (no dot). */
+@media (max-width: 640px) {
+  .md-hr-head { flex-basis: 100%; }
+  .md-hr-fact { flex-direction: column; align-items: flex-start; }
+  .md-hr-sep { display: none; }
+  .md-hr-value { flex-basis: 100%; }
+  .md-hr-view { width: 100%; justify-content: center; }
+}
+/* "View on Nostr" (njump.me, external) is the primary action of the row. */
 .md-hr-view { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; box-sizing: border-box; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--green-soft); color: var(--accent); font-size: 12px; text-decoration: none; }
-/* "View on Nostr" and "Copy naddr" side by side: one compact height, padding, font and line height on every pointer (only the
-   colours differ). On touch the visual size stays; an invisible ::after (below) makes the tap area 44px tall. */
-.md-hr-view, .md-hr-value .doc-copy-btn { position: relative; height: 32px; min-height: 32px; padding: 6px 12px; box-sizing: border-box; font-family: inherit; font-size: 12px; line-height: 1; display: inline-flex; align-items: center; }
+/* "View on Nostr": one compact height, padding, font and line height on every pointer. On touch the visual size stays; an
+   invisible ::after (below) makes the tap area 44px tall. */
+.md-hr-view { position: relative; height: 32px; min-height: 32px; padding: 6px 12px; box-sizing: border-box; font-family: inherit; font-size: 12px; line-height: 1; display: inline-flex; align-items: center; }
 .md-hr-view:hover { background: var(--green-soft-strong); }
 .md-hr-view:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* "For developers": a native <details>, collapsed, full width under the row; the summary has the height of the copy buttons. */
-.md-hr-published { flex-basis: 100%; min-width: 0; margin: 0; font-size: 12px; line-height: 1.4; color: var(--text3); overflow-wrap: anywhere; }
+.md-hr-published { min-width: 0; margin: 0; font-size: 12px; line-height: 1.4; color: var(--text3); overflow-wrap: anywhere; }
 .md-hr-published span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
 .md-hr-dev { flex-basis: 100%; min-width: 0; }
 .md-hr-dev summary { display: flex; align-items: center; gap: 6px; min-height: 32px; width: fit-content; max-width: 100%; font-size: 12px; color: var(--text2); cursor: pointer; list-style: none; }
@@ -2768,13 +2779,19 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-hr-dev summary:hover { color: var(--text); }
 .md-hr-dev summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
 .md-hr-dev-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 4px 0 6px; min-width: 0; }
+.md-hr-dev-actions { display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+@media (max-width: 640px) {
+  .md-hr-dev-body { align-items: stretch; }
+  .md-hr-dev-actions { flex-direction: column; }
+  .md-hr-dev-actions .doc-copy-btn { width: 100%; min-height: 44px; }
+}
 .md-hr-dev-relay { font-size: 12px; color: var(--text2); overflow-wrap: anywhere; }
 .md-hr-dev-relay code { font-family: var(--font-mono); color: var(--text); }
 .md-hr-dev-note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text3); overflow-wrap: anywhere; }
 .md-hr-dev-note a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (pointer: coarse) {
-  .md-hr-view, .md-hr-value .doc-copy-btn { height: 32px; min-height: 32px; padding: 6px 12px; }
-  .md-hr-view::after, .md-hr-value .doc-copy-btn::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+  .md-hr-view { height: 32px; min-height: 32px; padding: 6px 12px; }
+  .md-hr-view::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
   .md-hr-dev summary { min-height: 44px; }
 }
 

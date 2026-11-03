@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { nip19 } from 'nostr-tools'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
 import { layoutReady, resize } from './fixtures/settle'
@@ -200,10 +200,11 @@ test.describe('W5b C: a mint that is not online', () => {
 })
 
 test.describe('W5b D: Signed health record', () => {
-  test('View on Nostr opens njump.me in a new tab, Copy naddr holds the naddr, the link goes to /for-wallets', async ({ page }) => {
+  test('View on Nostr opens njump.me in a new tab, Copy naddr (under "For developers") holds the naddr, the link goes to /for-wallets', async ({ page }) => {
     await open(page, ALPHA, {})
     const row = page.locator('.md-hr-row')
     await expect(row.locator('.md-info-label')).toHaveText('Signed health record')
+    await row.locator('summary').click()
     await row.getByRole('button', { name: /Nostr address \(naddr\)/ }).click()
     const naddr = await page.evaluate(() => navigator.clipboard.readText())
     const dec = nip19.decode(naddr)
@@ -249,6 +250,69 @@ test.describe('W5b D: Signed health record', () => {
     expect(await dev.evaluate(el => (el as HTMLDetailsElement).open)).toBe(false)
   })
 
+  test('the main row holds only "View on Nostr"; Copy naddr and Copy nak command appear after opening "For developers", side by side, copying the same naddr as before', async ({ page }) => {
+    await open(page, ALPHA, {})
+    const row = page.locator('.md-hr-row')
+    const dev = row.locator('details.md-hr-dev')
+    const naddrBtn = row.getByRole('button', { name: /Nostr address \(naddr\)/ })
+    const nakBtn = row.getByRole('button', { name: /nak command/ })
+    // (a) outside the disclosure: exactly one control, the "View on Nostr" link; no button at all, no Copy naddr
+    const outside = row.locator(':scope > :not(details)')
+    await expect(outside.getByRole('button')).toHaveCount(0)
+    await expect(outside.getByRole('link', { name: /View on Nostr/ })).toHaveCount(1)
+    await expect(row.locator(':scope > .md-hr-value').getByRole('link')).toHaveCount(1)
+    await expect(naddrBtn).toBeHidden()
+    // (b) after opening: relay, then the two secondary buttons on one line, then the nak note
+    await dev.locator('summary').click()
+    await expect(naddrBtn).toBeVisible()
+    await expect(naddrBtn).toHaveText('Copy naddr')
+    await expect(nakBtn).toHaveText('Copy nak command')
+    await layoutReady(page)
+    const [relay, a, b, note] = await Promise.all([
+      dev.locator('.md-hr-dev-relay').boundingBox(), naddrBtn.boundingBox(), nakBtn.boundingBox(), dev.locator('.md-hr-dev-note').boundingBox(),
+    ])
+    expect(a!.y).toBe(b!.y)
+    expect(a!.x + a!.width).toBeLessThanOrEqual(b!.x)
+    expect(relay!.y + relay!.height).toBeLessThanOrEqual(a!.y)
+    expect(a!.y + a!.height).toBeLessThanOrEqual(note!.y)
+    // both buttons share the one secondary style
+    const style = (l: Locator) => l.evaluate(el => { const cs = getComputedStyle(el); return { cls: el.className, bg: cs.backgroundColor, border: cs.borderColor, color: cs.color, h: el.getBoundingClientRect().height } })
+    expect(await style(naddrBtn)).toEqual(await style(nakBtn))
+    // the copied value is the same naddr as the njump link and the same decoded address as before
+    await naddrBtn.click()
+    await expect(naddrBtn).toHaveText('Copied')
+    const naddr = await page.evaluate(() => navigator.clipboard.readText())
+    expect(nip19.decode(naddr)).toMatchObject({ type: 'naddr', data: { kind: 30385, pubkey: ATTESTATION_PUBKEY_HEX, identifier: ALPHA, relays: [...ATTESTATION_RELAYS_PUBLIC] } })
+    await expect(row.getByRole('link', { name: /View on Nostr/ })).toHaveAttribute('href', `https://njump.me/${naddr}`)
+    await nakBtn.click()
+    await expect(nakBtn).toHaveText('Copied')
+  })
+
+  test('"About signed health records" sits in the line under the title, after the publish time and a dot; the primary button is on the right', async ({ page }) => {
+    await open(page, ALPHA, { healthRecordPublishedAt: ago(2 * H + 5 * 60_000) })
+    const row = page.locator('.md-hr-row')
+    const title = row.locator('.md-info-label')
+    const fact = row.locator('.md-hr-fact')
+    const about = fact.getByRole('link', { name: 'About signed health records' })
+    // the spaces around the dot are the flex gap of the line, not text
+    await expect(fact).toHaveText('Last published 2h ago·About signed health records')
+    await expect(fact.locator('.md-hr-sep')).toHaveText('·')
+    await expect(about).toHaveAttribute('href', '/for-wallets#signed-health-assertions')
+    await expect(row.getByTestId('hr-published')).toHaveText('Last published 2h ago')
+    const [t, f, ab, pub, view] = await Promise.all([
+      title.boundingBox(), fact.boundingBox(), about.boundingBox(), row.getByTestId('hr-published').boundingBox(), row.locator('.md-hr-view').boundingBox(),
+    ])
+    expect(f!.y).toBeGreaterThanOrEqual(t!.y + t!.height - 1)
+    expect(Math.abs((ab!.y + ab!.height / 2) - (pub!.y + pub!.height / 2))).toBeLessThan(8) // same line
+    expect(ab!.x).toBeGreaterThan(pub!.x + pub!.width)
+    expect(view!.x).toBeGreaterThan(ab!.x + ab!.width) // button to the right of the heading block
+  })
+
+  test('without a publish time the fact line is only the About link (no dot)', async ({ page }) => {
+    await open(page, ALPHA, { healthRecordPublishedAt: null })
+    await expect(page.locator('.md-hr-fact')).toHaveText('About signed health records')
+  })
+
   test('an archived mint shows "No current record" and the same link', async ({ page }) => {
     await open(page, GONE, UNAVAILABLE.archived, { probeOffline: true })
     const row = page.locator('.md-hr-row')
@@ -273,7 +337,6 @@ test.describe('W5b D: Signed health record', () => {
       await expect(line.locator('a, button, svg, img')).toHaveCount(0)
       expect(await line.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12)
       await expect(row.getByRole('link', { name: /View on Nostr/ })).toBeVisible()
-      await expect(row.getByRole('button', { name: /Nostr address \(naddr\)/ })).toBeVisible()
       await expect(row.locator('details.md-hr-dev')).toHaveCount(1)
     })
   }
@@ -302,30 +365,48 @@ test.describe('W5b D: Signed health record', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 
-  for (const width of [390, 320]) {
-    test(`${width} px: the row and the opened disclosure stay inside the viewport, text at least 12px, targets at least as large as before`, async ({ page }) => {
-      await open(page, ALPHA, {}, { width, height: 844 })
-      const row = page.locator('.md-hr-row')
-      await row.locator('summary').click()
-      await expect(row.getByRole('button', { name: /nak command/ })).toBeVisible()
-      const m = await row.evaluate((el, vw) => {
-        const out: string[] = []
-        for (const n of el.querySelectorAll<HTMLElement>('*')) {
-          const r = n.getBoundingClientRect()
-          if (r.width === 0 || r.height === 0) continue
-          if (r.right > vw + 0.5 || r.left < -0.5) out.push(`${n.className || n.tagName} outside`)
-          if (n.scrollWidth > n.clientWidth + 1 && getComputedStyle(n).overflowX !== 'visible') out.push(`${n.className || n.tagName} clipped`)
-          if ([...n.childNodes].some(c => c.nodeType === 3 && (c.textContent ?? '').trim()) && parseFloat(getComputedStyle(n).fontSize) < 12) out.push(`${n.className || n.tagName} below 12px`)
+  for (const width of [390, 360, 320]) {
+    for (const opened of [false, true]) {
+      test(`${width} px, "For developers" ${opened ? 'open' : 'closed'}: no horizontal overflow, text at least 12px, stacked layout, 44px full-width copy buttons`, async ({ page }) => {
+        await open(page, ALPHA, { healthRecordPublishedAt: ago(2 * H) }, { width, height: 844 })
+        const row = page.locator('.md-hr-row')
+        if (opened) {
+          await row.locator('summary').click()
+          await expect(row.getByRole('button', { name: /nak command/ })).toBeVisible()
         }
-        const h = (sel: string) => el.querySelector<HTMLElement>(sel)?.getBoundingClientRect().height ?? 0
-        return { out, view: h('.md-hr-view'), summary: h('summary'), copy: h('.doc-copy-btn') }
-      }, width)
-      expect(m.out).toEqual([])
-      // the new controls are at least as tall as the existing copy buttons (they set the row's target size today)
-      expect(m.copy).toBeGreaterThan(0)
-      expect(m.view, '"View on Nostr" is exactly as tall as "Copy naddr"').toBe(m.copy)
-      expect(m.summary).toBeGreaterThanOrEqual(m.copy)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    })
+        const m = await row.evaluate((el, vw) => {
+          const out: string[] = []
+          for (const n of el.querySelectorAll<HTMLElement>('*')) {
+            const r = n.getBoundingClientRect()
+            if (r.width === 0 || r.height === 0) continue
+            if (r.right > vw + 0.5 || r.left < -0.5) out.push(`${n.className || n.tagName} outside`)
+            if (n.scrollWidth > n.clientWidth + 1 && getComputedStyle(n).overflowX !== 'visible') out.push(`${n.className || n.tagName} clipped`)
+            if ([...n.childNodes].some(c => c.nodeType === 3 && (c.textContent ?? '').trim()) && parseFloat(getComputedStyle(n).fontSize) < 12) out.push(`${n.className || n.tagName} below 12px`)
+          }
+          return out
+        }, width)
+        expect(m).toEqual([])
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+        // title and fact on top, "View on Nostr" under them on the full row width, the About link under the publish line
+        const [t, pub, about, view, rowBox] = await Promise.all([
+          row.locator('.md-info-label').boundingBox(), row.getByTestId('hr-published').boundingBox(),
+          row.getByRole('link', { name: 'About signed health records' }).boundingBox(), row.locator('.md-hr-view').boundingBox(), row.boundingBox(),
+        ])
+        expect(pub!.y).toBeGreaterThanOrEqual(t!.y + t!.height - 1)
+        expect(about!.y).toBeGreaterThanOrEqual(pub!.y + pub!.height - 1)
+        expect(view!.y).toBeGreaterThanOrEqual(about!.y + about!.height - 1)
+        expect(Math.abs(view!.width - rowBox!.width)).toBeLessThanOrEqual(1)
+        if (opened) {
+          const a = (await row.getByRole('button', { name: /naddr/ }).boundingBox())!
+          const b = (await row.getByRole('button', { name: /nak command/ }).boundingBox())!
+          expect(b.y).toBeGreaterThanOrEqual(a.y + a.height) // one under the other
+          expect(Math.abs(a.width - rowBox!.width)).toBeLessThanOrEqual(1)
+          expect(Math.abs(b.width - rowBox!.width)).toBeLessThanOrEqual(1)
+          expect(a.height).toBeGreaterThanOrEqual(44)
+          expect(b.height).toBeGreaterThanOrEqual(44)
+          expect(await row.getByRole('button', { name: /naddr/ }).evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12)
+        }
+      })
+    }
   }
 })
