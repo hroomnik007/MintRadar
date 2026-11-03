@@ -370,9 +370,12 @@ a.token-action-btn:focus {
   font-size: 13px; color: var(--text2); font-family: var(--font-body);
   line-height: 1.45; margin-top: 1px;
 }
-.wizard-rec-note {
+.wizard-rec-note,
+.wizard-latency-note {
   margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3);
 }
+/* Reason line under a result (Task B2): facts the mint meets from what was selected. Muted, never below 12px. */
+.wizard-rec-facts { font-size: 12px; line-height: 1.4; color: var(--text3); font-family: var(--font-body); overflow-wrap: anywhere; }
 .wizard-rec-exclusion-note {
   margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3);
 }
@@ -454,6 +457,12 @@ a.token-action-btn:focus {
 @media (min-width: 701px) {
   .wizard-unit-seg { align-self: flex-start; }
   .wizard-unit-opt { flex: 0 0 auto; min-width: 72px; padding: 6px 16px; font-size: 12px; }
+}
+/* "Preferred software" / "Max latency": the same segmented control with more, longer labels; they shrink and wrap inside their segment. */
+.wizard-seg-multi { max-width: 100%; }
+.wizard-seg-multi .wizard-unit-opt { overflow-wrap: anywhere; line-height: 1.25; }
+@media (min-width: 701px) {
+  .wizard-seg-multi .wizard-unit-opt { flex: 1 1 auto; min-width: 0; }
 }
 .wizard-unit-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .wizard-unit-opt.active { background: var(--accent-dim); color: var(--accent); }
