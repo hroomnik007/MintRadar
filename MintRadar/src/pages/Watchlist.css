@@ -14,6 +14,16 @@
   margin: 14px 0 0;
 }
 
+/* One summary line (watched, online, offline ...) directly above the explainer. Facts only, muted like the explainer. */
+.wl-summary {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text3);
+}
+
+.wl-summary + .wl-notify-explainer { margin-top: 6px; }
+
 /* One explainer above the card grid (not on every card). */
 .wl-notify-explainer {
   margin: 14px 0 0;
@@ -593,4 +603,5 @@
 /* Phone text floor (2026-10-20): no HTML text below 12px at <=767px (docs/claude/mobile-and-tooltips.md). */
 @media (max-width: 767px) {
   .wl-login-hint { font-size: 12px; }
+  .wl-summary { font-size: 12px; }
 }

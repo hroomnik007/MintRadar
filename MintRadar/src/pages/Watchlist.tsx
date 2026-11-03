@@ -19,6 +19,7 @@ import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import { displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { watchlistNotifyExplainer } from '@/utils/tooltipTexts'
 import { showWatchlistCount } from '@/utils/watchlistCount'
+import { watchlistSummary, watchlistSummaryText } from '@/utils/watchlistSummary'
 import { useLegacyNotifyNotice, LEGACY_NOTIFY_NOTICE_TEXT } from '@/hooks/useLegacyNotifyNotice'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import './Watchlist.css'
@@ -344,6 +345,7 @@ export default function Watchlist() {
                   </button>
                 </div>
               )}
+              <p className="wl-summary" data-testid="wl-summary">{watchlistSummaryText(watchlistSummary(orderedMints, knownMintsData ?? []))}</p>
               <p className="wl-notify-explainer">{watchlistNotifyExplainer()}</p>
               <div className="wl-grid">
                 {orderedMints.slice(0, visibleCount).map(url => {
