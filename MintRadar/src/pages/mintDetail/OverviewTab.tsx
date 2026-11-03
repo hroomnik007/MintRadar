@@ -255,8 +255,10 @@ export function OverviewTab({
                     ) : (
                       <span className="md-hr-none">No current record</span>
                     )}
-                    {(!healthRecord || published) && <span className="md-hr-sep" aria-hidden="true">·</span>}
-                    <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
+                    <span className="md-hr-about">
+                      {(!healthRecord || published) && <span className="md-hr-sep" aria-hidden="true"> · </span>}
+                      <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
+                    </span>
                   </div>
                 )
               })()}

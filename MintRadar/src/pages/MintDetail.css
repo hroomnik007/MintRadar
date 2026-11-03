@@ -2748,16 +2748,19 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-hr-row { flex-wrap: wrap; gap: 6px 12px; align-items: center; }
 .md-hr-value { display: flex; flex: none; align-items: center; justify-content: flex-end; max-width: 100%; word-break: normal; font-family: var(--font-body, inherit); font-size: 13px; }
 /* Left of the row: the title, and under it one fact line "Last published <time> ago · About signed health records". */
-.md-hr-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex: 1 1 0; min-width: 0; }
-.md-hr-fact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; min-width: 0; max-width: 100%; font-size: 12px; line-height: 1.4; color: var(--text3); }
-.md-hr-sep { color: var(--text3); }
+.md-hr-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex: 1 1 0; min-width: 0; container-type: inline-size; }
+.md-hr-fact { display: flex; flex-wrap: wrap; align-items: baseline; min-width: 0; max-width: 100%; font-size: 12px; line-height: 1.4; color: var(--text3); }
+.md-hr-sep { color: var(--text3); white-space: pre; }
+/* Too narrow for "time · About" on one line (phones): the link goes under the fact and the dot is not shown, so it never ends or starts a line. */
+@container (max-width: 400px) {
+  .md-hr-fact { flex-direction: column; align-items: flex-start; }
+  .md-hr-sep { display: none; }
+}
 .md-hr-none { font-size: 12px; color: var(--text3); }
-.md-hr-link { font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+.md-hr-link { display: inline-block; font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
 /* Phones: the title and the fact on top, "View on Nostr" under them on the full width, the link under the fact (no dot). */
 @media (max-width: 640px) {
   .md-hr-head { flex-basis: 100%; }
-  .md-hr-fact { flex-direction: column; align-items: flex-start; }
-  .md-hr-sep { display: none; }
   .md-hr-value { flex-basis: 100%; }
   .md-hr-view { width: 100%; justify-content: center; }
 }

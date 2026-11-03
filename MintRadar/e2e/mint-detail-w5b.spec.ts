@@ -294,9 +294,10 @@ test.describe('W5b D: Signed health record', () => {
     const title = row.locator('.md-info-label')
     const fact = row.locator('.md-hr-fact')
     const about = fact.getByRole('link', { name: 'About signed health records' })
-    // the spaces around the dot are the flex gap of the line, not text
-    await expect(fact).toHaveText('Last published 2h ago·About signed health records')
-    await expect(fact.locator('.md-hr-sep')).toHaveText('·')
+    // (b) real spaces around the dot, in the text of the line (copy / find), the dot itself hidden from screen readers
+    await expect(fact).toHaveText('Last published 2h ago · About signed health records')
+    expect(await fact.evaluate(el => el.textContent)).toBe('Last published 2h ago · About signed health records')
+    await expect(fact.locator('.md-hr-sep')).toHaveAttribute('aria-hidden', 'true')
     await expect(about).toHaveAttribute('href', '/for-wallets#signed-health-assertions')
     await expect(row.getByTestId('hr-published')).toHaveText('Last published 2h ago')
     const [t, f, ab, pub, view] = await Promise.all([
@@ -310,7 +311,28 @@ test.describe('W5b D: Signed health record', () => {
 
   test('without a publish time the fact line is only the About link (no dot)', async ({ page }) => {
     await open(page, ALPHA, { healthRecordPublishedAt: null })
-    await expect(page.locator('.md-hr-fact')).toHaveText('About signed health records')
+    // (c) no dot without a time
+    expect(await page.locator('.md-hr-fact').evaluate(el => el.textContent)).toBe('About signed health records')
+    await expect(page.locator('.md-hr-sep')).toHaveCount(0)
+  })
+
+  test('an archived mint: "No current record · About signed health records" with real spaces', async ({ page }) => {
+    await open(page, GONE, UNAVAILABLE.archived, { probeOffline: true })
+    expect(await page.locator('.md-hr-fact').evaluate(el => el.textContent)).toBe('No current record · About signed health records')
+  })
+
+  test('between a phone and a tablet the fact stays on one line with the dot; under 400px of room the link goes under it without a dot', async ({ page }) => {
+    await open(page, ALPHA, { healthRecordPublishedAt: ago(2 * H) }, { width: 600, height: 844 })
+    await layoutReady(page)
+    const dy = await page.locator('.md-hr-fact').evaluate(el => {
+      const c = (n: Element) => { const b = n.getBoundingClientRect(); return b.y + b.height / 2 }
+      return Math.abs(c(el.querySelector('[data-testid="hr-published"]')!) - c(el.querySelector('a')!))
+    })
+    expect(dy).toBeLessThan(8)
+    await expect(page.locator('.md-hr-sep')).toBeVisible()
+    await resize(page, 390, 844)
+    await expect(page.locator('.md-hr-sep')).toBeHidden()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 
   test('an archived mint shows "No current record" and the same link', async ({ page }) => {
