@@ -83,23 +83,22 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     for (const l of lines) expect(l.trim()).toMatch(/^Reliability \d+$/)
   })
 
-  test(`${size[0]}px: a preferred software moves that mint up and removes nobody`, async ({ page }) => {
-    await open(page, size)
+  test(`${size[0]}px: a preferred software is a small credit: it moves a mint 2 points behind up, and not one 10 points behind`, async ({ page }) => {
+    // Equal latency everywhere, so only the Reliability Scores differ: alpha 92 Nutshell, delta 90 CDK, echo 80 Nutshell, foxtrot 70 CDK.
+    await open(page, size, { alpha: 100, delta: 100, echo: 100, foxtrot: 100 })
     await toStep2(page)
     await check(page, 'Reliable')
     await find(page)
     await expect(rows(page)).toHaveCount(3, { timeout: 15_000 })
-    const before = await names(page)
-    expect(before).toEqual(['Alpha Mint', 'Delta Mint', 'Echo Mint'])
+    expect(await names(page)).toEqual(['Alpha Mint', 'Delta Mint', 'Echo Mint'])
     await page.getByRole('button', { name: /Start over/ }).click()
     await toStep2(page)
     await check(page, 'Reliable')
     await pick(page, 'Preferred software', 'CDK-Mintd')
     await find(page)
     await expect(rows(page)).toHaveCount(3, { timeout: 15_000 })
-    const after = await names(page)
-    expect(after.slice(0, 2)).toEqual(['Delta Mint', 'Alpha Mint']) // the CDK mint moved up; the Nutshell mint is still there, right behind it
-    expect(after).toHaveLength(3)
+    // Delta (CDK, 2 points behind Alpha) moves up; Alpha is still shown right behind it; Foxtrot (CDK, 10 points behind Echo) does not jump ahead.
+    expect(await names(page)).toEqual(['Delta Mint', 'Alpha Mint', 'Echo Mint'])
   })
 
   test(`${size[0]}px: a latency limit keeps only measured mints under it and says how many were measured`, async ({ page }) => {

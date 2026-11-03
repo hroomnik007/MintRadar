@@ -18,6 +18,18 @@ const RELIABLE_WEIGHTS: CoreWeights = { latency: 0.2, reliability: 0.7, nuts: 0.
 // The other three weights are scaled by (1 - REVIEWS_WEIGHT), so all four still sum to 1.
 export const REVIEWS_WEIGHT = 0.1
 
+// "Preferred software" (wizard option): a SOFT preference worth this many points of the 0..100 Reliability Score. It is its
+// own constant, independent of REVIEWS_WEIGHT. The final score is on a 0..1 scale where one Reliability point is
+// `weights.reliability / 100`, so the credit is SOFTWARE_PREFERENCE_BONUS / 100 * weights.reliability (softwarePreferenceCredit):
+// a mint of the preferred software outranks another mint only when that one leads by less than about this many points
+// of Reliability (all else equal), never by 10.
+export const SOFTWARE_PREFERENCE_BONUS = 3
+
+/** The score credit (same scale as `weightsFor` scores) of a mint of the preferred software, for the weights of this search. */
+export function softwarePreferenceCredit(w: Pick<Weights, 'reliability'>): number {
+  return (SOFTWARE_PREFERENCE_BONUS / 100) * w.reliability
+}
+
 // A mint needs at least this many rated reviews before its rating counts at all.
 export const MIN_REVIEWS_FOR_SCORE = 3
 
