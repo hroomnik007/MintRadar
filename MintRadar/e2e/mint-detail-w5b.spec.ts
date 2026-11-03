@@ -325,9 +325,10 @@ test.describe('W5b D: Signed health record', () => {
     const [line, view, ab, dev] = await Promise.all([
       block.locator('.md-hr-row').boundingBox(), block.locator('.md-hr-view').boundingBox(), about.boundingBox(), block.locator('details').boundingBox(),
     ])
+    expect(view!.x).toBeLessThan(ab!.x)
     expect(view!.y).toBeGreaterThanOrEqual(line!.y + line!.height - 1)
     expect(Math.abs((ab!.y + ab!.height / 2) - (view!.y + view!.height / 2))).toBeLessThan(3)
-    expect(Math.abs(ab!.x - (view!.x + view!.width) - 12)).toBeLessThanOrEqual(1) // 12px gap
+    expect(ab!.x).toBeGreaterThan(view!.x + view!.width) // the link is right of the button
     expect(dev!.y).toBeGreaterThanOrEqual(Math.max(view!.y + view!.height, ab!.y + ab!.height) - 1)
     expect(await about.evaluate(el => getComputedStyle(el).fontSize)).toBe('13px')
   })
@@ -435,9 +436,9 @@ test.describe('W5b D: Signed health record', () => {
         expect(about!.height).toBeGreaterThanOrEqual(44)
         expect(await row.getByRole('link', { name: 'About signed health records' }).evaluate(el => getComputedStyle(el).fontSize)).toBe('13px')
         if (width >= 390) {
-          // (b) same action line: the link right of the button, centred vertically against it, 12px apart
+          // (b) same action line: the link right of the button, centred vertically against it
           expect(Math.abs((about!.y + about!.height / 2) - (view!.y + view!.height / 2))).toBeLessThan(3)
-          expect(Math.abs(about!.x - (view!.x + view!.width) - 12)).toBeLessThanOrEqual(1)
+          expect(about!.x).toBeGreaterThan(view!.x + view!.width) // right of the button, in the same line
         } else if (width === 320) {
           // (c) too narrow: the link wraps under the button, nothing is cut off (checked above)
           expect(about!.y).toBeGreaterThanOrEqual(view!.y + view!.height - 1)
@@ -459,6 +460,18 @@ test.describe('W5b D: Signed health record', () => {
         }
       })
     }
+  }
+
+  for (const width of [1440, 390, 320]) {
+    test(`${width} px: the right edge of "About signed health records" is the right edge of the values ("Last published")`, async ({ page }) => {
+      await open(page, ALPHA, { healthRecordPublishedAt: ago(2 * H) }, { width, height: 844 })
+      await layoutReady(page)
+      const [about, value, view] = await Promise.all([
+        page.locator('.md-hr-actions .md-hr-link').boundingBox(), page.getByTestId('hr-published').boundingBox(), page.locator('.md-hr-view').boundingBox(),
+      ])
+      expect(Math.abs((about!.x + about!.width) - (value!.x + value!.width))).toBeLessThanOrEqual(1)
+      expect(view!.x).toBeLessThan(about!.x) // the button stays on the left
+    })
   }
 
   for (const width of [1440, 390]) {

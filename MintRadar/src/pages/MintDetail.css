@@ -2751,9 +2751,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
    the right); it wraps under the label on a narrow card, as the "Fees and limits" rows do. */
 .md-hr-block > .md-hr-row { border-bottom: none; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
 .md-hr-row .md-hr-published { margin-left: auto; max-width: 100%; word-break: normal; overflow-wrap: anywhere; }
-/* Actions: "View on Nostr" (its content width) and the About link on one line; the link wraps under the button on a narrow card. */
+/* Actions: "View on Nostr" (its content width) on the left and the About link on the right edge (margin-left: auto, in line with the
+   right edge of the values above) on one line; on a narrow card the link wraps under the button, still on the right. */
 .md-hr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; }
-.md-hr-link { display: inline-block; font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+.md-hr-link { display: inline-block; margin-left: auto; text-align: right; font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
 /* "View on Nostr" (njump.me, external) is the primary action of the row. */
 .md-hr-view { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; box-sizing: border-box; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--green-soft); color: var(--accent); font-size: 12px; text-decoration: none; }
 /* "View on Nostr": one compact height, padding, font and line height on every pointer. On touch the visual size stays; an
