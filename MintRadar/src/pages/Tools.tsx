@@ -721,7 +721,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
   const sizeHints = selectedUnit ? SIZE_HINTS[selectedUnit] : undefined
 
-  const advancedSelected = ADVANCED_CHECKS.filter(o => checks.has(o.id)).length
+  const advancedSelected = ADVANCED_CHECKS.filter(o => checks.has(o.id)).length + (effectivePreferred !== null ? 1 : 0) + (latencyLimit !== null ? 1 : 0)
 
   const toggleCheck = (id: WizardCheck) => setChecks(prev => {
     const next = new Set(prev)
@@ -878,38 +878,51 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           <button type="button" className="wizard-adv-toggle" aria-expanded={advancedOpen}
             aria-controls={advancedOpen ? 'wizard-advanced' : undefined}
             onClick={() => setAdvancedOpen(o => !o)}>
-            <span>Advanced options{advancedSelected > 0 ? ` · ${advancedSelected} selected` : ''}</span>
+            <span className="wizard-adv-title">
+              Advanced options
+              {/* How many choices inside are active ("Any" does not count); shown collapsed too, so a selection is never hidden without a sign. */}
+              {advancedSelected > 0 && (
+                <>
+                  <span className="wizard-adv-badge" aria-hidden="true" data-testid="wizard-adv-badge">{advancedSelected}</span>
+                  <span className="sr-only">{advancedSelected} selected</span>
+                </>
+              )}
+            </span>
             <ChevronDown size={16} aria-hidden="true" className="wizard-adv-chevron" />
           </button>
           {advancedOpen && (
             <div id="wizard-advanced" className="wizard-options">
               {ADVANCED_CHECKS.map(renderCheck)}
+              {softwareOptions.length > 0 && (
+                <div className={`wizard-opt wizard-opt-group${effectivePreferred !== null ? ' active' : ''}`}>
+                  <div className="wizard-opt-label">Preferred software</div>
+                  <div className="wizard-opt-sub">Mints running this software rank a little higher; the others stay in the list</div>
+                  <div className="wizard-unit-seg wizard-seg-multi" role="radiogroup" aria-label="Preferred software">
+                    {[{ key: null as string | null, name: 'Any' }, ...softwareOptions].map(o => (
+                      <button key={o.key ?? 'any'} type="button" role="radio" aria-checked={o.key === effectivePreferred}
+                        className={`wizard-unit-opt${o.key === effectivePreferred ? ' active' : ''}`}
+                        onClick={() => setPreferredSoftware(o.key)}>
+                        {o.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className={`wizard-opt wizard-opt-group${latencyLimit !== null ? ' active' : ''}`}>
+                <div className="wizard-opt-label">Max latency</div>
+                <div className="wizard-opt-sub">Measured from your browser; mints that are slower, or could not be measured, are left out</div>
+                <div className="wizard-unit-seg wizard-seg-multi" role="radiogroup" aria-label="Max latency (measured from your browser)">
+                  {[{ key: null as LatencyLimit | null, name: 'Any' }, ...LATENCY_LIMITS.map(l => ({ key: l as LatencyLimit | null, name: `Under ${l} ms` }))].map(o => (
+                    <button key={o.key ?? 'any'} type="button" role="radio" aria-checked={o.key === latencyLimit}
+                      className={`wizard-unit-opt${o.key === latencyLimit ? ' active' : ''}`}
+                      onClick={() => setLatencyLimit(o.key)}>
+                      {o.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
-          {softwareOptions.length > 0 && (
-            <>
-              <div className="wizard-q">Preferred software</div>
-              <div className="wizard-unit-seg wizard-seg-multi" role="radiogroup" aria-label="Preferred software">
-                {[{ key: null as string | null, name: 'Any' }, ...softwareOptions].map(o => (
-                  <button key={o.key ?? 'any'} type="button" role="radio" aria-checked={o.key === effectivePreferred}
-                    className={`wizard-unit-opt${o.key === effectivePreferred ? ' active' : ''}`}
-                    onClick={() => setPreferredSoftware(o.key)}>
-                    {o.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          <div className="wizard-q">Max latency (measured from your browser)</div>
-          <div className="wizard-unit-seg wizard-seg-multi" role="radiogroup" aria-label="Max latency (measured from your browser)">
-            {[{ key: null as LatencyLimit | null, name: 'Any' }, ...LATENCY_LIMITS.map(l => ({ key: l as LatencyLimit | null, name: `Under ${l} ms` }))].map(o => (
-              <button key={o.key ?? 'any'} type="button" role="radio" aria-checked={o.key === latencyLimit}
-                className={`wizard-unit-opt${o.key === latencyLimit ? ' active' : ''}`}
-                onClick={() => setLatencyLimit(o.key)}>
-                {o.name}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
@@ -918,7 +931,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           {finding ? 'Measuring latency…' : 'Find my mint →'}
         </button>
       )}
-      {step === 2 && checks.size === 0 && <div className="wizard-hint">Pick at least one</div>}
+      {step === 2 && checks.size === 0 && <div className="wizard-hint">Pick at least one priority</div>}
 
       {step > 1 && !recs && (
         <button type="button" className="wizard-back-btn" onClick={() => { setStep(s => s - 1); setRecs(null) }}>
