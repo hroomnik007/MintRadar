@@ -40,7 +40,7 @@ const MINT_PREFERRED = 'Mint list: preferred (ecash from other mints is accepted
 const MINT_STRICT = 'Mint list: strict (only ecash from these mints is accepted).'
 const STRICT_LIST_NOTE = 'Because the mint list is strict, this fee does not apply.'
 const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
-const PREFIX_ERROR = 'Not a payment request: expected a string starting with creqA or creqB.'
+const PREFIX_ERROR = 'Not a payment request: expected creqA, creqB or a bitcoin: link with a creq parameter.'
 
 const card = (page: Page) => page.getByTestId('payment-request-inspector')
 const input = (page: Page) => card(page).getByRole('textbox', { name: 'Payment request' })
@@ -208,8 +208,8 @@ test.describe('malformed input gives one calm message and never reaches the erro
 
 test('NUT-26 creqB: the example of the spec shows its mint and description, with the one-shot note and no open-amount note', async ({ page }) => {
   await open(page)
-  await expect(input(page)).toHaveAttribute('placeholder', 'creqA… or creqB…')
-  await expect(card(page)).toContainText('Paste a Cashu payment request (NUT-18 creqA or NUT-26 creqB) to read what it asks for and which mints it accepts.')
+  await expect(input(page)).toHaveAttribute('placeholder', 'creqA…, creqB… or bitcoin:?creq=…')
+  await expect(card(page)).toContainText('Paste a Cashu payment request (NUT-18 creqA, NUT-26 creqB or a bitcoin: link that contains one) to read what it asks for and which mints it accepts.')
   await input(page).fill(NUT26_EXAMPLE)
   await expect(errorBox(page)).toHaveCount(0)
   await expect(result(page)).toContainText('demo123')
@@ -325,6 +325,66 @@ test('decoding sends nothing: no request carries the pasted string, no /api call
     expect(r.body ?? '', r.url).not.toContain(n)
   }
   expect(own).toEqual([])
+})
+
+test.describe('bitcoin: links with a creq parameter (BIP-321)', () => {
+  const LN = 'lnbc210n1p56amv8sp5v5gvxh0swyje66pcxtqtqh3qmzxd74fkxhjmzgzw7nff9fuhcdgqpp566zkpv'
+  const URI = `bitcoin:?creq=${NUT26_EXAMPLE}`
+  const UNIFIED = `bitcoin:bc1qexampleaddress?lightning=${LN}&lno=lno1abc&creq=${NUT26_EXAMPLE}`
+  const note = (page: Page) => card(page).getByTestId('pr-link-note')
+
+  for (const [w, h] of [[1440, 900], [390, 844]] as const) {
+    test(`${w}px: the spec example URI shows its mint and description`, async ({ page }) => {
+      await open(page, [w, h])
+      await input(page).fill(URI)
+      await expect(errorBox(page)).toHaveCount(0)
+      await expect(result(page)).toContainText('demo123')
+      await expect(result(page)).toContainText('Coffee payment')
+      await expect(result(page).getByTestId('pr-mint').first()).toContainText('https://mint.example.com')
+      await expect(note(page)).toHaveText('From a bitcoin: link.')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    })
+  }
+
+  test('a unified URI shows the note with what else the link offers; the note holds no link', async ({ page }) => {
+    await open(page)
+    await input(page).fill(UNIFIED)
+    await expect(result(page)).toContainText('Coffee payment')
+    await expect(note(page)).toHaveText('From a bitcoin: link. The link also offers: Lightning invoice, BOLT12 offer, on-chain address. Only the Cashu payment request (creq) is decoded here.')
+    await expect(note(page).locator('a')).toHaveCount(0)
+    for (const part of [result(page), note(page)]) {
+      await expect(part).not.toContainText(LN)
+      await expect(part).not.toContainText('lno1abc')
+      await expect(part).not.toContainText('bc1qexampleaddress')
+    }
+  })
+
+  test('a bitcoin: link without creq shows its message; one over the cap shows the length message', async ({ page }) => {
+    await open(page)
+    await input(page).fill(`bitcoin:bc1qx?lightning=${LN}`)
+    await expect(errorBox(page)).toHaveText('This bitcoin: link has no creq parameter, so there is no Cashu payment request in it.')
+    await expect(result(page)).toHaveCount(0)
+    await input(page).fill(`bitcoin:?lightning=${'a'.repeat(8200)}`)
+    await expect(errorBox(page)).toHaveText('This bitcoin: link is longer than 8,192 characters, more than this tool reads.')
+  })
+
+  test('decoding a URI sends nothing and contacts nothing', async ({ page }) => {
+    trackRequests(page)
+    const warmedUp = page.waitForRequest(r => /\/api\/stats(\?|$)/.test(r.url()))
+    await open(page)
+    await warmedUp
+    await networkQuiet(page)
+    await flush(page)
+    const seen: { url: string; body: string | null }[] = []
+    page.on('request', r => seen.push({ url: r.url(), body: r.postData() }))
+    for (const text of [URI, UNIFIED, `bitcoin:?lightning=${LN}`]) {
+      await input(page).fill(text)
+      await expect(page.getByTestId('pr-result').or(errorBox(page))).toBeVisible()
+    }
+    await flush(page)
+    const own = seen.filter(r => !r.url.endsWith('/__e2e_barrier__'))
+    expect(own).toEqual([])
+  })
 })
 
 test.describe('layout', () => {

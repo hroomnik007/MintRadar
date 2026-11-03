@@ -95,7 +95,7 @@ describe('parsePaymentRequest', () => {
       expect(r.ok, s).toBe(false)
       if (!r.ok) { expect(r.reason, s).toBe('prefix'); expect(r.message, s).toBe(PAYMENT_REQUEST_PREFIX_ERROR) }
     }
-    expect(PAYMENT_REQUEST_PREFIX_ERROR).toBe('Not a payment request: expected a string starting with creqA or creqB.')
+    expect(PAYMENT_REQUEST_PREFIX_ERROR).toBe('Not a payment request: expected creqA, creqB or a bitcoin: link with a creq parameter.')
   })
 
   it('creqA prefix is case-insensitive; the payload is not touched', () => {
