@@ -127,11 +127,25 @@ describe('mobile Compare table', () => {
     expect(cells('limits')[0]).toContain('min not declared, max not declared')
   })
 
-  it('desktop keeps the grid and has no switch', () => {
+  it('desktop keeps the grid and carries the same switch: off shows every row, on hides the equal ones', () => {
     mobile = false
     const { baseElement } = renderModal([A, B])
     expect(baseElement.querySelector('.cmp-grid')).not.toBeNull()
     expect(baseElement.querySelector('table.cmp-m-table')).toBeNull()
-    expect(screen.queryByRole('switch', { name: 'Only differences' })).toBeNull()
+    const sw = screen.getByRole('switch', { name: 'Only differences' })
+    expect(sw.getAttribute('aria-checked')).toBe('false')
+    const labels = () => [...baseElement.querySelectorAll('.cmp-grid .cmp-lbl')].map(e => (e.textContent ?? '').trim())
+    const all = labels()
+    expect(all).toContain('Status')
+    fireEvent.click(sw)
+    expect(sw.getAttribute('aria-checked')).toBe('true')
+    const shown = labels()
+    expect(shown).not.toContain('Status')      // both online: same
+    expect(shown).toContain('Reliability Score') // 80 vs 60
+    expect(shown.some(l => l.startsWith('Latency'))).toBe(true) // 50 vs 300
+    expect(shown.some(l => l.startsWith('Input fee'))).toBe(true) // probe not answered yet: stays
+    expect(baseElement.querySelector('.cmp-d-status')?.textContent).toMatch(/rows differ/)
+    fireEvent.click(sw)
+    expect(labels()).toEqual(all)
   })
 })
