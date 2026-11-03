@@ -1,5 +1,5 @@
 import { INPUT_FEE_TEXT, compareAuditSuccessText, COMPARE_NUT_SUPPORT_TEXT } from '@/utils/tooltipTexts'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import {
   XAxis, YAxis, CartesianGrid,
@@ -26,6 +26,7 @@ import './ComparisonModal.css'
 import { auditSuccessText, storedKeysetsAsLive } from '@/utils/mintDetailFacts'
 import { visibleCompareRows, type CompareKey, type CompareRowKeys } from '@/utils/compareDiff'
 import { compareMethods, limitsKey, type CompareMethods, type MethodsCell } from '@/utils/compareMethods'
+import { SCORE_PART_ROWS, COMPARE_CONTACT_LABEL, COMPARE_NIP87_LABEL, scorePointsText, contactMethodsText, nip87RowText } from '@/utils/compareScoreRows'
 import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
 
 function reliabilityScoreInfo(score: number) {
@@ -79,6 +80,8 @@ function LimitsValue({ m }: { m: CompareMethods }) {
     </span>
   )
 }
+
+const EXTRA_ROW_IDS = new Set([...SCORE_PART_ROWS.map(r => r.id), 'contact-methods', 'nip87'])
 
 function listReliabilityScore(mint: KnownMint): number {
   if (mint.online !== true) return 0
@@ -275,6 +278,18 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     if (!q || q.isLoading) return null
     return String(q.data?.uptimePct ?? '—')
   }
+  // Contact methods: kinds only, from the probe answer this modal already fetches (same pending / failed states as the Input fee row).
+  const contactText = (i: number): string | null | 'pending' => {
+    const q = probeQueries[i]
+    if (!q || q.isLoading) return 'pending'
+    return q.data ? contactMethodsText(q.data) : null
+  }
+  const contactKey = (i: number): CompareKey => { const t = contactText(i); return t === 'pending' ? null : (t ?? 'n/a') }
+  const scoreRows = SCORE_PART_ROWS.map(r => ({
+    id: r.id, label: r.label,
+    keys: mints.map(m => scorePointsText(m, r.part, now)),
+    cell: (i: number) => <span className="cmp-fact">{scorePointsText(mints[i]!, r.part, now)}</span>,
+  }))
   const compareRows: Array<CompareRowKeys & { label: ReactNode; cell: (i: number) => ReactNode }> = [
     {
       id: 'status', label: 'Status',
@@ -405,6 +420,22 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
         const audit = auditSuccessDisplay(mints[i]!, now)
         return <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: audit.color }}>{audit.text}</span>
       },
+    },
+    ...scoreRows,
+    {
+      id: 'contact-methods', label: COMPARE_CONTACT_LABEL,
+      keys: mints.map((_, i) => contactKey(i)),
+      cell: i => {
+        const t = contactText(i)
+        return t === 'pending' ? <span style={{ color: 'var(--text3)' }}>…</span>
+          : t === null ? <span style={{ color: 'var(--text3)' }}>n/a</span>
+          : <span className="cmp-fact">{t}</span>
+      },
+    },
+    {
+      id: 'nip87', label: COMPARE_NIP87_LABEL,
+      keys: mints.map(m => nip87RowText(m)),
+      cell: i => <span className="cmp-fact">{nip87RowText(mints[i]!)}</span>,
     },
     {
       id: 'backup', label: <>Backup<InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore coins after data loss." /></>,
@@ -739,6 +770,16 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             )
           })}
           </>)}
+
+          {/* ── Score points, Contact methods, NIP-87 announcement: one row each, right after the audit row ── */}
+          {shownCompareRows.filter(r => EXTRA_ROW_IDS.has(r.id)).map(r => (
+            <Fragment key={r.id}>
+              <div className="cmp-lbl">{r.label}</div>
+              {mints.map((mint, i) => (
+                <div key={mint.url} className="cmp-val" data-row={r.id}>{r.cell(i)}</div>
+              ))}
+            </Fragment>
+          ))}
 
           {showRow('backup') && (<>
           {/* ── Backup ── */}

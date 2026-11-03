@@ -1975,6 +1975,9 @@
   min-width: 0;
 }
 
+/* Compare: score points, contact kinds and the NIP-87 line: plain text values (no colour), long ones wrap. */
+.cmp-fact { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; min-width: 0; }
+
 /* Compare: declared limits per method and unit (utils/compareMethods.ts), one label + value pair per line. */
 .cmp-limits { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .cmp-limit { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
