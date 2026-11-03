@@ -782,22 +782,65 @@ test.describe('Tools', () => {
       await expect(page.locator('.wizard-opt', { hasText: name })).toBeVisible()
   })
 
-  test('Best Mint Wizard shows "· N selected" on the Advanced toggle and a "Pick at least one" hint', async ({ page }) => {
+  test('Best Mint Wizard shows the count of active choices as a badge on the Advanced toggle and a "Pick at least one priority" hint', async ({ page }) => {
     await page.getByRole('radio', { name: 'SAT', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
-    await expect(page.locator('.wizard-hint')).toHaveText('Pick at least one')
+    await expect(page.locator('.wizard-hint')).toHaveText('Pick at least one priority')
+    const badge = page.getByTestId('wizard-adv-badge')
+    await expect(badge).toHaveCount(0) // nothing selected inside: no badge
 
     await page.getByRole('button', { name: 'Advanced options' }).click()
     await page.locator('.wizard-opt', { hasText: 'Restore from seed' }).click()
     await expect(page.locator('.wizard-hint')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Advanced options · 1 selected' })).toBeVisible()
+    await expect(badge).toHaveText('1')
+    await expect(page.getByRole('button', { name: /^Advanced options\s+1 selected$/ })).toBeVisible()
 
     await page.locator('.wizard-opt', { hasText: 'Locked payments' }).click()
-    await expect(page.getByRole('button', { name: 'Advanced options · 2 selected' })).toBeVisible()
+    await expect(badge).toHaveText('2')
+    await expect(page.getByRole('button', { name: /^Advanced options\s+2 selected$/ })).toBeVisible()
 
-    // Collapsing keeps the count, so a selected filter is never silently hidden.
+    // Collapsing keeps the badge, so a selected choice is never silently hidden.
     await page.getByRole('button', { name: /Advanced options/ }).click()
-    await expect(page.getByRole('button', { name: 'Advanced options · 2 selected' })).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.getByRole('button', { name: /^Advanced options\s+2 selected$/ })).toHaveAttribute('aria-expanded', 'false')
+    await expect(badge).toHaveText('2')
+    await expect(badge).toBeVisible()
+  })
+
+  test('Best Mint Wizard: "Preferred software" and "Max latency" live inside Advanced options, as option cards, after Live updates', async ({ page }) => {
+    await page.getByRole('radio', { name: 'SAT', exact: true }).click()
+    await page.locator('.wizard-opt', { hasText: 'Small' }).click()
+    const soft = page.getByRole('radiogroup', { name: 'Preferred software' })
+    const lat = page.getByRole('radiogroup', { name: 'Max latency (measured from your browser)' })
+    // collapsed: not in the page at all
+    await expect(soft).toHaveCount(0)
+    await expect(lat).toHaveCount(0)
+    await expect(page.getByText('Preferred software', { exact: true })).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Advanced options' }).click()
+    await expect(soft).toBeVisible()
+    await expect(lat).toBeVisible()
+    // order inside the panel, and the same card look as the other options (same label class and size, same weight and colour)
+    const labels = await page.locator('#wizard-advanced .wizard-opt-label').allInnerTexts()
+    expect(labels).toEqual(['Restore from seed', 'Locked payments', 'Live updates', 'Preferred software', 'Max latency'])
+    const style = (loc: ReturnType<typeof page.locator>) => loc.evaluate(el => { const c = getComputedStyle(el); return [c.fontSize, c.fontWeight, c.color].join('|') })
+    const card = await style(page.locator('#wizard-advanced .wizard-opt-label', { hasText: 'Restore from seed' }))
+    expect(await style(page.locator('#wizard-advanced .wizard-opt-label', { hasText: 'Preferred software' }))).toBe(card)
+    expect(await style(page.locator('#wizard-advanced .wizard-opt-label', { hasText: 'Max latency' }))).toBe(card)
+    await expect(page.locator('#wizard-advanced .wizard-opt-group')).toHaveCount(2)
+    // no leftovers outside the panel
+    await expect(page.locator('.wizard-step-body > .wizard-q')).toHaveText(['What matters to you? (pick any)'])
+
+    // the choices keep working and count on the badge ("Any" does not)
+    const badge = page.getByTestId('wizard-adv-badge')
+    await expect(badge).toHaveCount(0)
+    await soft.getByRole('radio', { name: 'Nutshell', exact: true }).click()
+    await expect(badge).toHaveText('1')
+    await lat.getByRole('radio', { name: 'Under 600 ms' }).click()
+    await expect(badge).toHaveText('2')
+    await lat.getByRole('radio', { name: 'Any' }).click()
+    await expect(badge).toHaveText('1')
+    await soft.getByRole('radio', { name: 'Any' }).click()
+    await expect(badge).toHaveCount(0)
   })
 
   test('Best Mint Wizard "Live updates" (WebSocket) filter excludes mints without NUT-17', async ({ page }) => {

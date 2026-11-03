@@ -44,7 +44,12 @@ const toStep2 = async (page: Page) => {
   await page.locator('.wizard-opt', { hasText: 'Small' }).click()
 }
 const check = (page: Page, label: string) => page.locator('.wizard-opt', { hasText: label }).click()
-const pick = (page: Page, group: string, name: string) => page.getByRole('radiogroup', { name: group }).getByRole('radio', { name, exact: true }).click()
+// "Preferred software" and "Max latency" sit inside the collapsed "Advanced options": open it first when it is closed.
+const pick = async (page: Page, group: string, name: string) => {
+  const toggle = page.locator('.wizard-adv-toggle')
+  if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
+  await page.getByRole('radiogroup', { name: group }).getByRole('radio', { name, exact: true }).click()
+}
 const find = (page: Page) => page.getByRole('button', { name: /Find my mint/ }).click()
 const rows = (page: Page) => page.locator('.wizard-rec-row')
 const names = async (page: Page) => (await page.locator('.wizard-rec-name').allInnerTexts()).map(t => t.trim())
@@ -132,11 +137,12 @@ test('a limit with no measured mint under it says so; without a limit nothing ab
   await expect(page.getByTestId('wizard-latency-note')).toHaveText('The latency limit applies to the 4 of 4 mints measured from your browser.')
 })
 
-test('the options are in the order priorities, preferred software, max latency; Any is the default', async ({ page }) => {
+test('the options are in the order priorities, advanced options, preferred software, max latency; Any is the default', async ({ page }) => {
   await open(page, [1440, 900])
   await toStep2(page)
-  const q = await page.locator('.wizard-step-body .wizard-q').allInnerTexts()
-  expect(q).toEqual(['What matters to you? (pick any)', 'Preferred software', LAT])
+  await page.locator('.wizard-adv-toggle').click()
+  const q = await page.locator('#wizard-advanced .wizard-opt-label').allInnerTexts()
+  expect(q).toEqual(['Restore from seed', 'Locked payments', 'Live updates', 'Preferred software', 'Max latency'])
   const soft = page.getByRole('radiogroup', { name: 'Preferred software' }).getByRole('radio')
   await expect(soft).toHaveText(['Any', 'CDK-Mintd', 'Nutshell']) // the Dashboard order: most mints first, ties alphabetical
   await expect(soft.first()).toHaveAttribute('aria-checked', 'true')
