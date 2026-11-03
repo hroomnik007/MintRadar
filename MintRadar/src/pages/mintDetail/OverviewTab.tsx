@@ -243,28 +243,17 @@ export function OverviewTab({
               )}
             </div>
           )}
-          <div className="md-info-row md-hr-row">
-            <div className="md-hr-head">
+          <div className="md-hr-block">
+            <div className="md-info-row md-hr-row">
               <span className="md-info-label">Signed health record</span>
               {(() => {
                 const published = healthRecord ? healthPublishedLine(knownMint?.healthRecordPublishedAt, now) : null
-                return (
-                  <div className="md-hr-fact">
-                    {healthRecord ? (
-                      published && <div className="md-hr-published" data-testid="hr-published">{published.text}</div>
-                    ) : (
-                      <span className="md-hr-none">No current record</span>
-                    )}
-                    <span className="md-hr-about">
-                      {(!healthRecord || published) && <span className="md-hr-sep" aria-hidden="true"> · </span>}
-                      <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
-                    </span>
-                  </div>
-                )
+                if (!healthRecord) return <span className="md-info-value md-hr-published">No current record</span>
+                return published ? <span className="md-info-value md-hr-published" data-testid="hr-published">{published.text}</span> : null
               })()}
             </div>
-            {healthRecord?.njumpUrl && (
-              <span className="md-info-value md-hr-value">
+            <div className="md-hr-actions">
+              {healthRecord?.njumpUrl && (
                 <a
                   href={healthRecord.njumpUrl}
                   target="_blank"
@@ -272,8 +261,9 @@ export function OverviewTab({
                   className="md-hr-view"
                   aria-label="View on Nostr (opens njump.me, an external site, in a new tab)"
                 >View on Nostr<ExternalLink size={12} aria-hidden="true" /></a>
-              </span>
-            )}
+              )}
+              <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
+            </div>
             {healthRecord && (
               <details className="md-hr-dev">
                 <summary>For developers</summary>

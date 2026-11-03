@@ -2745,14 +2745,15 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-ua-list li { margin: 3px 0; }
 .md-ua-link { display: inline-block; padding: 4px 0; font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
-.md-hr-row { flex-wrap: wrap; gap: 6px 12px; align-items: center; }
-.md-hr-value { display: flex; flex: none; align-items: center; justify-content: flex-end; max-width: 100%; word-break: normal; font-family: var(--font-body, inherit); font-size: 13px; }
-/* Left of the row: the title, and under it one fact line "Last published <time> ago · About signed health records". */
-.md-hr-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex: 1 1 0; min-width: 0; }
-.md-hr-fact { display: flex; flex-wrap: wrap; align-items: baseline; min-width: 0; max-width: 100%; font-size: 12px; line-height: 1.4; color: var(--text3); }
-.md-hr-sep { color: var(--text3); white-space: pre; }
-.md-hr-none { font-size: 12px; color: var(--text3); }
-.md-hr-link { display: inline-block; font-size: 12px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+.md-hr-block { border-bottom: 1px solid var(--border); padding-bottom: 6px; min-width: 0; }
+.md-hr-block:last-child { border-bottom: none; padding-bottom: 0; }
+/* The label / value line is a normal .md-info-row ("Signed health record" muted on the left, "Last published <time>" brighter on
+   the right); it wraps under the label on a narrow card, as the "Fees and limits" rows do. */
+.md-hr-block > .md-hr-row { border-bottom: none; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; }
+.md-hr-row .md-hr-published { margin-left: auto; max-width: 100%; word-break: normal; overflow-wrap: anywhere; }
+/* Actions: "View on Nostr" (its content width) and the About link on one line; the link wraps under the button on a narrow card. */
+.md-hr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; }
+.md-hr-link { display: inline-block; font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
 /* "View on Nostr" (njump.me, external) is the primary action of the row. */
 .md-hr-view { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; box-sizing: border-box; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--green-soft); color: var(--accent); font-size: 12px; text-decoration: none; }
 /* "View on Nostr": one compact height, padding, font and line height on every pointer. On touch the visual size stays; an
@@ -2761,15 +2762,14 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-hr-view:hover { background: var(--green-soft-strong); }
 .md-hr-view:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* "For developers": a native <details>, collapsed, full width under the row; the summary has the height of the copy buttons. */
-.md-hr-published { min-width: 0; margin: 0; font-size: 12px; line-height: 1.4; color: var(--text3); overflow-wrap: anywhere; }
-.md-hr-dev { flex-basis: 100%; min-width: 0; }
+.md-hr-dev { min-width: 0; }
 .md-hr-dev summary { display: flex; align-items: center; gap: 6px; min-height: 32px; width: fit-content; max-width: 100%; font-size: 12px; color: var(--text2); cursor: pointer; list-style: none; }
 .md-hr-dev summary::-webkit-details-marker { display: none; }
 .md-hr-dev summary::before { content: '\25B8'; display: inline-block; font-size: 12px; transition: transform 0.15s; }
 .md-hr-dev[open] summary::before { transform: rotate(90deg); }
 .md-hr-dev summary:hover { color: var(--text); }
 .md-hr-dev summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
-.md-hr-dev-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 4px 0 6px; min-width: 0; }
+.md-hr-dev-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 4px 0 0; min-width: 0; }
 .md-hr-dev-actions { display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%; }
 .md-hr-dev-relay { font-size: 12px; color: var(--text2); overflow-wrap: anywhere; }
 .md-hr-dev-relay code { font-family: var(--font-mono); color: var(--text); }
@@ -2780,21 +2780,12 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-hr-view::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
   .md-hr-dev summary { min-height: 44px; }
 }
-/* Phones: top to bottom the title, "Last published <time>", the full-width "View on Nostr" and, under it, the centred "About" link
-   (no dot). The head, the fact line and the link wrapper dissolve (display: contents) so `order` can place the link under the button
-   although it sits next to the time in the DOM (desktop). Last in the file: it must beat the coarse-pointer rule above. */
+/* Phones: "View on Nostr" and the About link get 44px touch targets; the copy buttons under "For developers" too. Last in the file:
+   it must beat the coarse-pointer rule above. */
 @media (max-width: 640px) {
-  .md-hr-row { row-gap: 0; }
-  .md-hr-head, .md-hr-fact, .md-hr-about { display: contents; }
-  .md-hr-row .md-info-label { order: 0; flex-basis: 100%; }
-  .md-hr-published, .md-hr-none { order: 1; flex-basis: 100%; margin-top: 6px; }
-  .md-hr-published { font-size: 14px; }
-  .md-hr-value { order: 2; flex-basis: 100%; margin-top: 14px; }
-  .md-hr-row .md-hr-view { width: 100%; height: 44px; min-height: 44px; justify-content: center; }
-  .md-hr-row .md-hr-view::after { content: none; }
-  .md-hr-sep { display: none; }
-  .md-hr-link { order: 3; flex-basis: 100%; display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 0; margin-top: 4px; font-size: 13px; }
-  .md-hr-dev { order: 4; margin-top: 6px; }
+  .md-hr-actions .md-hr-view { height: 44px; min-height: 44px; }
+  .md-hr-actions .md-hr-view::after { content: none; }
+  .md-hr-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0; }
   .md-hr-dev-actions .doc-copy-btn { min-height: 44px; }
 }
 

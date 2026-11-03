@@ -123,7 +123,7 @@ test('a value seen once is the "seen …, not confirmed yet" tag, not a date', a
 
 test('"View on Nostr" keeps its compact height, padding and font size (Copy naddr now lives in "For developers")', async ({ page }) => {
   await open(page)
-  const rowEl = page.locator('.md-hr-row')
+  const rowEl = page.locator('.md-hr-block')
   await expect(rowEl.locator('.md-hr-view')).toBeVisible()
   await layoutReady(page)
   const m = await rowEl.evaluate(el => {
@@ -134,18 +134,18 @@ test('"View on Nostr" keeps its compact height, padding and font size (Copy nadd
   expect(m).toEqual({ h: 32, pad: '6px 12px', fs: '12px' })
 })
 
-test('phone, 390 px: "View on Nostr" is a full-width 44px button (no extra tap-area pseudo-element needed)', async ({ browser }) => {
+test('phone, 390 px: "View on Nostr" is a 44px button as wide as its content (no extra tap-area pseudo-element needed)', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true })
   const page = await ctx.newPage()
   await open(page, answer(), 390)
-  const rowEl = page.locator('.md-hr-row')
+  const rowEl = page.locator('.md-hr-block')
   await expect(rowEl.locator('.md-hr-view')).toBeVisible()
   await layoutReady(page)
   const m = await rowEl.evaluate(el => {
     const n = el.querySelector<HTMLElement>('.md-hr-view')!
     const cs = getComputedStyle(n), after = getComputedStyle(n, '::after')
-    return { h: n.getBoundingClientRect().height, w: Math.round(n.getBoundingClientRect().width), rowW: Math.round(el.getBoundingClientRect().width), fs: cs.fontSize, after: after.content }
+    return { h: n.getBoundingClientRect().height, narrow: n.getBoundingClientRect().width < el.getBoundingClientRect().width * 0.6, fs: cs.fontSize, after: after.content }
   })
-  expect(m).toEqual({ h: 44, w: m.rowW, rowW: m.rowW, fs: '12px', after: 'none' })
+  expect(m).toEqual({ h: 44, narrow: true, fs: '12px', after: 'none' })
   await ctx.close()
 })
