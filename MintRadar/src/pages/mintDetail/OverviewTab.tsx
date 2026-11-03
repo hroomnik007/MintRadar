@@ -251,7 +251,7 @@ export function OverviewTab({
                 return (
                   <div className="md-hr-fact">
                     {healthRecord ? (
-                      published && <div className="md-hr-published" data-testid="hr-published"><span title={published.title}>{published.text}</span></div>
+                      published && <div className="md-hr-published" data-testid="hr-published">{published.text}</div>
                     ) : (
                       <span className="md-hr-none">No current record</span>
                     )}

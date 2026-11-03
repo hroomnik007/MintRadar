@@ -321,20 +321,6 @@ test.describe('W5b D: Signed health record', () => {
     expect(await page.locator('.md-hr-fact').evaluate(el => el.textContent)).toBe('No current record · About signed health records')
   })
 
-  test('between a phone and a tablet the fact stays on one line with the dot; under 400px of room the link goes under it without a dot', async ({ page }) => {
-    await open(page, ALPHA, { healthRecordPublishedAt: ago(2 * H) }, { width: 600, height: 844 })
-    await layoutReady(page)
-    const dy = await page.locator('.md-hr-fact').evaluate(el => {
-      const c = (n: Element) => { const b = n.getBoundingClientRect(); return b.y + b.height / 2 }
-      return Math.abs(c(el.querySelector('[data-testid="hr-published"]')!) - c(el.querySelector('a')!))
-    })
-    expect(dy).toBeLessThan(8)
-    await expect(page.locator('.md-hr-sep')).toBeVisible()
-    await resize(page, 390, 844)
-    await expect(page.locator('.md-hr-sep')).toBeHidden()
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  })
-
   test('an archived mint shows "No current record" and the same link', async ({ page }) => {
     await open(page, GONE, UNAVAILABLE.archived, { probeOffline: true })
     const row = page.locator('.md-hr-row')
@@ -349,12 +335,16 @@ test.describe('W5b D: Signed health record', () => {
 
   // Task H1: "Last published <relative time>" (title: the absolute UTC time) from /api/mints/known `healthRecordPublishedAt`.
   for (const width of [1440, 390]) {
-    test(`${width} px: the row says when the record was last published, with the UTC time as the title; nothing extra without the time`, async ({ page }) => {
+    test(`${width} px: the row says when the record was last published, as plain muted text (no title, no tooltip); nothing extra without the time`, async ({ page }) => {
       await open(page, ALPHA, { healthRecordPublishedAt: ago(2 * H + 5 * 60_000) }, { width, height: 844 })
       const row = page.locator('.md-hr-row')
       const line = row.getByTestId('hr-published')
       await expect(line).toHaveText('Last published 2h ago')
-      await expect(line.locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
+      // (a) no title attribute anywhere in the line or its trigger-less text, no tooltip trigger, no dotted underline
+      await expect(line.locator('[title]')).toHaveCount(0)
+      expect(await line.getAttribute('title')).toBeNull()
+      await expect(line.locator('[data-tooltip-trigger]')).toHaveCount(0)
+      expect(await line.evaluate(el => getComputedStyle(el).textDecorationLine)).toBe('none')
       // plain text: no link, no button, no icon in it; at least 12px; the other controls of the row are still there
       await expect(line.locator('a, button, svg, img')).toHaveCount(0)
       expect(await line.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12)
@@ -389,7 +379,7 @@ test.describe('W5b D: Signed health record', () => {
 
   for (const width of [390, 360, 320]) {
     for (const opened of [false, true]) {
-      test(`${width} px, "For developers" ${opened ? 'open' : 'closed'}: no horizontal overflow, text at least 12px, stacked layout, 44px full-width copy buttons`, async ({ page }) => {
+      test(`${width} px, "For developers" ${opened ? 'open' : 'closed'}: no horizontal overflow, text at least 12px, order title / fact / View on Nostr / About, 44px copy buttons side by side`, async ({ page }) => {
         await open(page, ALPHA, { healthRecordPublishedAt: ago(2 * H) }, { width, height: 844 })
         const row = page.locator('.md-hr-row')
         if (opened) {
@@ -409,21 +399,34 @@ test.describe('W5b D: Signed health record', () => {
         }, width)
         expect(m).toEqual([])
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-        // title and fact on top, "View on Nostr" under them on the full row width, the About link under the publish line
+        // (c) top to bottom: title, fact (14px, muted), "View on Nostr" (full width, 44px), then the centred About link (13px, 44px)
         const [t, pub, about, view, rowBox] = await Promise.all([
           row.locator('.md-info-label').boundingBox(), row.getByTestId('hr-published').boundingBox(),
           row.getByRole('link', { name: 'About signed health records' }).boundingBox(), row.locator('.md-hr-view').boundingBox(), row.boundingBox(),
         ])
-        expect(pub!.y).toBeGreaterThanOrEqual(t!.y + t!.height - 1)
-        expect(about!.y).toBeGreaterThanOrEqual(pub!.y + pub!.height - 1)
-        expect(view!.y).toBeGreaterThanOrEqual(about!.y + about!.height - 1)
+        expect(Math.abs(pub!.y - (t!.y + t!.height) - 6)).toBeLessThanOrEqual(1) // title -> fact: 6px
+        expect(Math.abs(view!.y - (pub!.y + pub!.height) - 14)).toBeLessThanOrEqual(1) // fact -> button: 14px
+        expect(Math.abs(about!.y - (view!.y + view!.height) - 4)).toBeLessThanOrEqual(1) // button -> link: 4px
         expect(Math.abs(view!.width - rowBox!.width)).toBeLessThanOrEqual(1)
+        expect(view!.height).toBe(44)
+        expect(about!.height).toBeGreaterThanOrEqual(44)
+        const css = await row.evaluate(el => {
+          const f = (s: string) => getComputedStyle(el.querySelector(s)!)
+          return { pub: f('.md-hr-published').fontSize, link: f('.md-hr-link').fontSize, align: f('.md-hr-link').justifyContent, sep: f('.md-hr-sep').display }
+        })
+        expect(css).toEqual({ pub: '14px', link: '13px', align: 'center', sep: 'none' })
+        expect(await row.locator('.md-hr-fact').evaluate(el => el.textContent)).toContain('Last published 2h ago')
         if (opened) {
+          // (d) the two copy buttons side by side, each at least 44px tall, 12px text, not full width; wrapping (320px) never overflows
           const a = (await row.getByRole('button', { name: /naddr/ }).boundingBox())!
           const b = (await row.getByRole('button', { name: /nak command/ }).boundingBox())!
-          expect(b.y).toBeGreaterThanOrEqual(a.y + a.height) // one under the other
-          expect(Math.abs(a.width - rowBox!.width)).toBeLessThanOrEqual(1)
-          expect(Math.abs(b.width - rowBox!.width)).toBeLessThanOrEqual(1)
+          if (width === 320) {
+            expect(b.x + b.width <= 320 && a.x >= 0).toBe(true)
+          } else {
+            expect(b.y).toBe(a.y)
+            expect(a.x + a.width + 8).toBeCloseTo(b.x, 0)
+          }
+          expect(a.width).toBeLessThan(rowBox!.width - 20)
           expect(a.height).toBeGreaterThanOrEqual(44)
           expect(b.height).toBeGreaterThanOrEqual(44)
           expect(await row.getByRole('button', { name: /naddr/ }).evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12)

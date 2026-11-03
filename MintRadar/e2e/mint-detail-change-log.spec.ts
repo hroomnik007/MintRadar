@@ -134,10 +134,9 @@ test('"View on Nostr" keeps its compact height, padding and font size (Copy nadd
   expect(m).toEqual({ h: 32, pad: '6px 12px', fs: '12px' })
 })
 
-test('touch, 390 px: "View on Nostr" stays compact (32px, 6px 12px) with a 44px tall invisible tap area', async ({ browser }) => {
+test('phone, 390 px: "View on Nostr" is a full-width 44px button (no extra tap-area pseudo-element needed)', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true })
   const page = await ctx.newPage()
-  expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'touch emulation').toBe(true)
   await open(page, answer(), 390)
   const rowEl = page.locator('.md-hr-row')
   await expect(rowEl.locator('.md-hr-view')).toBeVisible()
@@ -145,8 +144,8 @@ test('touch, 390 px: "View on Nostr" stays compact (32px, 6px 12px) with a 44px 
   const m = await rowEl.evaluate(el => {
     const n = el.querySelector<HTMLElement>('.md-hr-view')!
     const cs = getComputedStyle(n), after = getComputedStyle(n, '::after')
-    return { h: n.getBoundingClientRect().height, pad: `${cs.paddingTop} ${cs.paddingRight}`, fs: cs.fontSize, tap: parseFloat(after.height), pos: after.position }
+    return { h: n.getBoundingClientRect().height, w: Math.round(n.getBoundingClientRect().width), rowW: Math.round(el.getBoundingClientRect().width), fs: cs.fontSize, after: after.content }
   })
-  expect(m).toEqual({ h: 32, pad: '6px 12px', fs: '12px', tap: 44, pos: 'absolute' })
+  expect(m).toEqual({ h: 44, w: m.rowW, rowW: m.rowW, fs: '12px', after: 'none' })
   await ctx.close()
 })
