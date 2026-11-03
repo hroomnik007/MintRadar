@@ -362,4 +362,43 @@ describe('GET /api/mints/known: names and operator reviews', () => {
     expect(operated).toMatchObject({ operatorReviewCount: 2 })
     expect(normal).toMatchObject({ operatorReviewCount: 0 })
   })
+
+  describe('healthRecordPublishedAt (Task H1)', () => {
+    const PUBLISHED = 1_793_000_000 // attestation_state.last_created_at, BIGINT (pg returns it as a string)
+    const get = async (rows: Record<string, unknown>[]) => {
+      query.mockResolvedValueOnce({ rows })
+      const res = await request(app).get('/api/mints/known')
+      expect(res.status).toBe(200)
+      return res.body as Array<Record<string, unknown>>
+    }
+
+    it('is the ISO time of the last published event for a mint with a current record', async () => {
+      const [m] = await get([sampleRow({ health_published_at: String(PUBLISHED), last_online_at: new Date().toISOString() })])
+      expect(m?.['healthRecordPublishedAt']).toBe(new Date(PUBLISHED * 1000).toISOString())
+    })
+
+    it('is null for a mint that was never published, for one without a stored score, and for an archived one', async () => {
+      const old = new Date(Date.now() - 40 * 86_400_000).toISOString()
+      const rows = await get([
+        sampleRow({ url: 'https://never.example', health_published_at: null }),
+        sampleRow({ url: 'https://noscore.example', health_published_at: String(PUBLISHED), last_reliability_score: null }),
+        // archived: the last successful probe is more than 30 days old and the latest probe failed (archived.ts)
+        sampleRow({ url: 'https://archived.example', health_published_at: String(PUBLISHED), latest_online: false, last_online_at: old }),
+      ])
+      const by = (u: string) => rows.find(r => r['url'] === u)
+      expect(by('https://never.example')).toHaveProperty('healthRecordPublishedAt', null)
+      expect(by('https://noscore.example')).toHaveProperty('healthRecordPublishedAt', null)
+      expect(by('https://archived.example')).toMatchObject({ archived: true, healthRecordPublishedAt: null })
+    })
+
+    it('is read in the same query as the rest (one query for the snapshot) and the wallet API does not carry it', async () => {
+      query.mockResolvedValue({ rows: [sampleRow({ health_published_at: String(PUBLISHED) })] })
+      const known = await request(app).get('/api/mints/known')
+      expect(known.body[0]).toHaveProperty('healthRecordPublishedAt')
+      expect(String(query.mock.calls[0]?.[0])).toContain('attestation_state')
+      const wallet = await request(app).get('/api/wallets/mints').query({ includeOffline: 'true', includeUnscored: 'true' })
+      expect(JSON.stringify(wallet.body)).not.toContain('healthRecordPublishedAt')
+      expect(JSON.stringify(wallet.body)).not.toContain('health_published_at')
+    })
+  })
 })

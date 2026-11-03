@@ -22,7 +22,7 @@ import { formatTimeAgo } from '@/utils/mintFormatting'
 import { clockDriftLabel, isMotdAlert } from '@/utils/mintProbeDisplay'
 import { contactsNotSavedYet, CONTACTS_NOT_SAVED_TEXT } from '@/utils/mintDetailFacts'
 import { LAST_SCORE_CAPTION, KEEP_WALLET_SENTENCE, TEMPORARY_SENTENCE, contactSentence, restoreSentence, type UnavailableHeadline } from '@/utils/unavailableMint'
-import { HEALTH_RELAY_URL, type HealthRecord } from '@/utils/healthRecord'
+import { HEALTH_RELAY_URL, healthPublishedLine, type HealthRecord } from '@/utils/healthRecord'
 import type { InfoDates } from '@/utils/changeDates'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import type { MintStatus } from '@/core/mint/api'
@@ -264,6 +264,10 @@ export function OverviewTab({
               )}
               <Link to="/for-wallets#signed-health-assertions" className="md-hr-link">About signed health records</Link>
             </span>
+            {healthRecord && (() => {
+              const published = healthPublishedLine(knownMint?.healthRecordPublishedAt, now)
+              return published ? <div className="md-hr-published" data-testid="hr-published"><span title={published.title}>{published.text}</span></div> : null
+            })()}
             {healthRecord && (
               <details className="md-hr-dev">
                 <summary>For developers</summary>

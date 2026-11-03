@@ -175,6 +175,7 @@ describe('contract', () => {
         "descriptionLong",
         "discoveredAt",
         "hasOnion",
+        "healthRecordPublishedAt",
         "iconUrl",
         "ipAddress",
         "lastCheckedAt",
