@@ -19,6 +19,7 @@ import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe } from '@/utils/reliabilityScore'
 import { weightsFor, reviewsScore, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
+import { softwareChoices, rankWizardRecs, wizardReasonText, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -695,6 +696,14 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   const [recs, setRecs] = useState<WizardRec[] | null>(null)
   const [recsUnit, setRecsUnit] = useState<string | null>(null)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  // Task B2: a soft software preference (a family key, null = Any) and a latency limit over the browser measurements the wizard
+  // already takes (null = Any). `recsCtx` is what the shown results were computed with, so their reason lines and notes do not
+  // change when an option is toggled afterwards.
+  const [preferredSoftware, setPreferredSoftware] = useState<string | null>(null)
+  const [latencyLimit, setLatencyLimit] = useState<LatencyLimit | null>(null)
+  const [recsCtx, setRecsCtx] = useState<{ checks: Set<WizardCheck>; preferred: string | null; limit: LatencyLimit | null; measured: number; total: number } | null>(null)
+  const softwareOptions = useMemo(() => softwareChoices(knownMints), [knownMints])
+  const effectivePreferred = softwareOptions.some(o => o.key === preferredSoftware) ? preferredSoftware : null
 
   // Built from the distinct units the online mints actually advertise, never a
   // hardcoded sat/usd/eur list — a mint offering a new unit shows up here on its
@@ -771,7 +780,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     const maxLatency = Math.max(...[...latencyMap.values()].filter((v): v is number => v !== null), 1)
     const maxNuts = Math.max(...candidates.map(m => m.nutCount ?? 0), 1)
 
-    const scored: WizardRec[] = candidates.map(m => {
+    const scoredAll: WizardRec[] = candidates.map(m => {
       const latMs = latencyMap.get(m.url) ?? null
       const latScore = latMs !== null ? 1 - latMs / maxLatency : 0
       const reliabilityScore = (m.reliabilityScore ?? 0) / 100
@@ -784,9 +793,14 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
         mintLimits: limitsForUnit(m.mintMethods ?? null, selectedUnit),
         meltLimits: limitsForUnit(m.meltMethods ?? null, selectedUnit),
       }
-    }).sort((a, b) => b.score - a.score).slice(0, 3)
+    })
 
-    setRecs(scored)
+    // Software preference (a score credit, nobody removed) and the latency limit (only measured mints under it) are applied here, after
+    // the measurement the wizard always takes: choosing a limit starts no connection of its own.
+    const ranking = rankWizardRecs(scoredAll, { preferred: effectivePreferred, latencyLimit })
+
+    setRecs(ranking.top)
+    setRecsCtx({ checks: new Set(checks), preferred: effectivePreferred, limit: latencyLimit, measured: ranking.measured, total: ranking.total })
     setRecsUnit(selectedUnit)
     setFinding(false)
   }
@@ -872,6 +886,30 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
               {ADVANCED_CHECKS.map(renderCheck)}
             </div>
           )}
+          {softwareOptions.length > 0 && (
+            <>
+              <div className="wizard-q">Preferred software</div>
+              <div className="wizard-unit-seg wizard-seg-multi" role="radiogroup" aria-label="Preferred software">
+                {[{ key: null as string | null, name: 'Any' }, ...softwareOptions].map(o => (
+                  <button key={o.key ?? 'any'} type="button" role="radio" aria-checked={o.key === effectivePreferred}
+                    className={`wizard-unit-opt${o.key === effectivePreferred ? ' active' : ''}`}
+                    onClick={() => setPreferredSoftware(o.key)}>
+                    {o.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="wizard-q">Max latency (measured from your browser)</div>
+          <div className="wizard-unit-seg wizard-seg-multi" role="radiogroup" aria-label="Max latency (measured from your browser)">
+            {[{ key: null as LatencyLimit | null, name: 'Any' }, ...LATENCY_LIMITS.map(l => ({ key: l as LatencyLimit | null, name: `Under ${l} ms` }))].map(o => (
+              <button key={o.key ?? 'any'} type="button" role="radio" aria-checked={o.key === latencyLimit}
+                className={`wizard-unit-opt${o.key === latencyLimit ? ' active' : ''}`}
+                onClick={() => setLatencyLimit(o.key)}>
+                {o.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -891,7 +929,9 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       {recs !== null && (
         <div className="wizard-results">
           {recs.length === 0 ? (
-            <div className="wizard-no-results">No online mint supports {recsUnit} with the options you picked. Try another currency or change your answers.</div>
+            recsCtx?.limit != null && recsCtx.total > 0
+              ? <div className="wizard-no-results">{latencyLimitEmptyText(recsCtx.limit)}</div>
+              : <div className="wizard-no-results">No online mint supports {recsUnit} with the options you picked. Try another currency or change your answers.</div>
           ) : (
             <>
             {recs.length < 3 && (
@@ -906,6 +946,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
               const unitLabel = recsUnit ?? ''
               const mintRange = formatLimits(rec.mintLimits, unitLabel)
               const meltRange = formatLimits(rec.meltLimits, unitLabel)
+              const reason = recsCtx ? wizardReasonText({ checks: recsCtx.checks, mint: rec.mint, latencyMs: rec.latencyMs, latencyLimit: recsCtx.limit, preferred: recsCtx.preferred }) : null
               return (
                 <div key={rec.url} className="wizard-rec-row" {...clickableProps(() => navigate(`/mint/${encodeURIComponent(rec.url)}`))}>
                   <span className="wizard-rank">#{idx + 1}</span>
@@ -927,6 +968,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                         <span>No {unitLabel} limits published by this mint</span>
                       )}
                     </div>
+                    {reason && <div className="wizard-rec-facts">{reason}</div>}
                   </div>
                   <div className="wizard-rec-badge-col">
                   <span className="wizard-rec-badges">
@@ -954,6 +996,9 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
             })}
             </>
           )}
+          {recsCtx?.limit != null && recsCtx.total > 0 && (
+            <div className="wizard-latency-note" data-testid="wizard-latency-note">{latencyLimitNote(recsCtx.measured, recsCtx.total)}</div>
+          )}
           <div className="wizard-rec-exclusion-note">Test mints are never recommended here.</div>
           {recs.length > 0 && (
             <div className="wizard-rec-note">
@@ -963,7 +1008,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
             </div>
           )}
           <button type="button" className="wizard-start-over-btn"
-            onClick={() => { setStep(1); setSize(null); setChecks(new Set()); setRecs(null); setRecsUnit(null) }}>
+            onClick={() => { setStep(1); setSize(null); setChecks(new Set()); setPreferredSoftware(null); setLatencyLimit(null); setRecs(null); setRecsCtx(null); setRecsUnit(null) }}>
             ← Start over
           </button>
         </div>
