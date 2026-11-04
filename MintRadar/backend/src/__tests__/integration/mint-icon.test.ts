@@ -122,6 +122,20 @@ describe('GET /api/mint/icon', () => {
       await request(app).get(ICON_URL).set('If-None-Match', `"nope", ${first.headers['etag'] as string}`).expect(304)
     })
 
+    it('a matching (weak) ETag is a 304 even with Cache-Control: no-cache, as fetch() sends it', async () => {
+      arrange()
+      const first = await request(app).get(ICON_URL).expect(200)
+      const res = await request(app).get(ICON_URL).set('If-None-Match', `W/${first.headers['etag'] as string}`)
+        .set('Cache-Control', 'no-cache').set('Pragma', 'no-cache').expect(304)
+      expect(res.headers['etag']).toBe(first.headers['etag'])
+      expect(res.headers['cache-control']).toBe('public, max-age=604800, stale-while-revalidate=86400')
+    })
+
+    it('a non-matching ETag with Cache-Control: no-cache answers 200', async () => {
+      arrange()
+      await request(app).get(ICON_URL).set('If-None-Match', '"0000000000000000000000000000000f"').set('Cache-Control', 'no-cache').expect(200)
+    })
+
     it('If-None-Match with another ETag answers 200 with the full body', async () => {
       arrange()
       const res = await request(app).get(ICON_URL).set('If-None-Match', '"0000000000000000000000000000000f"').expect(200)
