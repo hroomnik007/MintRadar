@@ -793,7 +793,7 @@ export function sendCachedBody(res: Response, body: CachedBody, maxAgeSec = 300)
   res.setHeader('ETag', body.etag)
   // Answer the 304 ourselves instead of leaving it to Express's req.fresh: fetch() (Node/undici, browsers) adds
   // Cache-Control: no-cache to every request that carries If-None-Match, and fresh() then always gives a full 200.
-  if (ifNoneMatchMatches(res.req.headers['if-none-match'], body.etag)) {
+  if (ifNoneMatchMatches((res.req as Request | undefined)?.headers['if-none-match'], body.etag)) {
     res.status(304).end()
     return
   }
