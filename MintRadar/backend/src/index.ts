@@ -35,7 +35,7 @@ import { loadSpaTemplate, renderSpaHtml, resolveSpaHead, type SpaKnownMint } fro
 import { publicMintName, publicMintNameOrHost } from './mintNames.js'
 import {
   usesWalletRateLimit, isRecommendPath, isPublicCorsPath, PUBLIC_CORS_EXPOSE_HEADERS, parseWalletListQuery, walletListEnvelope, walletSingleEnvelope, recommendEnvelope,
-  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, sendWalletError, queryOf, keysetsOf, changesOf, type Snapshot, type WalletExtra, type AuditDirectionsRow, latency24hOf,
+  memoizedBody, cachedBodyOf, buildCachedBody, sendCachedBody, ifNoneMatchMatches, sendWalletError, queryOf, keysetsOf, changesOf, type Snapshot, type WalletExtra, type AuditDirectionsRow, latency24hOf,
 } from './walletApi.js'
 import { readStoredBreakdown } from './scoreBreakdown.js'
 import { readStoredContactChecks } from './contactChecks.js'
@@ -1875,8 +1875,10 @@ app.get('/api/mint/icon', (req: Request, res: Response): void => {
       // expired is revalidated by its strong ETag (304, no body). stale-while-revalidate: for a day past that the stale
       // copy shows at once while the 304 check runs in the background. The 204 "no icon" answer keeps its 30 minutes.
       res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400')
-      res.setHeader('ETag', iconEtag(icon.body))
-      if (req.fresh) {
+      const etag = iconEtag(icon.body)
+      res.setHeader('ETag', etag)
+      // Not req.fresh: fetch() adds Cache-Control: no-cache next to If-None-Match, and fresh() then never matches.
+      if (ifNoneMatchMatches(req.headers['if-none-match'], etag)) {
         res.removeHeader('Content-Type')
         res.status(304).end()
         return

@@ -791,8 +791,24 @@ export function cachedBodyOf(data: object): CachedBody {
 export function sendCachedBody(res: Response, body: CachedBody, maxAgeSec = 300): void {
   res.setHeader('Cache-Control', `public, max-age=${maxAgeSec}`)
   res.setHeader('ETag', body.etag)
+  // Answer the 304 ourselves instead of leaving it to Express's req.fresh: fetch() (Node/undici, browsers) adds
+  // Cache-Control: no-cache to every request that carries If-None-Match, and fresh() then always gives a full 200.
+  if (ifNoneMatchMatches((res.req as Request | undefined)?.headers['if-none-match'], body.etag)) {
+    res.status(304).end()
+    return
+  }
   res.type('application/json')
   res.send(body.json)
+}
+
+/** Weak comparison (RFC 9110 13.1.2): `*`, or any entry of the comma list equal to `etag` once `W/` is stripped. */
+export function ifNoneMatchMatches(header: string | undefined, etag: string): boolean {
+  if (!header) return false
+  const opaque = etag.replace(/^W\//, '')
+  return header.split(',').some(t => {
+    const tag = t.trim()
+    return tag === '*' || tag.replace(/^W\//, '') === opaque
+  })
 }
 
 export function sendWalletError(res: Response, status: number, code: string, message: string, retryAfterSec?: number): void {
