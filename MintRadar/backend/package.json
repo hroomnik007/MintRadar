@@ -18,7 +18,7 @@
     "express": "^5.3.0",
     "ipaddr.js": "^2.5.0",
     "node-cron": "^4.6.0",
-    "nostr-tools": "^2.25.2",
+    "nostr-tools": "^2.25.4",
     "p-limit": "^7.3.3",
     "pg": "^8.23.1",
     "undici": "^8.12.3",
@@ -27,7 +27,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.6",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "@types/ws": "^8.18.2",
