@@ -9,6 +9,15 @@
 
 import WebSocket from 'ws'
 import type { Event as NostrEvent } from 'nostr-tools'
+import {
+  mintUrlsForReviewEvent,
+  reviewFiltersForMintBatch,
+  type MintReviewIdentity,
+  type MintReviewIndex,
+} from './reviewMatching.js'
+
+export type { MintReviewIdentity, MintReviewIndex } from './reviewMatching.js'
+export { buildMintReviewIndex, reviewFiltersForMintBatch } from './reviewMatching.js'
 
 export const REVIEW_REQ_LIMIT = 500
 /** Mints per REQ (number of `#u` values in one filter). No NIP-11 limit is read anywhere, so this is the default. */
@@ -33,7 +42,9 @@ const PUSHBACK_PATTERN = /rate-?limit|too many|blocked/i
 
 export interface ReviewFilter {
   kinds: number[]
-  '#u': string[]
+  '#u'?: string[]
+  '#d'?: string[]
+  '#a'?: string[]
   limit: number
   since?: number
 }
@@ -52,8 +63,8 @@ export type RelayQueryResult =
   | { status: 'failed'; reason: string }
 
 export interface RelayConnection {
-  /** Never rejects. */
-  query(filter: ReviewFilter | ProfileFilter, timeoutMs: number): Promise<RelayQueryResult>
+  /** Never rejects. One filter object, or several ReviewFilters in one REQ (OR across filters). */
+  query(filter: ReviewFilter | ProfileFilter | readonly ReviewFilter[], timeoutMs: number): Promise<RelayQueryResult>
   close(): void
 }
 
@@ -142,7 +153,8 @@ export const connectRelayWs: ConnectRelay = (url, timeoutMs) => new Promise((res
           const timer = setTimeout(() => settle({ status: 'failed', reason: 'timeout' }), queryTimeoutMs)
           active = { subId, events: [], timer, resolve: res }
           try {
-            ws.send(JSON.stringify(['REQ', subId, filter]))
+            const parts = Array.isArray(filter) ? filter : [filter]
+            ws.send(JSON.stringify(['REQ', subId, ...parts]))
           } catch {
             settle({ status: 'failed', reason: 'socket-error' })
           }
@@ -201,18 +213,30 @@ export function planRelayQuery(state: RelaySyncState | undefined, nowSec: number
 // ── Grouping ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Assigns kind:38000 events to the mints named by their `u` tags (exact string match, same as the relay's
- * `#u` filter and the old per-mint query). An event naming several tracked mints belongs to each of them.
+ * Assigns kind:38000 events to known mints via u / d / a tags (see reviewMatching.ts).
+ * `mintUrls` alone keeps the old exact-`u` behaviour. Pass `index` for IMF-compatible
+ * URL normalization and d/a addressing. An event naming several tracked mints belongs to each.
  */
-export function groupEventsByMint(events: readonly NostrEvent[], mintUrls: ReadonlySet<string>): Map<string, NostrEvent[]> {
+export function groupEventsByMint(
+  events: readonly NostrEvent[],
+  mintUrls: ReadonlySet<string>,
+  index?: MintReviewIndex,
+): Map<string, NostrEvent[]> {
   const out = new Map<string, NostrEvent[]>()
+  const resolvedIndex = index ?? { urls: mintUrls, byId: new Map() }
   for (const e of events) {
     if (e.kind !== 38000) continue
-    const owners = new Set<string>()
-    for (const t of e.tags) {
-      if (t[0] === 'u' && t[1] !== undefined && mintUrls.has(t[1])) owners.add(t[1])
-    }
+    const owners = index
+      ? mintUrlsForReviewEvent(e.tags, resolvedIndex)
+      : (() => {
+          const exact = new Set<string>()
+          for (const t of e.tags) {
+            if (t[0] === 'u' && t[1] !== undefined && mintUrls.has(t[1])) exact.add(t[1])
+          }
+          return exact
+        })()
     for (const url of owners) {
+      if (!mintUrls.has(url)) continue
       const list = out.get(url)
       if (list) list.push(e); else out.set(url, [e])
     }
@@ -252,12 +276,13 @@ export interface RelayRunResult {
 export async function fetchRelayReviews(
   relay: string,
   connect: ConnectRelay,
-  mintUrls: readonly string[],
+  mints: readonly string[] | readonly MintReviewIdentity[],
   since: number | undefined,
   opts: RelayRunOptions,
 ): Promise<RelayRunResult> {
+  const identities: MintReviewIdentity[] = mints.map(m => typeof m === 'string' ? { url: m } : m)
   const result: RelayRunResult = { relay, outcome: 'ok', reason: null, reqs: 0, eventsReceived: 0, events: [], covered: new Set() }
-  if (mintUrls.length === 0) return result
+  if (identities.length === 0) return result
   if (opts.now() >= opts.deadlineMs) return { ...result, outcome: 'deadline', reason: 'deadline' }
 
   let conn: RelayConnection
@@ -268,7 +293,7 @@ export async function fetchRelayReviews(
   }
 
   try {
-    const queue = chunk(mintUrls, opts.batchSize)
+    const queue = chunk(identities, opts.batchSize)
     let consecutiveFailures = 0
     let anyBatchFailed = false
     let firstBatch = true
@@ -283,11 +308,10 @@ export async function fetchRelayReviews(
         result.reason = 'deadline'
         return result
       }
-      const batch = queue.shift() as string[]
-      const filter: ReviewFilter = { kinds: [38000], '#u': batch, limit: opts.limit }
-      if (since !== undefined) filter.since = since
+      const batch = queue.shift() as MintReviewIdentity[]
+      const filters = reviewFiltersForMintBatch(batch, opts.limit, since) as ReviewFilter[]
       result.reqs++
-      const res = await conn.query(filter, Math.min(opts.queryTimeoutMs, remaining))
+      const res = await conn.query(filters, Math.min(opts.queryTimeoutMs, remaining))
       if (res.status === 'ok') {
         consecutiveFailures = 0
         result.eventsReceived += res.events.length
@@ -297,7 +321,7 @@ export async function fetchRelayReviews(
           const mid = Math.ceil(batch.length / 2)
           queue.unshift(batch.slice(0, mid), batch.slice(mid))
         } else {
-          for (const url of batch) result.covered.add(url)
+          for (const m of batch) result.covered.add(m.url)
         }
       } else if (res.status === 'blocked') {
         result.outcome = 'skipped'

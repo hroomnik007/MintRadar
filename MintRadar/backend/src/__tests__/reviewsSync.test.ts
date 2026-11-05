@@ -65,6 +65,16 @@ describe('dedupeAndParseReviewEvents', () => {
     expect(out).toHaveLength(1)
     expect(out[0]!.rating).toBeNull()
   })
+
+  it('on equal created_at keeps the lower event id (NIP-01)', () => {
+    const out = dedupeAndParseReviewEvents([
+      evt({ id: 'fff', pubkey: 'alice', content: '[1/5] high-id', created_at: 100 }),
+      evt({ id: 'aaa', pubkey: 'alice', content: '[5/5] low-id', created_at: 100 }),
+    ])
+    expect(out).toHaveLength(1)
+    expect(out[0]!.eventId).toBe('aaa')
+    expect(out[0]!.rating).toBe(5)
+  })
 })
 
 describe('computeAvgRating', () => {
@@ -193,6 +203,7 @@ describe('persistMintReviews', () => {
 
     const insertCall = clientQueryMock.mock.calls.find(c => String(c[0]).includes('INSERT INTO mint_reviews'))!
     expect(String(insertCall[0])).toMatch(/mint_reviews\.created_at < EXCLUDED\.created_at/)
+    expect(String(insertCall[0])).toMatch(/mint_reviews\.created_at = EXCLUDED\.created_at AND mint_reviews\.event_id > EXCLUDED\.event_id/)
     expect(String(insertCall[0])).toMatch(/\$7/)
     expect(insertCall[1]).toHaveLength(12)
 

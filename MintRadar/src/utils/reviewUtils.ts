@@ -17,12 +17,29 @@ export interface ParsedReview {
   createdAt: number
 }
 
-// Keep only the most-recent event per pubkey (deduplication rule from NIP-87).
+/** IMF-compatible content body: rating prefix plus optional comment. Rating tag stays authoritative for MintRadar. */
+export function formatReviewContent(rating: number, comment: string): string {
+  const text = comment.trim()
+  return text ? `[${rating}/5] ${text}` : `[${rating}/5]`
+}
+
+/** NIP-01 replaceable preference: higher created_at wins; equal → lower hex event id. */
+export function isPreferredReplaceableReview(
+  candidate: { id: string; created_at?: number; createdAt?: number },
+  current: { id: string; created_at?: number; createdAt?: number },
+): boolean {
+  const cAt = candidate.created_at ?? candidate.createdAt ?? 0
+  const curAt = current.created_at ?? current.createdAt ?? 0
+  if (cAt !== curAt) return cAt > curAt
+  return candidate.id.toLowerCase() < current.id.toLowerCase()
+}
+
+// Keep only the preferred replaceable event per pubkey (NIP-87 / NIP-01).
 export function deduplicateByPubkey(events: ReviewEvent[]): ReviewEvent[] {
   const byPubkey = new Map<string, ReviewEvent>()
   for (const e of events) {
     const existing = byPubkey.get(e.pubkey)
-    if (!existing || e.created_at > existing.created_at) {
+    if (!existing || isPreferredReplaceableReview(e, existing)) {
       byPubkey.set(e.pubkey, e)
     }
   }
@@ -56,10 +73,11 @@ export function sortReviewsByNewest(parsed: ParsedReview[]): ParsedReview[] {
 
 // The mint card's number is the stored set: one row per pubkey. The detail
 // page must use that same set. A live event updates a stored reviewer only
-// when it is newer. A live event from anyone else is not added — that is what
-// made the detail say 5 while the card said 4. The one exception is the
-// viewer who just published, so their own review shows before the next sync.
-export function mergeStoredAndLiveReviews<T extends { pubkey: string; createdAt: number }>(
+// when it is preferred under NIP-01 (newer created_at, or equal with lower id).
+// A live event from anyone else is not added — that is what made the detail
+// say 5 while the card said 4. The one exception is the viewer who just
+// published, so their own review shows before the next sync.
+export function mergeStoredAndLiveReviews<T extends { id: string; pubkey: string; createdAt: number }>(
   stored: T[],
   live: T[],
   viewerPubkey: string | null,
@@ -67,12 +85,12 @@ export function mergeStoredAndLiveReviews<T extends { pubkey: string; createdAt:
   const byPubkey = new Map<string, T>()
   for (const review of stored) {
     const prev = byPubkey.get(review.pubkey)
-    if (!prev || review.createdAt > prev.createdAt) byPubkey.set(review.pubkey, review)
+    if (!prev || isPreferredReplaceableReview(review, prev)) byPubkey.set(review.pubkey, review)
   }
   for (const review of live) {
     const prev = byPubkey.get(review.pubkey)
     if (prev) {
-      if (review.createdAt > prev.createdAt) byPubkey.set(review.pubkey, review)
+      if (isPreferredReplaceableReview(review, prev)) byPubkey.set(review.pubkey, review)
     } else if (viewerPubkey !== null && review.pubkey === viewerPubkey) {
       byPubkey.set(review.pubkey, review)
     }
