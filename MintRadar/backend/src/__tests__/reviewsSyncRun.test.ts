@@ -26,14 +26,26 @@ function harness(stubs: Record<string, RelayStub>, mints: string[], state: Recor
     filters[relay] = []
     const conn: RelayConnection = {
       async query(f) {
-        filters[relay]!.push(f)
+        const list = (Array.isArray(f) ? f : [f]) as ReviewFilter[]
+        // Record the #u filter (primary) for assertions that inspect since / #u.
+        const primary = list.find(x => x['#u']) ?? list[0]!
+        filters[relay]!.push(primary)
         if (stub.fail) return stub.fail
-        // relay semantics: #u match + since + newest first + limit
+        // Relay OR semantics across filters: match any #u / #d / #a value.
+        const uVals = new Set(list.flatMap(x => x['#u'] ?? []))
+        const dVals = new Set(list.flatMap(x => x['#d'] ?? []))
+        const aVals = new Set(list.flatMap(x => x['#a'] ?? []))
+        const since = primary.since
+        const limit = primary.limit
         const hits = (stub.events ?? [])
-          .filter(e => e.tags.some(t => t[0] === 'u' && f['#u'].includes(t[1] as string)))
-          .filter(e => f.since === undefined || e.created_at >= f.since)
+          .filter(e => e.tags.some(t =>
+            (t[0] === 'u' && uVals.has(t[1] as string))
+            || (t[0] === 'd' && dVals.has(t[1] as string))
+            || (t[0] === 'a' && aVals.has(t[1] as string))
+          ))
+          .filter(e => since === undefined || e.created_at >= since)
           .sort((a, b) => b.created_at - a.created_at)
-          .slice(0, f.limit)
+          .slice(0, limit)
         return { status: 'ok', events: hits }
       },
       close() {},

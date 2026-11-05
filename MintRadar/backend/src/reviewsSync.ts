@@ -32,16 +32,19 @@ import {
   REVIEW_PACING_MIN_MS,
   REVIEW_QUERY_TIMEOUT_MS,
   REVIEW_REQ_LIMIT,
+  buildMintReviewIndex,
   connectRelayWs,
   fetchRelayReviews,
   groupEventsByMint,
   planRelayQuery,
   type ConnectRelay,
+  type MintReviewIdentity,
   type RelayPlan,
   type RelayRunOptions,
   type RelayRunResult,
   type RelaySyncState,
 } from './reviewsRelayFetch.js'
+import { isPreferredReplaceable } from './reviewMatching.js'
 import {
   accountRelayDeliveries,
   accountedIds,
@@ -90,7 +93,7 @@ export function dedupeAndParseReviewEvents(
   const byPubkey = new Map<string, (typeof events)[number]>()
   for (const e of events) {
     const existing = byPubkey.get(e.pubkey)
-    if (!existing || e.created_at > existing.created_at) byPubkey.set(e.pubkey, e)
+    if (!existing || isPreferredReplaceable(e, existing)) byPubkey.set(e.pubkey, e)
   }
   const out: SyncedReview[] = []
   for (const e of byPubkey.values()) {
@@ -184,7 +187,8 @@ export async function persistMintReviews(url: string, reviews: SyncedReview[]): 
            rating = EXCLUDED.rating,
            comment = EXCLUDED.comment,
            created_at = EXCLUDED.created_at
-         WHERE mint_reviews.created_at < EXCLUDED.created_at`,
+         WHERE mint_reviews.created_at < EXCLUDED.created_at
+            OR (mint_reviews.created_at = EXCLUDED.created_at AND mint_reviews.event_id > EXCLUDED.event_id)`,
         values,
       )
     }
@@ -293,6 +297,8 @@ async function saveRelayState(relay: string, startedAtSec: number, full: boolean
 export interface ReviewsSyncDeps {
   relays: readonly string[]
   getMints: () => Promise<string[]>
+  /** Optional mint identity fields for d/a review addressing (IMF-compatible). */
+  getMintIdentities?: () => Promise<MintReviewIdentity[]>
   loadState: () => Promise<Map<string, RelaySyncState>>
   saveState: (relay: string, startedAtSec: number, full: boolean) => Promise<void>
   persist: (url: string, reviews: SyncedReview[]) => Promise<void>
@@ -341,6 +347,17 @@ export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSync
   }
 
   const urls = [...new Set(await deps.getMints())]
+  let identities: MintReviewIdentity[] = urls.map(url => ({ url }))
+  if (deps.getMintIdentities) {
+    try {
+      const loaded = await deps.getMintIdentities()
+      const byUrl = new Map(loaded.map(m => [m.url, m]))
+      identities = urls.map(url => byUrl.get(url) ?? { url })
+    } catch (err) {
+      deps.log(`[reviews-sync] mint identities unavailable, using URLs only: ${err instanceof Error ? err.message : err}`)
+    }
+  }
+  const reviewIndex = buildMintReviewIndex(identities)
   let state = new Map<string, RelaySyncState>()
   try {
     state = await deps.loadState()
@@ -353,7 +370,7 @@ export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSync
   const relays = await Promise.all(deps.relays.map(async relay => {
     const plan = planRelayQuery(state.get(relay), startedSec)
     const relayStartedMs = deps.now()
-    const result = await fetchRelayReviews(relay, deps.connect, urls, plan.since, opts)
+    const result = await fetchRelayReviews(relay, deps.connect, identities, plan.since, opts)
     return { relay, plan, result, ms: Math.max(0, deps.now() - relayStartedMs) }
   }))
 
@@ -367,7 +384,7 @@ export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSync
       if (ok) verified.set(e.id, e)
     }
   }
-  const byMint = groupEventsByMint([...verified.values()], new Set(urls))
+  const byMint = groupEventsByMint([...verified.values()], new Set(urls), reviewIndex)
 
   // Per-relay accounting (counters only), computed BEFORE the inserts so "new" means "not stored yet".
   // Never allowed to affect the sync itself: any failure here only drops the counters of this run.
@@ -468,6 +485,24 @@ export async function runReviewsSync(deps: ReviewsSyncDeps): Promise<ReviewsSync
   return { mints: urls.length, relaysUsed: used, relaysFailed: failed, reqs, events, stored, updated, persistFailed, durationMs, deadlineHit, relays }
 }
 
+
+async function loadMintReviewIdentities(): Promise<MintReviewIdentity[]> {
+  const { rows } = await pool.query(
+    'SELECT url, pubkey, nostr_announce_pubkey, nostr_announce_d FROM mints',
+  )
+  return (rows as Array<{
+    url: string
+    pubkey: string | null
+    nostr_announce_pubkey: string | null
+    nostr_announce_d: string | null
+  }>).map(r => ({
+    url: r.url,
+    pubkey: r.pubkey,
+    announcePubkey: r.nostr_announce_pubkey,
+    announceD: r.nostr_announce_d,
+  }))
+}
+
 let reviewSyncRunning = false
 export function isReviewSyncRunning(): boolean {
   return reviewSyncRunning
@@ -484,6 +519,7 @@ export async function refreshAllMintReviews(): Promise<number> {
     const summary = await runReviewsSync({
       relays: REVIEW_SYNC_RELAYS,
       getMints: getKnownMints,
+      getMintIdentities: loadMintReviewIdentities,
       loadState: loadRelayState,
       saveState: saveRelayState,
       persist: persistMintReviews,

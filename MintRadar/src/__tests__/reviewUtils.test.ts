@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   deduplicateByPubkey,
+  formatReviewContent,
   mergeStoredAndLiveReviews,
   parseReviewEvent,
   sortReviewsByNewest,
@@ -17,7 +18,7 @@ import {
 
 function makeEvent(overrides: Partial<ReviewEvent> & { pubkey: string }): ReviewEvent {
   return {
-    id: overrides.pubkey + '-' + (overrides.created_at ?? 1000),
+    id: overrides.id ?? (overrides.pubkey + '-' + (overrides.created_at ?? 1000)),
     pubkey: overrides.pubkey,
     created_at: overrides.created_at ?? 1000,
     tags: overrides.tags ?? [],
@@ -52,11 +53,15 @@ describe('deduplicateByPubkey', () => {
     expect(deduplicateByPubkey([])).toEqual([])
   })
 
-  it('keeps the first-seen entry on a created_at tie (strict > means no replacement)', () => {
+  it('on equal created_at keeps the lower event id (NIP-01); equal ids keep first-seen', () => {
     const first = makeEvent({ pubkey: 'alice', created_at: 1000, content: 'first' })
     const second = makeEvent({ pubkey: 'alice', created_at: 1000, content: 'second' })
-    // created_at equality → `e.created_at > existing.created_at` is false → first wins
+    // makeEvent ids are pubkey-created_at, so both share the same id → first-seen wins
     expect(deduplicateByPubkey([first, second])[0]!.content).toBe('first')
+    const high = makeEvent({ pubkey: 'alice', created_at: 1000, content: 'high', id: 'fff' })
+    const low = makeEvent({ pubkey: 'alice', created_at: 1000, content: 'low', id: 'aaa' })
+    expect(deduplicateByPubkey([high, low])[0]!.content).toBe('low')
+    expect(deduplicateByPubkey([low, high])[0]!.content).toBe('low')
   })
 })
 
@@ -249,6 +254,21 @@ describe('mergeStoredAndLiveReviews', () => {
     const live = [row('a', 2, 'stale')]
     const merged = mergeStoredAndLiveReviews(stored, live, null)
     expect(merged[0]!.id).toBe('stored')
+  })
+
+  it('on equal createdAt prefers the lower event id', () => {
+    const stored = [row('a', 5, 'fff')]
+    const live = [row('a', 5, 'aaa')]
+    const merged = mergeStoredAndLiveReviews(stored, live, null)
+    expect(merged[0]!.id).toBe('aaa')
+  })
+})
+
+describe('formatReviewContent', () => {
+  it('prefixes rating for IMF readers and keeps the comment text', () => {
+    expect(formatReviewContent(4, 'Works well')).toBe('[4/5] Works well')
+    expect(formatReviewContent(5, '  ')).toBe('[5/5]')
+    expect(formatReviewContent(1, '')).toBe('[1/5]')
   })
 })
 

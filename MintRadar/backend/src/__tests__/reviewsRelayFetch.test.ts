@@ -6,6 +6,7 @@ import {
   REVIEW_FULL_SWEEP_INTERVAL_S,
   REVIEW_FULL_SWEEP_SLACK_S,
   REVIEW_SINCE_OVERLAP_S,
+  buildMintReviewIndex,
   chunk,
   connectRelayWs,
   fetchRelayReviews,
@@ -109,6 +110,38 @@ describe('groupEventsByMint', () => {
     const grouped = groupEventsByMint([ev('x', ['https://a.example', 'https://a.example'])], new Set(mints))
     expect(grouped.get('https://a.example')).toHaveLength(1)
   })
+
+  it('with an index, normalizes trailing-slash u and matches d=URL / d=pubkey / a-address', () => {
+    const mintPubkey = '02' + 'ab'.repeat(32)
+    const announcer = 'cd'.repeat(32)
+    const index = buildMintReviewIndex([
+      { url: 'https://a.example', pubkey: mintPubkey, announcePubkey: announcer, announceD: mintPubkey },
+      { url: 'https://b.example' },
+    ])
+    const slash = {
+      ...ev('slash', ['https://a.example/']),
+      tags: [['u', 'https://a.example/', 'cashu']],
+    }
+    const dUrl = {
+      ...ev('durl', []),
+      tags: [['d', 'https://b.example/']],
+    }
+    const dKey = {
+      ...ev('dkey', []),
+      tags: [['k', '38172'], ['d', mintPubkey]],
+    }
+    const aTag = {
+      ...ev('atag', []),
+      tags: [['a', `38172:${announcer}:${mintPubkey}`]],
+    }
+    const fed = {
+      ...ev('fed', []),
+      tags: [['u', 'https://a.example', 'fedimint']],
+    }
+    const grouped = groupEventsByMint([slash, dUrl, dKey, aTag, fed], new Set(mints), index)
+    expect(grouped.get('https://a.example')!.map(e => e.id).sort()).toEqual(['atag', 'dkey', 'slash'])
+    expect(grouped.get('https://b.example')!.map(e => e.id)).toEqual(['durl'])
+  })
 })
 
 function makeOpts(over: Partial<RelayRunOptions> = {}): RelayRunOptions & { sleeps: number[] } {
@@ -131,40 +164,55 @@ function makeOpts(over: Partial<RelayRunOptions> = {}): RelayRunOptions & { slee
   }
 }
 
-function fakeConn(answer: (f: ReviewFilter, n: number) => RelayQueryResult) {
-  const filters: ReviewFilter[] = []
+function fakeConn(answer: (filters: ReviewFilter[], n: number) => RelayQueryResult) {
+  const reqs: ReviewFilter[][] = []
   const conn: RelayConnection = {
-    query: vi.fn(async (f: ReviewFilter) => { filters.push(f); return answer(f, filters.length) }),
+    query: vi.fn(async (f: ReviewFilter | readonly ReviewFilter[]) => {
+      const filters = (Array.isArray(f) ? [...f] : [f]) as ReviewFilter[]
+      reqs.push(filters)
+      return answer(filters, reqs.length)
+    }),
     close: vi.fn(),
   }
   const connect: ConnectRelay = vi.fn(async () => conn)
-  return { conn, connect, filters }
+  return { conn, connect, reqs }
+}
+
+function uFilter(reqs: ReviewFilter[][]): ReviewFilter[] {
+  return reqs.map(r => {
+    const f = r.find(x => x['#u'])
+    if (!f) throw new Error('missing #u filter')
+    return f
+  })
 }
 
 const urls76 = Array.from({ length: 76 }, (_, i) => `https://mint${i}.example`)
 const OK: RelayQueryResult = { status: 'ok', events: [] }
 
 describe('fetchRelayReviews', () => {
-  it('sends one REQ per batch of at most 20 mints with kinds, #u, limit and since', async () => {
-    const { connect, filters, conn } = fakeConn(() => OK)
+  it('sends one REQ per batch of at most 20 mints with kinds, #u/#d, limit and since', async () => {
+    const { connect, reqs, conn } = fakeConn(() => OK)
     const opts = makeOpts()
     const res = await fetchRelayReviews('wss://r', connect, urls76, 1234, opts)
-    expect(filters.map(f => f['#u'].length)).toEqual([20, 20, 20, 16])
+    const filters = uFilter(reqs)
+    expect(filters.map(f => f['#u']!.length)).toEqual([20, 20, 20, 16])
     for (const f of filters) {
       expect(f.kinds).toEqual([38000])
       expect(f.limit).toBe(500)
       expect(f.since).toBe(1234)
     }
-    expect(filters.flatMap(f => f['#u'])).toEqual(urls76)
+    expect(filters.flatMap(f => f['#u']!)).toEqual(urls76)
+    // Each REQ also OR-queries #d with the same URLs (legacy d=URL reviews).
+    expect(reqs.every(r => r.some(f => f['#d'] && f['#d'].length > 0))).toBe(true)
     expect(res).toMatchObject({ outcome: 'ok', reqs: 4 })
     expect(res.covered.size).toBe(76)
     expect(conn.close).toHaveBeenCalledOnce()
   })
 
   it('omits since on a full sweep', async () => {
-    const { connect, filters } = fakeConn(() => OK)
+    const { connect, reqs } = fakeConn(() => OK)
     await fetchRelayReviews('wss://r', connect, urls76.slice(0, 5), undefined, makeOpts())
-    expect('since' in filters[0]!).toBe(false)
+    expect(reqs[0]!.every(f => !('since' in f))).toBe(true)
   })
 
   it('pauses 1-2 s between batches to the same relay, not before the first', async () => {
@@ -192,9 +240,9 @@ describe('fetchRelayReviews', () => {
   })
 
   it('a CLOSED "rate-limited" skips the relay for the rest of the run', async () => {
-    const { connect, filters, conn } = fakeConn((_, n) => n === 1 ? OK : { status: 'blocked', reason: 'closed-pushback' })
+    const { connect, reqs, conn } = fakeConn((_, n) => n === 1 ? OK : { status: 'blocked', reason: 'closed-pushback' })
     const res = await fetchRelayReviews('wss://r', connect, urls76, undefined, makeOpts())
-    expect(filters).toHaveLength(2) // second REQ was refused, third and fourth never sent
+    expect(reqs).toHaveLength(2) // second REQ was refused, third and fourth never sent
     expect(res.outcome).toBe('skipped')
     expect(res.reason).toBe('closed-pushback')
     expect(res.covered.size).toBe(20) // only the answered batch counts as covered
@@ -203,9 +251,9 @@ describe('fetchRelayReviews', () => {
 
   describe('consecutive failure counter', () => {
     it('3 failures in a row skip the relay', async () => {
-      const { connect, filters } = fakeConn(() => ({ status: 'failed', reason: 'timeout' }))
+      const { connect, reqs } = fakeConn(() => ({ status: 'failed', reason: 'timeout' }))
       const res = await fetchRelayReviews('wss://r', connect, urls76, undefined, makeOpts())
-      expect(filters).toHaveLength(3)
+      expect(reqs).toHaveLength(3)
       expect(res).toMatchObject({ outcome: 'skipped', reason: '3-failures-in-a-row' })
     })
     it('a success in between resets the counter', async () => {
@@ -213,16 +261,16 @@ describe('fetchRelayReviews', () => {
         { status: 'failed', reason: 'timeout' }, { status: 'failed', reason: 'timeout' }, OK,
         { status: 'failed', reason: 'timeout' },
       ]
-      const { connect, filters } = fakeConn((_, n) => script[n - 1] ?? OK)
+      const { connect, reqs } = fakeConn((_, n) => script[n - 1] ?? OK)
       const res = await fetchRelayReviews('wss://r', connect, urls76, undefined, makeOpts())
-      expect(filters).toHaveLength(4) // all four batches were tried
+      expect(reqs).toHaveLength(4) // all four batches were tried
       expect(res.outcome).toBe('failed') // finished, but not cleanly
       expect(res.covered.size).toBe(20)
     })
     it('the threshold is a named option', async () => {
-      const { connect, filters } = fakeConn(() => ({ status: 'failed', reason: 'timeout' }))
+      const { connect, reqs } = fakeConn(() => ({ status: 'failed', reason: 'timeout' }))
       await fetchRelayReviews('wss://r', connect, urls76, undefined, makeOpts({ maxConsecutiveFailures: 2 }))
-      expect(filters).toHaveLength(2)
+      expect(reqs).toHaveLength(2)
     })
   })
 
@@ -234,18 +282,18 @@ describe('fetchRelayReviews', () => {
 
   it('a full batch (limit reached) is asked again in halves until the answers are no longer full', async () => {
     const full = (n: number): RelayQueryResult => ({ status: 'ok', events: Array.from({ length: n }, (_, i) => ev(`x${i}`, [])) })
-    const { connect, filters } = fakeConn(f => f['#u'].length > 5 ? full(3) : OK)
+    const { connect, reqs } = fakeConn(filters => (filters.find(f => f['#u'])!['#u']!.length > 5) ? full(3) : OK)
     const res = await fetchRelayReviews('wss://r', connect, urls76.slice(0, 20), undefined, makeOpts({ limit: 3 }))
-    expect(filters.map(f => f['#u'].length)).toEqual([20, 10, 5, 5, 10, 5, 5])
+    expect(uFilter(reqs).map(f => f['#u']!.length)).toEqual([20, 10, 5, 5, 10, 5, 5])
     expect(res.covered.size).toBe(20)
     expect(res.outcome).toBe('ok')
   })
 
   it('stops cleanly when the run deadline passes', async () => {
-    const { connect, filters, conn } = fakeConn(() => OK)
+    const { connect, reqs, conn } = fakeConn(() => OK)
     // 1.5 s pause per batch, deadline after ~2 s: the first batch goes out, the second is cut off.
     const res = await fetchRelayReviews('wss://r', connect, urls76, undefined, makeOpts({ deadlineMs: 2_000 }))
-    expect(filters.length).toBeLessThan(4)
+    expect(reqs.length).toBeLessThan(4)
     expect(res.outcome).toBe('deadline')
     expect(conn.close).toHaveBeenCalledOnce()
   })
@@ -298,6 +346,22 @@ describe('connectRelayWs against a local stub relay', () => {
     conn.close()
     await s.close()
     expect(seen).toEqual({ ...filter, since: 42 })
+  })
+
+  it('spreads multiple filters into one REQ (OR across filters)', async () => {
+    let seen: unknown[] | undefined
+    const s = await stub((ws, sub, msg) => { seen = msg; ws.send(JSON.stringify(['EOSE', sub])) })
+    const conn = await connectRelayWs(s.url, 2000)
+    const filters: ReviewFilter[] = [
+      { kinds: [38000], '#u': ['https://a.example'], limit: 10 },
+      { kinds: [38000], '#d': ['02ab'], limit: 10 },
+    ]
+    await conn.query(filters, 2000)
+    conn.close()
+    await s.close()
+    expect(seen![0]).toBe('REQ')
+    expect(seen![2]).toEqual(filters[0])
+    expect(seen![3]).toEqual(filters[1])
   })
 
   it.each(['rate-limited: slow down', 'error: too many concurrent REQs', 'blocked: not allowed'])('CLOSED "%s" is a pushback', async reason => {

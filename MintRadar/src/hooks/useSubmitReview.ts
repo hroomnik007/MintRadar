@@ -1,6 +1,7 @@
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
 import { REVIEW_PUBLISH_RELAYS } from '@/core/nostr/relays'
+import { formatReviewContent } from '@/utils/reviewUtils'
 
 export async function submitMintReview(
   mintUrl: string,
@@ -23,7 +24,7 @@ export async function submitMintReview(
       ['rating', rating.toString()],
       ...(comment.trim() ? [['comment', comment.trim()]] : []),
     ],
-    content: comment.trim(),
+    content: formatReviewContent(rating, comment),
   }
 
   const signed = await window.nostr.signEvent(event) as NostrEvent
