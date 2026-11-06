@@ -22,7 +22,7 @@ test.describe('For wallets page', () => {
     await page.goto('/for-wallets')
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
     await expect(page.getByRole('heading', { level: 1, name: 'MintRadar for wallets' })).toBeVisible()
-    for (const name of ['Quick start', 'Polling and caching', 'CORS and limits', 'Response', 'Filters', 'Errors', 'Stability', 'Signed health assertions on Nostr (early version)', 'Suggested UX', 'Docs and contact']) {
+    for (const name of ['Quick start', 'Polling and caching', 'CORS and limits', 'Response', 'Filters', 'Errors', 'Stability', 'Suggested UX', 'Signed health assertions on Nostr (early version)', 'Docs and contact']) {
       await expect(page.getByRole('heading', { level: 2, name })).toBeVisible()
     }
     await expect(page.getByRole('note').first()).toContainText('Operational health signal, not solvency, not a recommendation to deposit funds')
@@ -130,13 +130,13 @@ const EXPECTED_NPUB = 'npub19hwhe6vr85hd3g9l4tus8nr37etyrusd37q5yycpvwnzt2ntjswq
 const SECTION = '#signed-health-assertions'
 
 test.describe('Signed health assertions section', () => {
-  test('has its heading, anchor and table-of-contents entry, between Stability and Suggested UX, with the early-version notice', async ({ page }) => {
+  test('has its heading, anchor and table-of-contents entry, between Suggested UX and Docs and contact, with the early-version notice', async ({ page }) => {
     await page.goto('/for-wallets')
     const h2 = page.locator(`h2${SECTION}`)
     await expect(h2).toHaveText('Signed health assertions on Nostr (early version)')
     const ids = await page.locator('main h2').evaluateAll(els => els.map(e => e.id))
-    expect(ids.indexOf('signed-health-assertions')).toBe(ids.indexOf('stability') + 1)
-    expect(ids.indexOf('ux')).toBe(ids.indexOf('signed-health-assertions') + 1)
+    expect(ids.indexOf('ux')).toBe(ids.indexOf('stability') + 1)
+    expect(ids.indexOf('signed-health-assertions')).toBe(ids.indexOf('ux') + 1)
     await expect(page.locator(`.about-toc a[href$="${SECTION}"]`)).toHaveCount(1)
     const notice = page.getByTestId('early-version-notice')
     await expect(notice).toBeVisible()

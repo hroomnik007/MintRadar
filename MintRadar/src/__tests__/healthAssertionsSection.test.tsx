@@ -21,11 +21,11 @@ const section = (): HTMLElement => {
 }
 
 describe('the signed health assertions section on /for-wallets', () => {
-  it('has the heading and anchor, after the API sections and before Suggested UX', () => {
+  it('has the heading and anchor, after the API sections and after Suggested UX', () => {
     const { container } = renderPage(<ForWallets />)
     const h2s = [...container.querySelectorAll('h2')].map(h => h.id)
     expect(h2s.indexOf(HEALTH_SECTION_ID)).toBeGreaterThan(h2s.indexOf('stability'))
-    expect(h2s.indexOf(HEALTH_SECTION_ID)).toBe(h2s.indexOf('ux') - 1)
+    expect(h2s.indexOf(HEALTH_SECTION_ID)).toBe(h2s.indexOf('ux') + 1)
     expect(container.querySelector(`#${HEALTH_SECTION_ID}`)?.textContent).toBe(HEALTH_SECTION_TITLE)
     expect(HEALTH_SECTION_TITLE).toBe('Signed health assertions on Nostr (early version)')
     expect(container.querySelector(`.about-toc a[href$="#${HEALTH_SECTION_ID}"]`)).not.toBeNull()
@@ -87,9 +87,9 @@ describe('the signed health assertions section on /for-wallets', () => {
     expect(VERIFY_HEALTH_SNIPPET.startsWith(`// ${VERIFY_HEALTH_RUNTIME_SENTENCE}`)).toBe(true)
     expect(VERIFY_HEALTH_RUNTIME_SENTENCE).toContain('Node 22 or newer')  })
 
-  it('states the update and publication rules, the disclaimer and the key rotation', () => {
+  it('states the update and publication rules, the disclaimer and the key rotation (in the paragraphs, without their own headings)', () => {
     const text = section().textContent ?? ''
-    for (const needle of ['expires 48 hours', 'at most every 6 hours', 'if the score changed by at least 2 points', '24 hours old', 'A change of mint_status', 'every 15 minutes', 'at least 5 minutes between two events of one mint', 'at most 30 such events per hour', 'none is dropped', 'any monitor may publish', 'the measurements', 'not solvency and not a recommendation', 'Not published', 'onion or an IP address', 'unknown', 'not a bad mint',
+    for (const needle of ['expires 48 hours', 'at most every 6 hours', 'when the score changed by at least 2 points', '24 hours old', 'A change of mint_status', 'every 15 minutes', 'at least 5 minutes between two events of one mint', 'at most 30 such events per hour', 'none is dropped', 'any monitor may publish', 'the measurements', 'not solvency and not a recommendation', 'Not published', 'onion or an IP address', 'unknown', 'not a bad mint',
       'Operational health signal, not solvency, not a recommendation to deposit funds', 'A new key would be announced on this page']) {
       expect(text, needle).toContain(needle)
     }

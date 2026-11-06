@@ -37,8 +37,8 @@ const SECTIONS = [
   { id: 'filters', label: 'Filters' },
   { id: 'errors', label: 'Errors' },
   { id: 'stability', label: 'Stability' },
-  { id: HEALTH_SECTION_ID, label: 'Signed assertions on Nostr' },
   { id: 'ux', label: 'Suggested UX' },
+  { id: HEALTH_SECTION_ID, label: 'Signed assertions on Nostr' },
   { id: 'links', label: 'Docs and contact' },
 ] as const
 
@@ -144,10 +144,11 @@ export default function ForWallets() {
               then every 10 minutes is well within the limits.
             </li>
             <li>
-              <strong>Use the ETag.</strong> Every successful answer has an <code>ETag</code> (a compressed answer carries it in the weak form <code>W/&quot;…&quot;</code>; keep it as it is). Send it back in{' '}
-              <code>If-None-Match</code>: while nothing changed you get <code>304 Not Modified</code> with the same
-              headers and no body. A browser&apos;s HTTP cache does this for you; a server or a native app should keep
-              the ETag itself.
+              <strong>Use the ETag.</strong> Every successful answer carries an <code>ETag</code>. Send it back in{' '}
+              <code>If-None-Match</code> and, if the answer has not changed, you get <code>304 Not Modified</code> with no
+              body. The list is rebuilt about every 45 seconds and its <code>ETag</code> changes with it, so a{' '}
+              <code>304</code> is likely only for a repeat request within that time; at the {F.pollMinutes}-minute poll
+              interval expect a full <code>200</code>.
             </li>
             <li>Error responses are not cached.</li>
           </ul>
@@ -184,12 +185,13 @@ export default function ForWallets() {
           <h3 className="doc-h3">The mint object</h3>
           <p>
             Fields of a nested object are written <code>parent.child</code>. Clients must ignore fields they do not know.
-            The answers never contain IP addresses, AS numbers, hosting organisations, server locations or error
-            messages, reviewer keys or review texts, or contact details (<code>contactChecks</code> says only whether MintRadar recognises the format of the entries a mint lists, never a value or a domain). They do carry the mint&apos;s public NUT-06
-            key (<code>pubkey</code>) and whether it advertises a Tor address (<code>hasOnion</code>). The heavier fields{' '}
+            They never contain IP addresses, AS numbers, hosting organisations, server locations, error messages,
+            reviewer keys, review texts or contact values. They do carry the mint&apos;s own public key (<code>pubkey</code>),
+            whether it advertises a Tor address (<code>hasOnion</code>) and its probe response times (<code>latency24h</code>). The heavier fields{' '}
             <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code> are
             in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code>, <code>contactChecks</code>, <code>feeExamples</code>, <code>limits</code>, <code>auditByDirection</code>, <code>latency24h</code> and <code>nip87</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
             <code>scoreBreakdown</code> is what the score used at its last computation, written together with the score.
+            Longer notes and the history of additions are in docs/API.md and the OpenAPI file.
           </p>
           <p data-testid="request-privacy">
             <strong>Privacy of your request:</strong> download the whole list and filter locally; the single-mint
@@ -298,6 +300,19 @@ export default function ForWallets() {
           </ul>
         </section>
 
+        <section aria-labelledby="ux">
+          <h2 id="ux" tabIndex={-1} className="about-h2">Suggested UX</h2>
+          <ul>
+            <li>Show the score with its label as <strong>operational health</strong> (for example &quot;Operational health 92/100&quot;), never as &quot;safe&quot; or &quot;trusted&quot;.</li>
+            <li>Treat a <code>null</code> score as <strong>no data yet</strong>, not as a bad score.</li>
+            <li>Hide test mints (<code>isTest: true</code>); the default list already leaves them out.</li>
+            <li>Show <code>status</code> next to the score, and a short hint while <code>scoreCappedNew</code> is true. When <code>scoreStale</code> is true, label the score as the last measured one.</li>
+            <li>Filter by the <code>unit</code> your wallet holds.</li>
+            <li>Show <code>name</code> and <code>software</code> as plain text: they come from the mints and are untrusted.</li>
+            <li>Never present the score as a recommendation to deposit funds, and link people to the methodology.</li>
+          </ul>
+        </section>
+
         <section aria-labelledby={HEALTH_SECTION_ID}>
           <h2 id={HEALTH_SECTION_ID} tabIndex={-1} className="about-h2">{HEALTH_SECTION_TITLE}</h2>
           <p className="about-note" role="note" data-testid="early-version-notice">
@@ -311,7 +326,8 @@ export default function ForWallets() {
           <h3 className="doc-h3">What it is</h3>
           <p>
             The same operational health signal as the API above, published as signed Nostr events (kind 30385, one per
-            mint) so that a wallet can verify it without relying on a server of ours. It is not solvency and not advice.
+            mint) so that a wallet can verify it without relying on a server of ours. Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar&apos;s probes
+            and third-party audit data; it can be wrong or out of date.
           </p>
 
           <h3 className="doc-h3">Who publishes it</h3>
@@ -319,6 +335,8 @@ export default function ForWallets() {
             The events are signed by the MintRadar Health key. <strong>Pin this public key in your wallet&apos;s code</strong>{' '}
             and ignore events signed by any other key. You can confirm it once through NIP-05:{' '}
             <code>{ATTESTATION_NIP05}</code> (<code>https://mintradar.org/.well-known/nostr.json?name=health</code>).
+            A new key would be announced on this page, in the profile of MintRadar Health and in the NIP-05 entry; events
+            of a retired key expire within {HEALTH_FACTS.expiryHours} hours.
           </p>
           <CodeBlock label="npub" title="MintRadar Health public key (npub)" code={ATTESTATION_NPUB} />
           <CodeBlock label="hex" title="MintRadar Health public key (hex)" code={ATTESTATION_PUBKEY_HEX} />
@@ -331,8 +349,7 @@ export default function ForWallets() {
 
           <h3 className="doc-h3">Query</h3>
           <p>
-            One query returns one event per scored mint, each about 1 kB, so a limit of {HEALTH_FACTS.queryLimit} is
-            plenty.
+            One query returns every mint, so a limit of {HEALTH_FACTS.queryLimit} is plenty.
           </p>
           <CodeBlock label="Filter" title="Filter for every mint" code={HEALTH_FILTER_ALL} />
           <p>
@@ -382,9 +399,10 @@ export default function ForWallets() {
               Check it yourself: a relay can keep an expired event.
             </li>
             <li>
-              For each mint a new event is published at most every {HEALTH_FACTS.minIntervalHours} hours, if the
-              score changed by at least {HEALTH_FACTS.minRankDelta} points or the methodology changed. A mint whose event
-              is {HEALTH_FACTS.refreshHours} hours old gets a new one anyway, so the expiry does not lapse.
+              For each mint a new event is published at most every {HEALTH_FACTS.minIntervalHours} hours, when the score
+              changed by at least {HEALTH_FACTS.minRankDelta} points or the methodology changed. A status change is
+              published sooner, at the next publisher run (every {HEALTH_FACTS.runIntervalMinutes} minutes). An event that
+              is {HEALTH_FACTS.refreshHours} hours old is replaced anyway, so the expiry does not lapse.
             </li>
             <li data-testid="health-state-change-rule">
               <strong>A change of <code>mint_status</code></strong> (for example online to degraded) does not wait for those{' '}
@@ -421,31 +439,6 @@ export default function ForWallets() {
             URL normalisation: https, lower-case host, no default port, no trailing slash on a bare host and no fragment.
             Examples for each rule are in the <a href={HEALTH_SPEC_TAGS_URL} target="_blank" rel="noopener noreferrer">tag table of the spec</a>.
           </p>
-
-          <h3 className="doc-h3">Disclaimer</h3>
-          <p>
-            Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar&apos;s probes
-            and third-party audit data; it can be wrong or out of date.
-          </p>
-
-          <h3 className="doc-h3">Key rotation</h3>
-          <p>
-            A new key would be announced on this page, in the profile of MintRadar Health and in the NIP-05 entry. Events of
-            a retired key simply expire within {HEALTH_FACTS.expiryHours} hours.
-          </p>
-        </section>
-
-        <section aria-labelledby="ux">
-          <h2 id="ux" tabIndex={-1} className="about-h2">Suggested UX</h2>
-          <ul>
-            <li>Show the score with its label as <strong>operational health</strong> (for example &quot;Operational health 92/100&quot;), never as &quot;safe&quot; or &quot;trusted&quot;.</li>
-            <li>Treat a <code>null</code> score as <strong>no data yet</strong>, not as a bad score.</li>
-            <li>Hide test mints (<code>isTest: true</code>); the default list already leaves them out.</li>
-            <li>Show <code>status</code> next to the score, and a short hint while <code>scoreCappedNew</code> is true. When <code>scoreStale</code> is true, label the score as the last measured one.</li>
-            <li>Filter by the <code>unit</code> your wallet holds.</li>
-            <li>Show <code>name</code> and <code>software</code> as plain text: they come from the mints and are untrusted.</li>
-            <li>Never present the score as a recommendation to deposit funds, and link people to the methodology.</li>
-          </ul>
         </section>
 
         <section aria-labelledby="links">
