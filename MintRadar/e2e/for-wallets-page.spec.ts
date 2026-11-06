@@ -22,7 +22,7 @@ test.describe('For wallets page', () => {
     await page.goto('/for-wallets')
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
     await expect(page.getByRole('heading', { level: 1, name: 'MintRadar for wallets' })).toBeVisible()
-    for (const name of ['Quick start', 'Polling and caching', 'CORS and limits', 'Response', 'Filters', 'Errors', 'Stability', 'Suggested UX', 'Signed health assertions on Nostr (early version)', 'Docs and contact']) {
+    for (const name of ['Quick start', 'Build a request', 'Polling and caching', 'CORS and limits', 'Response', 'Filters', 'Errors', 'Stability', 'Suggested UX', 'Signed health assertions on Nostr (early version)', 'Docs and contact']) {
       await expect(page.getByRole('heading', { level: 2, name })).toBeVisible()
     }
     await expect(page.getByRole('note').first()).toContainText('Operational health signal, not solvency, not a recommendation to deposit funds')
@@ -112,7 +112,7 @@ test.describe('For wallets page', () => {
   test('keyboard: Tab reaches every link, copy button and scroll box in order with a visible focus indicator', async ({ page }) => {
     await page.goto('/for-wallets')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    await expectKeyboardOrder(page)
+    await expectKeyboardOrder(page, '.wg-builder') // the builder's own Tab order: for-wallets-request-builder.spec.ts
   })
 
   test('the Methodology page links here', async ({ page }) => {
@@ -218,7 +218,7 @@ test.describe('Signed health assertions section', () => {
   test('keyboard: the copy buttons and links of the section are reached in order with a visible focus', async ({ page }) => {
     await page.goto('/for-wallets')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    await expectKeyboardOrder(page)
+    await expectKeyboardOrder(page, '.wg-builder')
   })
 
   test('a link with the anchor scrolls the section under the navbar and focuses its heading', async ({ page }) => {

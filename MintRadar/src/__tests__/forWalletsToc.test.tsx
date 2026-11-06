@@ -42,6 +42,10 @@ describe('For wallets table of contents', () => {
       expect(container.querySelector(`h2#${id}`)!.getAttribute('tabindex')).toBe('-1')
     }
     expect(ids).toEqual(expect.arrayContaining(['quick-start', 'polling', 'errors', 'stability', 'signed-health-assertions', 'ux', 'links']))
+    // the request builder sits right after Quick start and before Polling and caching
+    expect(h2.indexOf('request-builder')).toBe(h2.indexOf('quick-start') + 1)
+    expect(h2.indexOf('polling')).toBe(h2.indexOf('request-builder') + 1)
+    expect(within(nav()).getByRole('link', { name: 'Build a request' }).getAttribute('href')).toBe('/for-wallets#request-builder')
   })
 
   it('the phone toggle is a disclosure button that controls the list; Escape closes it and keeps focus', () => {

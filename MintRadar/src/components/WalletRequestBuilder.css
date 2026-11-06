@@ -1,0 +1,186 @@
+/* "Build a request" on /for-wallets. Looks like the Filters panel of the Dashboard (28-36px visible controls with
+   a larger invisible hit area, hairline borders, accent tint when selected) but shares no rule with it. Single
+   column on every width; the code blocks scroll inside themselves. */
+.wg-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 12px 0 8px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r);
+}
+.wg-builder .doc-code { margin: 0; }
+.wg-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.wg-label {
+  padding: 0;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.wg-label code, .wg-check code {
+  margin-left: 4px;
+  color: var(--text3);
+  font-family: var(--mono-data);
+  font-size: 11.5px;
+}
+.wg-hint { margin: 0; color: var(--text3); font-size: 12.5px; line-height: 1.4; }
+.wg-error { margin: 0; color: var(--copper); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; }
+
+/* Segmented radio group: the native radio covers its segment. */
+.wg-seg {
+  display: flex;
+  max-width: 100%;
+  width: max-content;
+  position: relative;
+  height: 36px;
+  border-radius: 8px;
+}
+.wg-seg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.wg-seg-opt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-width: 56px;
+  padding: 0 12px;
+  background: var(--surface-3);
+  color: var(--text2);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wg-seg-opt + .wg-seg-opt { border-left: 1px solid var(--border2); }
+.wg-seg-opt:first-child { border-radius: 8px 0 0 8px; }
+.wg-seg-opt:last-child { border-radius: 0 8px 8px 0; }
+.wg-seg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+.wg-seg-opt.is-active {
+  background-image: linear-gradient(var(--accent-dim), var(--accent-dim));
+  box-shadow: inset 0 0 0 1px var(--accent-brd);
+  color: var(--accent);
+}
+.wg-seg-opt input, .wg-chip input, .wg-check input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.wg-seg-opt:has(input:focus-visible),
+.wg-chip:has(input:focus-visible) { z-index: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Toggle chips */
+.wg-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.wg-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.wg-chip::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+.wg-chip.is-active { background: var(--green-soft); border-color: var(--green-soft-strong); color: var(--accent); }
+
+/* Range */
+.wg-range-row { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.wg-range { flex: 1 1 auto; min-width: 0; height: 44px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.wg-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wg-readout { flex: 0 0 auto; min-width: 3.5ch; color: var(--text); font-family: var(--mono-data); font-size: 13px; text-align: right; }
+
+/* Text and number inputs */
+.wg-input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono-data);
+  font-size: 16px; /* 16px keeps phones from zooming in on focus */
+}
+.wg-input-short { max-width: 220px; }
+.wg-input::placeholder { color: var(--text3); }
+.wg-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wg-input[aria-invalid='true'] { border-color: var(--copper); }
+
+/* Disclosure */
+.wg-more-btn {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.wg-more-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.wg-chevron { flex: 0 0 auto; transition: transform var(--transition); }
+.wg-more-btn[aria-expanded='true'] .wg-chevron { transform: rotate(180deg); }
+.wg-more-count { color: var(--accent); font-size: 13px; }
+.wg-more-panel { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; min-width: 0; }
+.wg-more-panel[hidden] { display: none; }
+
+/* Checkboxes */
+.wg-checks { display: flex; flex-direction: column; gap: 0; }
+.wg-check { position: relative; display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text2); font-size: 14px; cursor: pointer; }
+.wg-check input { position: static; width: 20px; height: 20px; flex: 0 0 auto; opacity: 1; accent-color: var(--accent); }
+.wg-check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+
+/* Actions */
+.wg-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.wg-reset {
+  min-height: 44px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.wg-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wg-note { margin: 0; color: var(--text2); font-size: 14px; }
+
+@media (hover: hover) {
+  .wg-seg-opt:not(.is-active):hover { background-image: linear-gradient(var(--border), var(--border)); color: var(--text); }
+  .wg-chip:not(.is-active):hover { border-color: var(--border-strong); color: var(--text); }
+  .wg-reset:hover { border-color: var(--accent); color: var(--text); }
+  .wg-more-btn:hover .wg-chevron { color: var(--accent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wg-chevron { transition: none; }
+}
+@media (max-width: 480px) {
+  .wg-builder { padding: 12px; }
+  .wg-seg { width: 100%; }
+  .wg-seg-opt { min-width: 0; padding: 0 6px; }
+}

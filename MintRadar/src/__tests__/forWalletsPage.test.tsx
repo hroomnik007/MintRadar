@@ -360,7 +360,7 @@ describe('the rendered page', () => {
     const c = renderPage()
     const buttons = Array.from(c.querySelectorAll<HTMLButtonElement>('.doc-copy-btn'))
     const blocks = Array.from(c.querySelectorAll('.doc-code-pre code')).map(b => b.textContent)
-    expect(buttons.length).toBe(WALLET_EXAMPLES.length + 1 + 7) // the examples, the error body and the 7 blocks of the signed assertions section (npub, hex, 2 filters, the record-from-the-API example, install, snippet)
+    expect(buttons.length).toBe(WALLET_EXAMPLES.length + 2 + 1 + 7) // the examples, the 2 blocks of the request builder (curl, fetch), the error body and the 7 blocks of the signed assertions section (npub, hex, 2 filters, the record-from-the-API example, install, snippet)
     expect(blocks).toContain(HEALTH_RECORD_READ_CODE)
     expect(blocks).toHaveLength(buttons.length)
     for (const ex of WALLET_EXAMPLES) expect(blocks).toContain(ex.code)

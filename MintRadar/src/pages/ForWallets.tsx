@@ -4,6 +4,7 @@ import { DocToc } from '@/components/DocToc'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { useHashScroll, useNavbarOffset } from '@/hooks/useDocPageScroll'
 import { CodeBlock } from '@/components/CodeBlock'
+import { WalletRequestBuilder } from '@/components/WalletRequestBuilder'
 import { CONTACT_NIP05, CONTACT_NPUB, REPO_URL } from '@/constants/contact'
 import {
   WALLET_API_BASE, WALLET_API_FACTS as F, WALLET_EXAMPLES, DOCS_API_URL, DOCS_OPENAPI_URL,
@@ -31,6 +32,7 @@ import './DocPage.css'
 
 const SECTIONS = [
   { id: 'quick-start', label: 'Quick start' },
+  { id: 'request-builder', label: 'Build a request' },
   { id: 'polling', label: 'Polling and caching' },
   { id: 'cors-and-limits', label: 'CORS and limits' },
   { id: 'response', label: 'Response' },
@@ -132,6 +134,12 @@ export default function ForWallets() {
             A mint that is offline, archived or on the test-mint list is returned when you ask for it by URL;{' '}
             <code>status</code> and <code>isTest</code> tell them apart.
           </p>
+        </section>
+
+        <section aria-labelledby="request-builder">
+          <h2 id="request-builder" tabIndex={-1} className="about-h2">Build a request</h2>
+          <p>Pick the parameters and copy the request. It is built in your browser; nothing is sent from this page.</p>
+          <WalletRequestBuilder />
         </section>
 
         <section aria-labelledby="polling">

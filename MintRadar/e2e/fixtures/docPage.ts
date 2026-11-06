@@ -65,21 +65,28 @@ export async function expectExternalLinksSafe(page: Page): Promise<void> {
  * Starting at the top of `main`, Tab reaches every rendered link, button and scroll box of `main` in DOM order, and each focused
  * element shows a focus indicator.
  */
-export async function expectKeyboardOrder(page: Page): Promise<void> {
-  const expected = await page.evaluate(() => {
+export async function expectKeyboardOrder(page: Page, skipWithin?: string): Promise<void> {
+  // skipWithin: a region with form controls (radios, checkboxes, inputs) whose Tab order has its own spec; its
+  // controls are neither expected nor counted, and Tab presses that land inside it are repeated until focus leaves.
+  const expected = await page.evaluate((skip) => {
     const main = document.querySelector('main')!
     // Controls that are not rendered (display: none, e.g. the phone-only
     // "On this page" toggle on desktop) are not tab stops.
     const items = Array.from(main.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex="0"]'))
-      .filter(el => el.getClientRects().length > 0)
+      .filter(el => el.getClientRects().length > 0 && !(skip && el.closest(skip)))
     items.forEach((el, i) => el.setAttribute('data-tab-index', String(i)))
     main.setAttribute('tabindex', '-1')
     main.focus()
     return items.length
-  })
+  }, skipWithin ?? '')
   expect(expected).toBeGreaterThan(5)
   for (let i = 0; i < expected; i++) {
     await page.keyboard.press('Tab')
+    if (skipWithin) {
+      for (let guard = 0; guard < 200 && await page.evaluate((skip) => !!document.activeElement?.closest(skip), skipWithin); guard++) {
+        await page.keyboard.press('Tab')
+      }
+    }
     const got = await page.evaluate(() => {
       const el = document.activeElement as HTMLElement | null
       if (!el) return null
