@@ -16,8 +16,10 @@ info:
 
     **Caching.** Every successful response carries `Cache-Control: public, max-age=300` and an
     `ETag` over the body (on a cache hit as well as a miss; strong, but a compressed answer carries the same
-    value in the weak form `W/"..."`, so treat it as an opaque string). Send `If-None-Match` to get `304`. The data
-    follows MintRadar's 5-minute probe cycle: poll at most every 5 minutes. Errors are not cached.
+    value in the weak form `W/"..."`, so treat it as an opaque string). Send `If-None-Match` and, if the answer has
+    not changed, you get `304` with no body. The list is rebuilt about every 45 seconds and its `ETag` changes with
+    it, so a `304` is likely only for a repeat request within that time; at the 5-minute poll interval expect a full
+    `200`. The data follows MintRadar's 5-minute probe cycle: poll at most every 5 minutes. Errors are not cached.
 
     **Rate limit.** 300 requests per minute per IP address, one counter shared by `/api/v1/wallets/*`
     and `/api/v1/mints/recommend` (the unversioned `/api/...` paths count the same; `/mints/recommend`
@@ -252,7 +254,7 @@ components:
     IfNoneMatch:
       name: If-None-Match
       in: header
-      description: The `ETag` of an earlier answer. A match gives `304` with the same headers and no body.
+      description: The `ETag` of an earlier answer. If the answer has not changed, you get `304` with the same headers and no body.
       schema: { type: string }
   headers:
     CacheControl:
@@ -278,7 +280,7 @@ components:
       schema: { type: integer, minimum: 1 }
   responses:
     NotModified:
-      description: Not modified. Same `Cache-Control` and `ETag`, no body.
+      description: Not modified: the answer has not changed since the `ETag` you sent. Same `Cache-Control` and `ETag`, no body.
       headers:
         Cache-Control: { $ref: '#/components/headers/CacheControl' }
         ETag: { $ref: '#/components/headers/ETag' }
@@ -366,9 +368,9 @@ components:
     Mint:
       type: object
       description: |
-        Operational health of one mint. Never contains IP addresses, ASNs, hosting organisations, server locations,
-        error messages, reviewer public keys, review texts or contact details (`contactChecks` states only whether MintRadar recognises the format of the entries, never a value or a domain). It does carry the mint's public NUT-06
-        key (`pubkey`) and whether it advertises a Tor address (`hasOnion`). The fields from `pubkey` on were added on
+        Operational health of one mint. Never contains IP addresses, AS numbers, hosting organisations, server locations,
+        error messages, reviewer keys, review texts or contact values. It does carry the mint's own public key (`pubkey`),
+        whether it advertises a Tor address (`hasOnion`) and its probe response times (`latency24h`). The fields from `pubkey` on were added on
         2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`,
         `scoreBreakdown`, `changes`, `changesPending`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h` and `nip87` are only present on the single-mint endpoint and in the list with the matching `include` value.
       required:
