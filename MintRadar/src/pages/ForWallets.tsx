@@ -146,7 +146,7 @@ export default function ForWallets() {
             <li>
               <strong>Use the ETag.</strong> Every successful answer carries an <code>ETag</code>. Send it back in{' '}
               <code>If-None-Match</code> and, if the answer has not changed, you get <code>304 Not Modified</code> with no
-              body. The list is rebuilt about every 45 seconds and its <code>ETag</code> changes with it, so a{' '}
+              body. The list is rebuilt about every {F.listRefreshSeconds} seconds and its <code>ETag</code> changes with it, so a{' '}
               <code>304</code> is likely only for a repeat request within that time; at the {F.pollMinutes}-minute poll
               interval expect a full <code>200</code>.
             </li>
@@ -185,7 +185,7 @@ export default function ForWallets() {
           <h3 className="doc-h3">The mint object</h3>
           <p>
             Fields of a nested object are written <code>parent.child</code>. Clients must ignore fields they do not know.
-            They never contain IP addresses, AS numbers, hosting organisations, server locations, error messages,
+            The answers never contain IP addresses, AS numbers, hosting organisations, server locations, error messages,
             reviewer keys, review texts or contact values. They do carry the mint&apos;s own public key (<code>pubkey</code>),
             whether it advertises a Tor address (<code>hasOnion</code>) and its probe response times (<code>latency24h</code>). The heavier fields{' '}
             <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code> are

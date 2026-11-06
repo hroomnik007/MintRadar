@@ -15,6 +15,8 @@ export const WALLET_API_FACTS = {
   pollMinutes: 5,
   cacheMaxAgeSeconds: 300,
   rateLimitPerMinute: 300,
+  /** The list is rebuilt this often (KNOWN_MINTS_REFRESH_INTERVAL in backend/src/knownMintsCache.ts, in seconds). */
+  listRefreshSeconds: 45,
   deprecationNoticeDays: 90,
   /** GET /api/v1/mints/recommend: deprecated on this day, may be removed from the sunset day (backend/src/deprecation.ts). */
   recommendDeprecatedOn: '2026-10-20',

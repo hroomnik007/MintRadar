@@ -20,6 +20,7 @@ import {
   WALLET_LIST_DEFAULT_LIMIT, WALLET_LIST_MAX_LIMIT, WALLET_MINT_FIELDS as beMintFields, WALLET_QUERY_PARAMS as beParams,
   type KnownMintLike, type WalletExtra,
 } from '../../backend/src/walletApi'
+import { KNOWN_MINTS_REFRESH_INTERVAL } from '../../backend/src/knownMintsCache'
 import { RECOMMEND_DEPRECATION } from '../../backend/src/deprecation'
 import { HEALTH_RECORD_READ_CODE, HEALTH_RECORD_READ_TEXT, HEALTH_RECORD_READ_TITLE } from '@/constants/healthAssertionPage'
 import { healthIdentifier as beHealthIdentifier } from '../../backend/src/healthAssertions'
@@ -192,6 +193,13 @@ describe('error codes and numbers', () => {
     expect(F.pollMinutes * 60).toBe(F.cacheMaxAgeSeconds)
     expect(F.pollMinutes).toBe(METHODOLOGY_PAGE.cadence.probeMinutes)
     expect(EXAMPLE_POLL_MINUTES).toBeGreaterThanOrEqual(F.pollMinutes)
+  })
+
+  it('the quoted list refresh interval is the backend timer interval, and the page text uses it', () => {
+    expect(F.listRefreshSeconds * 1000).toBe(KNOWN_MINTS_REFRESH_INTERVAL)
+    render(<MemoryRouter><ForWallets /></MemoryRouter>)
+    expect(document.body.textContent).toContain(`rebuilt about every ${F.listRefreshSeconds} seconds`)
+    expect(document.body.textContent).toContain('The answers never contain IP addresses, AS numbers')
   })
 
   it('the deprecation notice period is the one in docs/API.md and the OpenAPI file', () => {
