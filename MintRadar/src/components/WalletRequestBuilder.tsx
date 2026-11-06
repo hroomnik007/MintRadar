@@ -122,17 +122,18 @@ export function WalletRequestBuilder() {
   const uid = useId()
   const [s, setS] = useState<FormState>(INITIAL)
   const [open, setOpen] = useState(false)
+  const [pretty, setPretty] = useState(false)
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setS(prev => ({ ...prev, [k]: v }))
 
   const fill = Math.min(100, Math.max(0, Math.round(s.minScore))) // 0..100, the only value that reaches the style
   const request = useMemo(() => buildWalletRequest(toValues(s)), [s])
   const { curl, fetchCode } = useMemo(() => {
     // The URL comes from the builder, which only emits characters the snippets accept; the fallback is the bare request.
-    try { return { curl: walletCurlSnippet(request.url), fetchCode: walletFetchSnippet(request.url) } } catch {
+    try { return { curl: walletCurlSnippet(request.url, pretty), fetchCode: walletFetchSnippet(request.url) } } catch {
       const bare = `${WALLET_API_BASE}/wallets/mints`
-      return { curl: walletCurlSnippet(bare), fetchCode: walletFetchSnippet(bare) }
+      return { curl: walletCurlSnippet(bare, pretty), fetchCode: walletFetchSnippet(bare) }
     }
-  }, [request.url])
+  }, [request.url, pretty])
 
   const errors = useMemo(() => {
     const m = new Map<WalletParamName, string>()
@@ -258,10 +259,17 @@ export function WalletRequestBuilder() {
       </div>
 
       <CodeBlock label="curl" title="Request builder: curl" code={curl} />
+      <div className="wg-pretty">
+        <label className="wg-check">
+          <input type="checkbox" checked={pretty} aria-describedby={`${uid}-pretty-hint`} onChange={e => setPretty(e.target.checked)} />
+          <span>Pretty-print with jq</span>
+        </label>
+        <p className="wg-hint" id={`${uid}-pretty-hint`}>Adds <code>| jq .</code> to the curl command. Needs jq installed.</p>
+      </div>
       <CodeBlock label="JavaScript" title="Request builder: fetch" code={fetchCode} />
 
       <div className="wg-actions">
-        <button type="button" className="wg-reset" onClick={() => { setS(INITIAL); setOpen(false) }}>Reset</button>
+        <button type="button" className="wg-reset" onClick={() => { setS(INITIAL); setOpen(false); setPretty(false) }}>Reset</button>
         <p className="wg-note">This is a single request. To fetch repeatedly, see <Link to={{ hash: '#polling' }}>Polling and caching</Link>.</p>
       </div>
     </div>

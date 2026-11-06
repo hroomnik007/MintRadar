@@ -239,6 +239,15 @@ describe('snippets', () => {
     expect(walletFetchSnippet(url)).toBe(WALLET_EXAMPLES.find(e => e.id === 'list-fetch')!.code)
   })
 
+  it('walletCurlSnippet: pretty false (or omitted) is the list-curl example, pretty true adds exactly " | jq ."', () => {
+    const { url } = buildWalletRequest({ unit: 'sat', minScore: '70' })
+    const listCurl = WALLET_EXAMPLES.find(e => e.id === 'list-curl')!.code
+    expect(walletCurlSnippet(url, false)).toBe(listCurl)
+    expect(walletCurlSnippet(url)).toBe(listCurl)
+    expect(walletCurlSnippet(url, true)).toBe(`${listCurl} | jq .`)
+    expect(walletCurlSnippet(url, true)).toBe(`curl -s "${url}" | jq .`)
+  })
+
   const every: WalletRequestValues = {
     unit: 'Usd_-', minScore: '5', includeOffline: true, includeArchived: true, includeTest: true, includeUnscored: true, nuts: '4,5',
     eligible: false, method: 'bolt12', maxInputFeePpk: '10', include: 'facts,changes', changedSince: '2026-10-20T12:00:00+02:00', limit: '7',
@@ -271,6 +280,8 @@ describe('snippets', () => {
   it('the snippet functions refuse a URL that needs escaping', () => {
     for (const url of [`${WALLET_API_BASE}/wallets/mints?unit=a"b`, `${WALLET_API_BASE}/wallets/mints?unit=a'b`, 'https://x/`id`', 'https://x/$HOME', 'https://x/a b', '']) {
       expect(() => walletCurlSnippet(url)).toThrow()
+      expect(() => walletCurlSnippet(url, false)).toThrow()
+      expect(() => walletCurlSnippet(url, true)).toThrow()
       expect(() => walletFetchSnippet(url)).toThrow()
     }
   })

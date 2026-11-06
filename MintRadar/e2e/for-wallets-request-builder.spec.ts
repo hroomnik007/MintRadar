@@ -133,6 +133,54 @@ test.describe('Request builder on /for-wallets', () => {
     }
   })
 
+  test('Pretty-print with jq changes only the curl block and Copy copies the snippet with the suffix', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await open(page)
+    const box = builder(page).getByRole('checkbox', { name: 'Pretty-print with jq' })
+    await expect(box).not.toBeChecked()
+    const fetchBefore = await fetchPre(page).textContent()
+    await builder(page).getByRole('radio', { name: 'USD' }).check({ force: true })
+    await box.check()
+    await expect(curlPre(page)).toHaveText(`curl -s "${BARE}?unit=usd" | jq .`)
+    await expect(fetchPre(page)).toHaveText(fetchBefore!.replace(BARE, `${BARE}?unit=usd`))
+    const button = page.getByRole('button', { name: 'Copy: Request builder: curl' })
+    await button.click()
+    await expect(button).toHaveText('Copied')
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`curl -s "${BARE}?unit=usd" | jq .`)
+    await box.uncheck()
+    await expect(curlPre(page)).toHaveText(`curl -s "${BARE}?unit=usd"`)
+  })
+
+  for (const width of DOC_WIDTHS) {
+    test(`no horizontal overflow at ${width}px with Pretty-print with jq on`, async ({ page }) => {
+      await open(page, width)
+      await builder(page).getByRole('checkbox', { name: 'Pretty-print with jq' }).check()
+      await selectEverything(page)
+      await builder(page).getByLabel(/Changed since/).fill('2026-10-20T10:00:00+02:00')
+      await expect(curlPre(page)).toContainText('| jq .')
+      await expectNoHorizontalOverflow(page, `builder with jq ${width}px`)
+      await expectBoxesInsideViewport(page, '.wg-builder, .wg-builder .doc-code', width)
+      expect(await curlPre(page).evaluate(el => getComputedStyle(el).overflowX)).toBe('auto')
+    })
+  }
+
+  test('the Pretty-print checkbox is reachable by keyboard between the curl block and the fetch block', async ({ page }) => {
+    await open(page)
+    const copyCurl = page.getByRole('button', { name: 'Copy: Request builder: curl' })
+    await copyCurl.focus()
+    await page.keyboard.press('Tab') // the scrollable <pre>
+    await page.keyboard.press('Tab')
+    const box = builder(page).getByRole('checkbox', { name: 'Pretty-print with jq' })
+    await expect(box).toBeFocused()
+    expect(await box.evaluate(el => el.matches(':focus-visible'))).toBe(true)
+    expect((await box.locator('xpath=ancestor::label').boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    await page.keyboard.press('Space')
+    await expect(box).toBeChecked()
+    await expect(curlPre(page)).toHaveText(`curl -s "${BARE}" | jq .`)
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Copy: Request builder: fetch' })).toBeFocused()
+  })
+
   test('Tab order follows the visual order of the form', async ({ page }) => {
     await open(page)
     // Start on the first control (the Unit group) and record every stop until the Reset button.

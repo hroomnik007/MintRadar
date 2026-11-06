@@ -27,6 +27,33 @@ const more = () => screen.getByRole('button', { name: /More options/ })
 const expand = () => { if (more().getAttribute('aria-expanded') === 'false') fireEvent.click(more()) }
 
 describe('WalletRequestBuilder', () => {
+  it('Pretty-print with jq: off at start, adds the suffix to curl only, removable, reset by Reset, no fetch and no storage writes', () => {
+    renderBuilder()
+    const box = screen.getByRole('checkbox', { name: 'Pretty-print with jq' }) as HTMLInputElement
+    expect(box.checked).toBe(false)
+    expect(document.getElementById(box.getAttribute('aria-describedby')!)!.textContent).toBe('Adds | jq . to the curl command. Needs jq installed.')
+    const fetchBefore = fetchCode()
+    fireEvent.click(box)
+    expect(box.checked).toBe(true)
+    expect(curl()).toBe(`curl -s "${BARE}" | jq .`)
+    expect(fetchCode()).toBe(fetchBefore)
+    fireEvent.click(screen.getByRole('radio', { name: 'SAT' }))
+    fireEvent.change(screen.getByLabelText(/Minimum score/), { target: { value: '70' } })
+    expect(curl()).toBe(`${example('list-curl')} | jq .`)
+    expect(fetchCode()).toBe(example('list-fetch'))
+    expect(more().textContent).not.toMatch(/set\)/)
+    fireEvent.click(box)
+    expect(curl()).toBe(example('list-curl'))
+    fireEvent.click(box)
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
+    expect(box.checked).toBe(false)
+    expect(curl()).toBe(`curl -s "${BARE}"`)
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(setItem).not.toHaveBeenCalled()
+    expect(localStorage.length).toBe(0)
+    expect(sessionStorage.length).toBe(0)
+  })
+
   it('with nothing set the output is the bare list request', () => {
     renderBuilder()
     expect(curl()).toBe(`curl -s "${BARE}"`)

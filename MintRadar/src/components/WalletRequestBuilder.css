@@ -195,6 +195,12 @@
 .wg-check input { position: static; width: 20px; height: 20px; flex: 0 0 auto; opacity: 1; accent-color: var(--accent); }
 .wg-check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
 
+/* Pretty-print option under the curl block: reuses the .wg-check control (44px row, native checkbox, focus ring). */
+.wg-pretty { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.wg-pretty .wg-hint { padding-left: 30px; }
+.wg-pretty .wg-hint code { color: var(--text2); font-family: var(--mono-data); font-size: 11.5px; }
+.wg-pretty .wg-check { align-self: flex-start; }
+
 /* Actions */
 .wg-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .wg-reset {

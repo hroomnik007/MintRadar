@@ -186,10 +186,13 @@ function assertSafeUrl(url: string): void {
   if (!SAFE_URL_RE.test(url)) throw new Error('walletRequestBuilder: URL contains a character that needs escaping')
 }
 
-/** `curl -s "<url>"`; the URL has no character that needs escaping inside double quotes. */
-export function walletCurlSnippet(url: string): string {
+// Constant suffix of the optional pretty-print mode; nothing the user typed can reach it.
+const JQ_SUFFIX = ' | jq .'
+
+/** `curl -s "<url>"`, plus ` | jq .` when `pretty` is true; the URL has no character that needs escaping inside double quotes. */
+export function walletCurlSnippet(url: string, pretty = false): string {
   assertSafeUrl(url)
-  return `curl -s "${url}"`
+  return `curl -s "${url}"${pretty === true ? JQ_SUFFIX : ''}`
 }
 
 /** The fetch example of the /for-wallets page ("list-fetch") for any URL; the URL sits in single quotes. */
