@@ -60,10 +60,10 @@ describe('WalletRequestBuilder', () => {
   it('an invalid limit shows an error under the field and stays out of the output; the rest keeps working', () => {
     renderBuilder()
     fireEvent.click(screen.getByRole('radio', { name: 'EUR' }))
-    const limit = screen.getByLabelText(/^Limit/)
+    const limit = screen.getByLabelText(/^Max results/)
     fireEvent.change(limit, { target: { value: '500' } })
     expect(limit.getAttribute('aria-invalid')).toBe('true')
-    const msg = document.getElementById(limit.getAttribute('aria-describedby')!)!
+    const msg = document.getElementById(limit.getAttribute('aria-describedby')!.split(' ').pop()!)!
     expect(msg.textContent).toMatch(/limit must be an integer from 1 to 200/)
     expect(curl()).toBe(`curl -s "${BARE}?unit=eur"`)
     expect(curl()).not.toContain('limit')
@@ -72,27 +72,42 @@ describe('WalletRequestBuilder', () => {
     expect(curl()).toContain('limit=50')
   })
 
-  it('Other unit wins over the Unit segment, which then shows no selection', () => {
+  it('has no Other unit field; Unit stays a single choice', () => {
     renderBuilder()
-    fireEvent.click(screen.getByRole('radio', { name: 'SAT' }))
     expand()
-    fireEvent.change(screen.getByLabelText(/Other unit/), { target: { value: 'msat' } })
-    expect(curl()).toBe(`curl -s "${BARE}?unit=msat"`)
+    expect(screen.queryByLabelText(/Other unit/)).toBeNull()
+    fireEvent.click(screen.getByRole('radio', { name: 'SAT' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'EUR' }))
+    expect(curl()).toBe(`curl -s "${BARE}?unit=eur"`)
     const unit = screen.getByRole('group', { name: /^Unit/ })
-    expect(within(unit).getAllByRole('radio').filter(r => (r as HTMLInputElement).checked)).toHaveLength(0)
-    // clearing Other unit gives the Unit segment its choice back
-    fireEvent.change(screen.getByLabelText(/Other unit/), { target: { value: '' } })
-    expect(curl()).toBe(`curl -s "${BARE}?unit=sat"`)
-    expect((screen.getByRole('radio', { name: 'SAT' }) as HTMLInputElement).checked).toBe(true)
+    expect(within(unit).getAllByRole('radio').filter(r => (r as HTMLInputElement).checked)).toHaveLength(1)
+    expect(more().textContent).not.toMatch(/set\)/)
   })
 
-  it('an invalid Other unit is reported and left out', () => {
+  it('labels keep the parameter name and each field has its hint linked by aria-describedby', () => {
     renderBuilder()
     expand()
-    const other = screen.getByLabelText(/Other unit/)
-    fireEvent.change(other, { target: { value: 'a b"c' } })
-    expect(other.getAttribute('aria-invalid')).toBe('true')
-    expect(curl()).toBe(`curl -s "${BARE}"`)
+    const hintOf = (el: HTMLElement) => document.getElementById(el.getAttribute('aria-describedby')!.split(' ')[0]!)!.textContent
+    const limit = screen.getByLabelText(/^Max results/)
+    expect(document.querySelector(`label[for="${limit.id}"] code`)!.textContent).toBe('limit')
+    expect(hintOf(limit)).toBe('How many mints to return, 1 to 200 (default 100).')
+    const eligible = screen.getByRole('group', { name: /^Eligible mints/ })
+    expect(within(eligible).getByText('eligible')).toBeTruthy()
+    expect(hintOf(eligible)).toBe('true: online, scored, not a test mint, first seen 14 or more days ago and checked in the last 3 hours. false: only the others.')
+    const since = screen.getByLabelText(/Changed since/)
+    expect(hintOf(since)).toMatch(/^Only mints whose public data \(.*\) changed after this time\. Score and status changes are not included\. Accepts an ISO 8601 time with Z or an offset, a date, or UNIX seconds\.$/)
+  })
+
+  it('the slider fill variable follows the value as a percentage from 0 to 100', () => {
+    renderBuilder()
+    const range = screen.getByLabelText(/Minimum score/) as HTMLInputElement
+    expect(range.style.getPropertyValue('--wg-fill')).toBe('0%')
+    fireEvent.change(range, { target: { value: '70' } })
+    expect(range.style.getPropertyValue('--wg-fill')).toBe('70%')
+    fireEvent.change(range, { target: { value: '9999' } })
+    expect(range.style.getPropertyValue('--wg-fill')).toBe('100%')
+    fireEvent.change(range, { target: { value: '-5' } })
+    expect(range.style.getPropertyValue('--wg-fill')).toBe('0%')
   })
 
   it('"More options" is collapsed by default, controls its panel and counts the fields set', () => {
@@ -123,13 +138,13 @@ describe('WalletRequestBuilder', () => {
     fireEvent.change(screen.getByLabelText(/Minimum score/), { target: { value: '50' } })
     expand()
     fireEvent.click(screen.getByRole('checkbox', { name: /Offline/ }))
-    fireEvent.change(screen.getByLabelText(/^Limit/), { target: { value: '500' } })
+    fireEvent.change(screen.getByLabelText(/^Max results/), { target: { value: '500' } })
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
     expect(curl()).toBe(`curl -s "${BARE}"`)
     expect(more().getAttribute('aria-expanded')).toBe('false')
     expect(more().textContent).not.toMatch(/set\)/)
-    expect((screen.getByLabelText(/^Limit/) as HTMLInputElement).value).toBe('')
-    expect(screen.getByLabelText(/^Limit/).getAttribute('aria-invalid')).toBeNull()
+    expect((screen.getByLabelText(/^Max results/) as HTMLInputElement).value).toBe('')
+    expect(screen.getByLabelText(/^Max results/).getAttribute('aria-invalid')).toBeNull()
     expect((screen.getByLabelText(/Minimum score/) as HTMLInputElement).value).toBe('0')
     expect((screen.getByRole('radio', { name: 'USD' }) as HTMLInputElement).checked).toBe(false)
   })

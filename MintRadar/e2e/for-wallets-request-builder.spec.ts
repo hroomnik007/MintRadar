@@ -49,13 +49,33 @@ test.describe('Request builder on /for-wallets', () => {
       await selectEverything(page)
       await builder(page).getByLabel(/Changed since/).fill('2026-10-20T10:00:00+02:00')
       await builder(page).getByLabel(/Max input fee/).fill('1000000')
-      await builder(page).getByLabel(/^Limit/).fill('200')
+      await builder(page).getByLabel(/^Max results/).fill('200')
       await expectNoHorizontalOverflow(page, `builder everything selected ${width}px`)
       await expectBoxesInsideViewport(page, '.wg-builder, .wg-builder .doc-code', width)
       const m = await page.locator('.wg-builder .doc-code-pre').evaluateAll(els => els.map(e => getComputedStyle(e).overflowX))
       expect(m).toEqual(['auto', 'auto'])
     })
   }
+
+  test('Max results has no spin buttons, the slider is accent green, hints are visible; no Other unit', async ({ page }) => {
+    await open(page)
+    await moreBtn(page).click()
+    await expect(builder(page).getByLabel(/Other unit/)).toHaveCount(0)
+    await expect(builder(page).getByText('How many mints to return, 1 to 200 (default 100).')).toBeVisible()
+    await expect(builder(page).getByText(/^true: online, scored, not a test mint/)).toBeVisible()
+    await expect(builder(page).getByText(/^Only mints whose public data/)).toBeVisible()
+    const limit = builder(page).getByLabel(/^Max results/)
+    expect(await limit.evaluate(el => getComputedStyle(el).getPropertyValue('appearance') || getComputedStyle(el).webkitAppearance)).toBe('textfield')
+    await limit.press('ArrowUp')
+    await expect(limit).toHaveValue('1')
+    const range = builder(page).getByLabel(/Minimum score/)
+    await range.fill('40')
+    expect(await range.evaluate(el => (el as HTMLElement).style.getPropertyValue('--wg-fill'))).toBe('40%')
+    expect((await range.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Shift+Tab')
+    expect(await range.evaluate(el => el.matches(':focus-visible'))).toBe(true)
+  })
 
   test('More options expands and collapses with the mouse and the keyboard', async ({ page }) => {
     await open(page)
@@ -90,7 +110,7 @@ test.describe('Request builder on /for-wallets', () => {
     await builder(page).getByRole('checkbox', { name: /Offline/ }).check()
     await expect(moreBtn(page)).toContainText('(1 set)')
     await expect(curlPre(page)).toContainText('includeOffline=true')
-    await builder(page).getByLabel(/^Limit/).fill('500')
+    await builder(page).getByLabel(/^Max results/).fill('500')
     await expect(builder(page).getByText(/limit must be an integer from 1 to 200/)).toBeVisible()
     await expect(curlPre(page)).not.toContainText('limit=')
     await builder(page).getByRole('button', { name: 'Reset' }).click()
@@ -129,7 +149,7 @@ test.describe('Request builder on /for-wallets', () => {
     }
     const at = (re: RegExp) => seen.findIndex(s => re.test(s))
     const order = [/^input\|radio\|Any/, /^input\|range\|Minimum score/, /^input\|checkbox\|NUT-04/, /^input\|checkbox\|NUT-29/,
-      /^input\|radio\|(Any|bolt11)/, /^input\|number\|Limit/, /^button\|.*More options/, /^button\|.*Copy: Request builder: curl/,
+      /^input\|radio\|(Any|bolt11)/, /^input\|number\|Max results/, /^button\|.*More options/, /^button\|.*Copy: Request builder: curl/,
       /^pre\|/, /^button\|.*Copy: Request builder: fetch/, /^button\|.*Reset$/]
     let last = -1
     for (const re of order) {
@@ -153,7 +173,7 @@ test.describe('Request builder on /for-wallets', () => {
     const before = apiCalls.length
     const hostsBefore = rec.hosts().length
     await selectEverything(page)
-    await builder(page).getByLabel(/^Limit/).fill('500')
+    await builder(page).getByLabel(/^Max results/).fill('500')
     await builder(page).getByRole('button', { name: 'Reset' }).click()
     await page.waitForLoadState('networkidle')
     expect(rec.hosts()).toEqual(['localhost:5173'])

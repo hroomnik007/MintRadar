@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { CodeBlock } from '@/components/CodeBlock'
 import { NUT_META, TRACKED_NUTS } from '@/constants/nuts'
@@ -36,24 +36,29 @@ interface FormState {
   flags: Record<FlagName, boolean>
   include: string[]
   changedSince: string
-  otherUnit: string
 }
 
 const INITIAL: FormState = {
   unit: '', minScore: 0, nuts: [], method: '', limit: '', maxInputFeePpk: '', eligible: '',
   flags: { includeOffline: false, includeArchived: false, includeTest: false, includeUnscored: false },
-  include: [], changedSince: '', otherUnit: '',
+  include: [], changedSince: '',
 }
 
 const maxLen = (name: WalletParamName): number | undefined => WALLET_REQUEST_PARAMS.find(p => p.name === name)?.maxLength
 // Longest integer the builder reads (7 digits); the same limit as MAX_INTEGER_DIGITS in the data layer.
 const INTEGER_MAX_LENGTH = 7
 
+const HINTS = {
+  limit: 'How many mints to return, 1 to 200 (default 100).',
+  eligible: 'true: online, scored, not a test mint, first seen 14 or more days ago and checked in the last 3 hours. false: only the others.',
+  changedSince: 'Only mints whose public data (key, fees, keysets, name, description, message of the day, contacts, version, NUTs, payment methods) changed after this time. Score and status changes are not included. Accepts an ISO 8601 time with Z or an offset, a date, or UNIX seconds.',
+} as const
+
 const toggle = (list: string[], v: string): string[] => (list.includes(v) ? list.filter(x => x !== v) : [...list, v])
 
 function toValues(s: FormState): WalletRequestValues {
   return {
-    unit: s.otherUnit.trim() !== '' ? s.otherUnit : s.unit.toLowerCase(),
+    unit: s.unit.toLowerCase(),
     minScore: s.minScore > 0 ? String(s.minScore) : '',
     nuts: s.nuts,
     method: s.method,
@@ -70,16 +75,17 @@ function toValues(s: FormState): WalletRequestValues {
 function moreOptionsSet(s: FormState): number {
   return [
     s.maxInputFeePpk.trim() !== '', s.eligible !== '', ...FLAGS.map(f => s.flags[f.name]),
-    s.include.length > 0, s.changedSince.trim() !== '', s.otherUnit.trim() !== '',
+    s.include.length > 0, s.changedSince.trim() !== '',
   ].filter(Boolean).length
 }
 
-function Seg({ legend, param, name, value, options, onChange }: {
+function Seg({ legend, param, name, value, options, onChange, hint, hintId }: {
   legend: string; param: string; name: string; value: string
   options: readonly { value: string; label: string }[]; onChange: (v: string) => void
+  hint?: string; hintId?: string
 }) {
   return (
-    <fieldset className="wg-field">
+    <fieldset className="wg-field" aria-describedby={hint ? hintId : undefined}>
       <legend className="wg-label">{legend} <code>{param}</code></legend>
       <div className="wg-seg">
         {options.map(o => (
@@ -89,6 +95,7 @@ function Seg({ legend, param, name, value, options, onChange }: {
           </label>
         ))}
       </div>
+      {hint && <p className="wg-hint" id={hintId}>{hint}</p>}
     </fieldset>
   )
 }
@@ -117,6 +124,7 @@ export function WalletRequestBuilder() {
   const [open, setOpen] = useState(false)
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setS(prev => ({ ...prev, [k]: v }))
 
+  const fill = Math.min(100, Math.max(0, Math.round(s.minScore))) // 0..100, the only value that reaches the style
   const request = useMemo(() => buildWalletRequest(toValues(s)), [s])
   const { curl, fetchCode } = useMemo(() => {
     // The URL comes from the builder, which only emits characters the snippets accept; the fallback is the bare request.
@@ -144,14 +152,13 @@ export function WalletRequestBuilder() {
   const errLine = (f: WalletParamName) => (err(f) ? <p className="wg-error" id={errId(f)}>{err(f)}</p> : null)
 
   const nutItems = TRACKED_NUTS.map(n => ({ value: String(parseInt(n.slice(4), 10)), label: `${n} ${NUT_META[n]?.short ?? ''}`.trim() }))
-  const unitSelection = s.otherUnit.trim() !== '' ? null : s.unit
 
   return (
     <div className="wg-builder">
       <Seg
-        legend="Unit" param="unit" name={`${uid}-unit`} value={unitSelection ?? '__none__'}
+        legend="Unit" param="unit" name={`${uid}-unit`} value={s.unit}
         options={[{ value: '', label: 'Any' }, ...UNITS.map(u => ({ value: u, label: u }))]}
-        onChange={v => setS(prev => ({ ...prev, unit: v, otherUnit: '' }))}
+        onChange={v => set('unit', v)}
       />
 
       <div className="wg-field">
@@ -159,6 +166,7 @@ export function WalletRequestBuilder() {
         <div className="wg-range-row">
           <input
             id={`${uid}-minScore`} className="wg-range" type="range" min={0} max={100} step={1} value={s.minScore}
+            style={{ '--wg-fill': `${fill}%` } as CSSProperties}
             aria-valuetext={s.minScore === 0 ? 'any' : String(s.minScore)}
             onChange={e => set('minScore', Number(e.target.value))}
           />
@@ -175,12 +183,13 @@ export function WalletRequestBuilder() {
       />
 
       <div className="wg-field">
-        <label className="wg-label" htmlFor={`${uid}-limit`}>Limit <code>limit</code></label>
+        <label className="wg-label" htmlFor={`${uid}-limit`}>Max results <code>limit</code></label>
         <input
           id={`${uid}-limit`} className="wg-input wg-input-short" type="number" inputMode="numeric" min={1} max={200}
           placeholder="100" value={s.limit} onChange={e => set('limit', e.target.value.slice(0, INTEGER_MAX_LENGTH))}
-          {...invalid('limit')} {...describedBy('limit')}
+          {...invalid('limit')} {...describedBy('limit', `${uid}-limit-hint`)}
         />
+        <p className="wg-hint" id={`${uid}-limit-hint`}>{HINTS.limit}</p>
         {errLine('limit')}
       </div>
 
@@ -209,7 +218,8 @@ export function WalletRequestBuilder() {
           </div>
 
           <Seg
-            legend="Eligible" param="eligible" name={`${uid}-eligible`} value={s.eligible}
+            legend="Eligible mints" param="eligible" name={`${uid}-eligible`} value={s.eligible}
+            hint={HINTS.eligible} hintId={`${uid}-eligible-hint`}
             options={[{ value: '', label: 'Any' }, { value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
             onChange={v => set('eligible', v)}
           />
@@ -241,19 +251,8 @@ export function WalletRequestBuilder() {
               maxLength={maxLen('changedSince')} value={s.changedSince} onChange={e => set('changedSince', e.target.value)}
               {...invalid('changedSince')} {...describedBy('changedSince', `${uid}-since-hint`)}
             />
-            <p className="wg-hint" id={`${uid}-since-hint`}>ISO 8601 time with Z or an offset, a date, or UNIX seconds</p>
+            <p className="wg-hint" id={`${uid}-since-hint`}>{HINTS.changedSince}</p>
             {errLine('changedSince')}
-          </div>
-
-          <div className="wg-field">
-            <label className="wg-label" htmlFor={`${uid}-other`}>Other unit <code>unit</code></label>
-            <input
-              id={`${uid}-other`} className="wg-input wg-input-short" type="text" autoComplete="off" spellCheck={false}
-              maxLength={maxLen('unit')} value={s.otherUnit} onChange={e => set('otherUnit', e.target.value)}
-              {...(s.otherUnit.trim() !== '' ? invalid('unit') : {})} {...describedBy('unit', `${uid}-other-hint`)}
-            />
-            <p className="wg-hint" id={`${uid}-other-hint`}>Overrides the Unit choice above.</p>
-            {s.otherUnit.trim() !== '' && errLine('unit')}
           </div>
         </div>
       </div>
