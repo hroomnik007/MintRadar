@@ -9,6 +9,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { loadNostrClient } from '@/core/nostr/lazy'
+import type { PairingStage } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
 import { AccountMenu } from './AccountMenu'
 import './AppShell.css'
@@ -149,6 +150,7 @@ export function AppShell() {
   const [bunkerInput, setBunkerInput] = useState('')
   const [bunkerError, setBunkerError] = useState('')
   const [qrUri, setQrUri] = useState('')
+  const [pairingStage, setPairingStage] = useState<PairingStage>('awaiting-signer')
   const [copiedUri, setCopiedUri] = useState(false)
   const qrCancelRef = useRef<(() => void) | null>(null)
   // The pairing whose client-module load is still pending (startPairing); a newer start, a teardown or an unmount
@@ -219,9 +221,14 @@ export function AppShell() {
     void loadNostrClient().then(({ initBunkerQR }) => {
       if (pairingAttemptRef.current !== attempt) return
       pairingAttemptRef.current = null
-      const { uri, loginPromise, cancel } = initBunkerQR()
+      let cancel: () => void = () => {}
+      const { uri, loginPromise, cancel: cancelPairing } = initBunkerQR(stage => {
+        if (qrCancelRef.current === cancel) setPairingStage(stage)
+      })
+      cancel = cancelPairing
       qrCancelRef.current = cancel
       setQrUri(uri)
+      setPairingStage('awaiting-signer')
       setCopiedUri(false)
       setBunkerError('')
       void loginPromise
@@ -233,9 +240,11 @@ export function AppShell() {
         })
         .catch((err: unknown) => {
           if (qrCancelRef.current !== cancel || !(err instanceof Error)) return
-          if (err.name !== 'AbortError' && !err.message.includes('subscription closed')) {
-            setBunkerError(err.message || 'Pairing failed')
-          }
+          if (err.name === 'AbortError') return
+          qrCancelRef.current = null
+          // A dead pairing link must not stay copyable/scannable: its relays are gone.
+          if (err.name === 'PairingConnectionLost') setQrUri('') // client.ts PAIRING_CONNECTION_LOST (string: keeps the client chunk lazy)
+          setBunkerError(err.message || 'Pairing failed')
         })
     }, () => {
       if (pairingAttemptRef.current !== attempt) return
@@ -536,11 +545,18 @@ export function AppShell() {
                     </div>
                     {qrUri && !bunkerError && (
                       <div className="nostr-remote-status">
-                        Waiting for your signer
+                        {pairingStage === 'awaiting-pubkey' ? 'Signer approved, waiting for your public key' : 'Waiting for your signer to approve'}
                         <span className="nostr-remote-status-sub">This can take up to 2 minutes.</span>
                       </div>
                     )}
-                    {bunkerError && <div className="nostr-nsec-error">{bunkerError}</div>}
+                    {bunkerError && (
+                      <div className="nostr-nsec-error" role="alert">
+                        {bunkerError}
+                        {!qrUri && (
+                          <button type="button" className="nostr-qr-refresh" onClick={startPairing}>Get a new link</button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

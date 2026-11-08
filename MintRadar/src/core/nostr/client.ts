@@ -460,7 +460,11 @@ export function buildNostrConnectURI(): { uri: string; clientSecretKey: Uint8Arr
 // Initiates a client-initiated nostrconnect:// pairing flow (QR scanned by a
 // mobile signer app). Returns the URI to display as QR and a promise that
 // resolves once the signer connects back.
-export function initBunkerQR(): {
+export const PAIRING_CONNECTION_LOST = 'PairingConnectionLost'
+export const PAIRING_CONNECTION_LOST_MESSAGE = 'Lost the connection to the pairing relays before your signer answered (this can happen when the browser is in the background). Get a new link and try again.'
+export type PairingStage = 'awaiting-signer' | 'awaiting-pubkey'
+
+export function initBunkerQR(onStage?: (stage: PairingStage) => void): {
   uri: string
   loginPromise: Promise<NostrProfile>
   cancel: () => void
@@ -488,12 +492,27 @@ export function initBunkerQR(): {
   // If the timeout wins the race below, fromURI still rejects on abort — keep
   // that from surfacing as an unhandled rejection.
   rawSigner.catch(() => {})
+  // nostr-tools rejects with "subscription closed before connection was established." both
+  // when WE closed it (cancel/timeout → abort) and when every pairing relay dropped (no
+  // auto-reconnect in SimplePool). Tell the two apart: our own abort is an AbortError the UI
+  // ignores; a genuine drop is a typed, actionable error (it used to be swallowed by the UI,
+  // leaving the modal waiting forever with the 2-minute timer already cleared).
+  const signerOrLost = rawSigner.catch((err: unknown) => {
+    if (abortCtrl.signal.aborted) throw new DOMException('Pairing cancelled', 'AbortError')
+    if (err instanceof Error && err.message.includes('subscription closed')) {
+      const lost = new Error(PAIRING_CONNECTION_LOST_MESSAGE)
+      lost.name = PAIRING_CONNECTION_LOST
+      throw lost
+    }
+    throw err
+  })
+  onStage?.('awaiting-signer')
 
   // The timeout bounds the WHOLE flow (connect-ack + get_public_key), not just
   // the ack: a signer that acks but never answers get_public_key (e.g. Amber
   // closing after approval) used to leave the QR modal waiting forever.
   const loginPromise = Promise.race([
-    rawSigner.then(async signer => {
+    signerOrLost.then(async signer => {
     // The pairing can be cancelled (Cancel button / modal close → cancel()) or
     // time out in the very tick the signer's connect-ack resolved this promise.
     // Promise.race would still hand us the resolved signer — and installing the
@@ -509,6 +528,7 @@ export function initBunkerQR(): {
       return true
     }
     if (await bailIfAborted()) throw new DOMException('Pairing cancelled', 'AbortError')
+    onStage?.('awaiting-pubkey')
 
     let pubkeyHex: string
     try {
@@ -574,7 +594,11 @@ export async function restoreBunkerSession(): Promise<void> {
     // M-1 fix ensures auth store is cleared and user is logged out cleanly.
     installBunkerShim(signer, storedPubkey)
     // Reconnect relay subscription in background; clear session and log out if it fails
+    // Only act if THIS restored signer is still the live one: a fresh login (QR/bunker/nsec)
+    // meanwhile tears it down (its close() rejects this connect), and that rejection must not
+    // remove the NEW shim/session or log the new login out. A late success needs nothing.
     void signer.connect().catch(() => {
+      if (activeBunkerSigner !== signer) return
       removeBunkerShim()
       useAuthStore.getState().logout()
     })

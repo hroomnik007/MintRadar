@@ -218,3 +218,35 @@ describe('initBunkerQR — Amber interoperability', () => {
     expect((BunkerSigner.fromURI as Mock).mock.calls[0]![2]).toMatchObject({ skipSwitchRelays: true })
   })
 })
+
+describe('initBunkerQR — relay drop vs cancel, and progress stages', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  it('every pairing relay dropping (e.g. browser backgrounded) surfaces a typed, actionable error, not an endless wait', async () => {
+    vi.useFakeTimers()
+    ;(BunkerSigner.fromURI as Mock).mockRejectedValue(new Error('subscription closed before connection was established.'))
+    const err = await initBunkerQR().loginPromise.catch((e: Error) => e)
+    expect(err).toMatchObject({ name: 'PairingConnectionLost' })
+    expect((err as Error).message).toMatch(/new link/i)
+    expect(vi.getTimerCount()).toBe(0)
+    expect(pools[0]!.destroy).toHaveBeenCalled()
+    expect(sessionStorage.getItem('bunkerPubkey')).toBeNull()
+  })
+
+  it('a user cancel is still an AbortError even though nostr-tools reports it as "subscription closed"', async () => {
+    let rejectSub!: (e: Error) => void
+    ;(BunkerSigner.fromURI as Mock).mockReturnValue(new Promise((_, r) => { rejectSub = r }))
+    const { loginPromise, cancel } = initBunkerQR()
+    cancel()
+    rejectSub(new Error('subscription closed before connection was established.'))
+    await expect(loginPromise).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('reports awaiting-signer, then awaiting-pubkey after the ack — never with URI/secret/key data', async () => {
+    const signer = makeFakeSigner()
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const stages: unknown[][] = []
+    await initBunkerQR((...a: unknown[]) => { stages.push(a) }).loginPromise
+    expect(stages).toEqual([['awaiting-signer'], ['awaiting-pubkey']])
+  })
+})
