@@ -37,7 +37,7 @@ export const UPDOWN_COOLDOWN_MINUTES = 60
 export const DM_DAILY_CAP = 40
 /** A notification subscription that was not touched for this many days is dropped (backend/src/db.ts). */
 export const NOTIFICATION_RETENTION_DAYS = 30
-/** Most mints one subscriber can have notifications on for (backend/src/index.ts MAX_SUBSCRIPTIONS_PER_PUBKEY). */
+/** Most mints one subscriber can have notifications on for (backend/src/routes/notifications.ts MAX_SUBSCRIPTIONS_PER_PUBKEY). */
 export const MAX_NOTIFICATION_SUBSCRIPTIONS = 50
 /** Window of the Mint Detail outages list; the page requests it explicitly (`days=`), the backend default is the same. */
 export const OUTAGES_WINDOW_DAYS = 30

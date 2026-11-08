@@ -1,5 +1,23 @@
 # MintRadar — Backend API, DB schema, stats rules, cron jobs (split from CLAUDE.md)
 > Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
+
+## Where the API code lives (since 2026-11-08)
+`backend/src/index.ts` used to hold every route (2 742 lines). It now holds only the app, the middleware chain (security headers, `/api/v1` rewrite, CORS, readiness gate, `express.json()`, `rateLimitMiddleware`), the router mounts, the `/api` 404, the SPA head and the start-up sequence. The rest moved verbatim:
+
+| File | What |
+|---|---|
+| `serverConfig.ts` | `IS_DEV`, `ALLOWED_ORIGINS`, `MAX_URL_LENGTH`, `sanitizeLogValue`, `knownMintNameFields` |
+| `rateLimits.ts` | every limiter (general, read, wallet, submit, discover, notify, unknown probe), `RATE_LIMIT_EXEMPT`, `rateLimitMiddleware` |
+| `onDemandProbe.ts` | `probeMint`, `probeKnownMint` and the known-down fast path / offline cache |
+| `knownMintsSnapshot.ts` | `knownMints` (SWR cache), `computeKnownMints`, `loadKnownMints`, `invalidateKnownMints` |
+| `routes/meta.ts` | `/health`, `/api`, `/sitemap.xml` |
+| `routes/mints.ts` | `/api/mint/probe`, history, version-history, outages, recommend, known, icon, nip05, og, swaps, audit-cz, changes, nostr-reviews |
+| `routes/stats.ts` | `/api/stats`, reliability-trend, reliability-movers and their caches |
+| `routes/wallet.ts` | `/api/wallets/*` |
+| `routes/submit.ts` | `POST /api/mint/submit`, `POST /api/mints/discover` |
+| `routes/notifications.ts` | subscribe / unsubscribe / list, `validateRelays`, the per-pubkey caps |
+
+Routers are mounted in that order after the rate limiter; their paths do not overlap, so the order only matters for the catch-alls (`/api/wallets` inside the wallet router, `/api` and the SPA head in `index.ts`, both after every router). Older notes below that say "`index.ts`" for a route or limiter mean the file in this table.
 ## DB Tables
 
 ### mints

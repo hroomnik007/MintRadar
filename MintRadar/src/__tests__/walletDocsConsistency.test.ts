@@ -25,7 +25,7 @@ const openapi = readFileSync(resolve(root, OPENAPI), 'utf8')
 const openapiLines = openapi.split('\n')
 const HEALTH_MD = 'docs/nostr-health-assertions.md'
 const healthMd = readFileSync(resolve(root, HEALTH_MD), 'utf8')
-const backendIndex = readFileSync(resolve(root, 'backend/src/index.ts'), 'utf8')
+const backendRateLimits = readFileSync(resolve(root, 'backend/src/rateLimits.ts'), 'utf8')
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -200,7 +200,7 @@ describe(`${API_MD} matches the code constants`, () => {
     for (const s of stated) expect(s, `${API_MD}: wallet rate limit`).toBe(n)
     const row = mdTable(apiMd, '| Status | `code` |').find(r => stripTicks(r[1]!) === 'rate_limited')!
     expect(row[2], `${API_MD}: 429 row`).toContain(`over ${n} requests per minute`)
-    expect(backendIndex, 'backend/src/index.ts').toContain(`const WALLET_RATE_LIMIT_MAX = ${n}`)
+    expect(backendRateLimits, 'backend/src/rateLimits.ts').toContain(`const WALLET_RATE_LIMIT_MAX = ${n}`)
   })
 
   it('the methodology version table equals METHODOLOGY_CHANGES, and the newest number is METHODOLOGY_VERSION', () => {

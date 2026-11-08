@@ -176,14 +176,14 @@ describe('list parameters: the table equals the real parser', () => {
 
 describe('error codes and numbers', () => {
   it('every documented code is sent with its status by the backend', () => {
-    const source = read('../../backend/src/index.ts') + read('../../backend/src/walletApi.ts')
+    const source = ['index.ts', 'rateLimits.ts', 'routes/wallet.ts', 'walletApi.ts'].map(f => read(`../../backend/src/${f}`)).join('\n')
     for (const e of WALLET_ERRORS) {
       expect(source, e.code).toMatch(new RegExp(`sendWalletError\\(res, ${e.status}, '${e.code}'`))
     }
   })
 
   it('rate limit, cache lifetime and poll advice', () => {
-    expect(read('../../backend/src/index.ts')).toContain(`const WALLET_RATE_LIMIT_MAX = ${F.rateLimitPerMinute}`)
+    expect(read('../../backend/src/rateLimits.ts')).toContain(`const WALLET_RATE_LIMIT_MAX = ${F.rateLimitPerMinute}`)
     expect(WALLET_ERRORS.find(e => e.code === 'rate_limited')!.when).toContain(String(F.rateLimitPerMinute))
     const headers: Record<string, string> = {}
     const res = { setHeader: (k: string, v: string) => { headers[k] = v }, type: () => res, send: () => res } as never

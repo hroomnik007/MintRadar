@@ -18,8 +18,8 @@ describe('the constants equal the backend values they repeat', () => {
   })
   it('retention, subscription cap and outages default are the backend source lines', () => {
     expect(read('../../backend/src/db.ts')).toContain(`interval '${T.NOTIFICATION_RETENTION_DAYS} days'`)
-    expect(read('../../backend/src/index.ts')).toContain(`const MAX_SUBSCRIPTIONS_PER_PUBKEY = ${T.MAX_NOTIFICATION_SUBSCRIPTIONS}`)
-    expect(read('../../backend/src/index.ts')).toMatch(new RegExp(`parseInt\\(daysParam, 10\\)\\)\\)\\s*:\\s*${T.OUTAGES_WINDOW_DAYS}\\b`))
+    expect(read('../../backend/src/routes/notifications.ts')).toContain(`const MAX_SUBSCRIPTIONS_PER_PUBKEY = ${T.MAX_NOTIFICATION_SUBSCRIPTIONS}`)
+    expect(read('../../backend/src/routes/mints.ts')).toMatch(new RegExp(`parseInt\\(daysParam, 10\\)\\)\\)\\s*:\\s*${T.OUTAGES_WINDOW_DAYS}\\b`))
   })
 })
 
