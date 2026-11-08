@@ -1,3 +1,4 @@
+import { auditCzResponse, czSwapList } from './fixtures/auditCz'
 import { test, expect, type Page, type Browser } from '@playwright/test'
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import {
@@ -273,6 +274,8 @@ for (const width of WIDTHS) {
 
     test('Audit tab: every summary tile keeps its text inside the tile', async ({ page }) => {
       const { url } = await mount(page, {}, { width })
+      // The tiles are the cashu.info view (audit.8333.space's strip left the tab on 2026-11-08): give the mint a stored detail.
+      await page.route('**/api/mints/audit-cz**', r => r.fulfill({ json: auditCzResponse({ swaps: czSwapList([{ kind: 'ok' }, { kind: 'fail', status: 'failed', error: 'melt quote failed' }]) }) }))
       await page.goto(`/mint/${encodeURIComponent(url)}`)
       await expect(page.locator('.md-tabs')).toBeVisible()
       await page.locator('.md-tab', { hasText: 'Audit' }).click()

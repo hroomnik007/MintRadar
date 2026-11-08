@@ -60,7 +60,7 @@ for (const w of [1440, 390]) {
       if (w === 1440) expectSeen(recs, [['search-shortcut', '/']], 'cards')
     })
 
-    test('Mint Detail: status, New, Test mint, alerts, disabled method chips, retry button', async ({ page }) => {
+    test('Mint Detail: status, New, Test mint, alerts, disabled method chips', async ({ page }) => {
       const mints = [
         { ...DIMMED_MINTS[2], url: 'https://testnut.cashu.space', name: 'Testnut', discoveredAt: new Date().toISOString() },
         { ...DIMMED_MINTS[4], url: 'https://offerr.mint.example', name: 'Offerr', lastError: 'Connection timed out' },
@@ -75,23 +75,21 @@ for (const w of [1440, 390]) {
         p.info.nuts['5'] = { methods: [], disabled: true }
         r.fulfill({ json: p })
       })
-      await page.route('**/api/mints/swaps**', r => r.fulfill({ status: 500, json: {} }))
       const all: BadgeRecord[] = []
       for (const host of ['testnut.cashu.space', 'offerr.mint.example']) {
         await page.goto(`/mint/${encodeURIComponent(`https://${host}`)}`)
         await expect(page.locator('.md-tabs')).toBeVisible()
         for (const tab of ['overview', 'history', 'nuts', 'audit']) {
           await page.locator('.md-tab', { hasText: new RegExp(`^${tab}$`, 'i') }).click()
-          if (tab === 'audit') await expect(page.locator('.audit-swaps-error-banner')).toBeVisible()
           all.push(...(await scan(page, tab === 'audit' || tab === 'nuts')))
         }
       }
       assertAll(all, 'detail')
       expectSeen(all, [
         ['md-age-badge-inline', 'New'], ['md-mint-alert-title', 'Operator notice'], ['md-error-badge', 'Connection timed out'],
-        ['method-chip', 'bolt11'], ['audit-swaps-retry-btn', 'Retry'],
+        ['method-chip', 'bolt11'],
       ], 'detail')
-      expect.soft(all.some(r => r.sel.includes('audit-swaps-retry-btn') && r.state.includes('hover')), 'retry hover state scanned').toBe(true)
+      // The audit.8333.space "Couldn't load recent swaps" banner and its Retry button left the Audit tab on 2026-11-08.
     })
 
     test('Outdated badges (Mint Detail + Compare), Token Inspector Test mint badge', async ({ page }) => {

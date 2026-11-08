@@ -71,8 +71,8 @@ for (const width of [1440, 768, 390, 320]) {
     await expect(tile.locator('.md-sc-sub')).toContainText(latencyCaption())
     await expect(tile.locator('.md-sc-sub')).toContainText(`server · ${PROBE_LOCATION}`)
     await expect(tile.locator('.latency-test-btn')).toHaveText('Show my latency')
-    // the second ⓘ, next to the button, stays
-    await expect(triggers(tile)).toHaveCount(1)
+    // no ⓘ on the tile at all: the one beside the button was removed on 2026-11-08 (it repeated the button's label)
+    await expect(triggers(tile)).toHaveCount(0)
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   })
