@@ -1,30 +1,57 @@
-# Post-announcement backlog (written 2026-10-22, task E1)
+# Post-announcement backlog (written 2026-10-22, task E1; statuses checked 2026-11-08)
 
 What is planned after the public announcement. Nothing in the "By feedback only" table is started without a reason from users or wallet teams.
+Every status below was checked against the code, the docs or the live site on 2026-11-08; "Owner" means it cannot be checked from the repo.
 
-## Week 1 after the announcement
+## Open
+
+| Item | Status 2026-11-08 |
+|---|---|
+| SQL report on the relay delivery counters (was due about 2026-10-30) | **Overdue, not recorded anywhere.** The counters exist (`reviewsRelayStats.ts`, `reviews-and-nostr.md` "Relay delivery counters"); the report needs a read on the production database. |
+| First real mint change: test the change log, the DM and the feed tag | **Trigger has happened** (the wallet API lists 17 mints with changes since 2026-10-20, first on 2026-10-22), but no test of the DM or the `mint_last_change` feed tag is recorded. |
+| Monthly audit score analysis | Due about 2026-11-09. |
+| Inline critical CSS | Still open: two render-blocking stylesheets (`index-*.css`, `MintFavicon-*.css`). The CSP check is answered: production `style-src 'self' 'unsafe-inline'` allows an inline `<style>`. |
+| Condense `docs/claude` | Parked by the owner 2026-11-08: only the 4 largest files (stats-dashboard-watchlist-ui, backend-api-and-data, card-and-mint-detail-ui, deploy-and-infra, about 450 KB), one at a time with owner review; keep the rules, move history verbatim to `docs/claude/archive/`. |
+
+## Owner (cannot be checked from the repo)
 
 | Item | Detail |
 |---|---|
-| Wallet teams and gorrdy | Answer their questions; make small doc/API fixes from their feedback |
+| Wallet teams and gorrdy | Answer their questions; small doc/API fixes from their feedback |
 | Minibits courtesy note | Tell them their Nostr contact value is shown in a shortened "npub..." form |
-| Monitoring | PageSpeed, `/health`, the new kind 30385 event, error logs |
-| Server clean-up (after one week) | server clean-up after the announcement; tracked privately |
-| About 2026-10-30 | SQL report on the relay delivery counters |
+| Monitoring | PageSpeed, `/health`, the kind 30385 event, error logs |
+| Server clean-up after the announcement | Tracked privately |
 
-## Weeks 2-3 (small, low risk)
+## Recurring and fixed dates
 
-| Item | Detail |
+| Date | What |
 |---|---|
-| strfry HEALTHCHECK | Compose change, needs a server apply |
-| Stale limits | Unify `KNOWN_MINTS_STALE_LIMIT` and `STATS_STALE_LIMIT` to 5 minutes (done in task E1) |
-| DNS retry | One DNS retry on timeout for e-mail contact checks, no storage of contact values (done in task E1) |
-| `/mint/<URL ending in .svg/.png/.js>` | Answers 404 because the static-asset regex has precedence over the `/mint/` prefix; fix it |
-| Start-up order | `app.listen` before `initDb`, with a test |
-| "proofs" wording | Compare "Backup" tooltip (done in task E1) |
-| `h7` aggregate | `EXPLAIN (ANALYZE, BUFFERS)` on the production database for the 7-day aggregate before deciding on an index `mint_history(checked_at)` |
-| brotli on nginx | **Declined 2026-10-25** (needs a third-party nginx module; minimal external dependencies). Built-in `gzip_static` with build-time gzip -9 instead, see `deploy-and-infra.md`, "Precompressed .gz assets". |
-| Inline critical CSS | Render-blocking today; needs a CSP check |
+| Monthly | Docker / NodeSource updates |
+| 2027-01-01 | Check the year label of the 90-day trend. The rule is already built ("1 Jan 2027" on the first tick of a new year, `stats-dashboard-watchlist-ui.md`, "X axis rule"); only the look on the day is left to check. |
+| 2027-01-26 | Sunset of `/api/v1/mints/recommend`. The `Deprecation` and `Sunset: Tue, 26 Jan 2027` headers are live; on the day the route goes. |
+
+## Done (verified 2026-11-08)
+
+| Item | Where |
+|---|---|
+| strfry HEALTHCHECK | Task E3 (`deploy/strfry/docker-compose.strfry.yml`); the relay container reports `healthy` on server01 |
+| `/mint/<URL ending in .svg/.png/.js>` answered 404 | Task E3, `location ^~ /mint/`; live: such a URL gets the "Mint not found" page |
+| Start-up order (`app.listen` before `initDb`, with a test) | Task E4 readiness gate (`index.ts` start block, `integration/readiness.test.ts`) |
+| `h7` aggregate `EXPLAIN (ANALYZE, BUFFERS)` | Tasks E2/E2b: the 7-day aggregate is about 0.3 s; JIT off fixed the 3.9 s query; the `mint_history(checked_at)` index is deferred until about 0.5 s becomes a problem (`backend-api-and-data.md`) |
+| Stale limits unified to 5 minutes | Task E1 |
+| One DNS retry for e-mail contact checks | Task E1 |
+| "proofs" wording of the Compare "Backup" tooltip | Task E1 (now `COMPARE_BACKUP_TEXT` in `tooltipTexts.ts`) |
+| Deferring vendor-nostr and vendor-db | Stage 2 perf, 2026-10-25 (`deploy-and-infra.md`, "Code splitting & bundle layout") |
+| Real HTTP 404 for unknown paths | Stage 3 SEO, applied 2026-10-26: unknown paths and unknown mints answer 404 with the "Page not found" / "Mint not found" page (the old "soft 404 stays" decision is superseded) |
+| Stats note about the 2026-10-08 audit source switch | Replaced by `moversMethodologyNote()`: the movers panel names every methodology change inside its 7/30-day window and the note goes away by itself |
+
+## Declined
+
+| Item | Why |
+|---|---|
+| brotli on nginx | Declined 2026-10-25: needs a third-party nginx module; built-in `gzip_static` with build-time gzip -9 instead (`deploy-and-infra.md`, "Precompressed .gz assets") |
+| Icon resize | Declined 2026-10-25: built with `sharp`, reverted before release (minimal external dependencies). Icons get a 7-day cache + `stale-while-revalidate` + ETag, `loading=lazy`, `decoding=async`, width/height instead. Revisit only with a dependency-free approach. |
+| Moving inline styles to CSS as its own task | Owner 2026-11-08: only when a component is reworked anyway (a mechanical move changes CSS precedence) |
 
 ## By feedback only
 
@@ -40,20 +67,6 @@ Do not start without a reason from users or wallet teams.
 | Watchlist without login | |
 | DM notification settings | **DO NOT BUILD** (Task E5). Triggers unchanged: dozens of subscribers, a complaint, or a flapping mint with a subscription (mute was dropped on 2026-10-02). Smallest step when a trigger comes: two separate pills for key rotation and fee change, then a global pause. No digest, no quiet hours without a reason. |
 | Atomic deploy | |
-| Icon resize | **Declined 2026-10-25:** built in Stage 2 with `sharp`, reverted before release (minimal external dependencies). Icons get a 7-day cache + `stale-while-revalidate` + ETag, `loading=lazy`, `decoding=async`, width/height instead. Revisit only with a dependency-free approach. |
-| Deferring vendor-nostr and vendor-db | **Done 2026-10-25** (Stage 2 perf): out of the initial modulepreload, loaded on first use / after first paint; see `deploy-and-infra.md`, "Code splitting & bundle layout". |
 | SSR | |
 | JetBrains Mono | |
 | OSV scanning | Deferred |
-| Real HTTP 404 for unknown paths | Soft 404 stays; the decision record and the triggers are in `docs/claude/deploy-and-infra.md` (next to the nginx soft-404 section) |
-
-## Fixed dates
-
-| Date | What |
-|---|---|
-| 2026-10-30 | SQL report on relay delivery counters |
-| About 2026-11-09 | Monthly audit score analysis |
-| Monthly | Docker / NodeSource updates |
-| 2027-01-01 | Year label of the 90-day trend |
-| 2027-01-26 | Sunset of `/api/v1/mints/recommend` |
-| First real mint change | Test the change log, the DM and the feed tag |
