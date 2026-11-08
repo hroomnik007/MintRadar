@@ -24,7 +24,7 @@ vi.mock('@/stores/auth.store', () => ({
   useAuthStore: { getState: vi.fn(() => ({ logout: vi.fn() })) },
 }))
 
-import { initBunkerQR, restoreBunkerSession } from '@/core/nostr/client'
+import { initBunkerQR, restoreBunkerSession, isTransientSignerError } from '@/core/nostr/client'
 import { BunkerSigner } from 'nostr-tools/nip46'
 
 const PK = 'a'.repeat(64)
@@ -248,5 +248,171 @@ describe('initBunkerQR — relay drop vs cancel, and progress stages', () => {
     const stages: unknown[][] = []
     await initBunkerQR((...a: unknown[]) => { stages.push(a) }).loginPromise
     expect(stages).toEqual([['awaiting-signer'], ['awaiting-pubkey']])
+  })
+})
+
+// get_public_key: which errors of ONE attempt are transient (the schedule goes on) and which are terminal.
+// Messages are the exact nostr-tools 2.25.x texts (lib/esm/nip46.js).
+const TRANSIENT = [
+  'nostr-tools/nip46: failed to send "get_public_key" to any relay: connection failure: connection failed; publish timed out',
+  'nostr-tools/nip46: timeout after 30000ms waiting for "get_public_key"',
+  'nostr-tools/nip46: subscription to the remote signer was closed',
+]
+const TERMINAL = [
+  'this signer is not open anymore, create a new one',
+  'nostr-tools/nip46: signer was closed',
+  'user rejected', // the signer's own error text (no nostr-tools prefix)
+  'nostr-tools/nip46: remote signer aa requires auth to answer "get_public_key" but there was no onauth() callback configured',
+  'nostr-tools/nip46: remote signer response has neither result nor error',
+]
+
+describe('isTransientSignerError', () => {
+  it.each(TRANSIENT)('transient: %s', m => { expect(isTransientSignerError(new Error(m))).toBe(true) })
+  it.each(TERMINAL)('terminal: %s', m => { expect(isTransientSignerError(new Error(m))).toBe(false) })
+  it('terminal: an abort, a non-Error value, an empty message', () => {
+    expect(isTransientSignerError(new DOMException('Pairing cancelled', 'AbortError'))).toBe(false)
+    expect(isTransientSignerError('nostr-tools/nip46: timeout after 30000ms waiting for "x"')).toBe(false)
+    expect(isTransientSignerError(undefined)).toBe(false)
+    expect(isTransientSignerError(new Error(''))).toBe(false)
+  })
+})
+
+describe('initBunkerQR — get_public_key attempts: transient vs terminal errors', () => {
+  afterEach(() => { vi.useRealTimers() })
+  const noSession = () => {
+    expect((window as { nostr?: unknown }).nostr).toBeUndefined()
+    expect(sessionStorage.getItem('bunkerPubkey')).toBeNull()
+    expect(sessionStorage.getItem('bunkerURI')).toBeNull()
+    expect(sessionStorage.getItem('bunkerClientSecretKey')).toBeNull()
+  }
+
+  it.each(TRANSIENT)('a transient failure of the first attempt does not end the login; the next tick (8 s) sends a new one: %s', async msg => {
+    vi.useFakeTimers()
+    const signer = makeFakeSigner()
+    let calls = 0
+    signer.getPublicKey = vi.fn(() => (++calls === 1 ? Promise.reject(new Error(msg)) : Promise.resolve(PK)))
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const { loginPromise } = initBunkerQR()
+    const settled = loginPromise.then(p => ({ ok: p }), (e: Error) => ({ err: e }))
+    await vi.advanceTimersByTimeAsync(7_999)
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(1)       // no early retry: the schedule is kept
+    expect(await Promise.race([settled, Promise.resolve('pending')])).toBe('pending')
+    noSession()                                                // nothing stored before success
+    await vi.advanceTimersByTimeAsync(1)
+    expect(await settled).toMatchObject({ ok: { pubkey: PK } })
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(2)
+    expect(sessionStorage.getItem('bunkerPubkey')).toBe(PK)
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(2)       // the schedule stopped
+  })
+
+  it('every earlier attempt failing never skips a tick: calls at 0, 8, 16, 24 s, the fourth is answered', async () => {
+    vi.useFakeTimers()
+    const signer = makeFakeSigner()
+    signer.getPublicKey = vi.fn()
+      .mockRejectedValueOnce(new Error(TRANSIENT[1]!))
+      .mockRejectedValueOnce(new Error(TRANSIENT[0]!))
+      .mockRejectedValueOnce(new Error(TRANSIENT[2]!))
+      .mockResolvedValue(PK)
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const { loginPromise } = initBunkerQR()
+    const settled = loginPromise.then(p => ({ ok: p }), (e: Error) => ({ err: e }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(1)
+    let now = 0
+    for (const [t, n] of [[7_999, 1], [8_000, 2], [15_999, 2], [16_000, 3], [23_999, 3]] as const) {
+      await vi.advanceTimersByTimeAsync(t - now)
+      now = t
+      expect(signer.getPublicKey).toHaveBeenCalledTimes(n)
+    }
+    expect(await Promise.race([settled, Promise.resolve('pending')])).toBe('pending')
+    await vi.advanceTimersByTimeAsync(1)
+    expect(await settled).toMatchObject({ ok: { pubkey: PK } })
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(4)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it.each(TERMINAL)('a terminal error ends the login at once and is not retried: %s', async msg => {
+    vi.useFakeTimers()
+    const signer = makeFakeSigner()
+    signer.getPublicKey = vi.fn(() => Promise.reject(new Error(msg)))
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const { loginPromise } = initBunkerQR()
+    const settled = loginPromise.catch((e: Error) => e)
+    await vi.advanceTimersByTimeAsync(0)
+    expect((await settled as Error).message).toBe(msg)          // the existing message, unchanged
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(1)
+    expect(signer.close).toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(1)
+    noSession()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('only transient errors until the deadline: the existing 2-minute message, 15 bounded attempts, no timers left, nothing stored', async () => {
+    vi.useFakeTimers()
+    const signer = makeFakeSigner()
+    signer.getPublicKey = vi.fn(() => Promise.reject(new Error(TRANSIENT[0]!)))
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const { loginPromise } = initBunkerQR()
+    const settled = loginPromise.catch((e: Error) => e)
+    await vi.advanceTimersByTimeAsync(120_000)
+    const err = await settled as Error
+    expect(err.message).toMatch(/timed out/i)
+    expect(err.message).not.toMatch(/nostr-tools/)               // no library internals in the user-visible text
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(15)        // now, then every 8 s up to 112 s; the tick at 120 s finds the login over
+    expect(signer.close).toHaveBeenCalled()
+    expect(pools[0]!.destroy).toHaveBeenCalled()
+    noSession()
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(15)
+  })
+
+  it('cancel while an attempt is pending and another already failed: no session from the late answer, nothing retried afterwards', async () => {
+    vi.useFakeTimers()
+    const signer = makeFakeSigner()
+    let answer!: (pk: string) => void
+    let calls = 0
+    signer.getPublicKey = vi.fn(() => (++calls === 1
+      ? Promise.reject(new Error(TRANSIENT[0]!))
+      : new Promise<string>(r => { answer = r })))
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const { loginPromise, cancel } = initBunkerQR()
+    const settled = loginPromise.catch((e: Error) => e)
+    await vi.advanceTimersByTimeAsync(8_000)
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(2)
+    cancel()
+    expect(await settled).toMatchObject({ name: 'AbortError' })
+    answer(PK)                                                   // late answer
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(2)
+    expect(signer.close).toHaveBeenCalled()
+    noSession()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('a NEW login after the old one was cancelled: the old pairing\'s late answer changes neither window.nostr nor the stored session', async () => {
+    vi.useFakeTimers()
+    const PK2 = 'b'.repeat(64)
+    const oldSigner = makeFakeSigner()
+    let oldAnswer!: (pk: string) => void
+    oldSigner.getPublicKey = vi.fn(() => new Promise<string>(r => { oldAnswer = r }))
+    const newSigner = makeFakeSigner()
+    newSigner.getPublicKey = vi.fn(async () => PK2)
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValueOnce(oldSigner).mockResolvedValueOnce(newSigner)
+    const first = initBunkerQR()
+    const firstSettled = first.loginPromise.catch((e: Error) => e)
+    await vi.advanceTimersByTimeAsync(8_000)
+    first.cancel()
+    expect(await firstSettled).toMatchObject({ name: 'AbortError' })
+    await expect(initBunkerQR().loginPromise).resolves.toMatchObject({ pubkey: PK2 })
+    oldAnswer(PK)
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(sessionStorage.getItem('bunkerPubkey')).toBe(PK2)
+    expect(await (window as unknown as { nostr: { getPublicKey(): Promise<string> } }).nostr.getPublicKey()).toBe(PK2)
+    expect(oldSigner.close).toHaveBeenCalled()
+    expect(oldSigner.getPublicKey.mock.calls.length).toBeLessThanOrEqual(2) // not retried after the cancel
   })
 })

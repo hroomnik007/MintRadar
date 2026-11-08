@@ -415,10 +415,40 @@ export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile
 // for the new connection is registered, so an immediate get_public_key (an
 // ephemeral kind 24133 event) can be dropped by the relay (see the comment in
 // upstream Amber BunkerRequestUtils, fixed after v6.6.9). Re-send it every
-// GPK_RETRY_MS until one answer (or error) arrives or the pairing is aborted.
+// GPK_RETRY_MS until one answer (or a terminal error) arrives or the pairing is aborted.
 // The identity is ONLY ever taken from a get_public_key answer, never from the
 // signer event's pubkey. Exported for unit testing.
+//
+// A TRANSIENT failure of one attempt (isTransientSignerError) does not end the
+// login: the schedule (now, then every GPK_RETRY_MS) simply goes on, bounded by the
+// owner's abort signal (the 2-minute pairing deadline, cancel). Any other error is
+// TERMINAL and ends it at once. Only get_public_key is ever re-sent here.
 export const GPK_RETRY_MS = 8_000
+
+// nostr-tools (2.25.x, nip46.js) failures after which a NEW get_public_key can still succeed:
+//  - `failed to send "<method>" to any relay: …` — no relay took the request (connection failure
+//    or publish timeout, typically right after the browser returns from the background); the
+//    next request opens fresh relay connections.
+//  - `timeout after <ms>ms waiting for "<method>"` — nostr-tools gives up on ONE request after 30 s;
+//    later requests of the schedule are independent and may still be answered.
+//  - `subscription to the remote signer was closed` — the signer's subscription closed; the signer
+//    object stays open and sendRequest() re-creates the subscription for the next request. (With
+//    ResilientNip46Pool this only surfaces when the pool is torn down, i.e. when the login ends anyway.)
+// Everything else is terminal: `this signer is not open anymore…`, `…signer was closed`, the signer's
+// own error text (incl. a user rejection; no nostr-tools prefix), `…requires auth … no onauth()`,
+// `…response has neither result nor error`, and AbortError. A signer's own error text that happened to
+// start with one of these prefixes would only cost retries until the same deadline.
+const TRANSIENT_SIGNER_ERROR_PREFIXES = [
+  'nostr-tools/nip46: failed to send ',
+  'nostr-tools/nip46: timeout after ',
+  'nostr-tools/nip46: subscription to the remote signer was closed',
+]
+export function isTransientSignerError(err: unknown): boolean {
+  return err instanceof Error
+    && err.name !== 'AbortError'
+    && TRANSIENT_SIGNER_ERROR_PREFIXES.some(prefix => err.message.startsWith(prefix))
+}
+
 export function requestPubkeyWithRetry(
   signer: Pick<BunkerSigner, 'getPublicKey'>,
   signal: AbortSignal,
@@ -436,7 +466,13 @@ export function requestPubkeyWithRetry(
     const onAbort = () => finish(() => reject(new DOMException('Pairing cancelled', 'AbortError')))
     const attempt = () => {
       if (done) return
-      signer.getPublicKey().then(pk => finish(() => resolve(pk)), (err: unknown) => finish(() => reject(err)))
+      signer.getPublicKey().then(
+        pk => finish(() => resolve(pk)),
+        (err: unknown) => {
+          if (isTransientSignerError(err)) return // the next tick sends a new request; the abort signal bounds it
+          finish(() => reject(err))
+        },
+      )
     }
     const timer = setInterval(attempt, intervalMs)
     if (signal.aborted) { onAbort(); return }
