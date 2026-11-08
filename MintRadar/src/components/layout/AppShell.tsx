@@ -9,6 +9,7 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { loadNostrClient } from '@/core/nostr/lazy'
+import { isMobileDevice } from '@/utils/isMobileDevice'
 import type { PairingStage } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
 import { AccountMenu } from './AccountMenu'
@@ -506,6 +507,11 @@ export function AppShell() {
                         New QR
                       </button>
                     </div>
+                    {qrUri && isMobileDevice() && (
+                      // A phone cannot scan its own screen: hand the pairing link to the signer app (Amber …) directly.
+                      // Plain link, same tab; the pairing keeps running while the browser is in the background.
+                      <a className="nostr-connect-btn nostr-open-signer" href={qrUri}>Open in signer app</a>
+                    )}
                     {qrUri && (
                       <button
                         type="button"

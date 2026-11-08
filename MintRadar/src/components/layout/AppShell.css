@@ -835,6 +835,15 @@
 }
 .nostr-qr-copy:hover { border-color: var(--green-soft-strong); color: var(--green-bright); }
 .nostr-qr-copy svg { width: 13px; height: 13px; flex-shrink: 0; }
+.nostr-open-signer {
+  width: 100%;
+  margin-top: 8px;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+/* index.css has a:hover { text-decoration: underline } (more specific than the class alone); a tapped link keeps :hover on touch. */
+.nostr-open-signer:hover { text-decoration: none; }
 .nostr-qr-copy-uri {
   overflow: hidden;
   text-overflow: ellipsis;

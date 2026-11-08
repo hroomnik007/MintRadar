@@ -123,3 +123,45 @@ test('Refresh replaces the pairing (old sockets closed, new opened)', async ({ p
   await expect.poll(() => ws.closed, { timeout: 5000 }).toBeGreaterThanOrEqual(firstRound)
   await expect.poll(() => ws.opened).toBeGreaterThan(firstRound)
 })
+
+test('remote-signer: no "Open in signer app" link on a desktop browser', async ({ page }) => {
+  await setup(page)
+  await remoteCard(page).click()
+  await page.waitForSelector('.nostr-qr-wrap svg')
+  await expect(page.locator('.nostr-open-signer')).toHaveCount(0)
+})
+
+test.describe('on a phone', () => {
+  test.use({
+    isMobile: true,
+    hasTouch: true,
+    userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
+  })
+
+  test('remote-signer: "Open in signer app" is a plain link to the same pairing URI as the copy button', async ({ page }) => {
+    await setup(page)
+    await page.locator('.nostr-method-card', { hasText: 'Remote signer' }).click()
+    await page.waitForSelector('.nostr-qr-wrap svg')
+    const link = page.locator('a.nostr-open-signer')
+    await expect(link).toHaveCount(1)
+    await expect(link).toHaveText('Open in signer app')
+    const href = await link.getAttribute('href')
+    expect(href?.startsWith('nostrconnect://')).toBe(true)
+    expect(href).toMatch(/[?&]relay=/)
+    expect(href).toMatch(/[?&]secret=/)
+    expect(await link.getAttribute('target')).toBeNull() // same tab: the pairing page must stay alive
+    // Same URI as the copy button (the pairing is one and the same).
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.locator('.nostr-qr-copy').click()
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(href)
+  })
+
+  test('a fresh pairing replaces the link (New QR changes the href)', async ({ page }) => {
+    await setup(page)
+    await page.locator('.nostr-method-card', { hasText: 'Remote signer' }).click()
+    await page.waitForSelector('a.nostr-open-signer')
+    const first = await page.locator('a.nostr-open-signer').getAttribute('href')
+    await page.locator('.nostr-qr-refresh').click()
+    await expect.poll(() => page.locator('a.nostr-open-signer').getAttribute('href')).not.toBe(first)
+  })
+})
