@@ -1,6 +1,7 @@
 import { nip19, nip44, generateSecretKey, getPublicKey as nostrGetPublicKey, finalizeEvent } from 'nostr-tools'
 import { BunkerSigner, parseBunkerInput, createNostrConnectURI, toBunkerURL } from 'nostr-tools/nip46'
 import { SimplePool } from 'nostr-tools/pool'
+import { ResilientNip46Pool } from '@/core/nostr/resilientPool'
 import type { EventTemplate, Filter, NostrEvent } from 'nostr-tools'
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils'
 import { sharedPool } from '@/core/nostr/pool'
@@ -475,7 +476,7 @@ export function initBunkerQR(onStage?: (stage: PairingStage) => void): {
 
   // Dedicated pool for this attempt so cancel()/timeout can close every socket
   // it opened. On success the live signer takes ownership (see `handedOff`).
-  const pairingPool = new SimplePool()
+  const pairingPool = new ResilientNip46Pool()
   let handedOff = false
   const disposePool = () => { if (!handedOff) pairingPool.destroy() }
 
@@ -552,8 +553,16 @@ export function initBunkerQR(onStage?: (stage: PairingStage) => void): {
     }),
     new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
+        // Still without any relay at the deadline → the actionable connection error, not a generic timeout.
+        const lostConnection = pairingPool.isDisconnected()
         abortCtrl.abort()
-        reject(new Error('Pairing timed out — signer did not finish connecting within 2 minutes. Refresh the QR and try again.'))
+        if (lostConnection) {
+          const lost = new Error(PAIRING_CONNECTION_LOST_MESSAGE)
+          lost.name = PAIRING_CONNECTION_LOST
+          reject(lost)
+        } else {
+          reject(new Error('Pairing timed out — signer did not finish connecting within 2 minutes. Refresh the QR and try again.'))
+        }
       }, QR_PAIRING_TIMEOUT_MS)
     }),
   ]).finally(() => {
@@ -586,13 +595,16 @@ export async function restoreBunkerSession(): Promise<void> {
     if (!bp) throw new Error('Invalid stored bunker URI')
     // Logged out while this was loading or parsing (logout clears the keys): install nothing.
     if (sessionStorage.getItem(BUNKER_PUBKEY_KEY) !== storedPubkey) return
+    const pool = new ResilientNip46Pool()
     const signer = BunkerSigner.fromBunker(clientSecretKey, bp, {
       onauth: openRemoteSignerAuthUrl,
+      pool,
     })
     // Optimistic restore: shim installed before connect() resolves to allow
     // synchronous window.nostr access on page refresh. If connect() fails,
     // M-1 fix ensures auth store is cleared and user is logged out cleanly.
     installBunkerShim(signer, storedPubkey)
+    activeBunkerPool = pool // torn down with the session (removeBunkerShim / a newer login)
     // Reconnect relay subscription in background; clear session and log out if it fails
     // Only act if THIS restored signer is still the live one: a fresh login (QR/bunker/nsec)
     // meanwhile tears it down (its close() rejects this connect), and that rejection must not
