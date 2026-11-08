@@ -11,7 +11,7 @@ import './MintComparePicker.css'
 // (base mint already excluded); selection/search state lives here so callers
 // only need to hand back the final URLs via onConfirm.
 //
-// Keyboard (2026-10-27): the list is a multi-select listbox of real <button role="option"> items with a roving
+// Keyboard: the list is a multi-select listbox of real <button role="option"> items with a roving
 // tabindex — one Tab stop for the whole list, ArrowUp/ArrowDown/Home/End move, Enter/Space toggle (native button
 // click), ArrowDown in the search field jumps into the list. Every candidate is listed (no 50-item cap), so a mint
 // can be found by scrolling without searching first.

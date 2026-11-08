@@ -222,7 +222,7 @@ function MintDetailContent({ url }: { url: string }) {
   // duplicateDisplayNames for the rationale.
   const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
 
-  // Name rule (2026-10-05): a TRACKED mint uses the known-mint display name only (the backend cleaned it
+  // Name rule: a TRACKED mint uses the known-mint display name only (the backend cleaned it
   // and applied the hidden-names list; null means "show the hostname"), so the live probe's raw name can
   // never override it. An untracked mint (live probe only) uses the live name cleaned here with the same
   // function the backend uses (cleanMintName.ts).
@@ -539,15 +539,8 @@ function MintDetailContent({ url }: { url: string }) {
     return () => window.removeEventListener('keydown', h)
   }, [showComparePicker])
 
-  // Review deep-link (#review-<id>). This used to live further down, after
-  // `filteredReviews` was computed — but that placement was after the loading
-  // early-return below, so the effect was skipped on the loading render and
-  // then called on every render once data arrived: a Rules-of-Hooks violation
-  // (inconsistent hook count across renders of the same mount). Nothing this
-  // effect (or `filteredReviews`) needs actually depends on `data`/
-  // `knownMintsData` — only on already-resolved review state (`mergedReviews`,
-  // `reviewFilterState`, `reviewHideAnonState`) and the route `url` — so both
-  // can run unconditionally up here instead.
+  // Review deep-link (#review-<id>). Must stay ABOVE the loading early-return below (Rules of Hooks: a hook after it
+  // runs on some renders only). It needs only resolved review state and the route `url`, not `data`/`knownMintsData`.
   const activeReviewFilter = reviewFilterState.key === url ? reviewFilterState.type : 'all'
   const hideAnonActive = reviewHideAnonState.key === url && reviewHideAnonState.on
   let filteredReviews = mergedReviews
@@ -747,7 +740,7 @@ function MintDetailContent({ url }: { url: string }) {
   const supportedNuts = TRACKED_NUTS.filter(nut =>
     supportedNutNumbers.has(String(parseInt(nut.slice(4), 10)))
   )
-  // Switched off (2026-10-27): a declared NUT-04/05 with `disabled: true` is shown as disabled, not supported, and since
+  // Switched off: a declared NUT-04/05 with `disabled: true` is shown as disabled, not supported, and since
   // methodology 5 it does not count for the score either: the fallback score, the NUT row and the header use offeredNuts.
   const offeredNutNumbers = offeredNutKeys(nutsDeclared)
   const offeredNuts = supportedNuts.filter(nut => offeredNutNumbers.has(String(parseInt(nut.slice(4), 10))))
@@ -854,7 +847,7 @@ function MintDetailContent({ url }: { url: string }) {
   // Mint that is not online: an honest block at the top of the Overview (since when, last error, what to do).
   const unavailable = !isOnline && knownMint !== null
   const isArchived = !isOnline && knownMint?.archived === true
-  // Status word (2026-10-27): the shared rule of the wallet API `status` (utils/mintStatus.ts), so a mint the API calls
+  // Status word: the shared rule of the wallet API `status` (utils/mintStatus.ts), so a mint the API calls
   // `degraded` reads "Degraded" here as on its card (lnpay was degraded in the API but "Offline" here). The one
   // input that can differ from the API is `online`: a live probe from this page is newer than the snapshot, and when
   // it succeeds the mint is Online even if the snapshot still says degraded.
@@ -872,7 +865,7 @@ function MintDetailContent({ url }: { url: string }) {
   const nip87Checked = nip87 ? nip87CheckedLabel(nip87.checkedAt, now) : null
   const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId)
   const isNew = isNewMint(discoveredAt)
-  // No "Outdated" pill on an archived mint (2026-10-27): the version is the last one it reported and it is no longer
+  // No "Outdated" pill on an archived mint: the version is the last one it reported and it is no longer
   // probed, so comparing it with the current release adds nothing. The version text itself stays.
   const isOutdated = !isArchived && classifyMintVersion(version, versionLatestMap).label === 'outdated'
 
@@ -1094,7 +1087,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-avatar-id">
             <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={avatarSize} radius={16} className="md-hdr-favicon" />
             <div className="md-namebox" ref={nameboxRef}>
-              {/* The h1 holds only the name (2026-10-25): with the status and badges inside it, a screen reader
+              {/* The h1 holds only the name: with the status and badges inside it, a screen reader
                   read the heading as "21MintOnline". The flex row and its look stay on the outer .md-name. */}
               <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <h1 className="md-name-h1" {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</h1>
@@ -1186,7 +1179,7 @@ function MintDetailContent({ url }: { url: string }) {
           <button className="md-quick-btn" onClick={() => setShowQr(true)}>
             <QrCode size={12} /> Mint QR
           </button>
-          {/* Nor for a mint that switched minting or melting off (NUT-04/05 `disabled: true`, 2026-10-27): Cashu.me
+          {/* Nor for a mint that switched minting or melting off (NUT-04/05 `disabled: true`): Cashu.me
               only; Mint QR stays for it (the URL is still a fact). */}
           {!walletActionsOff && (
           <a

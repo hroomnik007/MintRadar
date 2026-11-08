@@ -161,10 +161,10 @@ interface FilterState {
   /** Hide mints the shared version rule labels "outdated" (?outdated=hide, utils/outdatedFilter.ts). Unknown versions stay. */
   hideOutdated: boolean
 }
-// New default Dashboard view (2026-09-09): online-only, test mints hidden,
+// New default Dashboard view: online-only, test mints hidden,
 // sorted by Reliability Score desc. The Name-sort freeze from earlier passes is
 // deliberately lifted for this — see the "Reliability Score default" note.
-// hideTestMints defaults to false (2026-09-10): a fresh Dashboard SHOWS test
+// hideTestMints defaults to false: a fresh Dashboard SHOWS test
 // mints (they still carry a "Test mint" badge). An earlier pass defaulted this
 // ON — that is deliberately lifted here. ?testmints=hide is emitted only when
 // the user turns the checkbox on; the default never emits a param.
@@ -329,8 +329,7 @@ function UnitHiddenNote({ excluded, selected, search }: { excluded: KnownMint[];
   return note ? <span className="grid-unit-hidden-note" data-testid="unit-hidden-note"> · {note}</span> : null
 }
 
-// Shown instead of the grid / table when the search (and filters) leave no mint (2026-10-25). Before, the page showed
-// an empty grid and "Showing 0 of N" with nothing to do next.
+// Shown instead of the grid / table when the search (and filters) leave no mint, so the visitor always has a next step.
 function NoMintsMatch({
   search,
   filtersActive,
@@ -475,7 +474,7 @@ function MintListView({
             {shown.map(mint => {
               const isOnline = mint.online === true
               const isArchived = !isOnline && mint.archived === true
-              // Same status rule and word as the card and the wallet API (2026-10-27): degraded reads "Degraded".
+              // Same status rule and word as the card and the wallet API: degraded reads "Degraded".
               const statusLabel = mintStatusLabel(mintStatus(mint))
               const displayName = mintDisplayName(mint, duplicateDisplayNames)
               const score = mint.reliabilityScore ?? null
@@ -1424,7 +1423,7 @@ export default function Dashboard() {
           title="Refresh mint list"
           aria-label="Refresh mint list"
           onClick={() => {
-            // Refresh only (2026-10-25): it used to also reset the search, sort and filters, which threw away a
+            // Refresh only: it used to also reset the search, sort and filters, which threw away a
             // filtered view just to get fresh numbers. Resetting lives in the Filters panel ("Reset") and in the
             // no-results state ("Clear search" / "Reset filters").
             void queryClient.invalidateQueries({ queryKey: ['mints-known'] })

@@ -72,7 +72,7 @@ export async function computeStats(): Promise<object> {
   // extra entries here are simply ignored there, but the Network Health
   // Index's "advanced adoption" component also reads this array directly
   // for a few auth/payment-method NUTs (21/22/25) outside the 14.
-  // Offered, not only declared (2026-10-27): a switched-off NUT-04/05 (`disabled: true`) is not counted as adoption.
+  // Offered, not only declared: a switched-off NUT-04/05 (`disabled: true`) is not counted as adoption.
   const onlineWithNuts = online.filter(r => r.nuts_limits != null)
   const totalForAdoption = onlineWithNuts.length
   const nutAdoption = MINT_ADVERTISED_NUT_KEYS.map(key => ({

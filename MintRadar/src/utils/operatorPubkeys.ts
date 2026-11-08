@@ -5,7 +5,7 @@
 // packages) — keep the code identical; src/__tests__/sharedModules.test.ts fails when the two drift.
 // Used on Mint Detail with the live probe's contact list and the announcement author.
 //
-// A key counts as the operator ONLY when BOTH sources agree (2026-10-05): (a) it is listed in the
+// A key counts as the operator ONLY when BOTH sources agree: (a) it is listed in the
 // mint's own NUT-06 contact entries with method "nostr" as an npub, nprofile or 64-character hex key
 // (an optional "nostr:" prefix is accepted) AND (b) it is the author of the mint's NIP-87
 // announcement (kind 38172). Either source alone proves nothing: the contact list is written by the

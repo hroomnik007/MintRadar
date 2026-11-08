@@ -1,5 +1,5 @@
 // Manually curated list of known test/dev-only Cashu mints — see the
-// "Test mint detection" investigation (2026-09-04). A pure keyword match on
+// "Test mint detection" investigation. A pure keyword match on
 // /v1/info's `description`/`description_long` was rejected as the runtime
 // mechanism: the wording isn't consistent across mints, generic risk
 // disclaimers on real production mints ("use at your own risk", "still in

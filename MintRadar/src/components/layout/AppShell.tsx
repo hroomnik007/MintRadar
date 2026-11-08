@@ -331,7 +331,7 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
-      {/* Skip link (2026-10-25): the first Tab stop, visually hidden until focused. It moves focus with JS instead of
+      {/* Skip link: the first Tab stop, visually hidden until focused. It moves focus with JS instead of
           following the hash, so the router and the pages that read location.hash (/for-wallets) are not touched. */}
       <a
         className="skip-link"

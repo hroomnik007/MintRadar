@@ -1,6 +1,5 @@
-// Lazy entry points into the Nostr client, the relay pool and the IndexedDB (Dexie) layer (Stage 2 perf,
-// 2026-10-25). vendor-nostr (~147 kB) and vendor-db (~97 kB) used to be modulepreloaded on every page because
-// the eager app code imported them statically. Eager code (main.tsx, stores, AppShell, Dashboard, MintCard,
+// Lazy entry points into the Nostr client, the relay pool and the IndexedDB (Dexie) layer, so vendor-nostr (~147 kB)
+// and vendor-db (~97 kB) are never in the initial modulepreload. Eager code (main.tsx, stores, AppShell, Dashboard, MintCard,
 // hooks run on every page) now reaches them only through these loaders, so the chunks are fetched after the
 // first render or on first use (login, reviews, watchlist, notifications), never in the initial preload.
 // Pages that are lazy routes themselves (Mint Detail, Watchlist, MintNaddr, Tools, Stats) may import them

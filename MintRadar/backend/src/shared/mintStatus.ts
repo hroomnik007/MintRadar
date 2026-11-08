@@ -1,4 +1,4 @@
-// The ONE status rule for a mint (2026-10-27). The wallet API `status`, the Nostr health assertion `mint_status`,
+// The ONE status rule for a mint. The wallet API `status`, the Nostr health assertion `mint_status`,
 // the link preview and every status word on the website derive from it, so the site and the API cannot disagree
 // about the same snapshot (lnpay was `degraded` in the API but "Offline" on its Mint detail page).
 // Order: archived first, then degraded, then the latest probe. The flags come from GET /api/mints/known:

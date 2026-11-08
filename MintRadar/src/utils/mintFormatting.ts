@@ -310,7 +310,7 @@ export const LOW_RELIABILITY_TEXT = 'color-mix(in srgb, var(--red) 75%, var(--te
 export function reliabilityScoreInfo(score: number): ReliabilityScoreInfo {
   if (score >= 70) return { label: 'High Reliability',     color: 'var(--accent)', bg: 'var(--green-soft)',  border: 'var(--green-soft-strong)'  }
   if (score >= 40) return { label: 'Moderate Reliability', color: 'var(--amber)', bg: 'var(--amber-soft)',   border: 'var(--amber-soft-strong)'   }
-  // Low: --red mixed toward --text (2026-10-25). Plain --red on --red-soft over a raised surface was 3.96:1 (axe on an
+  // Low: --red mixed toward --text. Plain --red on --red-soft over a raised surface was 3.96:1 (axe on an
   // archived mint's detail page); the 75 % mix is ~5.3:1 there, the same text tone as the Stats "down" movers.
   return                  { label: 'Low Reliability',      color: LOW_RELIABILITY_TEXT, bg: 'var(--red-soft)',   border: 'var(--red-soft-strong)'   }
 }
@@ -346,7 +346,7 @@ export function statusDotColor(status: StatusDotWord): string {
   return 'var(--text3)'
 }
 
-// mintStatusLabel (2026-10-27): the word for a status from the shared rule (utils/mintStatus.ts, the same function
+// mintStatusLabel: the word for a status from the shared rule (utils/mintStatus.ts, the same function
 // as the wallet API `status`). API `degraded` reads "Degraded" everywhere on the site (card badge, Dashboard list,
 // Mint detail, Compare, Payment request inspector, link preview): a plain fact, the same words as the Dashboard's
 // "hidden (offline 24h+)" note.

@@ -27,7 +27,7 @@ export function mintSupportsNut(nuts: Record<string, unknown> | null | undefined
   return nuts != null && isNutDeclaredSupported(nuts[key])
 }
 
-// Switched off (2026-10-27): NUT-04 (minting) and NUT-05 (melting) carry `disabled: true` when the operator turned
+// Switched off: NUT-04 (minting) and NUT-05 (melting) carry `disabled: true` when the operator turned
 // deposits or withdrawals off (Lek: "4": { "methods": [], "disabled": true }). The NUT is still DECLARED, so the rule
 // above (and the Reliability Score NUT component, the wallet API `nuts` field) still count it; the website shows it
 // as disabled and its lists and filters treat it as not offered. The wallet API exposes it as mintDisabled/meltDisabled.

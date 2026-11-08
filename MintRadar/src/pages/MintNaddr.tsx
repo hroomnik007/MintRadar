@@ -30,7 +30,7 @@ export const NADDR_UNREACHABLE_TEXT = 'Could not reach the Nostr relays to resol
 
 // Handles NIP-89 deep links: /mint/nostr/:naddr
 // Decodes the naddr, fetches the kind:38172 event, extracts the "u" (mint URL)
-// tag, and redirects to /mint/:url. On failure (2026-10-25) it shows a short error with a way on ("Browse mints",
+// tag, and redirects to /mint/:url. On failure it shows a short error with a way on ("Browse mints",
 // "Add a mint") instead of silently dropping the visitor on the Dashboard. A relay timeout is a LoadError with a retry.
 type NaddrTarget = { kind: number; pubkey: string; identifier: string; relays?: string[] | undefined }
 

@@ -1,4 +1,4 @@
-// Stats "Reliability movers" without archived mints (2026-10-25). An archived mint is no longer probed, so its score
+// Stats "Reliability movers" without archived mints. An archived mint is no longer probed, so its score
 // only drifts down as the stored history ages; listing it as a "faller" (or, after a last blip, a "riser") says nothing
 // about the network today. The API returns them, the page drops them against the known-mints list.
 // Until the list has loaded, the rows are shown unchanged (no flash of an empty panel).

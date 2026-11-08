@@ -54,7 +54,7 @@ export interface KnownMintLike {
   lastOnlineAt?: string | Date | null
   mintMethods?: Record<string, unknown>[] | null
   meltMethods?: Record<string, unknown>[] | null
-  // The stored NIP-87 announcement (discovery.ts): event created_at and `d` tag; read by `nip87` (2026-10-30).
+  // The stored NIP-87 announcement (discovery.ts): event created_at and `d` tag; read by `nip87`.
   nostrAnnouncedAt?: string | Date | null
   nostrAnnounceD?: string | null
   /** The last discovery run that reached the relays (app_state discovery_last_success_at); absent/null before the first one. */
@@ -577,7 +577,7 @@ function nutRequirementMet(m: WalletMint, n: string): boolean {
 }
 
 // A NUT-04 (mint) or NUT-05 (melt) side the mint switched off (`disabled: true`) does not meet `method=`, as on the
-// website's Dashboard method filter (2026-10-27). The `methods` and `limits` fields still list its entries.
+// website's Dashboard method filter. The `methods` and `limits` fields still list its entries.
 function methodRequirementMet(m: WalletMint, method: string, unit: string | undefined): boolean {
   if (m.methods === null) return false
   const sides = [m.mintDisabled === true ? [] : m.methods.mint, m.meltDisabled === true ? [] : m.methods.melt]

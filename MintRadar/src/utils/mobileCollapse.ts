@@ -1,4 +1,4 @@
-// Phone Dashboard (2026-10-25): the default view opens with the first MOBILE_COLLAPSED_ONLINE online mints in the
+// Phone Dashboard: the default view opens with the first MOBILE_COLLAPSED_ONLINE online mints in the
 // current sort order and a "Show all N" button under them, so the first screenfuls are the best mints instead of a
 // 60-card scroll. Only the ONLINE mints are capped: mints revealed by the existing "N mints hidden (offline …) Show"
 // toggle keep their place in the order and are never cut. A search, any non-default filter or Status other than the
@@ -36,7 +36,7 @@ export function mobileCollapseApplies(opts: { isPhone: boolean; expanded: boolea
 }
 
 /**
- * Whether an expanded phone list offers "Show less" (2026-10-25): exactly when the cut would apply again if the
+ * Whether an expanded phone list offers "Show less": exactly when the cut would apply again if the
  * expanded flag were cleared (phone, default view). A search or filter shows everything anyway, so no button there.
  */
 export function showLessApplies(opts: { isPhone: boolean; expanded: boolean; search: string; activeFilterCount: number; status: string }): boolean {
@@ -57,7 +57,7 @@ export function showingNoteText<T extends { online?: boolean | null }>(shown: re
 }
 
 /**
- * After "Show less" (2026-10-25): back to the very top of the page (scrollY 0), so the intro, the stats strip,
+ * After "Show less": back to the very top of the page (scrollY 0), so the intro, the stats strip,
  * search, filters, sort and the view toggle are in view again, not just the first card. Smooth unless the visitor
  * asked for reduced motion. Focus goes to `focusTarget` (the Dashboard heading, tabIndex -1) without a second
  * scroll; deliberately never the search input, which would open the on-screen keyboard on a phone.

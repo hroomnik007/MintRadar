@@ -53,7 +53,7 @@ export const ON_DEMAND_NETWORK_RETRY_DELAY_MS = 1_000
 export const ON_DEMAND_5XX_RETRY_DELAY_MS = 2_000
 export const ON_DEMAND_MIN_RETRY_MS = 1_500
 
-// Known-down mints (Stage 2 perf, 2026-10-25). Mint Detail of an offline mint used to wait ~2.4 s (a refused /
+// Known-down mints (Stage 2 perf). Mint Detail of an offline mint used to wait ~2.4 s (a refused /
 // failed connect, the 1 s retry wait and the retry) or up to the 12 s deadline (a host that never answers) for a
 // result the cron prober already knew. A mint whose LAST cron probe (mint_history) was offline is probed with a
 // shorter deadline and no retry: the retry exists so a transient blip does not disagree with the cron's

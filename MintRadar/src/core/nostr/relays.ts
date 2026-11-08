@@ -24,7 +24,7 @@
 // (the one new candidate proposed for this audit) failed NIP-11 and WS connect from BOTH the
 // sandbox and the production VPS — confirmed down, not added anywhere.
 //
-// wss://nostr.mintradar.org (2026-09-25) — MintRadar's own strfry backup relay, additive
+// wss://nostr.mintradar.org — MintRadar's own strfry backup relay, additive
 // alongside every relay above (nothing removed/deprioritized). Whitelist-only write policy
 // (kind 38172/38000 from the public, any kind from one privileged operator key), so it never
 // competes on discovery breadth — it's a durable, MintRadar-operated store for exactly the

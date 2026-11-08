@@ -29,7 +29,7 @@ export function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;')
 }
 
-// Same rule and words as the website (shared/mintStatus.ts, src/utils/mintFormatting.ts mintStatusLabel, 2026-10-27):
+// Same rule and words as the website (shared/mintStatus.ts, src/utils/mintFormatting.ts mintStatusLabel):
 // a degraded mint reads "Degraded", like its Dashboard card and Mint detail page.
 export function mintStatusLabel(mint: Pick<OgMintData, 'online' | 'degraded'>): string {
   const s = mintStatus(mint)

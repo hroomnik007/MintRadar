@@ -96,9 +96,8 @@ interface SoftwareVersionEntry {
   classifiable: boolean
 }
 
-// Mint-list drill-down level of SoftwareModal — this is the body the
-// standalone per-version modal used to render, unchanged (rows, Reliability Score,
-// age badge, "Show all", "X online · Y offline", "Sorted by Reliability Score").
+// Mint-list drill-down level of SoftwareModal (rows, Reliability Score, age badge, "Show all",
+// "X online · Y offline", "Sorted by Reliability Score").
 // Kept as its own component so the call site can `key` it by version, which
 // resets `showAll` when the user backs out and drills into a different one.
 function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNames }: {
@@ -569,8 +568,7 @@ function NetworkHealthComponentRow({ component: c, compact }: {
 }
 
 // Single source of truth for the formula explanation text — used by the
-// modal's footer (NetworkHealthFormulaNote, unchanged). The header has no tooltip any more
-// (removed 2026-10-14); the weights are visible in the breakdown rows.
+// modal's footer (NetworkHealthFormulaNote). The header has no tooltip; the weights are visible in the breakdown rows.
 // Built from NHI_WEIGHTS, so it can never disagree with the computation.
 const NETWORK_HEALTH_FORMULA_TEXT = nhiFormulaText()
 
@@ -673,7 +671,7 @@ export default function Stats() {
   // siblings got their own height fixes — see the row-1 height
   // investigation) — top 5 now lands close to Network Health Index's 319px.
   //
-  // Ranks by uptimePct7d, not uptimePct24h (2026-09-19) — on a 24h window most
+  // Ranks by uptimePct7d, not uptimePct24h — on a 24h window most
   // of the network sits at 100% uptime, so the ranking barely differentiated
   // mints that have been reliable for a while from ones that just got lucky
   // on the last few probe cycles. This is unrelated to isEligibleForRecommendation()

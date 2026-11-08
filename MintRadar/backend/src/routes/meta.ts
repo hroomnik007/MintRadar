@@ -42,7 +42,7 @@ router.get('/health', async (_req: Request, res: Response) => {
     auditUpstream: cashuInfoStatus,
     auditUpstreamCheckedAt: auditCz.lastSyncAt,
     auditCz,
-    // Additive (2026-10-20): the same facts grouped by input. usedForScore says whether the source feeds the
+    // Additive: the same facts grouped by input. usedForScore says whether the source feeds the
     // Reliability Score (docs/API.md "GET /health"); audit.8333.space is display only since methodology 2.
     sources: {
       ownProbe: { usedForScore: true, lastProbeAt },

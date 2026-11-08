@@ -140,7 +140,7 @@ const EMPTY_MINT: KnownMint = {
 function useMintCompareData(mint: KnownMint) {
   const now = useNow()
   const isOnline = mint.online === true
-  // Same status rule and word as the card, Mint detail and the wallet API (utils/mintStatus.ts, 2026-10-27).
+  // Same status rule and word as the card, Mint detail and the wallet API (utils/mintStatus.ts).
   const status = mintStatus(mint)
   const statusLabel = mintStatusLabel(status)
   const displayName = mint.name ?? getHostname(mint.url)
@@ -153,7 +153,7 @@ function useMintCompareData(mint: KnownMint) {
   // it in /v1/info. NUT-09 (restore signatures) is the mint-side capability
   // that actually gates backup/restore — matches MintDetail's supportsBackupRestore.
   // One NUT rule with Mint Detail (utils/nutSupport.ts): absent, null and `supported: false` are not support, and a
-  // switched-off NUT-04/05 (`disabled: true`) is not offered (2026-10-27).
+  // switched-off NUT-04/05 (`disabled: true`) is not offered.
   const supportedNuts = offeredNutKeys(nutsLimits)
   const supportsBackupRestore = supportedNuts.has('9')
   // Same rule and the same "latest" as everywhere else (versionRule.ts + the value the API sends with the mint).
@@ -714,7 +714,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
 
           {showRow('nut-support') && (<>
           {/* ── NUT Support ── */}
-          {/* The ⓘ says what green / grey mean (2026-10-25). Green = supportedNutKeys (utils/nutSupport.ts), the rule the score
+          {/* The ⓘ says what green / grey mean. Green = supportedNutKeys (utils/nutSupport.ts), the rule the score
               and Mint Detail use, so a NUT listed as {supported:false} is grey here too. */}
           <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             NUT Support

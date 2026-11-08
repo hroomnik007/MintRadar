@@ -84,10 +84,10 @@ export function MintCard({
   const hostname = getHostname(mint.url)
   const isOnline = mint.online === true
   const isOfflineDegraded = mint.degraded === true
-  // Archived (2026-10-25): the backend stopped probing the mint after a long outage. The card says "Archived" (muted,
+  // Archived: the backend stopped probing the mint after a long outage. The card says "Archived" (muted,
   // not the red "Degraded"): it is a state of the listing, not a fresh failure. Still dimmed like a degraded card.
   const isArchived = mint.archived === true
-  // One status rule with the wallet API (utils/mintStatus.ts, 2026-10-27): the dot title says "Degraded" for a
+  // One status rule with the wallet API (utils/mintStatus.ts): the dot title says "Degraded" for a
   // degraded mint, the same word as its badge.
   const statusWord = mintStatusLabel(mintStatus(mint))
   // Offline (24h+) cards are not dimmed with opacity; status colours are muted towards a text token instead.
