@@ -589,6 +589,8 @@ function discoverRateLimitStoreFor(source: DiscoverSource): Map<string, RateLimi
 // pubkey rotate through many IPs to bypass it).
 const notifySubscribeRateLimitStore = new Map<string, RateLimitEntry>()
 const notifyUnsubscribeRateLimitStore = new Map<string, RateLimitEntry>()
+// /api/notifications/list (restores the account's settings at login): own 30/hour budget.
+const notifyListRateLimitStore = new Map<string, RateLimitEntry>()
 const NOTIFY_RATE_LIMIT_MAX = 30
 
 function checkWindowedLimit(store: Map<string, RateLimitEntry>, max: number, key: string): boolean {
@@ -676,9 +678,13 @@ function checkNotifyUnsubscribeRateLimit(pubkey: string): boolean {
   return checkWindowedLimit(notifyUnsubscribeRateLimitStore, NOTIFY_RATE_LIMIT_MAX, pubkey)
 }
 
+function checkNotifyListRateLimit(pubkey: string): boolean {
+  return checkWindowedLimit(notifyListRateLimitStore, NOTIFY_RATE_LIMIT_MAX, pubkey)
+}
+
 setInterval(() => {
   const now = Date.now()
-  for (const store of [submitRateLimitStore, discoverAutoRateLimitStore, discoverBulkRateLimitStore, notifySubscribeRateLimitStore, notifyUnsubscribeRateLimitStore]) {
+  for (const store of [submitRateLimitStore, discoverAutoRateLimitStore, discoverBulkRateLimitStore, notifySubscribeRateLimitStore, notifyUnsubscribeRateLimitStore, notifyListRateLimitStore]) {
     for (const [key, entry] of store) {
       if (now >= entry.resetAt) store.delete(key)
     }
@@ -2602,6 +2608,47 @@ app.post('/api/notifications/unsubscribe', (req: Request, res: Response): void =
     })
     .catch((err: unknown) => {
       if (IS_DEV) console.error('[/api/notifications/unsubscribe]', err)
+      if (!res.headersSent) res.status(500).json({ error: 'Internal server error' })
+    })
+})
+
+// Lists the authenticated pubkey's own notification settings so a new device/browser can show
+// them truthfully at login. Only mint_url + the five flags — never relays, timestamps or other
+// accounts' rows. POST (not GET) so the NIP-98 token is bound to this exact method/url and the
+// response is never cached by a browser or proxy.
+app.post('/api/notifications/list', (req: Request, res: Response): void => {
+  res.set('Cache-Control', 'private, no-store')
+  authenticateNip98(req)
+    .then(auth => {
+      if (!auth.ok) {
+        res.status(auth.status).json({ error: auth.error })
+        return
+      }
+      const { pubkey } = auth
+      if (!checkNotifyListRateLimit(pubkey)) {
+        setRetryAfter(res, notifyListRateLimitStore, pubkey)
+        res.status(429).json({ error: 'Too many requests. Try again later.' })
+        return
+      }
+      return pool.query(
+        `SELECT mint_url, notify_on_down, notify_on_up, notify_on_mint_melt_issues,
+                notify_on_version_outdated, notify_on_nut_loss
+           FROM notification_subscriptions WHERE pubkey = $1`,
+        [pubkey]
+      ).then(result => {
+        const rows = (result.rows as Record<string, unknown>[]).map(r => ({
+          mintUrl: String(r.mint_url),
+          notifyOnDown: r.notify_on_down === true,
+          notifyOnUp: r.notify_on_up === true,
+          notifyOnMintMeltIssues: r.notify_on_mint_melt_issues === true,
+          notifyOnVersionOutdated: r.notify_on_version_outdated === true,
+          notifyOnNutLoss: r.notify_on_nut_loss === true,
+        }))
+        res.json({ subscriptions: rows })
+      })
+    })
+    .catch((err: unknown) => {
+      if (IS_DEV) console.error('[/api/notifications/list]', err)
       if (!res.headersSent) res.status(500).json({ error: 'Internal server error' })
     })
 })

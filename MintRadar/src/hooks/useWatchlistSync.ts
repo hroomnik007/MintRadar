@@ -141,7 +141,13 @@ export function useWatchlistSync() {
         // (resets their 30-day retention clock) for every entry whose
         // notifications the server has confirmed as on. Non-blocking — failures are logged and
         // swallowed inside refreshAllSubscriptions itself.
-        void loadNotificationSubscription().then(m => m.refreshAllSubscriptions(userReadRelaysRef.current))
+        // First restore this account's settings from the server (account-wide source of truth),
+        // then refresh. Runs once per login (guarded by syncedForPubkey above), never per render.
+        void loadNotificationSubscription().then(async m => {
+          await m.restoreServerSettings(isStale)
+          if (isStale()) return
+          await m.refreshAllSubscriptions(userReadRelaysRef.current)
+        })
       } catch (err) {
         if (isStale()) { console.warn('sync: error after pubkey change — ignoring', err); return }
         console.warn('sync: error during Phase 1:', err)
