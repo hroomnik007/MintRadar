@@ -8,9 +8,7 @@ Every status below was checked against the code, the docs or the live site on 20
 | Item | Status 2026-11-08 |
 |---|---|
 | SQL report on the relay delivery counters (was due about 2026-10-30) | **Overdue, not recorded anywhere.** The counters exist (`reviewsRelayStats.ts`, `reviews-and-nostr.md` "Relay delivery counters"); the report needs a read on the production database. |
-| First real mint change: test the change log, the DM and the feed tag | **Trigger has happened** (the wallet API lists 17 mints with changes since 2026-10-20, first on 2026-10-22), but no test of the DM or the `mint_last_change` feed tag is recorded. |
-| Monthly audit score analysis | Due about 2026-11-09. |
-| Inline critical CSS | Still open: two render-blocking stylesheets (`index-*.css`, `MintFavicon-*.css`). The CSP check is answered: production `style-src 'self' 'unsafe-inline'` allows an inline `<style>`. |
+| First real mint change: test the change log, the DM and the feed tag | **Change log and feed tag verified 2026-11-08:** `/api/mints/changes` holds 48 changes of 11 types on the tracked mints (first 2026-10-22); 17 signed kind 30385 events on `wss://nostr.mintradar.org` carry `mint_last_change`, each equal to the newest `observedAt` of that mint (e.g. minibits 2026-11-07 00:25, cashu.cz 2026-11-03 18:10, lnw.cash 2026-10-31 11:37). **DM still unverified:** the DM-triggering changes so far are `pubkey_changed` (mint.lnw.cash, 2026-10-31 10:50) and `input_fee_changed` (mint.lnpay.cz, 2026-10-30 13:57); nothing on the server records a sent DM beyond 2 days (`notification_dm_quota`), so only a subscriber of those mints can confirm it (owner). |
 | Condense `docs/claude` | Parked by the owner 2026-11-08: only the 4 largest files (stats-dashboard-watchlist-ui, backend-api-and-data, card-and-mint-detail-ui, deploy-and-infra, about 450 KB), one at a time with owner review; keep the rules, move history verbatim to `docs/claude/archive/`. |
 
 ## Owner (cannot be checked from the repo)
@@ -27,6 +25,7 @@ Every status below was checked against the code, the docs or the live site on 20
 | Date | What |
 |---|---|
 | Monthly | Docker / NodeSource updates |
+| Monthly (next about 2026-12-08) | Audit-part check: add a row to `scoring-and-probing.md`, "Monthly audit-part check" (first done 2026-11-08) |
 | 2027-01-01 | Check the year label of the 90-day trend. The rule is already built ("1 Jan 2027" on the first tick of a new year, `stats-dashboard-watchlist-ui.md`, "X axis rule"); only the look on the day is left to check. |
 | 2027-01-26 | Sunset of `/api/v1/mints/recommend`. The `Deprecation` and `Sunset: Tue, 26 Jan 2027` headers are live; on the day the route goes. |
 
@@ -43,6 +42,7 @@ Every status below was checked against the code, the docs or the live site on 20
 | "proofs" wording of the Compare "Backup" tooltip | Task E1 (now `COMPARE_BACKUP_TEXT` in `tooltipTexts.ts`) |
 | Deferring vendor-nostr and vendor-db | Stage 2 perf, 2026-10-25 (`deploy-and-infra.md`, "Code splitting & bundle layout") |
 | Real HTTP 404 for unknown paths | Stage 3 SEO, applied 2026-10-26: unknown paths and unknown mints answer 404 with the "Page not found" / "Mint not found" page (the old "soft 404 stays" decision is superseded) |
+| Inline critical CSS | Done 2026-11-08: the entry CSS is inline (`vite-inline-css.ts`); FCP 1 040 -> 320 ms on Slow 4G (`deploy-and-infra.md`, "Code splitting & bundle layout") |
 | Stats note about the 2026-10-08 audit source switch | Replaced by `moversMethodologyNote()`: the movers panel names every methodology change inside its 7/30-day window and the note goes away by itself |
 
 ## Declined
