@@ -27,6 +27,13 @@ test.describe('Watchlist notification toggles', () => {
     await expect(page.locator('.notify-strip')).toHaveCount(0)
   })
 
+  test('login restores the account settings from the server (POST /api/notifications/list), apart from the toggle requests', async ({ page }) => {
+    const api = await mockNotifyApi(page)
+    await openWatchlist(page)
+    await expect.poll(() => api.lists, { message: 'restoreServerSettings ran at login' }).toBeGreaterThan(0)
+    expect(api.calls).toHaveLength(0)
+  })
+
   test('More alerts pills toggle like Goes down/up: pending until the server answers, five flags sent, same size', async ({ page }) => {
     const api = await mockNotifyApi(page)
     await openWatchlist(page)

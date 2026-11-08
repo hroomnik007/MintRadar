@@ -16,7 +16,10 @@ const pk = getPublicKey(sk)
 
 export type Mode = 'ok' | '500' | '429' | 'abort' | 'gate'
 export interface Api {
+  /** subscribe / unsubscribe requests, in order. The login-time restore (`/list`) is kept apart in `lists`. */
   calls: { path: string; body: Record<string, unknown> }[]
+  /** POST /api/notifications/list requests: restoreServerSettings at login (twice in the dev server: React StrictMode runs the sync effect twice). */
+  lists: number
   mode: Mode
   byUrl: Record<string, Mode>
   /** Lets the held ('gate') request(s) through; waits until one has reached the mock, so it can never run ahead of the request. */
@@ -26,7 +29,7 @@ export interface Api {
 export async function mockNotifyApi(page: Page): Promise<Api> {
   const held: (() => void)[] = []
   const api: Api = {
-    calls: [], mode: 'ok', byUrl: {},
+    calls: [], lists: 0, mode: 'ok', byUrl: {},
     release: async () => {
       await expect.poll(() => held.length, { message: 'a gated request reaches the mock before it is released' }).toBeGreaterThan(0)
       held.splice(0).forEach(r => r())
@@ -34,7 +37,11 @@ export async function mockNotifyApi(page: Page): Promise<Api> {
   }
   await page.route('**/api/notifications/**', async (route: Route) => {
     const body = (route.request().postDataJSON() ?? {}) as Record<string, unknown>
-    api.calls.push({ path: new URL(route.request().url()).pathname.split('/').pop()!, body })
+    const path = new URL(route.request().url()).pathname.split('/').pop()!
+    // The restore answers like before (not a valid list, so it leaves the local flags untouched) and is not one of
+    // the toggle requests the specs count.
+    if (path === 'list') { api.lists++; return route.fulfill({ json: { success: true } }) }
+    api.calls.push({ path, body })
     const mode = api.byUrl[String(body['mintUrl'])] ?? api.mode
     if (mode === 'gate') await new Promise<void>(r => held.push(r))
     if (mode === '500') return route.fulfill({ status: 500, json: { error: 'Internal server error' } })
