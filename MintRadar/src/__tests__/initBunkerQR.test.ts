@@ -24,8 +24,8 @@ vi.mock('@/stores/auth.store', () => ({
   useAuthStore: { getState: vi.fn(() => ({ logout: vi.fn() })) },
 }))
 
-import { initBunkerQR, restoreBunkerSession, isTransientSignerError } from '@/core/nostr/client'
-import { BunkerSigner } from 'nostr-tools/nip46'
+import { initBunkerQR, restoreBunkerSession, isTransientSignerError, loginWithBunker, explainRejectedBunkerSecret } from '@/core/nostr/client'
+import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46'
 
 const PK = 'a'.repeat(64)
 
@@ -414,5 +414,54 @@ describe('initBunkerQR — get_public_key attempts: transient vs terminal errors
     expect(await (window as unknown as { nostr: { getPublicKey(): Promise<string> } }).nostr.getPublicKey()).toBe(PK2)
     expect(oldSigner.close).toHaveBeenCalled()
     expect(oldSigner.getPublicKey.mock.calls.length).toBeLessThanOrEqual(2) // not retried after the cancel
+  })
+})
+
+// bunker:// paste: Amber's bare "invalid secret" / "no secret" is replaced by an actionable text.
+// Only synthetic values; the secret's value never appears in the message.
+describe('loginWithBunker — signer rejects the link\'s secret', () => {
+  const SECRET = 'synthetic-secret-value-123'
+  const pasteWith = (secret: string | null, connectError: string) => {
+    ;(parseBunkerInput as Mock).mockResolvedValue({ pubkey: 'c'.repeat(64), relays: ['wss://r.example'], secret })
+    const signer = makeFakeSigner()
+    ;(signer as unknown as { connect: Mock }).connect = vi.fn(() => Promise.reject(new Error(connectError)))
+    ;(BunkerSigner.fromBunker as Mock).mockReturnValue(signer)
+    return loginWithBunker('bunker://synthetic').catch((e: Error) => e)
+  }
+  const noSession = () => {
+    expect((window as { nostr?: unknown }).nostr).toBeUndefined()
+    expect(sessionStorage.getItem('bunkerPubkey')).toBeNull()
+    expect(sessionStorage.getItem('bunkerURI')).toBeNull()
+  }
+
+  it('"invalid secret" for a link WITH a secret: explains that the signer does not know it, names the fix, hides the value', async () => {
+    const err = await pasteWith(SECRET, 'invalid secret') as Error
+    expect(err.message).toMatch(/does not accept the secret/i)
+    expect(err.message).toMatch(/reset the bunker/i)
+    expect(err.message).not.toContain(SECRET)
+    expect(err.message).not.toBe('invalid secret')
+    noSession()
+  })
+
+  it('"invalid secret" for a link WITHOUT a secret says the link has none', async () => {
+    const err = await pasteWith(null, 'invalid secret') as Error
+    expect(err.message).toMatch(/contains no secret/i)
+    expect(err.message).toMatch(/reset the bunker/i)
+    noSession()
+  })
+
+  it('"no secret" is explained the same way; case and spaces do not matter', async () => {
+    expect(((await pasteWith(SECRET, ' No Secret ')) as Error).message).toMatch(/does not accept the secret/i)
+  })
+
+  it.each(['user rejected', 'already connected', 'secret not in use', 'Connection timeout — bunker relay did not respond within 30 seconds'])(
+    'every other error passes through unchanged: %s', async text => {
+      expect(((await pasteWith(SECRET, text)) as Error).message).toBe(text)
+      noSession()
+    })
+
+  it('explainRejectedBunkerSecret leaves non-Error values alone', () => {
+    expect(explainRejectedBunkerSecret('invalid secret', true)).toBe('invalid secret')
+    expect(explainRejectedBunkerSecret(undefined, false)).toBeUndefined()
   })
 })

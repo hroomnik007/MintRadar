@@ -387,6 +387,20 @@ function forceTeardownExistingShim(): void {
   if (typeof window !== 'undefined') delete window.nostr
 }
 
+// Amber answers a `connect` whose secret it does not know with the bare text "invalid secret" (or "no secret"
+// for a blank one; EventNotificationConsumer.kt). A connection that was created by pairing a nostrconnect:// link is
+// stored without a bunker secret, so the bunker:// link Amber shows for it carries none (or none a NEW client
+// may use) and is rejected until the bunker is reset in Amber. Say that instead of the bare signer text.
+// Only the presence of a secret is reported, never its value. Any other error is returned unchanged.
+export function explainRejectedBunkerSecret(err: unknown, linkHasSecret: boolean): unknown {
+  if (!(err instanceof Error)) return err
+  const text = err.message.trim().toLowerCase()
+  if (text !== 'invalid secret' && text !== 'no secret') return err
+  return new Error(linkHasSecret
+    ? 'The signer does not accept the secret in this bunker link (it is unknown or already used). Create a new bunker link in your signer (in Amber: reset the bunker) and paste that one, or use the QR code.'
+    : 'This bunker link contains no secret, and the signer only accepts a link with one. Create a new bunker link in your signer (in Amber: reset the bunker) and paste that one, or use the QR code.')
+}
+
 export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile> {
   const clientSecretKey = generateSecretKey()
   const bp = await parseBunkerInput(bunkerInput)
@@ -394,10 +408,14 @@ export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile
   const signer = BunkerSigner.fromBunker(clientSecretKey, bp, {
     onauth: openRemoteSignerAuthUrl,
   })
-  await Promise.race([
-    signer.connect(),
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timeout — bunker relay did not respond within 30 seconds')), BUNKER_CONNECT_TIMEOUT_MS)),
-  ])
+  try {
+    await Promise.race([
+      signer.connect(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timeout — bunker relay did not respond within 30 seconds')), BUNKER_CONNECT_TIMEOUT_MS)),
+    ])
+  } catch (err) {
+    throw explainRejectedBunkerSecret(err, !!bp.secret)
+  }
   const pubkeyHex = await Promise.race([
     signer.getPublicKey(),
     new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Remote signer did not return a public key within 30 seconds')), BUNKER_CONNECT_TIMEOUT_MS)),
