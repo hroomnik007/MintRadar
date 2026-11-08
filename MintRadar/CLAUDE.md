@@ -1,6 +1,6 @@
 # MintRadar — Claude Code Context
 
-> Detailed sections of this file live in `docs/claude/` (see the index below). Read the matching file BEFORE working in that area. Pointers are plain text on purpose — do not `@`-import them.
+> Detailed sections of this file live in `docs/claude/` (see the index below). Read the matching file BEFORE working in that area. Pointers are plain text on purpose — do not `@`-import them. `docs/claude/archive/` holds history only (sections that describe superseded or removed behaviour); do not read it for current rules.
 
 ## Index — when you work on X, read docs/claude/Y.md first
 

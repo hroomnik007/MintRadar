@@ -91,10 +91,7 @@ across components.
   `MIN_MEANINGFUL_REVIEWS`.
 
 ### MintCard.tsx — history (was dead code, now the real shared component)
-
-An earlier `src/components/mint/MintCard.tsx`/`.css` was deleted (zero imports at the time). For a while Dashboard and Watchlist each had their own separate inline card renderer instead of a shared one.
-
-**This is no longer true as of the "Post-redesign fixes round 2" session (commit f98694a) below.** `src/components/mint/MintCard.tsx` was recreated and is now the real, actively-imported shared card component used by both `src/pages/Dashboard.tsx` and `src/pages/Watchlist.tsx`. Any task targeting "the mint card" or "the watch button" should edit this file — not Dashboard.tsx/Watchlist.tsx directly — unless the change is genuinely page-specific.
+Historical, no longer describes the current code: moved to `docs/claude/archive/card-and-mint-detail-ui.md`.
 
 ### Cards are real links (2026-10-05)
 

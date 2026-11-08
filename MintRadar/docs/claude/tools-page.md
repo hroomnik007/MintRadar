@@ -1,15 +1,7 @@
 # MintRadar — Tools page, Best Mint Wizard, Token Inspector (split from CLAUDE.md)
 > Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
 ### "Look up a mint" card — added then removed (2026-09-09 → 2026-09-10, commits `af595c4`/`efb19ec`)
-
-A third Tools card (`MintLookup` component) briefly existed as an entry point into Mint Detail:
-took a mint URL/hostname and navigated to `/mint/{encodeURIComponent(trimmed)}`, relying on
-`resolveMintDetailUrl`'s existing bare-host canonicalization — no mint-info UI of its own. Removed
-the next day: the component, its `.mint-lookup-*` CSS, the `#lookup` deep-link hash branch/anchor,
-and the `tools-mint-lookup` e2e spec are all deleted. **At that time Tools had just the Wizard +
-Inspector row** (a third card, the Payment request inspector, was added 2026-10-21, see below; it is not a mint lookup). `resolveMintDetailUrl` and the `/mint/:slug` route themselves are
-untouched, so pasting a bare host into the address bar still resolves correctly; only the Tools-page
-entry point for doing that was removed.
+Historical, no longer describes the current code: moved to `docs/claude/archive/tools-page.md`.
 
 ### Tools page layout — iterations and final state
 
