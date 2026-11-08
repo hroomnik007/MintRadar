@@ -74,7 +74,16 @@ export const useWatchlistStore = create<WatchlistState>()(
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         throw new TypeError('URL must start with http:// or https://')
       }
-      await (await loadDb()).watchlist.put({
+      const db = await loadDb()
+      // Never overwrite an entry that already exists in Dexie: the in-memory list
+      // can be empty right after login (a slow remote signer delays Phase 1's
+      // loadFromDb), and a put() here would reset that mint's saved notification
+      // flags and server confirmation to off.
+      if (await db.watchlist.get(url)) {
+        set(state => { if (!state.mints.includes(url)) state.mints.push(url) })
+        return
+      }
+      await db.watchlist.put({
         url,
         addedAt: new Date(),
         // A newly watched mint starts with notifications OFF; the user turns them on deliberately
