@@ -269,6 +269,7 @@ Every unknown path below `/api/v1/` is a JSON `404` in this envelope (`/api/v1/f
 | Every other read endpoint **except** the wallet routes and `/health`, `/api/stats` and `/api/mint/icon` (these three are exempt), `/api/mint/probe` included | **60 requests / minute / IP** |
 | `/api/mint/submit` (POST) | **20 requests / hour / IP** |
 | `/api/mints/discover` (POST) | **3 requests / hour / IP** by default (`"source": "auto"`), **10 requests / hour / IP** with `"source": "bulk"` (two independent counters) |
+| `/api/notifications/list` (POST, NIP-98) | **30 requests / hour / authenticated pubkey**, its own counter (separate from the website's subscribe/unsubscribe budgets) |
 | `/api/mint/probe` for a URL that is **not** a tracked mint | additionally **10 requests / minute**, **60 requests / hour** and **3 concurrent probes** per IP (tracked mints: global limit only) |
 
 Rate limit headers are returned on every non-exempt read endpoint:
@@ -690,6 +691,22 @@ Batch insert discovered mint URLs (max 100 per request).
 **Response:** `{ "added": 3, "total": 3, "results": [{ "url", "success", "isNew", "error"?, "errorKind"?, "aliasOf"? }] }`. A non-string entry in `urls` is skipped without a result. `400` for `urls` that is not an array (`urls must be array`) or has more than 100 entries; `429` with `Retry-After`.
 
 Rate limit: **3 requests / hour / IP** for `"source": "auto"` (the default), **10 requests / hour / IP** for `"source": "bulk"`.
+
+---
+
+### `POST /api/notifications/list`
+
+Returns the **authenticated account's own** mint notification settings, so the MintRadar website can show them correctly after a login on another device or browser. Used by the website only (same-origin; other browser origins get `403`).
+
+**Auth:** NIP-98 (`Authorization: Nostr <base64 kind 27235 event>`) signed for this exact URL and method `POST`, within the 60-second window; a token is single-use (a replayed one gets `401`). Only rows of the signing pubkey are read.
+
+**Body:** `{}` (ignored).
+
+**Response:** `{ "subscriptions": [{ "mintUrl", "notifyOnDown", "notifyOnUp", "notifyOnMintMeltIssues", "notifyOnVersionOutdated", "notifyOnNutLoss" }] }` — one entry per mint with active DM notifications (`mintUrl` normalized as stored, the five flags booleans). Nothing else is returned: no relays, no timestamps, no pubkey. A subscription not renewed in 30 days is deleted by the daily cleanup and then no longer listed. Always `Cache-Control: private, no-store`.
+
+**Errors:** `401` missing/invalid/expired/replayed NIP-98 token (`{ "error": "…" }`); `429` `{"error":"Too many requests. Try again later."}` with `Retry-After`; `500` `{"error":"Internal server error"}`.
+
+Rate limit: **30 requests / hour / pubkey**.
 
 ---
 

@@ -37,7 +37,7 @@ vi.mock('@/hooks/useUserRelays', () => {
   const stable = { read: [] as string[], write: [] as string[] }
   return { useUserRelays: () => stable }
 })
-vi.mock('@/core/nostr/notificationSubscription', () => ({ refreshAllSubscriptions: io.refreshAllSubscriptions }))
+vi.mock('@/core/nostr/notificationSubscription', () => ({ refreshAllSubscriptions: io.refreshAllSubscriptions, restoreServerSettings: vi.fn(async () => ({ ok: true, updated: 0 })) }))
 vi.mock('@/db', () => ({
   db: {
     meta: { get: io.dbMetaGet, put: io.dbMetaPut },

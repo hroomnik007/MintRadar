@@ -655,3 +655,85 @@ describe('POST /api/notifications/unsubscribe', () => {
     expect(res.status).toBe(200)
   })
 })
+
+describe('POST /api/notifications/list', () => {
+  const LIST_PATH = '/api/notifications/list'
+  const dbRow = {
+    mint_url: 'https://mint.example.com',
+    notify_on_down: true,
+    notify_on_up: false,
+    notify_on_mint_melt_issues: true,
+    notify_on_version_outdated: false,
+    notify_on_nut_loss: true,
+    relays: ['wss://secret-relay.example'],
+    updated_at: new Date(),
+    pubkey: 'f'.repeat(64),
+  }
+
+  it('requires NIP-98 auth and never caches', async () => {
+    const res = await post(LIST_PATH, {})
+    expect(res.status).toBe(401)
+    expect(res.headers['cache-control']).toBe('private, no-store')
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it('rejects a token signed for another route (subscribe)', async () => {
+    const { header } = await nip98Header(SUBSCRIBE_PATH, 'POST')
+    const res = await post(LIST_PATH, {}, header)
+    expect(res.status).toBe(401)
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it('queries only the authenticated pubkey and returns only mintUrl + five flags', async () => {
+    const { header, pubkey } = await nip98Header(LIST_PATH, 'POST')
+    query.mockResolvedValueOnce({ rows: [dbRow] })
+    const res = await post(LIST_PATH, {}, header)
+    expect(res.status).toBe(200)
+    expect(res.headers['cache-control']).toBe('private, no-store')
+    expect(query).toHaveBeenCalledTimes(1)
+    const [sql, params] = query.mock.calls[0]!
+    expect(String(sql)).toMatch(/WHERE pubkey = \$1/)
+    expect(String(sql)).not.toMatch(/relays|updated_at/)
+    expect(params).toEqual([pubkey])
+    expect(res.body).toEqual({
+      subscriptions: [{
+        mintUrl: 'https://mint.example.com',
+        notifyOnDown: true,
+        notifyOnUp: false,
+        notifyOnMintMeltIssues: true,
+        notifyOnVersionOutdated: false,
+        notifyOnNutLoss: true,
+      }],
+    })
+    expect(JSON.stringify(res.body)).not.toMatch(/secret-relay|ffff/)
+  })
+
+  it('rejects a replayed token', async () => {
+    const { header } = await nip98Header(LIST_PATH, 'POST')
+    query.mockResolvedValue({ rows: [] })
+    expect((await post(LIST_PATH, {}, header)).status).toBe(200)
+    expect((await post(LIST_PATH, {}, header)).status).toBe(401)
+  })
+
+  it('rate-limits a pubkey after 30 requests/hour on its own budget', async () => {
+    const sk = generateSecretKey()
+    const base = Math.round(Date.now() / 1000)
+    query.mockResolvedValue({ rows: [] })
+    for (let i = 0; i < 30; i++) {
+      const { header } = await nip98Header(LIST_PATH, 'POST', { sk, createdAt: base - i })
+      expect((await post(LIST_PATH, {}, header)).status).toBe(200)
+    }
+    const { header } = await nip98Header(LIST_PATH, 'POST', { sk, createdAt: base - 31 })
+    expect((await post(LIST_PATH, {}, header)).status).toBe(429)
+    const sub = await nip98Header(SUBSCRIBE_PATH, 'POST', { sk, createdAt: base - 32 })
+    expect((await post(SUBSCRIBE_PATH, {}, sub.header)).status).toBe(400) // subscribe budget untouched
+  })
+
+  it('a database error returns a generic 500 without details', async () => {
+    const { header } = await nip98Header(LIST_PATH, 'POST')
+    query.mockRejectedValueOnce(new Error('relation "x" secret detail'))
+    const res = await post(LIST_PATH, {}, header)
+    expect(res.status).toBe(500)
+    expect(JSON.stringify(res.body)).not.toMatch(/secret detail/)
+  })
+})

@@ -208,6 +208,7 @@ function runExclusive<T>(mintUrl: string, task: () => Promise<T>): Promise<T> {
 // Cancels a mint's server subscription (queued behind any request still running for that mint).
 // Used when the mint is removed from the watchlist; writes nothing locally — the entry is gone.
 export function cancelSubscription(mintUrl: string): Promise<NotifyResult> {
+  bumpMutation(mintUrl)
   return runExclusive(mintUrl, () => unsubscribeFromServer(mintUrl))
 }
 
@@ -221,6 +222,7 @@ export function setNotifyFlag(
   next: boolean,
   userReadRelays: string[] | null | undefined,
 ): Promise<NotifyResult> {
+  bumpMutation(mintUrl)
   return runExclusive(mintUrl, async (): Promise<NotifyResult> => {
     const entry = await db.watchlist.get(mintUrl)
     if (!entry) return { ok: false, reason: 'rejected' } // removed meanwhile
@@ -233,6 +235,101 @@ export function setNotifyFlag(
     }
     return result
   })
+}
+
+// Per-mint count of user-initiated changes (toggle / removal), bumped synchronously when one is
+// requested. restoreServerSettings snapshots it before its request and skips any mint whose
+// count moved meanwhile, so a slow login-time restore never overwrites a newer user decision.
+const mutationSeq = new Map<string, number>()
+function bumpMutation(mintUrl: string): void {
+  mutationSeq.set(mintUrl, (mutationSeq.get(mintUrl) ?? 0) + 1)
+}
+
+// Same normalization as the backend's normalizeUrl (backend/src/discovery.ts) — the server
+// stores mint_url normalized, so local watchlist urls are compared in that form. Keep in sync.
+export function serverMintKey(raw: string): string {
+  try {
+    const parsed = new URL(raw.trim())
+    parsed.protocol = 'https:'
+    parsed.hostname = parsed.hostname.toLowerCase()
+    let result = parsed.toString()
+    if (parsed.pathname === '/') result = result.replace(/\/$/, '')
+    return result
+  } catch {
+    return raw.trim()
+  }
+}
+
+const FLAG_FIELDS: readonly NotifyField[] = ['notifyOnDown', 'notifyOnUp', 'notifyOnMintMeltIssues', 'notifyOnVersionOutdated', 'notifyOnNutLoss']
+
+// Strict shape check: anything unexpected → null (caller then changes nothing).
+export function parseSubscriptionList(body: unknown): Map<string, NotifyFlags> | null {
+  if (typeof body !== 'object' || body === null) return null
+  const list = (body as { subscriptions?: unknown }).subscriptions
+  if (!Array.isArray(list)) return null
+  const out = new Map<string, NotifyFlags>()
+  for (const item of list) {
+    if (typeof item !== 'object' || item === null) return null
+    const rec = item as Record<string, unknown>
+    if (typeof rec.mintUrl !== 'string') return null
+    if (!FLAG_FIELDS.every(f => typeof rec[f] === 'boolean')) return null
+    out.set(serverMintKey(rec.mintUrl), Object.fromEntries(FLAG_FIELDS.map(f => [f, rec[f]])) as unknown as NotifyFlags)
+  }
+  return out
+}
+
+export type RestoreResult = { ok: true; updated: number } | { ok: false; reason: NotifyFailure | 'malformed' | 'stale' }
+
+const ALL_OFF: NotifyFlags = { notifyOnDown: false, notifyOnUp: false, notifyOnMintMeltIssues: false, notifyOnVersionOutdated: false, notifyOnNutLoss: false }
+
+// Login-time restore of the account's notification settings from the server (the source of
+// truth; rows are keyed by pubkey + mint, so they apply to every device). Only for mints in the
+// local watchlist; server rows for other mints are ignored. A mint with no server row is set
+// off ONLY after a complete, valid response. Any failure (signer declined/timed out, network,
+// non-2xx, malformed body), an account change (`isStale`) or a user toggle/removal requested
+// after the restore began leaves local data untouched. Bounded by SIGN_TIMEOUT_MS + REQUEST_TIMEOUT_MS.
+export async function restoreServerSettings(isStale: () => boolean): Promise<RestoreResult> {
+  const startSeq = new Map(mutationSeq)
+  const path = '/api/notifications/list'
+  const signed = await buildNip98Token(`${window.location.origin}${path}`, 'POST')
+  if ('reason' in signed) return { ok: false, reason: signed.reason }
+  if (isStale()) return { ok: false, reason: 'stale' }
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS)
+  let body: unknown
+  try {
+    const res = await fetch(path, {
+      method: 'POST',
+      credentials: 'omit',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', Authorization: signed.token },
+      body: '{}',
+      signal: ctrl.signal,
+    })
+    if (res.status === 429) return { ok: false, reason: 'rate-limited' }
+    if (!res.ok) return { ok: false, reason: 'rejected' }
+    body = await res.json()
+  } catch {
+    return { ok: false, reason: 'unreachable' }
+  } finally {
+    clearTimeout(timer)
+  }
+  const server = parseSubscriptionList(body)
+  if (!server) return { ok: false, reason: 'malformed' }
+  if (isStale()) return { ok: false, reason: 'stale' }
+
+  let updated = 0
+  const entries = await db.watchlist.toArray()
+  await Promise.all(entries.map(entry => runExclusive(entry.url, async () => {
+    if (isStale()) return
+    if ((mutationSeq.get(entry.url) ?? 0) !== (startSeq.get(entry.url) ?? 0)) return
+    if (!(await db.watchlist.get(entry.url))) return // removed meanwhile
+    const flags = server.get(serverMintKey(entry.url)) ?? ALL_OFF
+    await db.watchlist.update(entry.url, { ...flags, notifyConfirmedAt: new Date() })
+    updated++
+  })))
+  if (isStale()) return { ok: false, reason: 'stale' }
+  return { ok: true, updated }
 }
 
 const REFRESH_CONCURRENCY = 3
