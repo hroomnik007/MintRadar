@@ -6,7 +6,8 @@ import { TOOLTIP_STATES, VIEWPORTS } from './tooltipStates'
 //   triggers = visible [data-tooltip-trigger] elements in the state (a MINIMUM: a new tooltip does not fail the spec),
 //   opened   = distinct triggers that were hovered / tapped, at most 8 per state (MAX_OPENED_PER_STATE), a MINIMUM too.
 //   null     = the state does not exist at this viewport (its run() resolves false) and must keep not existing.
-// Derived from a full run on 2026-10-14 (same numbers for the mouse and the touch pointer). To change a number:
+// Derived from a full run on 2026-10-14 (same numbers for the mouse and the touch pointer). 2026-11-08: every Mint Detail
+// state lost one trigger, the ⓘ beside "Show my latency" (it repeated the button's label). To change a number:
 // run the spec, read the failure message, and say in the commit why the page gained or lost a tooltip.
 // A state with 0 triggers is deliberate and says why.
 type Cell = [triggers: number, opened: number] | null
@@ -36,24 +37,24 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   about: same([0, 0]),
   methodology: same([0, 0]),
   'for-wallets': same([0, 0]),
-  'mint-alpha-overview': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
-  'mint-alpha-history': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  'mint-alpha-nuts': [[4, 4], [4, 4], [9, 8], [9, 8], [9, 8]],
+  'mint-alpha-overview': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
+  'mint-alpha-history': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
+  'mint-alpha-nuts': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
   // A mint with an input fee (Task B2): the Fees and limits card adds the fee row's ⓘ, and the Keysets panel's "150 ppk" chip is a trigger (phones: NUTs tab; wide: sidebar).
-  'mint-fee-nuts': [[6, 6], [6, 6], [11, 8], [11, 8], [11, 8]],
-  'mint-alpha-audit': [[7, 7], [7, 7], [12, 8], [12, 8], [12, 8]],
-  'mint-alpha-audit-cz': [[7, 7], [7, 7], [12, 8], [12, 8], [12, 8]],
-  'mint-alpha-audit-8333': [[7, 7], [7, 7], [12, 8], [12, 8], [12, 8]],
-  'mint-alpha-reviews': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
+  'mint-fee-nuts': [[5, 5], [5, 5], [10, 8], [10, 8], [10, 8]],
+  'mint-alpha-audit': [[6, 6], [6, 6], [11, 8], [11, 8], [11, 8]],
+  'mint-alpha-audit-cz': [[6, 6], [6, 6], [11, 8], [11, 8], [11, 8]],
+  'mint-alpha-audit-8333': [[6, 6], [6, 6], [11, 8], [11, 8], [11, 8]],
+  'mint-alpha-reviews': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
   // The Reliability Score dialog is reachable below 768 px only (run() resolves false above).
-  'mint-alpha-score-dialog': [[8, 5], [8, 5], null, null, null],
-  'mint-offline-overview': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  'mint-test-overview': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  'mint-test-audit': [[7, 7], [7, 7], [12, 8], [12, 8], [12, 8]],
-  'mint-new-overview': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  'mint-new-nuts': [[4, 4], [4, 4], [9, 8], [9, 8], [9, 8]],
-  'mint-operator-overview': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  'mint-operator-reviews': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
+  'mint-alpha-score-dialog': [[7, 5], [7, 5], null,  null,  null],
+  'mint-offline-overview': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
+  'mint-test-overview': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
+  'mint-test-audit': [[6, 6], [6, 6], [11, 8], [11, 8], [11, 8]],
+  'mint-new-overview': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
+  'mint-new-nuts': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
+  'mint-operator-overview': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
+  'mint-operator-reviews': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
   // +1 (2026-10-25): the ⓘ next to "NUT Support" explains the green / grey NUT chips.
   'compare-modal': same([8, 3]),
   // 0 opened: the Submit dialog has no ⓘ of its own; the page's four triggers sit behind its overlay.

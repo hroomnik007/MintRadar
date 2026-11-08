@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isMotdAlert } from './mintProbeDisplay'
+import { isMotdAlert } from '@/utils/mintProbeDisplay'
 
 describe('isMotdAlert', () => {
   it('flags migration and maintenance MOTDs', () => {

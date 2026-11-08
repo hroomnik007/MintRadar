@@ -196,8 +196,7 @@ explanations on chips are migrated and deleted. A test (`src/__tests__/tooltipPa
   containing block sits. Width: the `width` prop (default 220), capped at `min(320px, 100vw − 16px)`.
 - **Hit area:** the visible icon stays 10–13 px; the button is padded by 7 px per side with the same negative margin (24+ px square, the
   layout does not move). Chips get 3.5 px above and below (24+ px high). Where a neighbouring control is within reach the hit area is cut
-  on that side with `--tt-hit-t/r/b/l` (and `--tt-ml` for an icon that used to carry a margin-left); cases: the client-latency ⓘ beside
-  "Show my latency" (`.latency-client-info`: 4 px left, 9 px right), the New / Test mint chips above the URL button (`.md-namebox`: 4 px above,
+  on that side with `--tt-hit-t/r/b/l` (and `--tt-ml` for an icon that used to carry a margin-left); cases: the New / Test mint chips above the URL button (`.md-namebox`: 4 px above,
   2 px below), the filter tag's text (`.filter-tag`: 6 px, the close button is beside it). The NIP-05 icon keeps its 44 px touch
   overlay (`::before`); the Dashboard Unit / Method icons are gone (F1, 2026-10-28). Cards: `.mint-card .info-tooltip` stays above the stretched-link overlay; `click` never reaches the host
   (`stopPropagation` + `preventDefault`), so a card, a label or a dialog backdrop is not activated.

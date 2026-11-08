@@ -2687,10 +2687,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .audit-summary-strip.audit-cz-tiles .audit-summary-cell:nth-child(even) { border-left: 0; padding: 0; }
 }
 
-/* Tooltip hit areas next to neighbouring controls (see InfoTooltip.css: --tt-hit-t/r/b/l).
-   The client-latency ⓘ sits 4 px after the "Show my latency" button: no hit area on that side beyond the gap,
-   the room is given back on the free right side (icon 11 + 4 + 9 = 24 px wide). */
-.latency-client-info { --tt-hit-l: 4px; --tt-hit-r: 9px; }
+/* Tooltip hit areas next to neighbouring controls (see InfoTooltip.css: --tt-hit-t/r/b/l). */
 /* The New / Test mint chips in the title wrap onto a line right above the URL button on narrow screens. */
 .md-namebox .info-tooltip--chip { --tt-hit-t: 4px; --tt-hit-b: 2px; }
 

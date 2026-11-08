@@ -1,4 +1,4 @@
-import { SIGNATURE_CHECK_TEXT, CLAIM_FEE_TEXT } from '@/utils/tooltipTexts'
+import { SIGNATURE_CHECK_TEXT, CLAIM_FEE_TEXT, TEST_MINT_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { clickableProps } from '@/utils/clickableProps'
 import { passesWizardNutChecks } from '@/utils/nutFilters'
@@ -373,7 +373,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <div className="trc-name">{mintInfo?.name ?? getHostname(result.mint)}</div>
                 {isTestMintToken && (
-                  <InfoTooltip text="Not for real funds — for testing and development only">
+                  <InfoTooltip text={TEST_MINT_TEXT}>
                     <span
                       className="token-test-mint-badge"
                       style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }}

@@ -1,4 +1,4 @@
-import { INPUT_FEE_TEXT, compareAuditSuccessText, COMPARE_NUT_SUPPORT_TEXT } from '@/utils/tooltipTexts'
+import { INPUT_FEE_TEXT, compareAuditSuccessText, COMPARE_NUT_SUPPORT_TEXT, COMPARE_BACKUP_TEXT } from '@/utils/tooltipTexts'
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import {
@@ -438,7 +438,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       cell: i => <span className="cmp-fact">{nip87RowText(mints[i]!)}</span>,
     },
     {
-      id: 'backup', label: <>Backup<InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore coins after data loss." /></>,
+      id: 'backup', label: <>Backup<InfoTooltip iconSize={11} width={200} about="Backup" text={COMPARE_BACKUP_TEXT} /></>,
       keys: allData.map(d => (d.supportsBackupRestore ? 'yes' : 'no')),
       cell: i => (allData[i]!.supportsBackupRestore
         ? <span style={{ fontSize: 11, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>✓ Supported</span>
@@ -785,7 +785,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Backup ── */}
           <div className="cmp-lbl cmp-last" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             Backup
-            <InfoTooltip iconSize={11} width={200} about="Backup" text="Whether this mint supports NUT-09, letting wallets restore coins after data loss." />
+            <InfoTooltip iconSize={11} width={200} about="Backup" text={COMPARE_BACKUP_TEXT} />
           </div>
           {mints.map((mint, i) => {
             const d = allData[i]!

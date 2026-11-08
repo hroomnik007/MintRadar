@@ -18,7 +18,7 @@ import {
   KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote,
   UPTIME_ROW_LABEL, AUDIT_ROW_LABEL, NUT_ROW_LABEL, VERSION_ROW_LABEL, CONTACT_ROW_LABEL,
   UPTIME_POINTS, AUDIT_POINTS, NUT_POINTS, VERSION_POINTS, CONTACT_POINTS,
-  auditTooFewDetail, auditTooOldDetail, OUTAGES_WINDOW_DAYS,
+  auditTooFewDetail, auditTooOldDetail, OUTAGES_WINDOW_DAYS, TEST_MINT_TEXT,
 } from '@/utils/tooltipTexts'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
@@ -1211,7 +1211,7 @@ function MintDetailContent({ url }: { url: string }) {
                   <InfoTooltip text={newMintBadgeText()} width={240}><span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>New</span></InfoTooltip>
                 )}
                 {isTestMint(url) && (
-                  <InfoTooltip text="Not for real funds — for testing and development only">
+                  <InfoTooltip text={TEST_MINT_TEXT}>
                     <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>
                       Test mint
                     </span>
@@ -1343,7 +1343,6 @@ function MintDetailContent({ url }: { url: string }) {
                   {testingLatency && <span className="latency-spinner" />}
                   {CLIENT_LATENCY_BUTTON_LABEL}
                 </button>
-                <InfoTooltip className="latency-client-info" iconSize={11} width={200} about="your latency from this browser" text="Your latency from this browser to the mint (client-side measurement)." />
               </span>
             </div>
             {/* Desktop strip: ends the first row (value + button) whatever the width of the value, so the label never climbs into it when the value is the short "—" of a mint without latency. */}

@@ -1,4 +1,4 @@
-import { reviewSurgeText, sameOperatorText } from '@/utils/tooltipTexts'
+import { reviewSurgeText, sameOperatorText, TEST_MINT_TEXT } from '@/utils/tooltipTexts'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { IcClose } from '@/components/IcClose'
 import { Link } from 'react-router-dom'
@@ -108,7 +108,7 @@ export function MintCard({
   const reliabilityBadges = (
     <>
       {isTestMint(mint.url) && (
-        <InfoTooltip text="Not for real funds — for testing and development only">
+        <InfoTooltip text={TEST_MINT_TEXT}>
           <span className="card-reliability-badge card-reliability-badge-test-mint">Test mint</span>
         </InfoTooltip>
       )}

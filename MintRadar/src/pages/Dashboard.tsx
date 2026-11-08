@@ -201,8 +201,6 @@ function applyFilters(
   })
 }
 
-const HIDE_TEST_MINTS_TOOLTIP = HIDE_TEST_MINTS_TEXT
-
 function countActiveFilters(f: FilterState): number {
   return [
     // 'all' widens the view (no status filter) so it isn't "active"; only an
@@ -649,8 +647,12 @@ export default function Dashboard() {
   }
 
   const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
-    const saved = localStorage.getItem('mintRadar_viewMode')
-    return saved === 'list' ? 'list' : 'cards'
+    // Blocked site data makes localStorage throw (or be null): fall back to the default view, never crash the page.
+    try {
+      return localStorage.getItem('mintRadar_viewMode') === 'list' ? 'list' : 'cards'
+    } catch {
+      return 'cards'
+    }
   })
 
   // Filter panel draft state — only committed to the URL (activeFilters) via
@@ -975,7 +977,7 @@ export default function Dashboard() {
 
   function handleViewMode(mode: 'cards' | 'list') {
     setViewMode(mode)
-    localStorage.setItem('mintRadar_viewMode', mode)
+    try { localStorage.setItem('mintRadar_viewMode', mode) } catch { /* blocked or full storage: the choice lasts for this page view */ }
   }
 
   // Where the sort segment scrolls inside itself (≤370px, see Dashboard.css) keep the active option in view.
@@ -1448,7 +1450,7 @@ export default function Dashboard() {
               )}
               {activeFilters.hideTestMints && (
                 <span className="filter-tag">
-                  <InfoTooltip text={HIDE_TEST_MINTS_TOOLTIP} width={240}>Test mints hidden</InfoTooltip>
+                  <InfoTooltip text={HIDE_TEST_MINTS_TEXT} width={240}>Test mints hidden</InfoTooltip>
                   <button type="button" onClick={() => { const f = { ...activeFilters, hideTestMints: false }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}

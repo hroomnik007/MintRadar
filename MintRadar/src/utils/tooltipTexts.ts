@@ -70,6 +70,9 @@ export function reviewSurgeText(): string {
   return `${SURGE_ABSOLUTE_GAIN} or more new reviews in about a week, or at least ${RATIO_WORDS[SURGE_RATIO] ?? `${SURGE_RATIO} times`} the count from a base of ${SURGE_RATIO_MIN_BASELINE} or more. Ratings can be gamed, so read this one with care.`
 }
 
+/** The "Test mint" chip on a card, on Mint Detail and in the Token Inspector. */
+export const TEST_MINT_TEXT = 'Not for real funds — for testing and development only'
+
 /** The "Hide test mints" filter (the tag shown while it is on). */
 export const HIDE_TEST_MINTS_TEXT = "Hides the mints on MintRadar's test-mint list (fake sats)."
 
@@ -111,6 +114,9 @@ export function contactRowText(): string {
 /** NUTs tab: the backup chips. */
 export const BACKUP_SUPPORTED_TEXT = 'NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.'
 export const NO_BACKUP_TEXT = 'This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.'
+
+/** Compare modal, Backup row. */
+export const COMPARE_BACKUP_TEXT = 'Whether this mint supports NUT-09, letting wallets restore coins after data loss.'
 
 /** Audit tab strip (audit.8333.space). */
 export const AUDIT_MINTS_TEXT = 'All-time count of mint operations that audit.8333.space has recorded for this mint.'
