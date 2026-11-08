@@ -5,6 +5,7 @@ import { RelayWebSocket } from './wsPolyfill.js'
 import { pool } from './db.js'
 import { setAppState, DISCOVERY_LAST_SUCCESS_KEY } from './appState.js'
 import { probeMintToDb, isValidCashuMint } from './prober.js'
+import { checkMintAdmission } from './mintAdmission.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
 // Fast string-based pre-filter. isSafeUrl() in probeMintToDb is the authoritative SSRF
@@ -260,7 +261,10 @@ export async function discoverMintsFromNostr(): Promise<number> {
   }
 
   let added38172 = 0
+  // NIP-87 events are untrusted input: a new URL must pass the new-mint caps (mintAdmission.ts) before the probe.
+  let refused = 0
   for (const [url, meta] of discovered38172) {
+    if (!(await checkMintAdmission(url)).ok) { refused++; continue }
     if (!(await isValidCashuMint(url))) continue
     const r = await pool.query(
       `INSERT INTO mints (url, is_known, nostr_announced_at, nostr_announce_id, nostr_announce_pubkey, nostr_announce_d)
@@ -290,6 +294,7 @@ export async function discoverMintsFromNostr(): Promise<number> {
 
   let added38000 = 0
   for (const url of discovered38000) {
+    if (!(await checkMintAdmission(url)).ok) { refused++; continue }
     if (!(await isValidCashuMint(url))) continue
     const r = await pool.query(
       'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
@@ -298,6 +303,7 @@ export async function discoverMintsFromNostr(): Promise<number> {
     if ((r.rowCount ?? 0) > 0) added38000++
   }
   console.log(`[discovery] kind:38000 found ${discovered38000.size} mints, added ${added38000} new`)
+  if (refused > 0) console.warn(`[discovery] ${refused} new URL(s) refused by the new-mint caps (mintAdmission.ts)`)
 
   return added38172 + added38000
 }

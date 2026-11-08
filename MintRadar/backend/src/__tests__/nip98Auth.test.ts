@@ -198,3 +198,37 @@ describe('authenticateNip98 — replay / nonce cache', () => {
     expect((await authenticateNip98(mkReq())).ok).toBe(true)
   })
 })
+
+describe('authenticateNip98 — payload tag binds the token to the request body', () => {
+  const URL_ = 'https://mintradar.org/api/notifications/subscribe'
+  async function tokenWithPayload(body: unknown, sk: Uint8Array = generateSecretKey()) {
+    const { nip98 } = await import('nostr-tools')
+    const token = await nip98.getToken(URL_, 'POST', e => Promise.resolve(finalizeEvent(e, sk)), true, body as Record<string, unknown>)
+    return { token, pubkey: getPublicKey(sk) }
+  }
+  function req(authorization: string, body: unknown): Request {
+    const r = fakeRequest({ authorization, host: 'mintradar.org', originalUrl: '/api/notifications/subscribe', method: 'POST', forwardedProto: 'https' })
+    ;(r as unknown as { body: unknown }).body = body
+    return r
+  }
+
+  it('accepts the body the token was signed for (after a JSON round trip, as express.json() delivers it)', async () => {
+    const { authenticateNip98 } = await import('../nip98Auth.js')
+    const body = { mintUrl: 'https://mint.example', notifyOnDown: true, notifyOnUp: false, relays: ['wss://relay.example'], name: 'é ✓' }
+    const { token, pubkey } = await tokenWithPayload(body)
+    expect(await authenticateNip98(req(token, JSON.parse(JSON.stringify(body))))).toEqual({ ok: true, pubkey })
+  })
+
+  it('rejects the same token with a different body', async () => {
+    const { authenticateNip98 } = await import('../nip98Auth.js')
+    const { token } = await tokenWithPayload({ mintUrl: 'https://mint.example', notifyOnDown: true })
+    const result = await authenticateNip98(req(token, { mintUrl: 'https://other.example', notifyOnDown: true }))
+    expect(result).toEqual({ ok: false, status: 401, error: 'Invalid NIP-98 authorization' })
+  })
+
+  it('still accepts a token without a payload tag (older cached clients)', async () => {
+    const { authenticateNip98 } = await import('../nip98Auth.js')
+    const { token, pubkey } = await signedToken(URL_, 'POST')
+    expect(await authenticateNip98(req(token, { anything: 1 }))).toEqual({ ok: true, pubkey })
+  })
+})

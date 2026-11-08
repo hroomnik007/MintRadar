@@ -22,6 +22,7 @@ import { readinessGate, isReady, openGateAfter } from './readiness.js'
 import { normalizeUrl, getSyncTimesFromDb, getAuditUpstreamStatus } from './discovery.js'
 import { computeDegraded } from './degraded.js'
 import { authenticateNip98 } from './nip98Auth.js'
+import { checkMintAdmission, rateLimitKey } from './mintAdmission.js'
 import { fetchOgMintData, renderMintOgHtml, renderPageOgHtml } from './og.js'
 import { getMintIcon, iconEtag } from './mintIcon.js'
 import { computeReliabilityMovers, type MintScoreSnapshot } from './reliabilityMovers.js'
@@ -696,7 +697,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next()
     return
   }
-  const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
+  const ip = rateLimitKey(req.ip ?? req.socket.remoteAddress)
   if (usesWalletRateLimit(req.path)) {
     const r = checkFixedWindow(walletRateLimitStore, WALLET_RATE_LIMIT_MAX, ip)
     const retryAfterSec = setRateLimitHeaders(res, r)
@@ -866,7 +867,7 @@ app.get('/api/mint/probe', (req: Request, res: Response): void => {
   //
   // The DB lookup runs first so an unknown URL can be charged to the dedicated
   // unknown-probe limiter BEFORE any outbound fetch happens.
-  const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
+  const ip = rateLimitKey(req.ip ?? req.socket.remoteAddress)
   pool.query(
     `SELECT m.contact_checks, m.last_contacts, m.last_contacts_at, m.last_online_at, s.info AS change_state_info,
             (SELECT h.online FROM mint_history h WHERE h.url = m.url ORDER BY h.checked_at DESC LIMIT 1) AS last_probe_online
@@ -2099,7 +2100,7 @@ app.get('/api/mints/changes', (req: Request, res: Response): void => {
 })
 
 app.post('/api/mint/submit', (req: Request, res: Response): void => {
-  const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
+  const ip = rateLimitKey(req.ip ?? req.socket.remoteAddress)
   if (!checkSubmitRateLimit(ip)) {
     setRetryAfter(res, submitRateLimitStore, ip)
     res.status(429).json({ error: 'Too many requests. Try again later.' })
@@ -2132,54 +2133,59 @@ app.post('/api/mint/submit', (req: Request, res: Response): void => {
   const normalized = normalizeUrl(url)
 
   isSafeUrl(normalized)
-    .then(safe => {
+    .then(async safe => {
       if (!safe) {
         res.status(400).json({ error: 'Invalid url' })
         return
       }
-      return probeMint(normalized).then(async status => {
-        if (!status.online) {
-          res.status(400).json({
-            error: 'URL does not appear to be a valid Cashu mint',
-            ...(status.errorKind !== undefined ? { errorKind: status.errorKind } : {}),
-          })
-          return
-        }
-        const result = await pool.query(
-          'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
-          [normalized]
-        )
-        const isNew = (result.rowCount ?? 0) > 0
-        try {
-          await probeMintToDb(normalized)
-        } catch (probeErr) {
-          if (IS_DEV) console.error('[submit] post-insert probe failed:', probeErr)
-        }
-        invalidateKnownMints()
+      // Before the outbound probe: a URL past the new-mint caps costs no fetch (mintAdmission.ts).
+      const admission = await checkMintAdmission(normalized)
+      if (!admission.ok) {
+        res.status(403).json({ error: admission.error })
+        return
+      }
+      const status = await probeMint(normalized)
+      if (!status.online) {
+        res.status(400).json({
+          error: 'URL does not appear to be a valid Cashu mint',
+          ...(status.errorKind !== undefined ? { errorKind: status.errorKind } : {}),
+        })
+        return
+      }
+      const result = await pool.query(
+        'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
+        [normalized]
+      )
+      const isNew = (result.rowCount ?? 0) > 0
+      try {
+        await probeMintToDb(normalized)
+      } catch (probeErr) {
+        if (IS_DEV) console.error('[submit] post-insert probe failed:', probeErr)
+      }
+      invalidateKnownMints()
 
-        // Alias hint — never merges cards, URL stays the only identity. Only
-        // meaningful for a genuinely new row; a re-submit of an already-tracked
-        // URL doesn't need "is this an alias of itself" noise.
-        let aliasOf: { url: string; name: string | null }[] = []
-        if (isNew) {
-          const pubkey = normalizeMintPubkey(status.info?.pubkey)
-          if (pubkey !== null) {
-            try {
-              aliasOf = await findMintsByPubkey(pubkey, normalized)
-            } catch (aliasErr) {
-              if (IS_DEV) console.error('[submit] alias lookup failed:', aliasErr)
-            }
+      // Alias hint — never merges cards, URL stays the only identity. Only
+      // meaningful for a genuinely new row; a re-submit of an already-tracked
+      // URL doesn't need "is this an alias of itself" noise.
+      let aliasOf: { url: string; name: string | null }[] = []
+      if (isNew) {
+        const pubkey = normalizeMintPubkey(status.info?.pubkey)
+        if (pubkey !== null) {
+          try {
+            aliasOf = await findMintsByPubkey(pubkey, normalized)
+          } catch (aliasErr) {
+            if (IS_DEV) console.error('[submit] alias lookup failed:', aliasErr)
           }
         }
+      }
 
-        res.json({
-          success: true,
-          isNew,
-          added: isNew,
-          alreadyTracked: !isNew,
-          name: publicMintName(status.info?.name, normalized).name,
-          aliasOf: aliasOf.map(a => ({ url: a.url, name: publicMintName(a.name, a.url).name })),
-        })
+      res.json({
+        success: true,
+        isNew,
+        added: isNew,
+        alreadyTracked: !isNew,
+        name: publicMintName(status.info?.name, normalized).name,
+        aliasOf: aliasOf.map(a => ({ url: a.url, name: publicMintName(a.name, a.url).name })),
       })
     })
     .catch((err: unknown) => {
@@ -2195,7 +2201,7 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
     res.status(403).json({ error: 'This deployment monitors a fixed mint allowlist.' })
     return
   }
-  const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown'
+  const ip = rateLimitKey(req.ip ?? req.socket.remoteAddress)
   const body = req.body as { urls?: unknown; source?: unknown }
   // Default to 'auto' — the smaller budget — when the field is missing or
   // unrecognized, so an unspecified/older caller can't silently claim the
@@ -2237,6 +2243,11 @@ app.post('/api/mints/discover', async (req: Request, res: Response): Promise<voi
     try {
       if (!(await isSafeUrl(normalized))) {
         results.push({ url: normalized, success: false, isNew: false, error: 'Invalid url' })
+        continue
+      }
+      const admission = await checkMintAdmission(normalized)
+      if (!admission.ok) {
+        results.push({ url: normalized, success: false, isNew: false, error: admission.error })
         continue
       }
       // validateCashuMintProbe() does the same single /v1/info fetch

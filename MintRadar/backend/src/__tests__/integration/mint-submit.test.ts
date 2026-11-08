@@ -15,6 +15,12 @@ vi.mock('../../db.js', () => ({
   pool: { query: vi.fn() },
   initDb: vi.fn(),
 }))
+// The new-mint caps (mintAdmission.ts) read the whole mints table; they have their own tests (mintAdmission.test.ts
+// and the "new-mint caps" cases below where present), so here every URL is admitted and the query sequence is unchanged.
+vi.mock('../../mintAdmission.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../mintAdmission.js')>()
+  return { ...actual, checkMintAdmission: vi.fn().mockResolvedValue({ ok: true }) }
+})
 vi.mock('dns/promises', () => ({ lookup: vi.fn() }))
 vi.mock('../../ssrf.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../ssrf.js')>()
@@ -249,5 +255,21 @@ describe('POST /api/mint/submit', () => {
 
     expect(res.headers['x-content-type-options']).toBe('nosniff')
     expect(res.headers['x-frame-options']).toBe('DENY')
+  })
+})
+
+describe('POST /api/mint/submit — new-mint caps', () => {
+  it('answers 403 with the cap text and makes no outbound request when the gate refuses the URL', async () => {
+    const { checkMintAdmission, ADMISSION_ERRORS } = await import('../../mintAdmission.js')
+    ;(checkMintAdmission as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: false, reason: 'domain_cap', error: ADMISSION_ERRORS.domain_cap })
+    resolvesTo({ address: '1.2.3.4', family: 4 })
+    mintReachable({ name: 'Spam', nuts: { '4': {} } })
+
+    const res = await post({ url: 'https://m99.evil.example.com' })
+
+    expect(res.status).toBe(403)
+    expect(res.body).toEqual({ error: ADMISSION_ERRORS.domain_cap })
+    expect(safeFetch).not.toHaveBeenCalled()
+    expect(query).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO mints'), expect.anything())
   })
 })

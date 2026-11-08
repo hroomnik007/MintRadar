@@ -76,15 +76,16 @@ export type NotifyResult = { ok: true } | { ok: false; reason: NotifyFailure }
 const SIGN_TIMEOUT_MS = 60_000
 const REQUEST_TIMEOUT_MS = 15_000
 
-async function buildNip98Token(url: string, method: string): Promise<{ token: string } | { reason: NotifyFailure }> {
+async function buildNip98Token(url: string, method: string, body: unknown): Promise<{ token: string } | { reason: NotifyFailure }> {
   if (!window.nostr) return { reason: 'signer-unavailable' }
   const sign = async (e: EventTemplate): Promise<Event> => (await window.nostr!.signEvent(e)) as Event
   let timer: ReturnType<typeof setTimeout> | undefined
   const timeout = new Promise<'timeout'>(resolve => { timer = setTimeout(() => resolve('timeout'), SIGN_TIMEOUT_MS) })
   try {
     // includeAuthorizationScheme=true → result is ready to use as the raw
-    // Authorization header value ("Nostr <base64>").
-    const result = await Promise.race([nip98.getToken(url, method, sign, true), timeout])
+    // Authorization header value ("Nostr <base64>"). The body adds the NIP-98 `payload` tag
+    // (sha256 of JSON.stringify(body), the exact string sent below), which binds the token to this body.
+    const result = await Promise.race([nip98.getToken(url, method, sign, true, body as Record<string, unknown>), timeout])
     if (result === 'timeout') return { reason: 'signer-timeout' }
     return { token: result }
   } catch {
@@ -96,7 +97,7 @@ async function buildNip98Token(url: string, method: string): Promise<{ token: st
 
 async function postWithNip98(path: string, body: unknown): Promise<NotifyResult> {
   const url = `${window.location.origin}${path}`
-  const signed = await buildNip98Token(url, 'POST')
+  const signed = await buildNip98Token(url, 'POST', body)
   if ('reason' in signed) return { ok: false, reason: signed.reason }
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS)
@@ -291,7 +292,7 @@ const ALL_OFF: NotifyFlags = { notifyOnDown: false, notifyOnUp: false, notifyOnM
 export async function restoreServerSettings(isStale: () => boolean): Promise<RestoreResult> {
   const startSeq = new Map(mutationSeq)
   const path = '/api/notifications/list'
-  const signed = await buildNip98Token(`${window.location.origin}${path}`, 'POST')
+  const signed = await buildNip98Token(`${window.location.origin}${path}`, 'POST', {})
   if ('reason' in signed) return { ok: false, reason: signed.reason }
   if (isStale()) return { ok: false, reason: 'stale' }
   const ctrl = new AbortController()

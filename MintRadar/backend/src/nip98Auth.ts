@@ -94,6 +94,14 @@ export async function authenticateNip98(req: Request): Promise<Nip98AuthResult> 
     if (typeof event.pubkey !== 'string' || event.pubkey.length !== 64) {
       return { ok: false, status: 401, error: 'Invalid NIP-98 authorization' }
     }
+    // Body binding: a token that carries a `payload` tag (the frontend always sends one since 2026-11-08) is valid
+    // only for the body it was signed for, so a token that leaked (a log, a proxy) cannot carry a different body.
+    // The hash is sha256(JSON.stringify(body)) — the same string the client sent, because express.json() parsed
+    // exactly that and stringify of a parsed JSON value gives it back. A token without the tag (an older cached
+    // client) is still accepted; the URL, method, 60 s window and the one-use nonce below still bind it.
+    if (event.tags.some(t => t[0] === 'payload') && !nip98.validateEventPayloadTag(event, req.body ?? {})) {
+      return { ok: false, status: 401, error: 'Invalid NIP-98 authorization' }
+    }
 
     // Replay guard — only reached once the token is otherwise fully valid, so a
     // stream of bad tokens can't fill the cache. `event.id` is the signed event
