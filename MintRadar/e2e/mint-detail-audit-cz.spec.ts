@@ -1,16 +1,14 @@
 import { test, expect } from '@playwright/test'
 import {
-  ALPHA, CZ_PAGE_URL, D, FRESH_8333, LNPAY_DETAIL, NO_8333, NOT_COVERED, ago,
+  ALPHA, CZ_PAGE_URL, FRESH_8333, LNPAY_DETAIL, NO_8333, NOT_COVERED, ago,
   auditCzResponse, czDetail, czSwapList, gotoAuditTab, measureSettled,
 } from './fixtures/auditCz'
 
 type Page = import('@playwright/test').Page
-interface Rect { x: number; y: number; width: number; height: number; right: number }
 
 // Audit tab, cashu.info branch (src/utils/auditCz.ts, MintDetail.tsx). Every endpoint is mocked
 // (e2e/fixtures/auditCz.ts); nothing here reaches cashu.info or audit.8333.space.
 
-const cell = (page: Page, label: string) => page.locator('.audit-summary-strip .audit-summary-cell', { hasText: label })
 const row = (page: Page, host: string) => page.locator('.audit-swaps-table tbody tr', { hasText: host })
 const czLink = (page: Page) => page.getByRole('link', { name: 'Open on cashu.info →' })
 // cashu.info view: tile by key; the two swap tables sit behind a tablist ("From this mint (N)" | "To this mint (M)"), one panel at a time.
@@ -311,179 +309,26 @@ test.describe('the two tables', () => {
   })
 })
 
-// ── e) both sources have data: the switch ───────────────────────
-const bothSources = () => ({ alpha: FRESH_8333, cz: auditCzResponse({ swaps: czSwapList([ok, ok, melt, ok]) }) })
-
-test.describe('source switch (both sources have data)', () => {
-  test('defaults to 8333.space, switches to cashu.cz and back with the 8333 panel unchanged', async ({ page }) => {
-    await gotoAuditTab(page, bothSources())
-    const header = page.locator('.md-audit-header-main')
-    const seg = header.locator('.md-audit-seg')
-    const card = page.locator('.md-audit-collapsible')
-    const czBtn = segGroup(page).getByRole('button', { name: 'cashu.info', exact: true })
-    const eightBtn = segGroup(page).getByRole('button', { name: '8333.space', exact: true })
-
-    // The control sits in the card's header row, to the right of the title.
-    await expect(seg).toBeVisible()
-    await expect(segGroup(page)).toHaveCount(1)
-    await expect(segGroup(page).getByRole('button')).toHaveText(['cashu.info', '8333.space'])
-    const [h, s] = await measureSettled(page, ['.md-audit-header-main', '.md-audit-header-main .md-audit-seg']) as [Rect, Rect]
-    // Layout rects are fractional (font metrics, flex rounding): 1px tolerance, nothing looser.
-    expect(s.y).toBeGreaterThanOrEqual(h.y - 1)
-    expect(s.y + s.height).toBeLessThanOrEqual(h.y + h.height + 1)
-    expect(s.right).toBeLessThanOrEqual(h.right + 1)
-
-    // Default: the audit.8333.space panel.
-    await expect(header).toContainText('via audit.8333.space')
-    await expect(eightBtn).toHaveAttribute('aria-pressed', 'true')
-    await expect(czBtn).toHaveAttribute('aria-pressed', 'false')
-    await expect(cell(page, 'Mints').locator('.audit-summary-value')).toHaveText('1,234')
-    await expect(cell(page, 'Recent success rate').locator('.audit-summary-main')).toHaveText('98 / 100')
-    await expect(page.getByRole('link', { name: 'Open on audit.8333.space →' })).toBeVisible()
-    const before = await card.evaluate(e => e.outerHTML)
-
-    await czBtn.click()
-    await expect(header).toContainText('via cashu.info')
-    await expect(czBtn).toHaveAttribute('aria-pressed', 'true')
-    await expect(eightBtn).toHaveAttribute('aria-pressed', 'false')
-    await expect(tile(page, 'mints').locator('.audit-summary-value')).toHaveText('56 / 62')
-    await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('51 / 64')
-    await expect(czLink(page)).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Open on audit.8333.space →' })).toHaveCount(0)
-    await expect(seg).toBeVisible()
-
-    await eightBtn.click()
-    await expect(header).toContainText('via audit.8333.space')
-    await expect(eightBtn).toHaveAttribute('aria-pressed', 'true')
-    expect(await card.evaluate(e => e.outerHTML)).toBe(before)
-  })
-
-  test('operable from the keyboard, with a group name and aria-pressed', async ({ page }) => {
-    await gotoAuditTab(page, bothSources())
-    const header = page.locator('.md-audit-header-main')
-    const czBtn = segGroup(page).getByRole('button', { name: 'cashu.info', exact: true })
-    const eightBtn = segGroup(page).getByRole('button', { name: '8333.space', exact: true })
-
-    await czBtn.focus()
-    await expect(czBtn).toBeFocused()
-    await page.keyboard.press('Enter')
-    await expect(czBtn).toHaveAttribute('aria-pressed', 'true')
-    await expect(header).toContainText('via cashu.info')
-    await expect(czBtn).toBeFocused() // the re-render keeps the focus on the pressed button
-
-    await page.keyboard.press('Tab')
-    await expect(eightBtn).toBeFocused()
-    await page.keyboard.press('Space')
-    await expect(eightBtn).toHaveAttribute('aria-pressed', 'true')
-    await expect(czBtn).toHaveAttribute('aria-pressed', 'false')
-    await expect(header).toContainText('via audit.8333.space')
-  })
-
-  test.describe('coarse pointer', () => {
-    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
-
-    test('hit area is at least 44px and a tap outside the visible box still toggles', async ({ page }) => {
-      await gotoAuditTab(page, bothSources())
-      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
-      // ≤767px the mobile heading carries the control (the desktop one is display:none).
-      const header = page.locator('.md-audit-toggle')
-      await expect(header).toBeVisible()
-      const czBtn = segGroup(page).getByRole('button', { name: 'cashu.info', exact: true })
-      const eightBtn = segGroup(page).getByRole('button', { name: '8333.space', exact: true })
-      await expect(czBtn).toBeVisible()
-      await czBtn.scrollIntoViewIfNeeded() // taps and elementFromPoint use viewport coordinates
-      await measureSettled(page, ['.md-audit-toggle .md-audit-seg-btn'])
-
-      for (const btn of [czBtn, eightBtn]) {
-        const m = await btn.evaluate(el => {
-          const b = el.getBoundingClientRect()
-          const pseudo = getComputedStyle(el, '::before')
-          const cx = b.left + b.width / 2
-          // 10px beyond the visible box is inside the invisible extension (≈12.5px each side).
-          return {
-            height: b.height,
-            pseudoContent: pseudo.content,
-            pseudoHeight: parseFloat(pseudo.height),
-            above: el.contains(document.elementFromPoint(cx, b.top - 10)),
-            below: el.contains(document.elementFromPoint(cx, b.bottom + 10)),
-          }
-        })
-        expect(m.pseudoContent).toBe('""')
-        expect(m.pseudoHeight).toBeGreaterThanOrEqual(44)
-        expect(m.above).toBe(true)
-        expect(m.below).toBe(true)
-      }
-
-      // Real touch input 10px above / below the visible box.
-      const cz = (await czBtn.boundingBox())!
-      await page.touchscreen.tap(cz.x + cz.width / 2, cz.y - 10)
-      await expect(czBtn).toHaveAttribute('aria-pressed', 'true')
-      const eight = (await eightBtn.boundingBox())!
-      await page.touchscreen.tap(eight.x + eight.width / 2, eight.y + eight.height + 10)
-      await expect(eightBtn).toHaveAttribute('aria-pressed', 'true')
-    })
-  })
-})
-
-// ── f) cz does not cover the mint: the page is as before ────────
+// ── f) cz does not cover the mint ───────────────────────────────
+// audit.8333.space is no longer shown at all (no answer since 2026-09-27), whatever its stored data says.
 test.describe('cz does not cover the mint (covered: false)', () => {
-  test('8333 data absent: "No audit data available", no cz card, no switch', async ({ page }) => {
-    const h = await gotoAuditTab(page, { alpha: NO_8333, cz: NOT_COVERED })
-    await expect(page.getByText('No audit data available for this mint.')).toBeVisible()
-    await expect(page.getByText('Loading audit data…')).toHaveCount(0)
-    expect(h.czQueries().length).toBeGreaterThan(0) // the answer really came from the endpoint
-    // 8333 is hidden while its data is missing (auditNeedsFallback): no "via audit.8333.space" label any more.
-    await expect(page.locator('.md-audit-header')).not.toContainText('8333')
-    await expect(page.locator('.audit-summary-strip')).toHaveCount(0)
-    await expect(page.locator('.md-audit-seg')).toHaveCount(0)
-  })
-
-  const stale = [
-    ['auditor data 10 days old', { auditCheckedAt: ago(10 * D) }],
-    ['MintRadar sync 2 days old', { auditSyncedAt: ago(2 * D) }],
-  ] as const
-  for (const [name, over] of stale) {
-    test(`8333 data stale (${name}): 8333 hidden, "No audit data available", no strip, no link, no switch`, async ({ page }) => {
-      const h = await gotoAuditTab(page, { alpha: { ...FRESH_8333, ...over }, cz: NOT_COVERED })
+  for (const [name, alpha] of [['no 8333 data', NO_8333], ['fresh 8333 data in the payload', FRESH_8333]] as const) {
+    test(`${name}: "No audit data available", nothing names audit.8333.space, no strip, no switch`, async ({ page }) => {
+      const h = await gotoAuditTab(page, { alpha, cz: NOT_COVERED })
       await expect(page.getByText('No audit data available for this mint.')).toBeVisible()
-      expect(h.czQueries().length).toBeGreaterThan(0)
-      await expect(page.locator('.audit-summary-strip')).toHaveCount(0)
+      await expect(page.getByText('Loading audit data…')).toHaveCount(0)
+      expect(h.czQueries().length).toBeGreaterThan(0) // the answer really came from the endpoint
       await expect(page.locator('.md-audit-header')).not.toContainText('8333')
       await expect(page.getByRole('link', { name: /audit\.8333\.space/ })).toHaveCount(0)
-      await expect(page.locator('.md-audit-seg')).toHaveCount(0)
+      await expect(page.locator('.audit-summary-strip')).toHaveCount(0)
       await expect(segGroup(page)).toHaveCount(0)
     })
   }
-})
-
-// ── f2) how old the audit.8333.space data is ───────────────────
-// Stale 8333 data is hidden altogether (auditNeedsFallback), so the age line ("audit.8333.space data is N days old")
-// never reaches the screen any more: with cashu.info there is only the cashu.info view, without it the empty state.
-const staleLine = (page: Page) => page.getByText(/audit\.8333\.space data is/)
-
-test.describe('stale audit.8333.space data is hidden', () => {
-  test('sync 21 days old, both sources: only the cashu.info view, no switch, no age line, nothing names 8333', async ({ page }) => {
-    const synced = ago(21 * D)
-    await gotoAuditTab(page, { alpha: { ...FRESH_8333, auditCheckedAt: synced, auditSyncedAt: synced }, cz: auditCzResponse({ swaps: czSwapList([ok, ok]) }) })
+  test('with cashu.info data and fresh 8333 data: only the cashu.info view', async ({ page }) => {
+    await gotoAuditTab(page, { alpha: FRESH_8333, cz: auditCzResponse({ swaps: czSwapList([ok, ok]) }) })
     await expect(page.locator('.md-audit-header-main')).toContainText('via cashu.info')
     await expect(segGroup(page)).toHaveCount(0)
-    await expect(staleLine(page)).toHaveCount(0)
-    await expect(page.locator('.audit-summary-strip:not(.audit-cz-tiles)')).toHaveCount(0)
     await expect(page.locator('.md-audit-collapsible')).not.toContainText('8333')
-  })
-
-  test('8333.space would be the only source: empty state, no age line', async ({ page }) => {
-    await gotoAuditTab(page, { alpha: { ...FRESH_8333, auditSyncedAt: ago(30 * 3_600_000) }, cz: NOT_COVERED })
-    await expect(page.getByText('No audit data available for this mint.')).toBeVisible()
-    await expect(staleLine(page)).toHaveCount(0)
-    await expect(page.locator('.audit-summary-strip')).toHaveCount(0)
-  })
-
-  test('fresh data: the 8333 panel as before, without the age line', async ({ page }) => {
-    await gotoAuditTab(page, { alpha: { ...FRESH_8333 }, cz: NOT_COVERED })
-    await expect(page.locator('.audit-summary-strip')).toBeVisible()
-    await expect(page.locator('.md-audit-header-main')).toContainText('via audit.8333.space')
-    await expect(staleLine(page)).toHaveCount(0)
   })
 })
 
@@ -743,13 +588,11 @@ test.describe('390px viewport', () => {
   const swaps = () => czSwapList([ok, ok, melt, ok, ok, ok, ok, ok, ok, ok]).map((s, i) => ({ ...s, otherMintUrl: wide(i) }))
   const cases = [
     ['cz only', () => onlyCz(swaps())],
-    ['both sources (switch in the heading)', () => ({ alpha: FRESH_8333, cz: auditCzResponse({ swaps: swaps() }) })],
   ] as const
 
   for (const [name, setup] of cases) {
     test(`${name}: no horizontal page overflow, the table fits its box (long names are cut)`, async ({ page }) => {
       await gotoAuditTab(page, setup())
-      if (name !== 'cz only') await segGroup(page).getByRole('button', { name: 'cashu.info', exact: true }).click()
       await expect(page.locator('.md-audit-toggle')).toContainText('via cashu.info')
       await expect(page.locator('.audit-swaps-table tbody tr').first()).toBeVisible()
 

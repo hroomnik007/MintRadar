@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  auditComponent, auditDataState, auditAgeHours, isAuditUnknown,
-  AUDIT_MIN_SAMPLES, AUDIT_MAX_AGE_HOURS, AUDIT_NEUTRAL, AUDIT_TAB_MIN_SAMPLES,
+  auditComponent, auditDataState, auditAgeHours,
+  AUDIT_MIN_SAMPLES, AUDIT_MAX_AGE_HOURS, AUDIT_NEUTRAL,
 } from '../shared/auditScore.js'
 
 // The audit component is computed from cashu.info's 7-day window stored on mints.audit_cz_*
@@ -72,16 +72,3 @@ describe('auditDataState', () => {
   })
 })
 
-// The Audit tab (audit.8333.space window) keeps its own, unchanged "too few" floor.
-describe('isAuditUnknown (Audit tab only)', () => {
-  it('is false when there is no audit data at all', () => expect(isAuditUnknown(null)).toBe(false))
-  it('is true below the tab floor of 3', () => {
-    expect(AUDIT_TAB_MIN_SAMPLES).toBe(3)
-    expect(isAuditUnknown(0)).toBe(true)
-    expect(isAuditUnknown(2)).toBe(true)
-  })
-  it('is false from the tab floor up', () => {
-    expect(isAuditUnknown(3)).toBe(false)
-    expect(isAuditUnknown(100)).toBe(false)
-  })
-})

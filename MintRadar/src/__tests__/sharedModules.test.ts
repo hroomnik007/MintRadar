@@ -101,8 +101,8 @@ describe('auditScore: backend and frontend copies agree', () => {
     expect(codeOf('../utils/auditScore.ts')).toBe(codeOf('../../backend/src/shared/auditScore.ts'))
   })
   it('exports the same constants', () => {
-    expect([feAudit.AUDIT_MIN_SAMPLES, feAudit.AUDIT_MAX_AGE_HOURS, feAudit.AUDIT_NEUTRAL, feAudit.AUDIT_TAB_MIN_SAMPLES])
-      .toEqual([beAudit.AUDIT_MIN_SAMPLES, beAudit.AUDIT_MAX_AGE_HOURS, beAudit.AUDIT_NEUTRAL, beAudit.AUDIT_TAB_MIN_SAMPLES])
+    expect([feAudit.AUDIT_MIN_SAMPLES, feAudit.AUDIT_MAX_AGE_HOURS, feAudit.AUDIT_NEUTRAL])
+      .toEqual([beAudit.AUDIT_MIN_SAMPLES, beAudit.AUDIT_MAX_AGE_HOURS, beAudit.AUDIT_NEUTRAL])
   })
   it.each(AUDIT_CASES.map((c, i) => [i, c] as const))('case %i: component, state and total', (_i, [blamed, total, at]) => {
     expect(feAudit.auditComponent(blamed, total, at, A_NOW)).toBe(beAudit.auditComponent(blamed, total, at, A_NOW))

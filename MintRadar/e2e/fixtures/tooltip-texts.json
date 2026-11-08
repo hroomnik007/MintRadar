@@ -575,7 +575,7 @@
     ],
     "triggers": 0
   },
-  "mint-alpha-audit-8333@1440": {
+  "mint-alpha-audit-nodata@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "<DATE>",
@@ -584,46 +584,30 @@
       "<DATE>",
       "<DATE>",
       "Add Alpha Mint to watchlist",
-      "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
-      "All-time count of mint operations that audit.8333.space has recorded for this mint.",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
-      "Average duration of the successful swaps in the same rolling window as Recent success rate.",
+      "Audit stats come from cashu.info, which runs test swaps through mints. It has no data for this mint; the Reliability Score then counts the audit part as neutral.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Last swaps, newest first",
       "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked."
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
-    "triggers": 11
+    "triggers": 7
   },
-  "mint-alpha-audit-8333@390": {
+  "mint-alpha-audit-nodata@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "Add Alpha Mint to watchlist",
-      "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
-      "All-time count of mint operations that audit.8333.space has recorded for this mint.",
-      "Average duration of the successful swaps in the same rolling window as Recent success rate.",
-      "Last swaps, newest first",
+      "Audit stats come from cashu.info, which runs test swaps through mints. It has no data for this mint; the Reliability Score then counts the audit part as neutral.",
       "Mint also advertises a .onion URL",
-      "MintRadar",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
-      "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked."
+      "MintRadar"
     ],
-    "triggers": 6
+    "triggers": 2
   },
-  "mint-alpha-audit-cz@1440": {
+  "mint-alpha-audit@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "126 of 126 swaps in the last 7 days, 19 failed for other reasons",
@@ -656,7 +640,7 @@
     ],
     "triggers": 13
   },
-  "mint-alpha-audit-cz@390": {
+  "mint-alpha-audit@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "126 of 126 swaps in the last 7 days, 19 failed for other reasons",
@@ -676,54 +660,6 @@
       "melt quote failed"
     ],
     "triggers": 8
-  },
-  "mint-alpha-audit@1440": {
-    "texts": [
-      "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "Add Alpha Mint to watchlist",
-      "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
-      "All-time count of mint operations that audit.8333.space has recorded for this mint.",
-      "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
-      "Average duration of the successful swaps in the same rolling window as Recent success rate.",
-      "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
-      "Copy full keyset ID",
-      "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Last swaps, newest first",
-      "Mint also advertises a .onion URL",
-      "MintRadar",
-      "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked."
-    ],
-    "triggers": 11
-  },
-  "mint-alpha-audit@390": {
-    "texts": [
-      "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "Add Alpha Mint to watchlist",
-      "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
-      "All-time count of mint operations that audit.8333.space has recorded for this mint.",
-      "Average duration of the successful swaps in the same rolling window as Recent success rate.",
-      "Last swaps, newest first",
-      "Mint also advertises a .onion URL",
-      "MintRadar",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
-      "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked."
-    ],
-    "triggers": 6
   },
   "mint-alpha-history@1440": {
     "texts": [
@@ -1128,43 +1064,27 @@
       "<DATE>",
       "<DATE>",
       "Add Test Nut to watchlist",
-      "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
-      "All-time count of mint operations that audit.8333.space has recorded for this mint.",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
-      "Average duration of the successful swaps in the same rolling window as Recent success rate.",
+      "Audit stats come from cashu.info, which runs test swaps through mints. It has no data for this mint; the Reliability Score then counts the audit part as neutral.",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Copy full keyset ID",
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
-      "Last swaps, newest first",
       "MintRadar",
       "Not for real funds — for testing and development only",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "OK · <DATE>",
       "Percentage of successful checks over the last 24h. 100% uptime = full points.",
-      "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
-      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
-      "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked."
+      "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
-    "triggers": 11
+    "triggers": 7
   },
   "mint-test-audit@390": {
     "texts": [
       "Add Test Nut to watchlist",
-      "All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.",
-      "All-time count of mint operations that audit.8333.space has recorded for this mint.",
-      "Average duration of the successful swaps in the same rolling window as Recent success rate.",
-      "Last swaps, newest first",
+      "Audit stats come from cashu.info, which runs test swaps through mints. It has no data for this mint; the Reliability Score then counts the audit part as neutral.",
       "MintRadar",
-      "Not for real funds — for testing and development only",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "OK · <DATE>",
-      "Successful swaps among the last ~100 that audit.8333.space audited. Fewer than 3: \"too few to score\". The score uses cashu.info instead.",
-      "These stats come from audit.8333.space, an independent service that repeatedly mints and melts real ecash through this mint — how many operations it ran, how many failed, and when it last checked."
+      "Not for real funds — for testing and development only"
     ],
-    "triggers": 6
+    "triggers": 2
   },
   "mint-test-overview@1440": {
     "texts": [

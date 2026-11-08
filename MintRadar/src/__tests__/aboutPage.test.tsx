@@ -20,12 +20,12 @@ const sectionOf = (headingId: string): HTMLElement => {
 const squash = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim()
 
 describe('About: audit sources', () => {
-  it('names cashu.info as the source of the score part and audit.8333.space as the Audit tab only', () => {
+  it('names cashu.info as the audit source of the score and of the Audit tab', () => {
     renderAbout()
     const how = squash(screen.getByText(/How we check\./).closest('p')!.textContent)
     expect(how).toContain('Audit data comes from third-party services and can be out of date; when it is, we say so.')
-    expect(how).toContain('cashu.info feeds the audit part of the Reliability Score;')
-    expect(how).toContain("audit.8333.space is only shown on a mint's Audit tab and is not part of the score.")
+    expect(how).toContain("cashu.info feeds the audit part of the Reliability Score and is the audit data shown on a mint's Audit tab.")
+    expect(how).not.toContain('audit.8333.space')
     // The old sentence put both services on the same footing.
     expect(how).not.toContain('(audit.8333.space and cashu.info)')
   })

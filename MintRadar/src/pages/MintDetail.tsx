@@ -12,8 +12,8 @@ import { useMintChanges } from '@/hooks/useMintChanges'
 import { infoDates, infoTitle, keysetDates, keysetPending } from '@/utils/changeDates'
 import { useMintProbe } from '@/hooks/useMintProbe'
 import {
-  reviewSurgeText, AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT, auditSuccessRateText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
-  versionRowText, contactRowText, scoreFormulaText, cashuInfoViewText,
+  reviewSurgeText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
+  versionRowText, contactRowText, scoreFormulaText,
   HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS, operatorExcludedText,
   KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote,
   UPTIME_ROW_LABEL, AUDIT_ROW_LABEL, NUT_ROW_LABEL, VERSION_ROW_LABEL, CONTACT_ROW_LABEL,
@@ -38,7 +38,7 @@ import { supportedNutKeys, offeredNutKeys } from '@/utils/nutSupport'
 import { NutDescription, NutSpecLink } from '@/components/NutSpec'
 import { nutOfferBreakdown } from '@/utils/nutFilters'
 import { formatDate } from '@/utils/formatDate'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, formatAuditSuccessRatio, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
@@ -46,11 +46,10 @@ import { operatorPubkeys } from '@/utils/operatorPubkeys'
 import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, urlIsOnion, listHasOnion } from '@/utils/mintProbeDisplay'
 import { keysetExpiry, keysetExpiryMs } from '@/utils/keysetExpiry'
-import { auditComponent, auditDataState, auditAgeHours, isAuditUnknown, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
-import { auditFreshness, audit8333StaleLine, auditNeedsFallback as auditNeeds8333Fallback } from '@/utils/auditFreshness'
+import { auditComponent, auditDataState, auditAgeHours, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
 import { IcClose } from '@/components/IcClose'
 import { useAuditCz } from '@/hooks/useAuditCz'
-import { adaptAuditCz, auditCzSyncNote, type AuditSwapRow } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzSyncNote } from '@/utils/auditCz'
 import { sortUnits } from '@/utils/sortUnits'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
@@ -72,7 +71,7 @@ import { healthRecordFor } from '@/utils/healthRecord'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { NutsTab } from './mintDetail/NutsTab'
 import { HistoryTab } from './mintDetail/HistoryTab'
-import { AuditTab, AUDIT_SWAP_ROWS_DEFAULT } from './mintDetail/AuditTab'
+import { AuditTab } from './mintDetail/AuditTab'
 import { ReviewsTab } from './mintDetail/ReviewsTab'
 import { OverviewTab } from './mintDetail/OverviewTab'
 import { shortNpub, starString, type MergedReviewCandidate } from './mintDetail/reviewFormat'
@@ -440,45 +439,15 @@ function MintDetailContent({ url }: { url: string }) {
   const [clientLatency, setClientLatency] = useState<number | string | null>(null)
   const [testingLatency, setTestingLatency] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
-  const [showAllAuditSwaps, setShowAllAuditSwaps] = useState(false)
   // cashu.info view: each of the two swap tables expands on its own.
   const [showAllCzFrom, setShowAllCzFrom] = useState(false)
   const [showAllCzTo, setShowAllCzTo] = useState(false)
   // Keysets card: inactive keysets are folded by default. Keyed by mint like reviewsPageState, so switching mints folds them again without a reset effect.
   const [keysetsExpandedFor, setKeysetsExpandedFor] = useState<string | null>(null)
-  // Last ≤100 audit.8333.space swaps for this mint (backend/src/discovery.ts's
-  // mint_audit_swaps, served via GET /api/mints/swaps — never audit.8333.space
-  // directly). Lazily fetched only once the Audit tab is actually opened, and
-  // cached from then on for the rest of the session.
-  const { data: auditSwapsData, isLoading: auditSwapsLoading, isError: auditSwapsError, refetch: refetchAuditSwaps } = useQuery({
-    queryKey: ['mint', 'audit-swaps', url],
-    queryFn: async () => {
-      const res = await fetch(`/api/mints/swaps?url=${encodeURIComponent(url)}`)
-      if (!res.ok) throw new Error('Failed to fetch audit swaps')
-      return await res.json() as {
-        url: string
-        avgTimeMs: number | null
-        swaps: Array<{
-          swapId: number
-          toUrl: string | null
-          amount: number | null
-          fee: number | null
-          createdAt: string | null
-          timeTakenMs: number | null
-          state: string
-          error: string | null
-        }>
-      }
-    },
-    enabled: activeTab === 'audit',
-    staleTime: 5 * 60 * 1000,
-  })
   // cashu.info data: fetched (from our own /api/mints/audit-cz, never from them) only while
   // the Audit tab is open and the known-mints list has loaded. The breakdown's Audit row does not use it.
   const { data: auditCzData, loading: auditCzLoading } = useAuditCz(url, activeTab === 'audit')
   const czData = adaptAuditCz(auditCzData, now)
-  // Source chosen with the header switch (null = default: cashu.info when the 8333 data is missing/stale).
-  const [auditSourcePick, setAuditSourcePick] = useState<'cz' | '8333' | null>(null)
   const [showComparePicker, setShowComparePicker] = useState(false)
   const [compareSelectedUrls, setCompareSelectedUrls] = useState<Set<string>>(new Set())
   const [showComparisonModal, setShowComparisonModal] = useState(false)
@@ -827,8 +796,7 @@ function MintDetailContent({ url }: { url: string }) {
     ? (storedBreakdown && storedBreakdown.contact.points > 0 ? (contactKindsText(data?.contactChecks) ?? 'Listed at last check') : 'None')
     : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
   // Audit part of the score: cashu.info's 7-day attributed failures (mints.audit_cz_*), the same
-  // functions the server scores with (shared/auditScore.ts). The audit.8333.space figures below
-  // (breakdownAuditRecent*) are for the Audit tab only.
+  // functions the server scores with (shared/auditScore.ts).
   const auditCzBlamed = knownMint?.auditCzBlamed ?? null
   const auditCzTotal = knownMint?.auditCzTotal ?? null
   const auditCzFetchedAt = knownMint?.auditCzFetchedAt ?? null
@@ -848,41 +816,12 @@ function MintDetailContent({ url }: { url: string }) {
   const breakdownAuditDisplay = auditState === 'scored' ? (auditSuccessText(auditCzBlamed, auditCzTotal) ?? 'neutral') : 'neutral'
   const auditAgeDays = auditAgeH !== null && auditAgeH > 24 && (auditState === 'scored' || auditState === 'too-few') ? Math.floor(auditAgeH / 24) : null
   const auditStaleNote = auditAgeDays !== null ? `data ${auditAgeDays} ${auditAgeDays === 1 ? 'day' : 'days'} old` : undefined
-  const breakdownAuditRecentTotal = knownMint?.auditRecentTotal ?? null
-  const breakdownAuditRecentErrors = knownMint?.auditRecentErrors ?? null
-  // Audit summary strip's "Recent success rate" cell — the audit.8333.space rolling window
-  // (audit_recent_total / audit_recent_errors, up to AUDIT_SWAPS_WINDOW = 100 swaps), Audit tab
-  // only: it no longer feeds the Reliability Score (that uses cashu.info, see breakdownAScore
-  // above). Colour comes from auditReliabilityColor() (error-rate based:
-  // <=5% green/25% amber/else red), not from the score's bands (see mintFormatting.ts).
-  const recentReliabilityColor = auditReliabilityColor(breakdownAuditRecentTotal, breakdownAuditRecentErrors)
   // Breakdown row colour: same error-rate colouring over the cashu.info window, muted while neutral.
   const auditRowColor = auditReliabilityColor(auditState === 'scored' ? auditCzTotal : null, auditCzBlamed, AUDIT_MIN_SAMPLES)
-  const auditSyncedAt = knownMint?.auditSyncedAt ?? null
-  const auditCheckedAt = knownMint?.auditCheckedAt ?? null
-  const freshness = auditFreshness(auditCheckedAt, auditSyncedAt)
-  const audit8333Stale = audit8333StaleLine(auditSyncedAt, now)
-
-  // Audit tab source: while the audit.8333.space data is missing or stale (auditNeedsFallback, the one condition) the
-  // tab shows only the cashu.info view and nothing that names audit.8333.space (no switch, label, link, age line or
-  // strip); with fresh 8333 data both sources are present and the header switch lets the visitor pick.
-  const has8333Audit = knownMint !== null && knownMint.auditNMints !== null
-  const auditNeedsFallback = auditNeeds8333Fallback(has8333Audit, freshness)
-  const show8333Audit = !auditNeedsFallback
-  const auditSource = show8333Audit ? (auditSourcePick ?? '8333') : 'cz'
-  const czView = czData !== null && auditSource === 'cz' ? czData : null
-  const czInfoText = czView ? cashuInfoViewText() : null
+  // Audit tab: the cashu.info view (the audit source of the score); null while the mint has no stored detail.
+  const czView = czData
   const czSyncNote = czView ? auditCzSyncNote(czView, now) : null
-  const auditSwitch = czData !== null && show8333Audit ? (
-    <div className="md-audit-seg" role="group" aria-label="Audit source">
-      <button type="button" className={`md-audit-seg-btn${czView ? ' active' : ''}`} aria-pressed={czView !== null} onClick={() => setAuditSourcePick('cz')}>cashu.info</button>
-      <button type="button" className={`md-audit-seg-btn${czView ? '' : ' active'}`} aria-pressed={czView === null} onClick={() => setAuditSourcePick('8333')}>8333.space</button>
-    </div>
-  ) : null
 
-  // Strip values: audit.8333.space as stored, or (cz view) counted from the swaps MintRadar collected.
-  const stripTotal = breakdownAuditRecentTotal
-  const stripErrors = breakdownAuditRecentErrors
   // Latest successful /v1/info fetch: the latest probe while the mint is online, else the last time it was seen online.
   const infoFetchedAt = isOnline ? knownMint?.lastCheckedAt : knownMint?.lastOnlineAt
   const uptimeSource = uptimeSourceLine({ checks: uptime24hData ? headerTotalChecks : null, lastProbeAt: knownMint?.lastCheckedAt, now })
@@ -937,53 +876,9 @@ function MintDetailContent({ url }: { url: string }) {
   // probed, so comparing it with the current release adds nothing. The version text itself stays.
   const isOutdated = !isArchived && classifyMintVersion(version, versionLatestMap).label === 'outdated'
 
-  // audit.8333.space lifetime counters (display-only "Audit stats" panel) — the
-  // rolling-window figures that feed Reliability Score are auditRecent* / breakdownAudit* above.
-  const auditNMints = knownMint?.auditNMints ?? 0
-  const auditNMelts = knownMint?.auditNMelts ?? 0
-
-  // ── Audit summary strip (top of the Audit tab) — a 5-second overview.
-  // Mints / Melts are audit.8333.space lifetime counters; Recent success rate
-  // is the rolling ~100-swap window (same numbers as the Recent reliability
-  // card and the Reliability Score's Audit component); Last checked is OUR 6h
-  // cron's write time (auditSyncedAt), NOT auditCheckedAt (that's the
-  // auditor's own clock).
-  //
-  // The main number is framed as successes ("<successes> / <total>"), not
-  // errors — every other "X/Y" ratio in the app reads higher-is-better (e.g.
-  // Online Mints "55/56"), and an error count read the opposite way at a
-  // glance. formatAuditSuccessRatio() does the total-minus-errors math; the
-  // sub-line no longer repeats a percentage of the same fraction.
-  const stripRecentSuccessDisplay = formatAuditSuccessRatio(stripTotal, stripErrors)
-  const stripRecentSuccessPct = stripTotal !== null && stripTotal > 0
-    ? Math.round(((stripTotal - (stripErrors ?? 0)) / stripTotal) * 100)
-    : null
-  const stripRecentSuccessSub = stripTotal === null
-    ? 'no recent swaps'
-    : isAuditUnknown(stripTotal)
-      ? 'too few to score'
-      : `${stripRecentSuccessPct}% ok`
-
-  // Average duration of the successful swaps in the same rolling window
-  // (backend/src/discovery.ts's computeSwapStats() → mints.audit_avg_time_ms).
-  const auditAvgTimeMs = knownMint?.auditAvgTimeMs ?? null
-  const stripAvgTimeDisplay = auditAvgTimeMs !== null ? `${Math.round(auditAvgTimeMs)} ms` : 'n/a'
-  const stripMints = auditNMints
-  const stripMelts = auditNMelts
-  const stripReliabilityColor = recentReliabilityColor
-  const tipMints = AUDIT_MINTS_TEXT
-  const tipMelts = AUDIT_MELTS_TEXT
-  const tipSuccess = auditSuccessRateText()
-  const tipAvg = 'Average duration of the successful swaps in the same rolling window as Recent success rate.'
-
-  // Last ≤100 swaps, newest first (the backend already orders by created_at
-  // DESC) — the outcome bar and the "Recent swaps" table below both read from
-  // this same array so they can never disagree.
-  const auditSwaps: AuditSwapRow[] = auditSwapsData?.swaps ?? []
+  // The swap strip shows the stored cashu.info swaps of both directions together, newest first.
   const AUDIT_SWAP_BAR_MAX = 44
-  // cashu.info view: the bar shows the stored swaps of both directions together.
-  const auditSwapBarItems = (czView ? czView.swaps : auditSwaps).slice(0, AUDIT_SWAP_BAR_MAX)
-  const auditRecentSwapRows = showAllAuditSwaps ? auditSwaps : auditSwaps.slice(0, AUDIT_SWAP_ROWS_DEFAULT)
+  const auditSwapBarItems = (czView?.swaps ?? []).slice(0, AUDIT_SWAP_BAR_MAX)
 
   // The mint's operator keys: a nostr contact it lists that ALSO authored its NIP-87 announcement
   // (both must agree, decision 2026-10-05). Their reviews stay in the list, labelled "Operator",
@@ -1581,34 +1476,12 @@ function MintDetailContent({ url }: { url: string }) {
             <AuditTab
               auditCzLoading={auditCzLoading}
               czView={czView}
-              show8333Audit={show8333Audit}
-              czInfoText={czInfoText}
               czSyncNote={czSyncNote}
-              auditSwitch={auditSwitch}
-              audit8333Stale={audit8333Stale}
-              czData={czData}
-              stripMints={stripMints}
-              stripMelts={stripMelts}
-              stripReliabilityColor={stripReliabilityColor}
-              stripRecentSuccessDisplay={stripRecentSuccessDisplay}
-              stripRecentSuccessSub={stripRecentSuccessSub}
-              stripAvgTimeDisplay={stripAvgTimeDisplay}
-              tipMints={tipMints}
-              tipMelts={tipMelts}
-              tipSuccess={tipSuccess}
-              tipAvg={tipAvg}
               auditSwapBarItems={auditSwapBarItems}
-              auditRecentSwapRows={auditRecentSwapRows}
-              auditSwaps={auditSwaps}
-              showAllAuditSwaps={showAllAuditSwaps}
-              setShowAllAuditSwaps={setShowAllAuditSwaps}
               showAllCzFrom={showAllCzFrom}
               showAllCzTo={showAllCzTo}
               setShowAllCzFrom={setShowAllCzFrom}
               setShowAllCzTo={setShowAllCzTo}
-              auditSwapsLoading={auditSwapsLoading}
-              auditSwapsError={auditSwapsError}
-              refetchAuditSwaps={refetchAuditSwaps}
             />
           )}
 

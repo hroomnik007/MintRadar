@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
-import { ALPHA_PATH, NO_8333, SWAPS_8333, auditCzResponse, czSwapList } from './fixtures/auditCz'
+import { ALPHA_PATH, NO_8333, auditCzResponse, czSwapList } from './fixtures/auditCz'
 import { frames, layoutReady, networkQuiet, resize, trackRequests } from './fixtures/settle'
 
 // /tools and Mint Detail must not move while they load. The lazy route fallback (App.tsx) and the pending state of Mint
@@ -144,7 +144,6 @@ test('Mint Detail #audit deep link at 390px: the right column stays below the fi
   await prepare(page, 390)
   const rows = MOCK_KNOWN_MINTS.map((m, i) => (i === 0 ? { ...m, ...NO_8333 } : m))
   await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
-  await page.route('**/api/mints/swaps**', route => route.fulfill({ json: SWAPS_8333 }))
   const audit = gate(page, '**/api/mints/audit-cz**', route => route.fulfill({
     json: auditCzResponse({ swaps: czSwapList(Array.from({ length: 12 }, () => ({ kind: 'dest' }))) }),
   }))

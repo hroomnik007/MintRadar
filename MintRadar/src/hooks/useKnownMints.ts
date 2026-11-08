@@ -29,26 +29,13 @@ export interface KnownMint {
   // Used for submit-time alias hints and the card "Same operator" badge
   // (see groupMintsByPubkey() in mintFormatting.ts) — never to merge cards.
   pubkey?: string | null
-  auditNMints?: number | null
-  auditNMelts?: number | null
-  auditNErrors?: number | null
-  // audit.8333.space's own `updated_at` for this mint's audit record.
-  auditCheckedAt?: string | null
-  // When OUR 6h discovery cron last refreshed the audit_* columns — the honest
-  // "Last checked X ago" value for the Audit tab (auditCheckedAt is the auditor's
-  // clock, not ours). Null until that cron has run since the column was added.
-  auditSyncedAt?: string | null
-  auditRecentTotal?: number | null
-  auditRecentErrors?: number | null
+  // The audit.8333.space fields of /api/mints/known (auditNMints, auditRecentTotal, …) are still served but no longer
+  // read here: the page stopped showing that service (no answer since 2026-09-27).
   // cashu.info 7-day window that feeds the audit part of the Reliability Score (backend shared/auditScore.ts):
   // swaps whose failure is attributed to this mint, all swaps, and the stored detail's fetch time (ISO).
   auditCzBlamed?: number | null
   auditCzTotal?: number | null
   auditCzFetchedAt?: string | null
-  // Mean time_taken (ms) over the OK swaps in the same rolling window as
-  // auditRecentTotal/Errors (backend/src/discovery.ts's computeSwapStats()).
-  // Null when the window has no OK swap with a known time.
-  auditAvgTimeMs?: number | null
   discoveredAt?: string | null
   nostrAnnouncedAt?: string | null
   nostrAnnounceId?: string | null

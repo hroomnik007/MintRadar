@@ -11,7 +11,7 @@
 // possible and 220 at most, no ALL CAPS, no verdict words (safe, secure, trusted, guaranteed, recommended), nothing that
 // implies solvency, the terms "Reliability Score", "Community Rating", "audit data from cashu.info", "attributed to this
 // mint", "probe", "mint".
-import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, AUDIT_TAB_MIN_SAMPLES, auditComponent } from './auditScore'
+import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, auditComponent } from './auditScore'
 import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, contactComponent, nutComponent, uptimeComponent } from './reliabilityScore'
 import { UNKNOWN_SOFTWARE_POINTS, pointsForMinorsBehind } from './versionRule'
 import { pluralize } from './plural'
@@ -20,8 +20,6 @@ import { FRESH_MINT_MONTHS } from './mintFormatting'
 // ── Facts that only the backend defines (compared with it by the unit test) ───────────────────────────────────
 /** Window of the uptime figure (backend/src/prober.ts: the last 24 hours of probes). */
 export const UPTIME_WINDOW_HOURS = 24
-/** How many of an auditor's latest swaps audit.8333.space's recent figures cover (backend/src/discovery.ts AUDIT_SWAPS_WINDOW). */
-export const AUDIT_SWAPS_WINDOW = 100
 /** Review surge rule (backend/src/reviewSurge.ts): +10 reviews, or at least double from a base of 5, against the snapshot of about a week ago. */
 export const SURGE_ABSOLUTE_GAIN = 10
 export const SURGE_RATIO = 2
@@ -118,13 +116,6 @@ export const NO_BACKUP_TEXT = 'This mint does not support NUT-09, so wallets can
 /** Compare modal, Backup row. */
 export const COMPARE_BACKUP_TEXT = 'Whether this mint supports NUT-09, letting wallets restore coins after data loss.'
 
-/** Audit tab strip (audit.8333.space). */
-export const AUDIT_MINTS_TEXT = 'All-time count of mint operations that audit.8333.space has recorded for this mint.'
-export const AUDIT_MELTS_TEXT = 'All-time count of melt operations (ecash back to Lightning) that audit.8333.space has recorded for this mint.'
-export function auditSuccessRateText(): string {
-  return `Successful swaps among the last ~${AUDIT_SWAPS_WINDOW} that audit.8333.space audited. Fewer than ${AUDIT_TAB_MIN_SAMPLES}: "too few to score". The score uses cashu.info instead.`
-}
-
 /** Reviews tab: Reviews · NIP-87. */
 export const REVIEWS_NIP87_TEXT = 'Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.'
 
@@ -175,12 +166,12 @@ export function cleanTileText(clean: number, total: number, blamed: number, othe
   return `${head}, ${fmt(blamed)} attributed to this mint${other > 0 ? `, ${fmt(other)} other failure${other === 1 ? '' : 's'}` : ''}`
 }
 
-/** Audit tab: the ⓘ of the cashu.info view. It never names audit.8333.space: that source is hidden while its data is stale. */
+/** Audit tab: the ⓘ of the cashu.info view. */
 export function cashuInfoViewText(): string {
   return `The Reliability Score uses the combined cashu.info number for the last ${AUDIT_WINDOW_DAYS} days. Deposits and withdrawals are the same data split by direction.`
 }
 
-/** Audit tab: the ⓘ of the "No audit data" panel while audit.8333.space is hidden (it does not name that service). */
+/** Audit tab: the ⓘ of the "No audit data" panel. */
 export function auditNoDataText(): string {
   return `Audit stats come from cashu.info, which runs test swaps through mints. It has no data for this mint; the Reliability Score then counts the audit part as neutral.`
 }

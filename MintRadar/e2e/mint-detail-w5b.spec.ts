@@ -2,7 +2,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import { nip19 } from 'nostr-tools'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
 import { layoutReady, resize } from './fixtures/settle'
-import { auditCzResponse, FRESH_8333, NO_8333, gotoAuditTab } from './fixtures/auditCz'
+import { auditCzResponse, NO_8333, gotoAuditTab } from './fixtures/auditCz'
 import { METHODOLOGY_VERSION } from '../src/utils/methodology'
 import { ATTESTATION_PUBKEY_HEX, ATTESTATION_RELAYS_PUBLIC } from '../src/utils/healthAssertionConstants'
 
@@ -65,11 +65,6 @@ test.describe('W5b A: source line under every score row', () => {
     await open(page, ALPHA, {})
     const link = page.locator('.md-reliability-panel').getByRole('link', { name: `Methodology v${METHODOLOGY_VERSION}` })
     await expect(link).toHaveAttribute('href', '/methodology')
-  })
-
-  test('Audit tab names the window the score uses and the one the tab shows', async ({ page }) => {
-    await gotoAuditTab(page, { alpha: FRESH_8333, cz: auditCzResponse() })
-    await expect(page.getByText("The Reliability Score uses cashu.info's last 7 days; this view shows audit.8333.space's last ~100 swaps.")).toBeVisible()
   })
 
   test('Audit tab, cashu.info view: no sentence under the heading, the window is in the ⓘ', async ({ page }) => {

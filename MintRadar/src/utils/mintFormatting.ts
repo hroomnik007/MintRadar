@@ -441,8 +441,7 @@ export function auditReliabilityColor(
 // better, e.g. Online Mints "55/56" — instead of an error count where a
 // bigger number would misleadingly look "more". `total === null` (mint
 // audited but no rolling-window swap sample yet) renders as an em dash; a
-// null error count is treated as zero. Sample-size adequacy ("too few to
-// score") is a separate concern — see isAuditUnknown().
+// null error count is treated as zero.
 export function formatAuditSuccessRatio(
   recentTotal: number | null | undefined,
   recentErrors: number | null | undefined,

@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import * as T from '@/utils/tooltipTexts'
-import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, AUDIT_TAB_MIN_SAMPLES } from '@/utils/auditScore'
+import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL } from '@/utils/auditScore'
 import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, computeReliabilityScore, contactComponent } from '@/utils/reliabilityScore'
 import { UNKNOWN_SOFTWARE_POINTS, classifyMintVersion, pointsForMinorsBehind } from '@/utils/versionRule'
 import { NHI_WEIGHTS, DEGRADED_AFTER_HOURS, nhiOnlineSetText, nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption } from '@/utils/networkHealthIndex'
@@ -31,9 +31,6 @@ describe('facts the frontend repeats from the backend', () => {
     expect(T.MINT_MELT_COOLDOWN_HOURS).toBe(ALERT_COOLDOWN_HOURS.mint_melt)
     expect(T.OTHER_ALERT_COOLDOWN_HOURS).toBe(ALERT_COOLDOWN_HOURS.version_outdated)
     expect(T.OTHER_ALERT_COOLDOWN_HOURS).toBe(ALERT_COOLDOWN_HOURS.nut_loss)
-  })
-  it('audit.8333.space window of the recent figures', () => {
-    expect(backend('discovery.ts')).toMatch(new RegExp(`const AUDIT_SWAPS_WINDOW = ${T.AUDIT_SWAPS_WINDOW}\\b`))
   })
   it('uptime window is the last 24 hours of probes', () => {
     expect(backend('prober.ts')).toContain(`INTERVAL '${T.UPTIME_WINDOW_HOURS} hours'`)
@@ -97,9 +94,6 @@ describe('numbers in the built texts equal their sources', () => {
     expect(numbers(T.newMintCapNote())).toEqual([NEW_MINT_RELIABILITY_CAP, NEW_MINT_MAX_DAYS])
   })
   it('outdated-software text', () => expect(T.outdatedSoftwareText()).toContain('two or more minor versions'))
-  it('audit tab text: ~100 swaps window, "too few" below 3', () => {
-    expect(numbers(T.auditSuccessRateText())).toEqual([T.AUDIT_SWAPS_WINDOW, AUDIT_TAB_MIN_SAMPLES])
-  })
   it('Compare audit success text: 7 days, 10 swaps', () => {
     expect(numbers(T.compareAuditSuccessText())).toEqual([T.AUDIT_WINDOW_DAYS, AUDIT_MIN_SAMPLES])
   })
@@ -115,7 +109,7 @@ describe('numbers in the built texts equal their sources', () => {
     expect(T.cashuInfoViewText()).toBe('The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
     expect(numbers(T.cashuInfoViewText())).toEqual([T.AUDIT_WINDOW_DAYS])
   })
-  it('Audit tab texts shown while audit.8333.space is hidden do not name it', () => {
+  it('Audit tab texts do not name audit.8333.space (no longer shown)', () => {
     expect(T.cashuInfoViewText()).not.toMatch(/8333/)
     expect(T.auditNoDataText()).not.toMatch(/8333/)
   })
@@ -149,7 +143,6 @@ const BUILT: Record<string, string> = {
   versionRowText: T.versionRowText(), contactRowText: T.contactRowText(), reviewSurgeText: T.reviewSurgeText(),
   HIDE_TEST_MINTS_TEXT: T.HIDE_TEST_MINTS_TEXT, outdatedSoftwareText: T.outdatedSoftwareText(),
   TRACKING_HISTORY_TEXT: T.TRACKING_HISTORY_TEXT, BACKUP_SUPPORTED_TEXT: T.BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT: T.NO_BACKUP_TEXT,
-  AUDIT_MINTS_TEXT: T.AUDIT_MINTS_TEXT, AUDIT_MELTS_TEXT: T.AUDIT_MELTS_TEXT, auditSuccessRateText: T.auditSuccessRateText(),
   REVIEWS_NIP87_TEXT: T.REVIEWS_NIP87_TEXT, SIGNATURE_CHECK_TEXT: T.SIGNATURE_CHECK_TEXT, INPUT_FEE_TEXT: T.INPUT_FEE_TEXT, FEE_PER_COIN_TEXT: T.FEE_PER_COIN_TEXT, KEYSET_FEE_TEXT: T.KEYSET_FEE_TEXT,
   compareAuditSuccessText: T.compareAuditSuccessText(), sameOperatorText: T.sameOperatorText(['alpha.mint.example', 'twin.mint.example']),
   depositsTileText: T.depositsTileText(), withdrawalsTileText: T.withdrawalsTileText(),

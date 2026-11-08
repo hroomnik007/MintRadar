@@ -254,8 +254,7 @@ export default function Methodology() {
             </table>
           </div>
           <p>
-            The score is recomputed after every probe, so it follows the probe cycle. Data from audit.8333.space is
-            shown on the Audit tab of a mint and is not used in the score. Since a score can only be as current as these
+            The score is recomputed after every probe, so it follows the probe cycle. Since a score can only be as current as these
             sources, it can lag behind what a mint is doing right now. If most mints fail from our server at the same moment and
             cashu.info sees them up, MintRadar treats that cycle as a problem on its own side and does not record the
             failures. A mint with at least 4 probes in the last 24 hours

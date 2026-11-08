@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test'
 import { nip19 } from 'nostr-tools'
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS, probePayload, makeCashuTokenV4 } from './mocks'
-import { auditCzResponse, czSwapList, NOT_COVERED, SWAPS_8333 } from './auditCz'
+import { auditCzResponse, czSwapList, NOT_COVERED } from './auditCz'
 import { openWatchlist, URLS } from './watchlistNotify'
 import { frames, layoutReady, networkQuiet, trackRequests } from './settle'
 
@@ -76,7 +76,6 @@ export async function installTooltipMocks(page: Page, opts: { keysets?: unknown 
     }
     return r.fulfill({ json: NOT_COVERED })
   })
-  await page.route('**/api/mints/swaps**', r => r.fulfill({ json: SWAPS_8333 }))
   await page.route('**/api/mints/outages**', r => r.fulfill({ json: { sinceLastOutageMs: 3 * D, avgRecoveryMs: 600_000, outageCount: 2, outages: [{ startedAt: daysAgo(3), durationMs: 600_000, error: 'timeout' }] } }))
   await page.route('**/api/mints/nostr-reviews**', r => r.fulfill({ json: reviewsFor(new URL(r.request().url()).searchParams.get('url') ?? '') }))
   await page.route('**/api/notifications/**', r => r.fulfill({ json: { success: true } }))
@@ -247,21 +246,8 @@ export const TOOLTIP_STATES: TooltipState[] = [
   // A mint with an input fee: the Fees and limits card (NUTs tab) and the "150 ppk" chip of the Keysets panel.
   feeMint('nuts'),
   {
-    // The cashu.info view of the Audit tab (segment "cashu.info"): its tiles, heading and swap tables carry tooltips.
-    id: 'mint-alpha-audit-cz',
-    run: async page => {
-      await installTooltipMocks(page)
-      await page.goto(mintPath(ALPHA, '#audit'))
-      await expect(page.locator('.md-tabs')).toBeVisible()
-      await settle(page)
-      if (!(await clickIfPresent(page, 'button.md-audit-seg-btn:has-text("cashu.info") >> visible=true'))) return false
-      await expect(page.locator('.audit-cz-tiles [data-tile]').first()).toBeVisible()
-      await settle(page)
-      return true
-    },
-  },
-  {
-    id: 'mint-alpha-audit-8333',
+    // The Audit tab of a mint cashu.info does not cover: the "No audit data" panel.
+    id: 'mint-alpha-audit-nodata',
     run: async page => {
       await installTooltipMocks(page)
       await page.route('**/api/mints/audit-cz**', r => r.fulfill({ json: NOT_COVERED }))

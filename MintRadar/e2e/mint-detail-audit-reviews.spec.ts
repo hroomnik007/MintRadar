@@ -4,8 +4,8 @@ import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fix
 const ALPHA = MOCK_MINTS[0]!.url
 const detailPath = `/mint/${encodeURIComponent(ALPHA)}`
 
-// Give Alpha a populated audit.8333.space rolling window (3 errors / 100 swaps, Audit tab) and, separately,
-// the cashu.info 7-day window that feeds the Reliability Score's audit row (1 attributed of 50 swaps).
+// Give Alpha the cashu.info 7-day window that feeds the Reliability Score's audit row (1 attributed of 50 swaps), next
+// to a populated audit.8333.space window (3 errors / 100 swaps) that the page must ignore.
 const KNOWN_WITH_RECENT = MOCK_KNOWN_MINTS.map((m, i) =>
   i === 0 ? { ...m, auditRecentTotal: 100, auditRecentErrors: 3, auditCzTotal: 50, auditCzBlamed: 1, auditCzFetchedAt: new Date(Date.now() - 3_600_000).toISOString() } : m,
 )
@@ -18,27 +18,9 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.md-tabs')).toBeVisible()
 })
 
-test('Audit tab strip shows the audit.8333.space window; the Reliability Score breakdown row shows the cashu.info window', async ({ page }) => {
-  await page.locator('.md-tab', { hasText: 'Audit' }).click()
-
-  const strip = page.locator('.audit-summary-strip')
-  await expect(strip).toBeVisible()
-
-  const recentCell = strip.locator('.audit-summary-cell', { hasText: 'Recent success rate' })
-  // 3 errors / 100 swaps → the strip's main number is successes, not errors.
-  await expect(recentCell.locator('.audit-summary-main')).toHaveText('97 / 100')
-  await expect(recentCell.locator('.audit-summary-sub')).toHaveText('97% ok')
-
-  // The all-time body paragraphs were removed — only the heading, the four stat
-  // tiles and their ⓘ tooltips remain.
-  await expect(page.locator('.audit-alltime-line')).toHaveCount(0)
-  await expect(page.locator('.audit-tab-explainer')).toHaveCount(0)
-
-  await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-summary-strip.png' })
-
-  // The sidebar Reliability Score breakdown reads the cashu.info 7-day window instead (1 attributed failure of 50 → 49 / 50 without one, as in Compare), not the strip's 3/100.
-  // The breakdown is always visible inline on the Overview sidebar panel now
-  // (no "Details ›" click needed).
+test('the Reliability Score breakdown row shows the cashu.info 7-day window', async ({ page }) => {
+  // 1 attributed failure of 50 → 49 / 50 without one, as in Compare. The breakdown is always visible inline on the
+  // Overview sidebar panel.
   const reliabilityPanel = page.locator('.md-reliability-panel')
   await expect(reliabilityPanel.getByText('Audit reliability (25%)')).toBeVisible()
   await expect(reliabilityPanel.getByText('49 / 50')).toBeVisible()

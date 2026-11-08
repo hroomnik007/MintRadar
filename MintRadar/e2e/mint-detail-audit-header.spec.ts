@@ -1,19 +1,19 @@
 import { test, expect } from '@playwright/test'
-import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
+import { auditCzResponse, czSwapList } from './fixtures/auditCz'
 
 const ALPHA = MOCK_MINTS[0]!.url
 const detailPath = `/mint/${encodeURIComponent(ALPHA)}`
-const TOOLTIP_RE = /independent service that repeatedly mints and melts/i
+const TOOLTIP_RE = /combined cashu\.info number for the last 7 days/i
 
 type Page = import('@playwright/test').Page
 
 async function gotoAudit(page: Page, opts: { noAudit?: boolean } = {}) {
   await mockRelays(page)
   await installApiMocks(page)
-  if (opts.noAudit) {
-    // Registered AFTER installApiMocks so this handler wins.
-    const noAudit = MOCK_KNOWN_MINTS.map((m, i) => (i === 0 ? { ...m, auditNMints: null } : m))
-    await page.route('**/api/mints/known', route => route.fulfill({ json: noAudit }))
+  if (!opts.noAudit) {
+    // Registered AFTER installApiMocks so this handler wins: cashu.info covers Alpha (the default mock does not).
+    await page.route('**/api/mints/audit-cz**', route => route.fulfill({ json: auditCzResponse({ swaps: czSwapList([{ kind: 'ok' }, { kind: 'ok' }]) }) }))
   }
   await page.goto(detailPath)
   await expect(page.locator('.md-tabs')).toBeVisible()
@@ -28,7 +28,7 @@ test.describe('Audit stats heading — with data', () => {
     const header = page.locator('.md-audit-header-main')
     await expect(header).toBeVisible()
     await expect(header).toContainText('Audit stats')
-    await expect(header).toContainText('via audit.8333.space')
+    await expect(header).toContainText('via cashu.info')
     await expect(page.locator('.md-audit-toggle')).toBeHidden()
 
     await header.locator('.md-audit-info').hover()
@@ -47,7 +47,7 @@ test.describe('Audit stats heading — with data', () => {
       const toggle = page.locator('.md-audit-toggle')
       await expect(toggle).toBeVisible()
       await expect(toggle).toContainText('Audit stats')
-      await expect(toggle).toContainText('via audit.8333.space')
+      await expect(toggle).toContainText('via cashu.info')
 
       // The ⓘ is present in the heading row and its tooltip text is in the DOM.
       const info = toggle.locator('.md-audit-info')
@@ -55,8 +55,8 @@ test.describe('Audit stats heading — with data', () => {
       await info.tap()
       await expect(page.getByText(TOOLTIP_RE)).toBeVisible()
 
-      // Summary strip is always visible; there is no longer a collapsible body.
-      await expect(page.locator('.audit-summary-strip')).toBeVisible()
+      // The tiles are always visible; there is no collapsible body.
+      await expect(page.locator('.audit-cz-tiles')).toBeVisible()
 
       await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-header-mobile.png' })
     })

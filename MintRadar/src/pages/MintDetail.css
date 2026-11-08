@@ -1717,26 +1717,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
   gap: 3px;
 }
 
-/* "Recent errors" cell only — the reliability sub-text ("97% ok" /
-   "too few to score" / "no recent swaps") now sits on the same line as the
-   "N / 100" ratio instead of a small line below it. It inherits the cell's
-   colour (recentReliabilityColor) so the green/amber/grey coding is kept. */
-.audit-summary-dot { color: var(--text-faint); font-weight: 400; }
-
-.audit-summary-sub {
-  font-size: 13px;
-  font-weight: 500;
-  font-family: var(--font-mono);
-  letter-spacing: 0.02em;
-}
-
-/* Two-column strip narrower than ~445px (cells < ~220px): "N / 100 · NN% ok" no longer fits on one
-   line, so the success-rate text goes on its own line and the separator dot is dropped. */
-@container audit-strip (max-width: 445px) {
-  .audit-summary-dot { display: none; }
-  .audit-summary-sub { flex-basis: 100%; text-align: center; }
-}
-
 /* Don't shrink the tiles. Below ~900px four columns collide — use 2×2
    at the original cell size so "98 / 100 · 98% ok" fits inside its box. */
 @media (max-width: 900px) {
@@ -1771,13 +1751,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 .audit-recent-swaps {
   margin-top: 10px;
-}
-
-.audit-recent-swaps-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text2);
-  margin-bottom: 6px;
 }
 
 .audit-swaps-table-wrap {
@@ -1834,36 +1807,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 .audit-swaps-show-all-btn:hover {
   color: var(--text);
-}
-
-.audit-swaps-error-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--amber);
-  background: var(--amber-soft);
-  border: 1px solid var(--amber-soft-strong);
-  border-radius: var(--radius-m);
-  padding: 10px 14px;
-  margin-top: 4px;
-}
-
-.audit-swaps-retry-btn {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--amber);
-  background: transparent;
-  border: 1px solid var(--amber-soft-strong);
-  border-radius: var(--radius-m);
-  padding: 3px 10px;
-  cursor: pointer;
-}
-
-.audit-swaps-retry-btn:hover {
-  color: color-mix(in srgb, var(--amber) 60%, var(--text));
-  background: var(--amber-soft-strong);
 }
 
 .audit-external-link {
@@ -1927,36 +1870,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* Wrapped onto its own line: no leading dot, the text starts at the line's left edge (see AuditSyncNote). */
 .md-audit-sync-wrapped { transform: translateX(calc(-1 * var(--md-sync-sep, 0px))); }
 .md-audit-sync-wrapped .md-audit-sync-sep { visibility: hidden; }
-
-/* Source switch in the Audit card header (cashu.info | audit.8333.space): same recipe as the
-   Stats page "Uptime | Reliability" toggle (.stats-tab-toggle / .stats-tab-btn — Stats.css can't be
-   loaded here, it carries global rules for other pages). Right-aligned; wraps under the title when narrow.
-   44px hit area through an invisible ::before (vertical extension only, same technique as .md-back). */
-.md-audit-seg {
-  display: flex;
-  margin-left: auto;
-  align-self: center;
-  background: var(--bg2);
-  border-radius: 6px;
-  padding: 2px;
-  gap: 2px;
-}
-.md-audit-seg-btn {
-  position: relative;
-  background: none;
-  border: none;
-  border-radius: 5px;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--text3);
-  padding: 3px 9px;
-  cursor: pointer;
-  transition: background 150ms ease, color 150ms ease;
-  white-space: nowrap;
-}
-.md-audit-seg-btn::before { content: ''; position: absolute; left: 0; right: 0; top: -12.5px; bottom: -12.5px; }
-.md-audit-seg-btn.active { background: var(--surface-3); color: var(--text); }
-.md-audit-seg-btn:hover:not(.active) { color: var(--text2); }
 
 @media (max-width: 767px) {
   .md-audit-header-main { display: none; }

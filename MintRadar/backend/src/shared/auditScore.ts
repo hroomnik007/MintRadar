@@ -67,13 +67,3 @@ export function auditComponent(
   if (errorRate < 0.15) return 10
   return 5
 }
-
-// ── audit.8333.space Audit tab only (never feeds the score) ─────────────────
-// The Audit tab's "too few to score" label still uses the 8333 rolling window's own floor.
-export const AUDIT_TAB_MIN_SAMPLES = 3
-
-// True when there's some 8333 audit history but not enough of it (< AUDIT_TAB_MIN_SAMPLES) to
-// read reliably — distinct from "no audit data at all" (recentTotal === null).
-export function isAuditUnknown(recentTotal: number | null): boolean {
-  return recentTotal !== null && recentTotal < AUDIT_TAB_MIN_SAMPLES
-}
