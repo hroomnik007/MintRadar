@@ -397,7 +397,10 @@ export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile
     signer.connect(),
     new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timeout — bunker relay did not respond within 30 seconds')), BUNKER_CONNECT_TIMEOUT_MS)),
   ])
-  const pubkeyHex = await signer.getPublicKey()
+  const pubkeyHex = await Promise.race([
+    signer.getPublicKey(),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Remote signer did not return a public key within 30 seconds')), BUNKER_CONNECT_TIMEOUT_MS)),
+  ])
   installBunkerShim(signer, pubkeyHex)
   // Store canonical bunker:// URL so restore never needs a network lookup
   sessionStorage.setItem(BUNKER_URI_KEY, toBunkerURL(bp))
@@ -405,6 +408,40 @@ export async function loginWithBunker(bunkerInput: string): Promise<NostrProfile
   sessionStorage.setItem(BUNKER_PUBKEY_KEY, pubkeyHex)
   const npub = nip19.npubEncode(pubkeyHex)
   return { pubkey: pubkeyHex, npub }
+}
+
+// Amber <= v6.6.9 can publish the connect ack before its listening subscription
+// for the new connection is registered, so an immediate get_public_key (an
+// ephemeral kind 24133 event) can be dropped by the relay (see the comment in
+// upstream Amber BunkerRequestUtils, fixed after v6.6.9). Re-send it every
+// GPK_RETRY_MS until one answer (or error) arrives or the pairing is aborted.
+// The identity is ONLY ever taken from a get_public_key answer, never from the
+// signer event's pubkey. Exported for unit testing.
+export const GPK_RETRY_MS = 8_000
+export function requestPubkeyWithRetry(
+  signer: Pick<BunkerSigner, 'getPublicKey'>,
+  signal: AbortSignal,
+  intervalMs = GPK_RETRY_MS,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let done = false
+    const finish = (fn: () => void) => {
+      if (done) return
+      done = true
+      clearInterval(timer)
+      signal.removeEventListener('abort', onAbort)
+      fn()
+    }
+    const onAbort = () => finish(() => reject(new DOMException('Pairing cancelled', 'AbortError')))
+    const attempt = () => {
+      if (done) return
+      signer.getPublicKey().then(pk => finish(() => resolve(pk)), (err: unknown) => finish(() => reject(err)))
+    }
+    const timer = setInterval(attempt, intervalMs)
+    if (signal.aborted) { onAbort(); return }
+    signal.addEventListener('abort', onAbort)
+    attempt()
+  })
 }
 
 // Builds a fresh client-initiated nostrconnect:// URI plus its ephemeral client
@@ -441,22 +478,22 @@ export function initBunkerQR(): {
   const rawSigner = BunkerSigner.fromURI(
     clientSecretKey,
     uri,
-    { onauth: openRemoteSignerAuthUrl, pool: pairingPool },
+    // skipSwitchRelays: Amber answers switch_relays with its own default relays and
+    // moves its listener there, while nostr-tools only waits 1s for that answer
+    // before sending get_public_key on the OLD relays (Amber EventNotificationConsumer
+    // SWITCH_RELAYS branch; nostr-tools nip46 fromURI). Stay on the URI's relays.
+    { onauth: openRemoteSignerAuthUrl, pool: pairingPool, skipSwitchRelays: true },
     abortCtrl.signal
   )
   // If the timeout wins the race below, fromURI still rejects on abort — keep
   // that from surfacing as an unhandled rejection.
   rawSigner.catch(() => {})
 
+  // The timeout bounds the WHOLE flow (connect-ack + get_public_key), not just
+  // the ack: a signer that acks but never answers get_public_key (e.g. Amber
+  // closing after approval) used to leave the QR modal waiting forever.
   const loginPromise = Promise.race([
-    rawSigner,
-    new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        abortCtrl.abort()
-        reject(new Error('Pairing timed out — no signer connected within 2 minutes. Refresh the QR and try again.'))
-      }, QR_PAIRING_TIMEOUT_MS)
-    }),
-  ]).then(async signer => {
+    rawSigner.then(async signer => {
     // The pairing can be cancelled (Cancel button / modal close → cancel()) or
     // time out in the very tick the signer's connect-ack resolved this promise.
     // Promise.race would still hand us the resolved signer — and installing the
@@ -473,7 +510,13 @@ export function initBunkerQR(): {
     }
     if (await bailIfAborted()) throw new DOMException('Pairing cancelled', 'AbortError')
 
-    const pubkeyHex = await signer.getPublicKey()
+    let pubkeyHex: string
+    try {
+      pubkeyHex = await requestPubkeyWithRetry(signer, abortCtrl.signal)
+    } catch (err) {
+      try { await signer.close() } catch { /* already down */ }
+      throw err
+    }
     if (await bailIfAborted()) throw new DOMException('Pairing cancelled', 'AbortError')
 
     // Commit — past this point the live signer owns the pool and the session.
@@ -486,7 +529,14 @@ export function initBunkerQR(): {
     sessionStorage.setItem(BUNKER_PUBKEY_KEY, pubkeyHex)
     const npub = nip19.npubEncode(pubkeyHex)
     return { pubkey: pubkeyHex, npub }
-  }).finally(() => {
+    }),
+    new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        abortCtrl.abort()
+        reject(new Error('Pairing timed out — signer did not finish connecting within 2 minutes. Refresh the QR and try again.'))
+      }, QR_PAIRING_TIMEOUT_MS)
+    }),
+  ]).finally(() => {
     if (timeoutId !== undefined) clearTimeout(timeoutId)
     disposePool()
   })

@@ -129,3 +129,92 @@ describe('initBunkerQR — cancel / signer-ack race (audit finding L2)', () => {
     expect(pools[0]!.destroy).not.toHaveBeenCalled()
   })
 })
+
+describe('initBunkerQR — signer acks but never answers get_public_key', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  it('times out with a visible error and commits no session instead of waiting forever', async () => {
+    vi.useFakeTimers()
+    const signer = makeFakeSigner()
+    signer.getPublicKey = vi.fn(() => new Promise<string>(() => {})) // never answers
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+
+    const { loginPromise } = initBunkerQR()
+    const settled = loginPromise.catch((e: unknown) => e)
+    await vi.advanceTimersByTimeAsync(120_000)
+    const err = await settled
+
+    expect(err).toBeInstanceOf(Error)
+    expect((err as Error).message).toMatch(/timed out/i)
+    expect(signer.getPublicKey).toHaveBeenCalled()
+    expect((window as { nostr?: unknown }).nostr).toBeUndefined()
+    expect(sessionStorage.getItem('bunkerPubkey')).toBeNull()
+    expect(pools[0]!.destroy).toHaveBeenCalled()
+  })
+})
+
+describe('initBunkerQR — timer and late-answer cleanup', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  it('timely success commits the session and clears the pairing timer', async () => {
+    vi.useFakeTimers()
+    const signer = makeFakeSigner()
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const { loginPromise } = initBunkerQR()
+    await expect(loginPromise).resolves.toMatchObject({ pubkey: PK })
+    expect(sessionStorage.getItem('bunkerPubkey')).toBe(PK)
+    expect(vi.getTimerCount()).toBe(0)
+    expect(pools[0]!.destroy).not.toHaveBeenCalled()
+  })
+
+  it('a get_public_key answer arriving after the timeout commits nothing and closes the signer', async () => {
+    vi.useFakeTimers()
+    let answer!: (pk: string) => void
+    const signer = makeFakeSigner()
+    signer.getPublicKey = vi.fn(() => new Promise<string>(r => { answer = r }))
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const { loginPromise } = initBunkerQR()
+    const settled = loginPromise.catch((e: unknown) => e)
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect((await settled as Error).message).toMatch(/timed out/i)
+    answer(PK)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(signer.close).toHaveBeenCalled()
+    expect((window as { nostr?: unknown }).nostr).toBeUndefined()
+    expect(sessionStorage.getItem('bunkerPubkey')).toBeNull()
+  })
+})
+
+describe('initBunkerQR — Amber interoperability', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  it('re-sends get_public_key when the first request is dropped, and logs in on the retry answer', async () => {
+    vi.useFakeTimers()
+    const signer = makeFakeSigner()
+    let calls = 0
+    signer.getPublicKey = vi.fn(() => (++calls === 1 ? new Promise<string>(() => {}) : Promise.resolve(PK)))
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    const { loginPromise } = initBunkerQR()
+    const settled = loginPromise.catch((e: unknown) => e)
+    await vi.advanceTimersByTimeAsync(8_000)
+    await expect(settled).resolves.toMatchObject({ pubkey: PK })
+    expect(signer.getPublicKey).toHaveBeenCalledTimes(2)
+    expect(sessionStorage.getItem('bunkerPubkey')).toBe(PK)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('a signer rejection of get_public_key fails fast with that error and commits nothing', async () => {
+    const signer = makeFakeSigner()
+    signer.getPublicKey = vi.fn(() => Promise.reject(new Error('user rejected')))
+    ;(BunkerSigner.fromURI as Mock).mockResolvedValue(signer)
+    await expect(initBunkerQR().loginPromise).rejects.toThrow('user rejected')
+    expect(signer.close).toHaveBeenCalled()
+    expect(sessionStorage.getItem('bunkerPubkey')).toBeNull()
+  })
+
+  it('pairs with skipSwitchRelays so the signer cannot move relays mid-handshake', () => {
+    ;(BunkerSigner.fromURI as Mock).mockReturnValue(new Promise(() => {}))
+    initBunkerQR().cancel()
+    expect((BunkerSigner.fromURI as Mock).mock.calls[0]![2]).toMatchObject({ skipSwitchRelays: true })
+  })
+})
