@@ -18,11 +18,11 @@
     "express": "^5.3.0",
     "ipaddr.js": "^2.5.0",
     "node-cron": "^4.6.0",
-    "nostr-tools": "^2.25.4",
+    "nostr-tools": "^2.25.5",
     "p-limit": "^7.3.3",
     "pg": "^8.23.1",
-    "undici": "^8.12.3",
-    "ws": "^8.22.0"
+    "undici": "^8.12.4",
+    "ws": "^8.22.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -31,8 +31,8 @@
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "@types/ws": "^8.18.2",
-    "@vitest/coverage-v8": "^5.0.5",
-    "eslint": "^10.13.0",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^10.14.0",
     "supertest": "^7.3.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
