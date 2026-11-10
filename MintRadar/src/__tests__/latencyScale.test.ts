@@ -11,6 +11,21 @@ describe('latencyScale', () => {
     expect(ticks.length).toBeGreaterThanOrEqual(3)
     expect(ticks.length).toBeLessThanOrEqual(7)
   })
+  it('the axis starts at 0, so a small change is drawn small (a 290-350 ms week used to get a 275-375 ms axis)', () => {
+    const week = latencyScale([350, 348, 300, 290, 295, 322, 315])
+    expect(week.domain[0]).toBe(0)
+    expect(week.ticks[0]).toBe(0)
+    expect(week.domain[1]).toBeGreaterThanOrEqual(350)
+    // the data uses at most the top quarter of the plot less than before: the 60 ms spread is under a fifth of the axis
+    expect((350 - 290) / (week.domain[1] - week.domain[0])).toBeLessThan(0.2)
+    for (const values of [[48], [160, 240], [80, 2900, 1500], [9000, 4000]]) {
+      const s = latencyScale(values)
+      expect(s.domain[0]).toBe(0)
+      expect(s.domain[1]).toBeGreaterThanOrEqual(Math.max(...values))
+      expect(s.ticks.length).toBeGreaterThanOrEqual(2)
+      expect(s.ticks.length).toBeLessThanOrEqual(7)
+    }
+  })
   it('a flat series and an empty one still give a usable axis', () => {
     const flat = latencyScale([300, 300, 300])
     expect(flat.domain[1]).toBeGreaterThan(flat.domain[0])

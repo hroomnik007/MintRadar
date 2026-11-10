@@ -35,8 +35,8 @@ async function setup(page: Page, width: number) {
   await expect(page.locator('.review-card')).toHaveCount(texts.length)
 }
 
-// Short key and date follow the 12 px phone floor (MintDetail.css, max-width 767px since cf79605e); desktop keeps 11 / 10 px.
-const SMALL_TEXT: Record<number, { npub: string; date: string }> = { 1440: { npub: '11px', date: '10px' }, 390: { npub: '12px', date: '12px' } }
+// The date follows the 12 px phone floor (MintDetail.css, max-width 767px since cf79605e); desktop keeps 11 / 10 px.
+const SMALL_TEXT: Record<number, { date: string }> = { 1440: { date: '10px' }, 390: { date: '12px' } }
 
 for (const width of [1440, 390]) {
   test(`review comment at ${width}px: 15px, line height 1.55, contrast at least 7:1; the rest of the item unchanged`, async ({ page }) => {
@@ -65,7 +65,8 @@ for (const width of [1440, 390]) {
     const card = page.locator('.review-card').first()
     const px = (sel: string) => card.locator(sel).first().evaluate(el => getComputedStyle(el).fontSize)
     expect(await px('.review-author-name')).toBe('14px')
-    expect(await px('.review-author-npub')).toBe(SMALL_TEXT[width]!.npub)
+    // These reviewers have no profile name: the name line is the short npub, so there is no second npub line under it.
+    await expect(card.locator('.review-author-npub')).toHaveCount(0)
     expect(await px('.review-date')).toBe(SMALL_TEXT[width]!.date)
     expect(await px('.review-stars')).toBe('12px')
     await expect(card.locator('.review-action-btn').first()).toBeVisible()

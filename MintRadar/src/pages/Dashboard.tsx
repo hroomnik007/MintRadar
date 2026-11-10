@@ -1619,7 +1619,7 @@ export default function Dashboard() {
                 Hide test mints
               </label>
               <div className="filter-rel">
-                <span className="filter-group-label">Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></span>
+                <span className="filter-group-label">{pendingFilters.minReliabilityScore > 0 ? <>Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></> : <>Reliability: <strong>any</strong></>}</span>
                 <input
                   type="range" min={0} max={100} step={5}
                   value={pendingFilters.minReliabilityScore}

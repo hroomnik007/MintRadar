@@ -48,6 +48,8 @@ function MintDetailHistoryChart({ data, metric, interval, height }: {
           stroke="var(--accent)"
           dot={false}
           strokeWidth={2}
+          // Short: with the default 1.5 s the chart stood empty for a moment after every period or metric switch.
+          animationDuration={350}
           connectNulls
         />
       </LineChart>

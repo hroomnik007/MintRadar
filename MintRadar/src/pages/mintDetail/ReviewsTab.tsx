@@ -145,7 +145,8 @@ export function ReviewsTab({
                                 <span className="review-operator-badge">Operator</span>
                               )}
                             </span>
-                            <span className="review-author-npub">{shortNpub(npub)}</span>
+                            {/* Without a profile name the name line already is the short npub: not the same text twice. */}
+                            {profile?.name && <span className="review-author-npub">{shortNpub(npub)}</span>}
                             {showContactLabel(r.pubkey, contactListed, operatorKeys) && (
                               <span className="review-contact-label">{CONTACT_LISTED_LABEL}</span>
                             )}
@@ -178,6 +179,7 @@ export function ReviewsTab({
                                   rel="noopener noreferrer"
                                   className="review-action-btn"
                                   title="Open this review on Nostr"
+                                  aria-label="Open this review on Nostr"
                                 ><ExternalLink size={13} /></a>
                               )}
                               <button
