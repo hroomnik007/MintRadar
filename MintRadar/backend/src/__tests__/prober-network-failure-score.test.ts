@@ -28,6 +28,7 @@ const CONTACTS = 3
 const MAX_AT_UPTIME_0 = 60
 
 let query: ReturnType<typeof vi.fn>
+let storedBreakdown: Record<string, unknown> | null = null
 let lookup: ReturnType<typeof vi.fn>
 let safeFetch: ReturnType<typeof vi.fn>
 let notifySubscribers: ReturnType<typeof vi.fn>
@@ -74,6 +75,12 @@ beforeEach(async () => {
       history.push({ id, online: params !== undefined && params.length > 1 ? (params[1] as boolean) : !/VALUES \(\$1, false/.test(sql), reliability_score: null })
       return { rows: [{ id }] }
     }
+    // The 30-day rows of the uptime inputs (uptimeInputFor): the stored probes one day apart, the newest one now,
+    // so two failed probes in a row are an outage of 24 hours.
+    if (/SELECT online, checked_at FROM mint_history/.test(sql)) {
+      const now = Date.now()
+      return { rows: history.map((h, i) => ({ online: h.online, checked_at: new Date(now - (history.length - 1 - i) * 86_400_000) })) }
+    }
     if (/FROM mints m\s*\n\s*LEFT JOIN mint_history h/.test(sql)) {
       const online = history.filter(h => h.online).length
       return { rows: [{
@@ -85,6 +92,7 @@ beforeEach(async () => {
     if (/UPDATE mints SET last_reliability_score/.test(sql)) {
       storedScore = params?.[0] as number
       lastError = params?.[1] as string | null
+      storedBreakdown = JSON.parse(params?.[3] as string) as Record<string, unknown>
       return { rowCount: 1 }
     }
     if (/UPDATE mint_history SET reliability_score/.test(sql)) {
@@ -100,8 +108,12 @@ beforeEach(async () => {
   })
 })
 
+// Offline for the whole stored history: no successful probe in 24 hours or 30 days, one ongoing outage of 24 hours.
 const expectedAtUptime0 = () =>
-  computeReliabilityScore(0, NUT_COUNT, null, CONTACTS, { blamed: null, total: null, fetchedAt: null }, {}, null)
+  computeReliabilityScore(
+    { pct24h: 0, pct30d: 0, outageCount30d: 1, longestOutageMs30d: 86_400_000, ongoingOutage: true },
+    NUT_COUNT, null, CONTACTS, { blamed: null, total: null, fetchedAt: null }, {}, null,
+  )
 
 // Several of the failures below are retried inside the prober (1 s, 2 s): fake timers keep the suite fast.
 async function probe(): Promise<void> {
@@ -188,6 +200,27 @@ describe('probeMintToDb — a failed probe updates the stored score and runs the
       })
     })
   }
+})
+
+describe('probeMintToDb — the 30-day uptime inputs are stored with the score (methodology 7)', () => {
+  it('two failed probes after ten successful ones: one ongoing outage, counted from the stored rows', async () => {
+    lookup.mockResolvedValue([{ address: '1.2.3.4', family: 4 }])
+    safeFetch.mockResolvedValue({ ok: false, status: 503 })
+
+    await probe()
+    await probe()
+
+    // 12 stored probes one day apart (the mock), 10 of them successful; the outage runs from the first failed probe to now
+    expect(storedBreakdown!['uptimeInputs']).toEqual({ uptime24hPct: 83, uptime30dPct: 83, outageCount30d: 1, longestOutage30dMs: expect.any(Number), ongoingOutage: true })
+    const longest = (storedBreakdown!['uptimeInputs'] as { longestOutage30dMs: number }).longestOutage30dMs
+    expect(Math.round(longest / 3_600_000)).toBe(24)
+    // 24 h: round(83 * 0.2) = 17; 30 days: 83 % is under the 90 % floor = 0; longest outage a day or more = 0; ongoing = 0
+    expect(storedBreakdown!['uptimeParts']).toEqual({
+      last24h: { points: 17, max: 20 }, last30d: { points: 0, max: 10 }, longestOutage: { points: 0, max: 6 }, outageCount: { points: 0, max: 4 },
+    })
+    expect(storedBreakdown!['uptime']).toEqual({ points: 17, max: 40 })
+    expect(storedBreakdown!['sum']).toBe(storedScore)
+  })
 })
 
 describe('probeMintToDb — failures held back as a suspected vantage outage', () => {

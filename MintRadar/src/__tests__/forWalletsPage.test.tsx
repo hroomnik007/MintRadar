@@ -44,6 +44,8 @@ const FULL_EXTRA: WalletExtra = {
   keysets: [{ id: '00aaaaaaaaaaaaaa', unit: 'sat', active: true, inputFeePpk: 100, finalExpiry: null, idVersion: 'v1', idValid: true }],
   scoreBreakdown: {
     uptime: { points: 40, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 6, max: 15 }, version: { points: 15, max: 15 },
+    uptimeParts: { last24h: { points: 20, max: 20 }, last30d: { points: 10, max: 10 }, longestOutage: { points: 6, max: 6 }, outageCount: { points: 4, max: 4 } },
+    uptimeInputs: { uptime24hPct: 100, uptime30dPct: 100, outageCount30d: 0, longestOutage30dMs: 0, ongoingOutage: false },
     contact: { points: 5, max: 5 }, newMintCap: { points: 0, cap: 75 }, sum: 92,
   },
   changes: [{ type: 'motd_changed', field: 'motd', oldValue: 'a', newValue: null, observedAt: '2026-10-13T11:00:00.000Z', firstSeenAt: '2026-10-13T10:55:00.000Z' }],

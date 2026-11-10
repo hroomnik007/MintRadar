@@ -4,7 +4,7 @@ import pLimit from 'p-limit'
 import { pool } from './db.js'
 import { hasNulByte } from './hostnameGuard.js'
 import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
-import { computeReliabilityScore, TRACKED_NUT_KEYS } from './shared/reliabilityScore.js'
+import { computeReliabilityScore, TRACKED_NUT_KEYS, type UptimeInput } from './shared/reliabilityScore.js'
 import { isNutOffered } from './shared/nutSupport.js'
 import { notifySubscribers, notifyAlert, recordAlertClear, isNotificationServiceEnabled, type AlertKind } from './nostrService.js'
 import { mintMeltCondition, versionCondition, nutLossTransition, type Condition } from './alertTriggers.js'
@@ -14,6 +14,7 @@ import { recordInfoObservation } from './mintChanges.js'
 import { queueContactChecks } from './contactChecks.js'
 import { extractLastContacts } from './lastContacts.js'
 import { computeScoreBreakdown } from './scoreBreakdown.js'
+import { summarizeOutages, type OutageRow } from './outages.js'
 import { isAllowlistMode } from './allowlist.js'
 import { classifyProbeFailure, failureFromResponse, isAbortLike, type ProbeErrorKind, type SafeFetchRejection } from './probeErrorKind.js'
 
@@ -145,6 +146,8 @@ export async function refreshServerLocations(lookup: (mintUrl: string) => Promis
 
 const PROBE_TIMEOUT_MS = 10000
 const RETENTION_DAYS = 90
+/** Window of the 30-day uptime inputs of the score; must not exceed RETENTION_DAYS. */
+export const UPTIME_WINDOW_DAYS = 30
 
 // Reliability Score maths now lives in shared/reliabilityScore.ts, shared (via a synced copy)
 // with the frontend's Reliability Score Breakdown. These re-exports keep prober.ts the
@@ -695,6 +698,32 @@ interface ProbeResult {
   nutTransition: 'lost' | 'restored' | null
 }
 
+/**
+ * The uptime inputs of the score (methodology 7): the 24-hour percentage plus, from the stored probes of the last
+ * 30 days (the row just inserted included), the share of successful ones, the number of outages and the longest one.
+ * The outage blocks are the ones /api/mints/outages lists (summarizeOutages: two or more failed probes in a row), so
+ * the History tab and the score count the same thing. A mint tracked for less than 30 days is measured on what exists.
+ */
+export async function uptimeInputFor(url: string, uptimePct24h: number, online: boolean, now: number): Promise<UptimeInput> {
+  const res = await pool.query(
+    `SELECT online, checked_at FROM mint_history
+     WHERE url = $1 AND checked_at > NOW() - INTERVAL '${UPTIME_WINDOW_DAYS} days'
+     ORDER BY checked_at ASC`,
+    [url]
+  )
+  const rows = res.rows as OutageRow[]
+  const total = rows.length
+  const onlineCount = rows.reduce((n, r) => n + (r.online ? 1 : 0), 0)
+  const outages = summarizeOutages(rows, now)
+  return {
+    pct24h: uptimePct24h,
+    pct30d: total === 0 ? (online ? 100 : 0) : Math.round((onlineCount / total) * 100),
+    outageCount30d: outages.outageCount,
+    longestOutageMs30d: outages.longestOutageMs,
+    ongoingOutage: outages.ongoing,
+  }
+}
+
 async function recordProbeResult(url: string, result: ProbeResult): Promise<void> {
   const { online, latencyMs, lastError, contactCount, nutTransition } = result
   // Snapshot the previous state before inserting the new row, so a
@@ -783,8 +812,9 @@ async function recordProbeResult(url: string, result: ProbeResult): Promise<void
       }
       // One `now` for the score and its breakdown, written in the same UPDATE (scoreBreakdown.ts).
       const scoreNow = Date.now()
+      const uptimeInput = await uptimeInputFor(url, uptimePct, online, scoreNow)
       const reliabilityScore = computeServerReliabilityScore(
-        uptimePct,
+        uptimeInput,
         row.nut_count as number | null,
         row.version as string | null,
         effectiveContactCount,
@@ -794,7 +824,7 @@ async function recordProbeResult(url: string, result: ProbeResult): Promise<void
         scoreNow,
       )
       const breakdown = computeScoreBreakdown(
-        uptimePct, row.nut_count as number | null, row.version as string | null, effectiveContactCount,
+        uptimeInput, row.nut_count as number | null, row.version as string | null, effectiveContactCount,
         auditInput, latestVersions, row.discovered_at as string | null, scoreNow,
       )
       await pool.query(

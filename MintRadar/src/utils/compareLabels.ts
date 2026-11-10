@@ -2,6 +2,10 @@
 
 /** The Compare uptime row is the server's 24 h figure (the same window as Mint Detail's header). */
 export const COMPARE_UPTIME_LABEL = 'Uptime 24h'
+/** The 30-day figure stored with the score (/api/mints/known uptimePct30d): the window of the score's 30-day part and of the recommendation gate. */
+export const COMPARE_UPTIME_30D_LABEL = 'Uptime 30d'
+/** The card chip shown only below the recommendation limit. */
+export const cardUptime30dChip = (pct: number): string => `${pct}% up 30d`
 /** Compare and card latency is one sample: the latest check, not an average. */
 export const COMPARE_LATENCY_LABEL = 'Latency (last check)'
 export const COMPARE_LATENCY_TITLE = 'Latency of the last check (one sample)'

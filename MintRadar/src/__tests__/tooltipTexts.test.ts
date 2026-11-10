@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import * as T from '@/utils/tooltipTexts'
 import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL } from '@/utils/auditScore'
-import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, computeReliabilityScore, contactComponent } from '@/utils/reliabilityScore'
+import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, computeReliabilityScore, contactComponent, UPTIME_24H_MAX, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX } from '@/utils/reliabilityScore'
 import { UNKNOWN_SOFTWARE_POINTS, classifyMintVersion, pointsForMinorsBehind } from '@/utils/versionRule'
 import { NHI_WEIGHTS, DEGRADED_AFTER_HOURS, nhiOnlineSetText, nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption } from '@/utils/networkHealthIndex'
 import { TRACKED_NUTS } from '@/constants/nuts'
@@ -56,7 +56,9 @@ describe('numbers in the built texts equal their sources', () => {
     expect(best).toBe(100)
     expect(numbers(T.scoreFormulaText())).toEqual([T.UPTIME_POINTS, T.NUT_POINTS, T.VERSION_POINTS, T.CONTACT_POINTS, T.AUDIT_POINTS, NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP])
   })
-  it('uptime row', () => expect(numbers(T.uptimeRowText())).toEqual([T.UPTIME_WINDOW_HOURS, 100]))
+  it('uptime row: 24 h (20 points), 30 days (10), longest outage (6), number of outages (4)', () => {
+    expect(numbers(T.uptimeRowText())).toEqual([T.UPTIME_WINDOW_HOURS, UPTIME_24H_MAX, T.UPTIME_30D_WINDOW_DAYS, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX, T.UPTIME_30D_WINDOW_DAYS])
+  })
   it('audit row: 7 days, 10 swaps, neutral 12.5 of 25', () => {
     expect(T.AUDIT_WINDOW_DAYS).toBe(AUDIT_MAX_AGE_HOURS / 24)
     expect(numbers(T.auditRowText())).toEqual([T.AUDIT_WINDOW_DAYS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, T.AUDIT_POINTS])

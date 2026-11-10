@@ -90,7 +90,7 @@ export default function Methodology() {
                 <tr><th scope="col">Component</th><th scope="col">Maximum</th><th scope="col">Input</th></tr>
               </thead>
               <tbody>
-                <tr><th scope="row">Uptime</th><td>{w.uptime}</td><td>MintRadar probes of the last {M.uptime.windowHours} hours</td></tr>
+                <tr><th scope="row">Uptime</th><td>{w.uptime}</td><td>MintRadar probes of the last {M.uptime.windowHours} hours and of the last {M.uptime.windowDays} days</td></tr>
                 <tr><th scope="row">Audit reliability</th><td>{w.audit}</td><td>cashu.info swaps of the last {M.audit.windowDays} days</td></tr>
                 <tr><th scope="row">NUT support</th><td>{w.nuts}</td><td>NUTs the mint says it supports in <code>/v1/info</code> (an entry with <code>&quot;supported&quot;: false</code>, or a NUT-04/05 the mint has switched off, does not count)</td></tr>
                 <tr><th scope="row">Software version</th><td>{w.version}</td><td>The version the mint reports, against the newest stable release</td></tr>
@@ -104,10 +104,47 @@ export default function Methodology() {
             Every {M.cadence.probeMinutes} minutes the server in {PROBE_LOCATION} requests the mint&apos;s{' '}
             <code>/v1/info</code> ({M.cadence.probeTimeoutSeconds} second timeout, one retry after a network
             failure). A probe counts as successful only if the answer is a 2xx response with a valid JSON body
-            in which <code>nuts</code> is an object. Uptime is the share of successful probes among all probes of the last{' '}
-            {M.uptime.windowHours} hours, rounded to a whole percent; the component is that percentage times{' '}
-            {M.uptime.factor.toFixed(2)}, rounded to a whole number. A mint with no probe in the window scores
-            100 % if the probe now succeeds and 0 % if it fails.
+            in which <code>nuts</code> is an object. Uptime is the share of successful probes among all probes of a
+            window, rounded to a whole percent. An outage is {M.uptime.outageMinProbes} or more failed probes in a row;
+            a single failed probe is not one. The component has four parts:
+          </p>
+          <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="Parts of the uptime component">
+            <table className="doc-table" data-testid="uptime-parts-table">
+              <thead>
+                <tr><th scope="col">Part</th><th scope="col">Maximum</th><th scope="col">Points</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Last {M.uptime.windowHours} hours</th><td>{M.uptime.parts.last24h}</td>
+                  <td>Uptime of the last {M.uptime.windowHours} hours times {(M.uptime.parts.last24h / 100).toFixed(2)}, rounded to a whole number</td>
+                </tr>
+                <tr>
+                  <th scope="row">Last {M.uptime.windowDays} days</th><td>{M.uptime.parts.last30d}</td>
+                  <td>One point for each whole percent of {M.uptime.windowDays}-day uptime above {M.uptime.floorPct30d} %; {M.uptime.floorPct30d} % or less scores 0</td>
+                </tr>
+                <tr>
+                  <th scope="row">Longest outage in {M.uptime.windowDays} days</th><td>{M.uptime.parts.longestOutage}</td>
+                  <td>
+                    Shorter than {M.uptime.longestOutageBands.map(b => `${b.belowHours} ${b.belowHours === 1 ? 'hour' : 'hours'}: ${b.points}`).join(', shorter than ')}
+                    , longer: {M.uptime.longestOutagePointsBeyond}. An outage that has not ended is measured up to now.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Outages in {M.uptime.windowDays} days</th><td>{M.uptime.parts.outageCount}</td>
+                  <td>
+                    Up to {M.uptime.outageCountBands.map(b => `${b.upTo}: ${b.points}`).join(', up to ')}
+                    , more: {M.uptime.outageCountPointsBeyond}. While the mint is in an outage this part scores 0.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            The {M.uptime.windowHours}-hour part says how the mint runs now. The three {M.uptime.windowDays}-day parts
+            say how it ran: how much of the month it was down in total, how long funds were out of reach at a time,
+            and how often a payment would have failed. A mint tracked for less than {M.uptime.windowDays} days is
+            measured on the history that exists; a mint with no probe in a window scores 100 % if the probe now
+            succeeds and 0 % if it fails. The outages are the ones the History tab of a mint lists.
           </p>
 
           <h3 className="doc-h3">Audit reliability ({w.audit} points)</h3>
@@ -208,8 +245,10 @@ export default function Methodology() {
             <li>
               <strong>Recommendations need {M.recommendation.minAgeDays} days.</strong> A mint is eligible to appear in a
               recommendation (the top lists and the wallet API&apos;s <code>eligibleForRecommendation</code>) only when it
-              was first seen at least {M.recommendation.minAgeDays} days ago, is online, has a score and was probed within the last{' '}
-              {M.recommendation.maxProbeAgeHours} hours.
+              was first seen at least {M.recommendation.minAgeDays} days ago, is online, has a score, was probed within the last{' '}
+              {M.recommendation.maxProbeAgeHours} hours and had at least {M.recommendation.minUptime30dPct} % uptime in the
+              last {M.uptime.windowDays} days. The score describes mostly how a mint runs now; a recommendation also asks
+              for a month without long downtime.
             </li>
             <li><strong>Test mints are never recommended.</strong> Mints on MintRadar&apos;s manual test-mint list are marked and excluded.</li>
           </ul>

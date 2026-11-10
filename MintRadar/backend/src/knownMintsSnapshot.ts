@@ -232,6 +232,10 @@ export function computeKnownMints(): Promise<Snapshot> {
           // unchanged and still used everywhere else (mint cards, avg-uptime
           // hero tile, degraded detection).
           uptimePct7d: total7d === 0 ? null : Math.round(onlineCount7d / total7d * 100),
+          // Additive (methodology 7): 30-day uptime, the figure the recommendation gate (hasSteadyUptime) and the
+          // score's 30-day part use. The value stored with the score at the newest probe; the live count only until
+          // the first probe after a deploy has stored one.
+          uptimePct30d: uptime30dPctOf(r),
           serverLocation: (r.server_location as string | null) ?? null,
           ipAddress: (r.ip_address as string | null) ?? null,
           netAsn: (r.net_asn as number | null) ?? null,
@@ -289,7 +293,7 @@ export function computeKnownMints(): Promise<Snapshot> {
           probes24h: Number(r.total ?? 0),
           downSince: r.down_since ? new Date(r.down_since as string | Date).toISOString() : null,
           scoreBreakdown: readStoredBreakdown(r.score_breakdown),
-          uptime30dPct: Number(r.total_30d ?? 0) === 0 ? null : Math.round(Number(r.online_count_30d ?? 0) / Number(r.total_30d) * 100),
+          uptime30dPct: uptime30dPctOf(r),
           latency24h: latency24hOf(r.latency_p50_24h, r.latency_p95_24h, r.latency_samples_24h),
           keysets: keysetsOf(r.keysets_json),
           keysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
@@ -302,4 +306,12 @@ export function computeKnownMints(): Promise<Snapshot> {
       const now = Date.now()
       return { data, computedAt: now, reviewFallback, walletExtra }
     })
+}
+
+/** 30-day uptime in whole percent: the figure stored with the score, else the live count of the snapshot query, else null. */
+function uptime30dPctOf(r: Record<string, unknown>): number | null {
+  const stored = readStoredBreakdown(r.score_breakdown)?.uptimeInputs?.uptime30dPct
+  if (stored !== undefined) return stored
+  const total = Number(r.total_30d ?? 0)
+  return total === 0 ? null : Math.round(Number(r.online_count_30d ?? 0) / total * 100)
 }

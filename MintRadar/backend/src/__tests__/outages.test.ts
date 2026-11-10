@@ -43,6 +43,17 @@ describe('summarizeOutages', () => {
   })
 
   it('no rows: all empty', () => {
-    expect(summarizeOutages([], 0)).toEqual({ sinceLastOutageMs: null, avgRecoveryMs: null, outageCount: 0, recoveredCount: 0, ongoing: false, currentOutage: null, outages: [] })
+    expect(summarizeOutages([], 0)).toEqual({ sinceLastOutageMs: null, avgRecoveryMs: null, outageCount: 0, recoveredCount: 0, ongoing: false, currentOutage: null, longestOutageMs: 0, outages: [] })
+  })
+
+  it('longestOutageMs is the longest block of the window, an ongoing one measured to now, also beyond the listed 20', () => {
+    expect(summarizeOutages(rows('+--+----+--+'), T(100).getTime()).longestOutageMs).toBe(20 * MIN)
+    expect(summarizeOutages(rows('+--+---'), T(200).getTime()).longestOutageMs).toBe(T(200).getTime() - T(20).getTime())
+    expect(summarizeOutages(rows('+-+'), T(100).getTime()).longestOutageMs).toBe(0)
+    // 25 outages: the first is the longest (15 min) and is not among the 20 listed ones
+    const many = summarizeOutages(rows('+---' + '+--'.repeat(24) + '+'), T(1000).getTime())
+    expect(many.outageCount).toBe(25)
+    expect(many.outages).toHaveLength(20)
+    expect(many.longestOutageMs).toBe(15 * MIN)
   })
 })

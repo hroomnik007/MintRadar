@@ -12,7 +12,10 @@
 // implies solvency, the terms "Reliability Score", "Community Rating", "audit data from cashu.info", "attributed to this
 // mint", "probe", "mint".
 import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, auditComponent } from './auditScore'
-import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, contactComponent, nutComponent, uptimeComponent } from './reliabilityScore'
+import {
+  NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, contactComponent, nutComponent, uptimeComponent,
+  UPTIME_24H_MAX, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX,
+} from './reliabilityScore'
 import { UNKNOWN_SOFTWARE_POINTS, pointsForMinorsBehind } from './versionRule'
 import { pluralize } from './plural'
 import { FRESH_MINT_MONTHS } from './mintFormatting'
@@ -41,6 +44,8 @@ export const NOTIFICATION_RETENTION_DAYS = 30
 export const MAX_NOTIFICATION_SUBSCRIPTIONS = 50
 /** Window of the Mint Detail outages list; the page requests it explicitly (`days=`), the backend default is the same. */
 export const OUTAGES_WINDOW_DAYS = 30
+/** Window of the 30-day uptime inputs of the score (backend/src/prober.ts UPTIME_WINDOW_DAYS). */
+export const UPTIME_30D_WINDOW_DAYS = 30
 
 // ── Facts derived from the code's own functions (maximum of each score component) ────────────────────────────
 const FIXED_NOW = Date.UTC(2026, 0, 1)
@@ -93,7 +98,7 @@ export function scoreFormulaText(): string {
 
 /** Breakdown rows. */
 export function uptimeRowText(): string {
-  return `Percentage of successful checks over the last ${UPTIME_WINDOW_HOURS}h. 100% uptime = full points.`
+  return `Successful checks in the last ${UPTIME_WINDOW_HOURS}h (${UPTIME_24H_MAX} points) and ${UPTIME_30D_WINDOW_DAYS} days (${UPTIME_30D_MAX}), plus the longest outage (${LONGEST_OUTAGE_MAX}) and the number of outages (${OUTAGE_COUNT_MAX}) in those ${UPTIME_30D_WINDOW_DAYS} days.`
 }
 export function auditRowText(): string {
   return `Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last ${AUDIT_WINDOW_DAYS} days (failures caused elsewhere are not counted against it). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral ${AUDIT_NEUTRAL} of ${AUDIT_POINTS}.`

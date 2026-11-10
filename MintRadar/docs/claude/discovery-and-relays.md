@@ -68,6 +68,8 @@ never for the Reliability Score.
 
 ### Recommendation-surface minimum age gate (2026-09-19, audit run-3 MEDIUM finding)
 
+> **Methodology 7 (2026-11-10):** recommendation surfaces also require `hasSteadyUptime(uptimePct30d)` (at least 95 % uptime in 30 days) next to the 14-day gate described here; see `scoring-and-probing.md` ("Recommendation gate: 95 % uptime in 30 days").
+
 A brand-new mint (hours-to-days of track record) could reach a "recommendation" surface's
 top-5 purely on a high Reliability Score — `NEW_MINT_RELIABILITY_CAP` (see "Reliability Score calculation"
 above) only discounts a new mint's *score* (capped at 75 for its first `NEW_MINT_MAX_DAYS` =

@@ -175,6 +175,9 @@ export **before** rendering `MintDetailContent`. Fixes the "ghost mint" bug wher
 
 ### Reliability Score breakdown always visible on Overview (2026-09-20)
 
+> **Methodology 7 (2026-11-10):** the 30-day uptime is shown on the card (chip only below 95 %), in the Mint Detail header, under the breakdown's Uptime row, in Compare (row `uptime-30d`) and in the History tab's Outages panel; the Stats "Most Reliable" lists and the wizard require 95 % uptime in 30 days. Details in `scoring-and-probing.md` ("Where the 30-day figure is shown", "Recommendation gate: 95 % uptime in 30 days").
+
+
 The desktop `.md-reliability-panel` sidebar (Overview tab, ≥901px) now renders all 5 Reliability Score
 components (Uptime 40% · Audit reliability 25% · NUT Support 15% · Version 15% · Contact 5%)
 and the "Score = Uptime×40% + …" explanatory line directly under the donut/badge — no click on

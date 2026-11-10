@@ -20,6 +20,8 @@ import {
   classifyVersion, canonicalSoftwareName, pointsForMinorsBehind, MIN_MINTS_FOR_FALLBACK_LATEST,
   UNKNOWN_SOFTWARE_POINTS, UNPARSABLE_VERSION_POINTS,
 } from '@/utils/versionRule'
+import * as fe from '@/utils/reliabilityScore'
+import { UPTIME_30D_WINDOW_DAYS } from '@/utils/tooltipTexts'
 import * as be from '../../backend/src/shared/reliabilityScore'
 import { METHODOLOGY_VERSION as beVersion, METHODOLOGY_CHANGES as beChanges } from '../../backend/src/shared/methodology'
 import Methodology from '@/pages/Methodology'
@@ -50,8 +52,48 @@ describe('weights', () => {
 })
 
 describe('uptime', () => {
-  it('points = round(percent x factor) for every whole percent', () => {
-    for (let p = 0; p <= 100; p++) expect(uptimeComponent(p)).toBe(Math.round(p * M.uptime.factor))
+  it('only the 24-hour percentage known: points = round(percent x fallback factor) for every whole percent', () => {
+    for (let p = 0; p <= 100; p++) expect(uptimeComponent(p)).toBe(Math.round(p * M.uptime.fallbackFactor))
+  })
+  it('the four parts: maxima, the 30-day floor, the outage bands, in both packages', () => {
+    const P = M.uptime.parts
+    expect(P.last24h + P.last30d + P.longestOutage + P.outageCount).toBe(M.weights.uptime)
+    for (const mod of [fe, be]) {
+      expect([mod.UPTIME_24H_MAX, mod.UPTIME_30D_MAX, mod.LONGEST_OUTAGE_MAX, mod.OUTAGE_COUNT_MAX]).toEqual([P.last24h, P.last30d, P.longestOutage, P.outageCount])
+      expect(mod.UPTIME_30D_FLOOR_PCT).toBe(M.uptime.floorPct30d)
+      expect(mod.LONGEST_OUTAGE_BANDS).toEqual(M.uptime.longestOutageBands.map(b => [b.belowHours, b.points]))
+      expect(mod.OUTAGE_COUNT_BANDS).toEqual(M.uptime.outageCountBands.map(b => [b.upTo, b.points]))
+      const clean = { pct24h: 100, pct30d: 100, outageCount30d: 0, longestOutageMs30d: 0, ongoingOutage: false }
+      expect(mod.uptimeParts(clean)).toEqual(P)
+      for (let p = 0; p <= 100; p++) {
+        expect(mod.uptimeParts({ ...clean, pct24h: p }).last24h).toBe(Math.round(p * P.last24h / 100))
+        expect(mod.uptimeParts({ ...clean, pct30d: p }).last30d).toBe(Math.min(P.last30d, Math.max(0, p - M.uptime.floorPct30d)))
+      }
+      for (const b of M.uptime.longestOutageBands) {
+        expect(mod.longestOutagePoints(b.belowHours * HOUR - 1)).toBe(b.points)
+        expect(mod.longestOutagePoints(b.belowHours * HOUR)).toBeLessThan(b.points)
+      }
+      expect(mod.longestOutagePoints(24 * HOUR)).toBe(M.uptime.longestOutagePointsBeyond)
+      for (const b of M.uptime.outageCountBands) {
+        expect(mod.outageCountPoints(b.upTo, false)).toBe(b.points)
+        expect(mod.outageCountPoints(b.upTo + 1, false)).toBeLessThan(b.points)
+        expect(mod.outageCountPoints(b.upTo, true)).toBe(0)
+      }
+      expect(mod.outageCountPoints(21, false)).toBe(M.uptime.outageCountPointsBeyond)
+    }
+  })
+  it('the 30-day window and the outage rule are the ones in the prober and outages.ts', () => {
+    expect(read('../../backend/src/prober.ts')).toContain(`export const UPTIME_WINDOW_DAYS = ${M.uptime.windowDays}`)
+    expect(read('../../backend/src/outages.ts')).toContain(`if (count >= ${M.uptime.outageMinProbes}) {`)
+    expect(UPTIME_30D_WINDOW_DAYS).toBe(M.uptime.windowDays)
+  })
+  it('the 30-day recommendation gate equals the code constant, in both packages', () => {
+    for (const mod of [fe, be]) {
+      expect(mod.MIN_RECOMMENDATION_UPTIME_30D_PCT).toBe(M.recommendation.minUptime30dPct)
+      expect(mod.hasSteadyUptime(M.recommendation.minUptime30dPct)).toBe(true)
+      expect(mod.hasSteadyUptime(M.recommendation.minUptime30dPct - 1)).toBe(false)
+      expect(mod.hasSteadyUptime(null)).toBe(false)
+    }
   })
   it('the window and the cadence are the ones in the prober and the cron', () => {
     expect(read('../../backend/src/prober.ts')).toContain(`INTERVAL '${M.uptime.windowHours} hours'`)

@@ -55,7 +55,7 @@ export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'reviews.ratedCount', type: 'integer', nullable: false, meaning: 'How many of them carry a rating.' },
   { name: 'reviews.avg', type: 'number', nullable: true, meaning: 'Average rating over the rated reviews, one decimal. null when there are none.' },
   { name: 'reviews.operatorCount', type: 'integer', nullable: false, meaning: 'Reviews written by the mint\'s own operator (a key that is both a Nostr contact of the mint and the author of its NIP-87 announcement). They are not included in count, ratedCount or avg.' },
-  { name: 'eligibleForRecommendation', type: 'boolean', nullable: false, meaning: 'true when the mint is online, has a score, is not a test mint, was first seen at least 14 days ago and its newest probe is at most 3 hours old.' },
+  { name: 'eligibleForRecommendation', type: 'boolean', nullable: false, meaning: 'true when the mint is online, has a score, is not a test mint, was first seen at least 14 days ago, its newest probe is at most 3 hours old and its uptime in the last 30 days (uptime30dPct) is at least 95 %.' },
   // Added 2026-10-20 (all additive). downSince, hasOnion, authRequired and auditNeutralReason are on every object; the others only
   // with the matching include= value or on the single-mint endpoint.
   { name: 'pubkey', type: 'string', nullable: true, meaning: 'Only with include=facts (always on the single-mint endpoint). The mint\'s public NUT-06 key as MintRadar last stored it (66 hex characters). null when none is stored. Public data the mint publishes itself.' },
@@ -77,7 +77,9 @@ export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'methods.mint', type: 'object[]', nullable: false, meaning: 'NUT-04 entries: { method, unit, minAmount, maxAmount }. The amounts are integers or null when the mint states none. Empty when none are stored.' },
   { name: 'methods.melt', type: 'object[]', nullable: false, meaning: 'NUT-05 entries, same shape as methods.mint.' },
   { name: 'scoreBreakdown', type: 'object', nullable: true, meaning: 'Only with include=breakdown (always on the single-mint endpoint). What the score used at its last computation: uptime, audit, nuts, version and contact are { points, max } (max 40, 25, 15, 15 and 5), newMintCap is { points, cap }, sum is the score; neutral audit data counts 12.5, so parts can end in .5. null until the first probe after this field was introduced.' },
-  { name: 'scoreBreakdown.uptime', type: 'object', nullable: false, meaning: '{ points, max } for uptime over the last 24 hours.' },
+  { name: 'scoreBreakdown.uptime', type: 'object', nullable: false, meaning: '{ points, max } for uptime: the sum of the four parts in uptimeParts.' },
+  { name: 'scoreBreakdown.uptimeParts', type: 'object', nullable: false, meaning: 'Since methodology 7 (absent in a breakdown stored before it). The four parts of uptime, each { points, max }: last24h (max 20), last30d (max 10), longestOutage (max 6) and outageCount (max 4).' },
+  { name: 'scoreBreakdown.uptimeInputs', type: 'object', nullable: false, meaning: 'Present together with uptimeParts. The figures those parts used: uptime24hPct, uptime30dPct, outageCount30d (outages of two or more failed probes in a row), longestOutage30dMs and ongoingOutage.' },
   { name: 'scoreBreakdown.audit', type: 'object', nullable: false, meaning: '{ points, max } for the audit part (see auditNeutralReason).' },
   { name: 'scoreBreakdown.nuts', type: 'object', nullable: false, meaning: '{ points, max } for NUT support.' },
   { name: 'scoreBreakdown.version', type: 'object', nullable: false, meaning: '{ points, max } for software freshness.' },

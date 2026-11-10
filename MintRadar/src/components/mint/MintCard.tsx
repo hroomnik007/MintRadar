@@ -14,8 +14,8 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { CARD_LATENCY_LABEL } from '@/utils/compareLabels'
-import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, formatTimeAgo, statusDotColor, mintStatusLabel } from '@/utils/mintFormatting'
+import { CARD_LATENCY_LABEL, cardUptime30dChip } from '@/utils/compareLabels'
+import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, isUptime30dLow, formatTimeAgo, statusDotColor, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { isTestMint } from '@/constants/testMints'
 import { sortUnits } from '@/utils/sortUnits'
@@ -200,6 +200,11 @@ export function MintCard({
         {uptimePct24h !== null && (
           <span className="card-pill" style={{ color: upChipColor(uptimePct24h), fontFamily: 'var(--font-mono-data)' }}>
             {uptimePct24h}% up 24h
+          </span>
+        )}
+        {isUptime30dLow(mint.uptimePct30d) && (
+          <span className="card-pill" data-testid="card-uptime-30d" style={{ color: offlineTone('var(--med)', 'var(--text2)'), fontFamily: 'var(--font-mono-data)' }}>
+            {cardUptime30dChip(mint.uptimePct30d)}
           </span>
         )}
         {isArchived && !isOnline ? (

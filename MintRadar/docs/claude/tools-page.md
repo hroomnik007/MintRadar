@@ -123,6 +123,8 @@ NUT-04/05 limits, click-through to `/mint/:url` — as far back as `781617d` (20
 was never a plain-text recommendation; that was a wrong assumption going into this pass, not
 an actual prior state of the code.
 
+> **Methodology 7 (2026-11-10):** recommendation surfaces also require `hasSteadyUptime(uptimePct30d)` (at least 95 % uptime in 30 days) next to the 14-day gate described here; see `scoring-and-probing.md` ("Recommendation gate: 95 % uptime in 30 days").
+
 The real gap: `candidates` filtered `online`, `!isTestMint()`, and unit support, but was
 **missing `isEligibleForRecommendation()`** — the same 14-day minimum-age gate wired into the
 backend `top5ByReliabilityScore` and frontend `top5ByReliability` (see "Recommendation-surface minimum age

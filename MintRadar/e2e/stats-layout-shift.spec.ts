@@ -185,7 +185,7 @@ for (const width of WIDTHS) {
 // condition, so it is there at the first paint exactly when the note is shown, and it equals the note's real height (margin
 // + lines, within 1 px) at every width, for 1 to 5 changes. These tests pin the date on purpose: with the real date the
 // note disappears from the 7d window a week after a change. METHODOLOGY_CHANGES: v2 on 2026-10-08, v3 on 2026-10-09, v4 on
-// 2026-10-21, v5 on 2026-10-27, v6 on 2026-10-28. A window always holds the NEWEST changes, so each date below gives the
+// 2026-10-21, v5 on 2026-10-27, v6 on 2026-10-28, v7 on 2026-11-10. A window always holds the NEWEST changes, so each date below gives the
 // text that the live page can show for that count (the dates are day-granular, both ends included).
 const NOTE_CASES = [
   // `note7` = the note of the default 7d view (what the waiting block and the first paint show), `note` = the note of `period`.
@@ -196,10 +196,11 @@ const NOTE_CASES = [
   { name: '30d window holds five changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '30d window holds four changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '30d window holds three changes, 7d none', date: '2026-11-09T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds two changes, 7d none', date: '2026-11-21T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds one change, 7d none', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds three changes, 7d none (v5, v6, v7)', date: '2026-11-21T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds two changes, 7d none', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds one change, 7d none', date: '2026-12-05T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '7d window holds no change', date: '2026-11-05T12:00:00Z', period: '7d', note7: false, note: false },
-  { name: '30d window holds no change', date: '2026-12-01T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds no change', date: '2026-12-11T12:00:00Z', period: '30d', note7: false, note: false },
 ] as const
 
 for (const width of [1440, 1024, 768, 390, 320]) {

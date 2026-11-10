@@ -23,6 +23,8 @@ export interface MockMint {
   /** Same computation as uptimePct24h, over a 7-day window — feeds the Stats
    *  "Most Reliable" panel. Defaults to uptimePct24h when omitted. */
   uptimePct7d?: number | null
+  /** 30-day uptime (methodology 7): the recommendation gate needs 95. Defaults to 100 (no long outage) when omitted. */
+  uptimePct30d?: number | null
   discoveredAt: string
   /** Units this mint issues, as persisted by prober.ts's parseMintMethods(). */
   units: string[] | null
@@ -129,6 +131,7 @@ function knownMintPayload(m: MockMint) {
     lastError: null,
     uptimePct24h: m.uptimePct24h,
     uptimePct7d: m.uptimePct7d ?? m.uptimePct24h,
+    uptimePct30d: m.uptimePct30d === undefined ? 100 : m.uptimePct30d,
     serverLocation: 'Germany',
     lastCheckedAt: new Date(now - 60_000).toISOString(),
     reviewCount: m.reviewCount ?? null,

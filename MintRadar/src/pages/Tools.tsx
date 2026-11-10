@@ -17,7 +17,7 @@ import { PageHead } from '@/components/layout/PageHead'
 import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
-import { isEligibleForRecommendation, hasFreshProbe } from '@/utils/reliabilityScore'
+import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
 import { weightsFor, reviewsScore, softwarePreferenceCredit, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
 import { softwareChoices, rankWizardRecs, wizardReasonText, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { sortUnits } from '@/utils/sortUnits'
@@ -747,6 +747,9 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       // /api/stats) — a brand-new mint shouldn't be actively recommended here
       // just because it hasn't accumulated enough history to be penalized yet.
       .filter(m => isEligibleForRecommendation(m.discoveredAt))
+      // And a month without long downtime (methodology 7): at least MIN_RECOMMENDATION_UPTIME_30D_PCT of the probes of
+      // the last 30 days succeeded, the same rule as the wallet API's eligibleForRecommendation.
+      .filter(m => hasSteadyUptime(m.uptimePct30d))
       // A mint that doesn't issue this unit can't serve the user at all, so it
       // is dropped before scoring rather than ranked and then explained away.
       .filter(m => (m.units ?? []).includes(selectedUnit))

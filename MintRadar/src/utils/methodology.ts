@@ -7,7 +7,7 @@
 // src/__tests__/sharedModules.test.ts fails when they drift. SOURCE OF TRUTH is the backend file: change it
 // there first and mirror the change here.
 
-export const METHODOLOGY_VERSION = 6
+export const METHODOLOGY_VERSION = 7
 
 export interface MethodologyChange {
   version: number
@@ -23,4 +23,5 @@ export const METHODOLOGY_CHANGES: readonly MethodologyChange[] = [
   { version: 4, date: '2026-10-21', summary: 'NUT part: a NUT entry with "supported": false in /v1/info no longer counts as support for the NUT component; a NUT counts when the mint lists it and does not mark it as not supported.' },
   { version: 5, date: '2026-10-27', summary: 'NUT part: a NUT the mint has switched off (NUT-04 minting or NUT-05 melting with "disabled": true in /v1/info) no longer counts for the NUT component.' },
   { version: 6, date: '2026-10-28', summary: 'Recommendation gate: a mint is eligible only if its newest probe is at most 3 hours old; the score formula is unchanged.' },
+  { version: 7, date: '2026-11-10', summary: 'Uptime part (40) now has four parts: last 24 hours 20, last 30 days 10, longest outage in 30 days 6, number of outages in 30 days 4. Recommendation gate: at least 95% uptime in 30 days.' },
 ]

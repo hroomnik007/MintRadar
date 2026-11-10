@@ -6,7 +6,7 @@ import { Fragment, lazy, Suspense, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { formatDate } from '@/utils/formatDate'
 import { reliabilityScoreInfo } from '@/utils/mintFormatting'
-import { outageTiles, outageErrorCell, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { outageTiles, outageErrorCell, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { outagesCountLabel, noOutagesText, OUTAGES_WINDOW_DAYS } from '@/utils/tooltipTexts'
 import type { HistoryChartPoint } from '../MintDetailHistoryChart'
 
@@ -23,16 +23,6 @@ function formatOutageStart(iso: string): string {
   return `${date} ${time}`
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 60000) return `${Math.round(ms / 1000)}s`
-  if (ms < 3600000) return `${Math.round(ms / 60000)} min`
-  const h = Math.floor(ms / 3600000)
-  const m = Math.round((ms % 3600000) / 60000)
-  if (h < 24) return m > 0 ? `${h}h ${m}m` : `${h}h`
-  const d = Math.floor(h / 24)
-  const rh = h % 24
-  return rh > 0 ? `${d}d ${rh}h` : `${d}d`
-}
 /** A version string with a line-break opportunity after each "/" ("Nutshell/0.20.3"); no <wbr> text is added. */
 function versionWithBreaks(v: string): ReactNode {
   const parts = v.split('/')
@@ -136,10 +126,11 @@ export function HistoryTab({
           <div className="md-panel">
             <div className="md-panel-title">Outages</div>
             <div className="md-hist-summary" style={{ marginBottom: 12 }}>
-              {outageTiles(outagesData, outagesCountLabel(), formatDuration).map(({ key, label, value }) => (
+              {outageTiles(outagesData, outagesCountLabel(), formatDuration).map(({ key, label, value, note }) => (
                 <div key={key} className="md-hist-fig" data-testid={`outage-tile-${key}`}>
                   <div className="md-hist-fig-value" style={key === 'down' ? { color: 'var(--red)' } : undefined}>{value}</div>
                   <div className="md-hist-fig-label">{label}</div>
+                  {note && <div className="md-hist-fig-delta">{note}</div>}
                 </div>
               ))}
             </div>

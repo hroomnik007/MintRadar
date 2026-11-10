@@ -74,3 +74,49 @@ describe('readStoredBreakdown', () => {
     }
   })
 })
+
+// Methodology 7: with the 30-day inputs the breakdown also stores the four uptime parts and the figures they used.
+describe('uptime parts in the breakdown', () => {
+  const H = 3_600_000
+  const INPUTS = [
+    { pct24h: 100, pct30d: 100, outageCount30d: 0, longestOutageMs30d: 0, ongoingOutage: false },
+    { pct24h: 100, pct30d: 77, outageCount30d: 8, longestOutageMs30d: 162 * H, ongoingOutage: false },
+    { pct24h: 97, pct30d: 97, outageCount30d: 35, longestOutageMs30d: 2 * H, ongoingOutage: false },
+    { pct24h: 0, pct30d: 93, outageCount30d: 1, longestOutageMs30d: 30 * H, ongoingOutage: true },
+    { pct24h: 50, pct30d: 91, outageCount30d: 4, longestOutageMs30d: 5 * H, ongoingOutage: true },
+  ]
+
+  it('sum equals computeReliabilityScore and the four parts add up to the uptime points', () => {
+    for (const u of INPUTS) {
+      for (const audit of AUDITS) {
+        for (const discovered of DISCOVERED) {
+          const score = computeReliabilityScore(u, 12, 'Nutshell/0.21.0', 2, audit, LATEST, discovered, NOW)
+          const b = computeScoreBreakdown(u, 12, 'Nutshell/0.21.0', 2, audit, LATEST, discovered, NOW)
+          expect(b.sum).toBe(score)
+          const p = b.uptimeParts!
+          expect(p.last24h.points + p.last30d.points + p.longestOutage.points + p.outageCount.points).toBe(b.uptime.points)
+          expect([p.last24h.max, p.last30d.max, p.longestOutage.max, p.outageCount.max]).toEqual([20, 10, 6, 4])
+          expect(b.uptimeInputs).toEqual({ uptime24hPct: u.pct24h, uptime30dPct: u.pct30d, outageCount30d: u.outageCount30d, longestOutage30dMs: u.longestOutageMs30d, ongoingOutage: u.ongoingOutage })
+        }
+      }
+    }
+  })
+
+  it('a plain percentage stores no parts (nothing to show them from)', () => {
+    const b = computeScoreBreakdown(80, 10, 'Nutshell/0.21.0', 2, AUDITS[3]!, LATEST, null, NOW)
+    expect(b.uptimeParts).toBeUndefined()
+    expect(b.uptimeInputs).toBeUndefined()
+  })
+
+  it('round-trips through JSON; parts that do not add up or have no inputs are dropped, the rest stays readable', () => {
+    const good = computeScoreBreakdown(INPUTS[1]!, 10, 'Nutshell/0.21.0', 2, AUDITS[3]!, LATEST, null, NOW)
+    expect(readStoredBreakdown(JSON.parse(JSON.stringify(good)))).toEqual(good)
+    const plain = { uptime: good.uptime, audit: good.audit, nuts: good.nuts, version: good.version, contact: good.contact, newMintCap: good.newMintCap, sum: good.sum }
+    const wrongSum = { ...good, uptimeParts: { ...good.uptimeParts!, last24h: { points: 1, max: 20 } } }
+    const noInputs = { ...good, uptimeInputs: undefined }
+    const badInputs = { ...good, uptimeInputs: { ...good.uptimeInputs!, uptime30dPct: 140 } }
+    for (const partial of [wrongSum, noInputs, badInputs]) {
+      expect(readStoredBreakdown(JSON.parse(JSON.stringify(partial)))).toEqual(plain)
+    }
+  })
+})

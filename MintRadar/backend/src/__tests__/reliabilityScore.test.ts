@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { computeServerReliabilityScore } from '../prober.js'
-import { TRACKED_NUT_COUNT, TRACKED_NUT_KEYS, isEligibleForRecommendation, MIN_RECOMMENDATION_AGE_DAYS, versionComponent, type AuditInput } from '../shared/reliabilityScore.js'
+import {
+  TRACKED_NUT_COUNT, TRACKED_NUT_KEYS, isEligibleForRecommendation, MIN_RECOMMENDATION_AGE_DAYS, versionComponent,
+  uptimeComponent, uptimeParts, longestOutagePoints, outageCountPoints, hasSteadyUptime,
+  UPTIME_24H_MAX, UPTIME_30D_MAX, UPTIME_30D_FLOOR_PCT, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX, MIN_RECOMMENDATION_UPTIME_30D_PCT,
+  type AuditInput, type UptimeInput,
+} from '../shared/reliabilityScore.js'
 
 // Audit inputs: cashu.info attributed failures over the 7-day window (mints.audit_cz_*).
 const NO_AUDIT: AuditInput = { blamed: null, total: null, fetchedAt: null }
@@ -236,5 +241,75 @@ describe('version component (15 points, one rule: shared/versionRule.ts)', () =>
   it('a recognized family with no latest at all scores neutrally (4)', () => {
     expect(versionComponent('Nutshell/0.21.0')).toBe(4)
     expect(versionComponent('Nutshell/0.21.0', { cdk: { major: 0, minor: 18 } })).toBe(4)
+  })
+})
+
+// Methodology 7: the 40 uptime points are four parts (24 h, 30 days, longest outage, number of outages).
+describe('uptime component with 30-day inputs', () => {
+  const H = 3_600_000
+  const clean: UptimeInput = { pct24h: 100, pct30d: 100, outageCount30d: 0, longestOutageMs30d: 0, ongoingOutage: false }
+
+  it('the maxima of the four parts add up to 40', () => {
+    expect(UPTIME_24H_MAX + UPTIME_30D_MAX + LONGEST_OUTAGE_MAX + OUTAGE_COUNT_MAX).toBe(40)
+    expect(uptimeParts(clean)).toEqual({ last24h: 20, last30d: 10, longestOutage: 6, outageCount: 4 })
+    expect(uptimeComponent(clean)).toBe(40)
+  })
+
+  it('24-hour part: 20 points times the share of successful probes', () => {
+    for (const [pct, pts] of [[100, 20], [97, 19], [50, 10], [0, 0]] as const) {
+      expect(uptimeParts({ ...clean, pct24h: pct }).last24h).toBe(pts)
+    }
+  })
+
+  it('30-day part: one point per whole percent above 90, capped at 10', () => {
+    for (const [pct, pts] of [[100, 10], [99, 9], [95, 5], [91, 1], [90, 0], [77, 0], [0, 0]] as const) {
+      expect(uptimeParts({ ...clean, pct30d: pct }).last30d).toBe(pts)
+    }
+    expect(UPTIME_30D_FLOOR_PCT).toBe(90)
+  })
+
+  it('longest outage: under 1 h 6, under 6 h 4, under 24 h 2, a day or more 0', () => {
+    for (const [ms, pts] of [[0, 6], [1 * H - 1, 6], [1 * H, 4], [6 * H - 1, 4], [6 * H, 2], [24 * H - 1, 2], [24 * H, 0], [163 * H, 0]] as const) {
+      expect(longestOutagePoints(ms)).toBe(pts)
+    }
+  })
+
+  it('number of outages: 0-2 4, 3-5 3, 6-10 2, 11-20 1, more 0; 0 while an outage is ongoing', () => {
+    for (const [n, pts] of [[0, 4], [2, 4], [3, 3], [5, 3], [6, 2], [10, 2], [11, 1], [20, 1], [21, 0], [35, 0]] as const) {
+      expect(outageCountPoints(n, false)).toBe(pts)
+    }
+    expect(outageCountPoints(1, true)).toBe(0)
+  })
+
+  it('a week-long outage that ended 11 days ago no longer scores 40 (the case that started methodology 7)', () => {
+    const lnpay: UptimeInput = { pct24h: 100, pct30d: 77, outageCount30d: 8, longestOutageMs30d: 162.5 * H, ongoingOutage: false }
+    expect(uptimeParts(lnpay)).toEqual({ last24h: 20, last30d: 0, longestOutage: 0, outageCount: 2 })
+    expect(computeServerReliabilityScore(lnpay, 14, 'Nutshell/0.20', 3, CLEAN, LATEST)).toBe(82)
+    // many short outages: the month is fine, the count is not
+    const flaky: UptimeInput = { pct24h: 100, pct30d: 97, outageCount30d: 35, longestOutageMs30d: 2.4 * H, ongoingOutage: false }
+    expect(uptimeParts(flaky)).toEqual({ last24h: 20, last30d: 7, longestOutage: 4, outageCount: 0 })
+  })
+
+  it('a plain number (only the 24-hour percentage known) stands in for all 40 points', () => {
+    for (let p = 0; p <= 100; p++) expect(uptimeComponent(p)).toBe(Math.round(p * 0.40))
+    expect(computeServerReliabilityScore(100, 14, 'Nutshell/0.20', 3, CLEAN, LATEST))
+      .toBe(computeServerReliabilityScore(clean, 14, 'Nutshell/0.20', 3, CLEAN, LATEST))
+  })
+
+  it('a mint offline for more than a day scores 0 uptime points', () => {
+    expect(uptimeComponent({ pct24h: 0, pct30d: 60, outageCount30d: 1, longestOutageMs30d: 300 * H, ongoingOutage: true })).toBe(0)
+  })
+})
+
+describe('hasSteadyUptime (recommendation gate, 30-day uptime)', () => {
+  it('needs at least 95 percent; unknown is not eligible', () => {
+    expect(MIN_RECOMMENDATION_UPTIME_30D_PCT).toBe(95)
+    expect(hasSteadyUptime(100)).toBe(true)
+    expect(hasSteadyUptime(95)).toBe(true)
+    expect(hasSteadyUptime(94)).toBe(false)
+    expect(hasSteadyUptime(0)).toBe(false)
+    expect(hasSteadyUptime(null)).toBe(false)
+    expect(hasSteadyUptime(undefined)).toBe(false)
+    expect(hasSteadyUptime(Number.NaN)).toBe(false)
   })
 })

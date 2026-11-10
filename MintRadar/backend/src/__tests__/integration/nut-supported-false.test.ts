@@ -30,7 +30,7 @@ function row(url: string, nuts: Record<string, unknown> | null) {
     audit_cz_total: 104, audit_cz_blamed: 2, audit_cz_fetched_at: new Date(ago(0.1)), discovered_at: ago(200),
     last_reliability_score: 90, last_error: null, server_location: null, ip_address: null, net_asn: null, net_org: null,
     net_country: null, has_onion: false, review_count: 0, review_avg_rating: null, review_rated_count: 0,
-    review_operator_count: 0, nostr_announce_pubkey: null, total: 288, online_count: 288, total_7d: 2016, online_count_7d: 2016,
+    review_operator_count: 0, nostr_announce_pubkey: null, total: 288, online_count: 288, total_7d: 2016, online_count_7d: 2016, total_30d: 8640, online_count_30d: 8640,
     latest_online: true, latest_latency_ms: 120, latest_checked_at: ago(0.001), last_online_at: ago(0.001),
   }
 }
@@ -83,7 +83,7 @@ describe('wallet API', () => {
 
 describe('/api/stats NUT coverage', () => {
   it('/api/stats nutAdoption: count and percent skip supported:false', async () => {
-    const rows = ROWS.map(r => ({ url: r.url, name: r.name, last_reliability_score: 80, nuts_limits: r.nuts_limits, discovered_at: ago(365), online: true, latency_ms: 100 }))
+    const rows = ROWS.map(r => ({ url: r.url, name: r.name, last_reliability_score: 80, nuts_limits: r.nuts_limits, discovered_at: ago(365), uptime_30d_pct: 100, online: true, latency_ms: 100 }))
     query.mockReset()
     query.mockResolvedValueOnce({ rows }).mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
     const r = await request(app).get('/api/stats')

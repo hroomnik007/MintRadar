@@ -59,6 +59,9 @@ function row(url: string, o: Record<string, unknown> = {}) {
     online_count: 288,
     total_7d: 2016,
     online_count_7d: 2016,
+    // 30 days of probes, all successful: clears the 95 % recommendation gate by default
+    total_30d: 8640,
+    online_count_30d: 8640,
     latest_online: true,
     latest_latency_ms: 120,
     latest_checked_at: ago(0.001),
@@ -213,6 +216,7 @@ describe('contract', () => {
         "tosUrl",
         "units",
         "uptimePct24h",
+        "uptimePct30d",
         "uptimePct7d",
         "url",
         "version",
@@ -791,6 +795,31 @@ describe('list filters nuts and eligible (replace /mints/recommend)', () => {
     // a mint whose nuts are unknown never matches; without the parameter it is listed
     expect(urls((await list()).body)).toContain('https://nonuts.example.com')
     expect(urls((await list('?nuts=4')).body)).not.toContain('https://nonuts.example.com')
+  })
+
+  it('eligibleForRecommendation needs 95 % uptime in 30 days: the stored figure wins, the live count is the fallback', async () => {
+    const breakdown = (uptime30dPct: number) => ({
+      uptime: { points: 34, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 15, max: 15 }, version: { points: 15, max: 15 }, contact: { points: 5, max: 5 },
+      uptimeParts: { last24h: { points: 20, max: 20 }, last30d: { points: 4, max: 10 }, longestOutage: { points: 6, max: 6 }, outageCount: { points: 4, max: 4 } },
+      uptimeInputs: { uptime24hPct: 100, uptime30dPct, outageCount30d: 0, longestOutage30dMs: 0, ongoingOutage: false },
+      newMintCap: { points: 0, cap: 75 }, sum: 94,
+    })
+    query.mockResolvedValue({ rows: [
+      row('https://steady.example.com', { last_reliability_score: 94 }),
+      row('https://live-under.example.com', { last_reliability_score: 94, online_count_30d: 8000 }), // 93 %
+      row('https://stored-under.example.com', { last_reliability_score: 94, score_breakdown: breakdown(94) }), // live count says 100
+      row('https://stored-ok.example.com', { last_reliability_score: 94, score_breakdown: breakdown(95), online_count_30d: 8000 }),
+      row('https://no-history.example.com', { last_reliability_score: 94, total_30d: 0, online_count_30d: 0 }),
+    ] })
+    const mints = (await list('?includeUnscored=true')).body.mints as Array<{ url: string; eligibleForRecommendation: boolean; uptime30dPct: number | null }>
+    const by = Object.fromEntries(mints.map(m => [m.url, [m.eligibleForRecommendation, m.uptime30dPct]]))
+    expect(by).toEqual({
+      'https://steady.example.com': [true, 100],
+      'https://live-under.example.com': [false, 93],
+      'https://stored-under.example.com': [false, 94],
+      'https://stored-ok.example.com': [true, 95],
+      'https://no-history.example.com': [false, null],
+    })
   })
 
   it('eligible=true keeps what /recommend would consider; eligible=false keeps only the others; absent = no filter', async () => {

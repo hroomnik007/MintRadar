@@ -485,7 +485,7 @@ components:
         reviews: { $ref: '#/components/schemas/Reviews' }
         eligibleForRecommendation:
           type: boolean
-          description: True when the mint is online, has a score, is not a test mint, was first seen at least 14 days ago and its newest probe is at most 3 hours old.
+          description: True when the mint is online, has a score, is not a test mint, was first seen at least 14 days ago, its newest probe is at most 3 hours old and its uptime in the last 30 days (uptime30dPct) is at least 95 %.
         pubkey:
           type: [string, 'null']
           description: Only with `include=facts` (always on the single-mint endpoint). The mint's public NUT-06 key as MintRadar last stored it (66 hex characters); null when none is stored. Public data the mint publishes itself.
@@ -772,6 +772,27 @@ components:
       required: [uptime, audit, nuts, version, contact, newMintCap, sum]
       properties:
         uptime: { $ref: '#/components/schemas/ScorePart' }
+        uptimeParts:
+          type: object
+          description: >-
+            Since methodology 7 (absent in a breakdown stored before it). The four parts of `uptime`; their points add
+            up to `uptime.points`.
+          required: [last24h, last30d, longestOutage, outageCount]
+          properties:
+            last24h: { allOf: [{ $ref: '#/components/schemas/ScorePart' }], description: 'Uptime of the last 24 hours times 0.20, rounded. Max 20.' }
+            last30d: { allOf: [{ $ref: '#/components/schemas/ScorePart' }], description: 'One point for each whole percent of 30-day uptime above 90 %. Max 10.' }
+            longestOutage: { allOf: [{ $ref: '#/components/schemas/ScorePart' }], description: 'Longest outage in 30 days: under 1 hour 6, under 6 hours 4, under 24 hours 2, longer 0.' }
+            outageCount: { allOf: [{ $ref: '#/components/schemas/ScorePart' }], description: 'Outages in 30 days: up to 2 4, up to 5 3, up to 10 2, up to 20 1, more 0; 0 while an outage is ongoing.' }
+        uptimeInputs:
+          type: object
+          description: Present together with `uptimeParts`. The figures those parts used, as stored at that probe.
+          required: [uptime24hPct, uptime30dPct, outageCount30d, longestOutage30dMs, ongoingOutage]
+          properties:
+            uptime24hPct: { type: integer, minimum: 0, maximum: 100 }
+            uptime30dPct: { type: integer, minimum: 0, maximum: 100, description: Over the stored history of at most 30 days. }
+            outageCount30d: { type: integer, minimum: 0, description: Outages of two or more failed probes in a row. }
+            longestOutage30dMs: { type: integer, minimum: 0, description: 'Milliseconds; an ongoing outage is measured up to the probe.' }
+            ongoingOutage: { type: boolean }
         audit: { $ref: '#/components/schemas/ScorePart' }
         nuts: { $ref: '#/components/schemas/ScorePart' }
         version: { $ref: '#/components/schemas/ScorePart' }
@@ -789,7 +810,7 @@ components:
       required: [points, max]
       properties:
         points: { type: number, minimum: 0 }
-        max: { type: integer, description: 'uptime 40, audit 25, nuts 15, version 15, contact 5.' }
+        max: { type: integer, description: 'uptime 40 (its parts 20, 10, 6, 4), audit 25, nuts 15, version 15, contact 5.' }
     Audit:
       type: object
       description: The 7-day swap window published by cashu.info. Fewer than 10 swaps, or data older than 168 hours, scores neutral in the Reliability Score.

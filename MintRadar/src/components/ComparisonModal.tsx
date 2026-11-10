@@ -13,7 +13,7 @@ import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
-import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT, mintStatusLabel } from '@/utils/mintFormatting'
+import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT, mintStatusLabel, uptime30dColor } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -27,7 +27,7 @@ import { auditSuccessText, storedKeysetsAsLive } from '@/utils/mintDetailFacts'
 import { visibleCompareRows, type CompareKey, type CompareRowKeys } from '@/utils/compareDiff'
 import { compareMethods, limitsKey, type CompareMethods, type MethodsCell } from '@/utils/compareMethods'
 import { SCORE_PART_ROWS, COMPARE_CONTACT_LABEL, COMPARE_NIP87_LABEL, scorePointsText, contactMethodsText, nip87RowText } from '@/utils/compareScoreRows'
-import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
+import { COMPARE_UPTIME_LABEL, COMPARE_UPTIME_30D_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
 
 function reliabilityScoreInfo(score: number) {
   if (score >= 70) return { label: 'High Reliability', color: 'var(--accent)', bg: 'var(--green-soft)', border: 'var(--green-soft-strong)' }
@@ -344,6 +344,14 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       },
     },
     {
+      id: 'uptime-30d', label: COMPARE_UPTIME_30D_LABEL,
+      keys: mints.map(m => (typeof m.uptimePct30d === 'number' ? String(m.uptimePct30d) : '—')),
+      cell: i => {
+        const pct = mints[i]!.uptimePct30d ?? null
+        return <span style={{ color: uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{pct !== null ? `${pct}%` : '—'}</span>
+      },
+    },
+    {
       id: 'latency', label: <>{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></>,
       keys: mints.map((m, i) => (allData[i]!.isOnline && m.latencyMs != null ? String(m.latencyMs) : '—')),
       cell: i => (
@@ -644,6 +652,19 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             return (
               <div key={mint.url} className="cmp-val" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                 {uptimePct !== null ? `${uptimePct}%` : '—'}
+              </div>
+            )
+          })}
+          </>)}
+
+          {showRow('uptime-30d') && (<>
+          {/* ── Uptime (30 days, the figure stored with the score) ── */}
+          <div className="cmp-lbl">{COMPARE_UPTIME_30D_LABEL}</div>
+          {mints.map(mint => {
+            const pct = mint.uptimePct30d ?? null
+            return (
+              <div key={mint.url} className="cmp-val" style={{ color: uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+                {pct !== null ? `${pct}%` : '—'}
               </div>
             )
           })}

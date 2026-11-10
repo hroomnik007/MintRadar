@@ -2,6 +2,9 @@
 > Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
 ## Compare feature — shared picker + mobile layout
 
+> **Methodology 7 (2026-11-10):** the 30-day uptime is shown on the card (chip only below 95 %), in the Mint Detail header, under the breakdown's Uptime row, in Compare (row `uptime-30d`) and in the History tab's Outages panel; the Stats "Most Reliable" lists and the wizard require 95 % uptime in 30 days. Details in `scoring-and-probing.md` ("Where the 30-day figure is shown", "Recommendation gate: 95 % uptime in 30 days").
+
+
 - **`MintComparePicker`** (`src/components/MintComparePicker.tsx` + its own `.css`) is the
   shared "Compare with..." mint-selection UI, opened from both Dashboard's per-card ⇄ Compare
   button and MintDetail's header Compare button, ahead of `ComparisonModal`. **History:** it

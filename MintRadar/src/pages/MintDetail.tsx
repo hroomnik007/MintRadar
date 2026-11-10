@@ -38,7 +38,7 @@ import { supportedNutKeys, offeredNutKeys } from '@/utils/nutSupport'
 import { NutDescription, NutSpecLink } from '@/components/NutSpec'
 import { nutOfferBreakdown } from '@/utils/nutFilters'
 import { formatDate } from '@/utils/formatDate'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel, uptime30dColor } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
@@ -63,7 +63,7 @@ import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocu
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
-import { auditSuccessText, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, uptimePartsDetail, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -826,8 +826,13 @@ function MintDetailContent({ url }: { url: string }) {
   const rowNScore = breakdownRowScore(storedBreakdown, 'nuts', breakdownNScore)
   const rowVScore = breakdownRowScore(storedBreakdown, 'version', breakdownVScore)
   const rowCScore = breakdownRowScore(storedBreakdown, 'contact', breakdownCScore)
+  // Methodology 7: the stored record carries the four uptime parts and the 30-day figures they used. The row then
+  // names both windows, and the line under it lists each part with its points (they add up to the row's points).
+  const storedUptimeInputs = storedBreakdown?.uptimeParts ? storedBreakdown.uptimeInputs : undefined
+  const uptimeRowDisplay = storedUptimeInputs ? `${uptimePct}% · 30d ${storedUptimeInputs.uptime30dPct}%` : `${uptimePct}%`
+  const uptimeDetail = uptimePartsDetail(storedBreakdown, formatDuration)
   const reliabilityBreakdownRows = [
-    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : `${uptimePct}%`, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
+    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : uptimeRowDisplay, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), ...(uptimeDetail ? { detail: uptimeDetail } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
     { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: rowAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: NUT_ROW_LABEL, display: `${offeredNuts.length} / ${TRACKED_NUTS.length} NUTs${disabledNuts.length > 0 ? ` · ${disabledNuts.length} disabled` : ''}`, source: infoSource, score: rowNScore, max: NUT_POINTS, color: storedBreakdown ? breakdownPointsColor(rowNScore, NUT_POINTS) : offeredNuts.length >= 12 ? 'var(--accent)' : offeredNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
     { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: rowVScore, max: VERSION_POINTS, color: breakdownPointsColor(rowVScore, VERSION_POINTS), tooltip: versionRowText() },
@@ -1248,6 +1253,11 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-label">Uptime 24h</div>
             <div className="md-sc-value" style={{color: uptimeColor(headerUptimePct)}}>{headerUptimePct !== null ? `${headerUptimePct}%` : '—'}</div>
             <div className="md-sc-sub">{headerTotalChecks === 1 ? `${headerOnlineChecks} check` : `${headerOnlineChecks} / ${headerTotalChecks} checks`}</div>
+            {typeof knownMint?.uptimePct30d === 'number' && (
+              <div className="md-sc-sub" data-testid="md-uptime-30d">
+                30 days <span style={{ color: uptime30dColor(knownMint.uptimePct30d), fontFamily: 'var(--font-mono-data)' }}>{knownMint.uptimePct30d}%</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="md-sc">

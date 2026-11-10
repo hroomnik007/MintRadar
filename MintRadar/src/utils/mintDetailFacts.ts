@@ -23,10 +23,24 @@ export interface OutagesResponse {
   recoveredCount?: number
   ongoing?: boolean
   currentOutage?: { startedAt: string; durationMs: number } | null
+  /** Longest outage of the window in ms (an ongoing one up to now), 0 without one; absent from an older API. */
+  longestOutageMs?: number
   outages: OutageEntry[]
 }
 
-export interface OutageTile { key: 'since' | 'down' | 'recover' | 'count'; label: string; value: string }
+/** "45 min", "3h 20m", "6d 18h": a duration of the Outages panel and of the score's longest-outage figure. */
+export function formatDuration(ms: number): string {
+  if (ms < 60000) return `${Math.round(ms / 1000)}s`
+  if (ms < 3600000) return `${Math.round(ms / 60000)} min`
+  const h = Math.floor(ms / 3600000)
+  const m = Math.round((ms % 3600000) / 60000)
+  if (h < 24) return m > 0 ? `${h}h ${m}m` : `${h}h`
+  const d = Math.floor(h / 24)
+  const rh = h % 24
+  return rh > 0 ? `${d}d ${rh}h` : `${d}d`
+}
+
+export interface OutageTile { key: 'since' | 'down' | 'recover' | 'count'; label: string; value: string; /** Small line under the label. */ note?: string }
 
 /**
  * The three tiles. While an outage is ongoing the first one reads "Down now" with its duration (never "Since last outage":
@@ -38,10 +52,12 @@ export function outageTiles(data: OutagesResponse | undefined, countLabel: strin
     ? { key: 'down', label: 'Down now', value: data?.currentOutage ? fmt(data.currentOutage.durationMs) : '—' }
     : { key: 'since', label: 'Since last outage', value: data?.sinceLastOutageMs != null ? fmt(data.sinceLastOutageMs) : '—' }
   const recovered = data?.recoveredCount
+  const longest = typeof data?.longestOutageMs === 'number' && data.longestOutageMs > 0 && (data.outageCount ?? 0) > 1 ? data.longestOutageMs : null
   const recoverLabel = typeof recovered === 'number' && ongoing ? `Time to recover (${recovered} recovered)` : 'Time to recover'
   return [
     first,
-    { key: 'recover', label: recoverLabel, value: data?.avgRecoveryMs != null ? fmt(data.avgRecoveryMs) : '—' },
+    // The mean hides one long outage among short ones (8 outages, mean 21 h, one of them 6.8 days): name the longest.
+    { key: 'recover', label: recoverLabel, value: data?.avgRecoveryMs != null ? fmt(data.avgRecoveryMs) : '—', ...(longest ? { note: `longest ${fmt(longest)}` } : {}) },
     { key: 'count', label: countLabel, value: data?.outageCount != null ? String(data.outageCount) : '—' },
   ]
 }
@@ -54,8 +70,14 @@ export function outageErrorCell(o: Pick<OutageEntry, 'ongoing'>, lastError: stri
 // ── Reliability Score breakdown from the stored record ──────────────────────────────────────────────────────────────
 
 export interface StoredPart { points: number; max: number }
+/** The four parts of the uptime component and the 30-day figures they used (methodology 7; backend scoreBreakdown.ts). */
+export interface StoredUptimeParts { last24h: StoredPart; last30d: StoredPart; longestOutage: StoredPart; outageCount: StoredPart }
+export interface StoredUptimeInputs { uptime24hPct: number; uptime30dPct: number; outageCount30d: number; longestOutage30dMs: number; ongoingOutage: boolean }
 export interface StoredScoreBreakdown {
   uptime: StoredPart
+  /** Absent in a record stored before methodology 7. */
+  uptimeParts?: StoredUptimeParts
+  uptimeInputs?: StoredUptimeInputs
   audit: StoredPart
   nuts: StoredPart
   version: StoredPart
@@ -68,6 +90,24 @@ export type BreakdownPart = 'uptime' | 'audit' | 'nuts' | 'version' | 'contact'
 /** The row's points: the stored part when the stored breakdown exists, else the live computation (null = pending). */
 export function breakdownRowScore(stored: StoredScoreBreakdown | null | undefined, part: BreakdownPart, live: number | null): number | null {
   return stored ? stored[part].points : live
+}
+
+/**
+ * The line under the Uptime row: each of its four parts with the figure it used and its points, from the stored record.
+ * null without the stored parts (a record from before methodology 7, or the live fallback).
+ */
+export function uptimePartsDetail(stored: StoredScoreBreakdown | null | undefined, fmt: (ms: number) => string): string | null {
+  const p = stored?.uptimeParts
+  const i = stored?.uptimeInputs
+  if (!p || !i) return null
+  const pts = (part: StoredPart) => `${part.points}/${part.max}`
+  const outages = `${i.outageCount30d} ${i.outageCount30d === 1 ? 'outage' : 'outages'}${i.ongoingOutage ? ', one ongoing' : ''}`
+  return [
+    `24 h ${i.uptime24hPct}%: ${pts(p.last24h)}`,
+    `30 days ${i.uptime30dPct}%: ${pts(p.last30d)}`,
+    `longest outage ${i.outageCount30d === 0 ? 'none' : fmt(i.longestOutage30dMs)}: ${pts(p.longestOutage)}`,
+    `${outages}: ${pts(p.outageCount)}`,
+  ].join(' · ')
 }
 
 /** Colour by share of the part's maximum (the same bands the version and contact rows used: 80 % / 40 %). */

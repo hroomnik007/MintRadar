@@ -3,7 +3,7 @@ import { Router } from 'express'
 import { type Request, type Response } from 'express'
 import { pool } from '../db.js'
 import { isNutOffered } from '../shared/nutSupport.js'
-import { MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation, hasFreshProbe } from '../shared/reliabilityScore.js'
+import { MINT_ADVERTISED_NUT_KEYS, isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '../shared/reliabilityScore.js'
 import { computeReliabilityMovers, type MintScoreSnapshot } from '../reliabilityMovers.js'
 import { isTestMint } from '../testMints.js'
 import { publicMintName } from '../mintNames.js'
@@ -38,6 +38,9 @@ export async function computeStats(): Promise<object> {
   const [mintsResult, latencyResult] = await Promise.all([
     pool.query(`
       SELECT m.url, m.name, m.last_reliability_score, m.nuts_limits, m.discovered_at,
+        -- 30-day uptime as stored with the score (scoreBreakdown.uptimeInputs); NULL until a probe has stored it.
+        CASE WHEN jsonb_typeof(m.score_breakdown->'uptimeInputs'->'uptime30dPct') = 'number'
+          THEN (m.score_breakdown->'uptimeInputs'->>'uptime30dPct')::numeric END AS uptime_30d_pct,
         latest.online AS online, latest.latency_ms, latest.checked_at
       FROM mints m
       LEFT JOIN LATERAL (
@@ -55,7 +58,7 @@ export async function computeStats(): Promise<object> {
         AND latency_ms < 10000
     `),
   ])
-  type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; online: boolean | null; latency_ms: number | null; checked_at: string | Date | null }
+  type MintRow = { url: string; name: string | null; last_reliability_score: number | null; nuts_limits: Record<string, unknown> | null; discovered_at: string | Date | null; uptime_30d_pct: string | number | null; online: boolean | null; latency_ms: number | null; checked_at: string | Date | null }
   const rows = mintsResult.rows as MintRow[]
   const online = rows.filter(r => r.online === true)
   const offline = rows.filter(r => r.online === false)
@@ -95,6 +98,9 @@ export async function computeStats(): Promise<object> {
     // Additive to NEW_MINT_RELIABILITY_CAP (score-side discount); this is the
     // ranking-eligibility side.
     .filter(r => isEligibleForRecommendation(r.discovered_at))
+    // A month without long downtime (methodology 7): at least MIN_RECOMMENDATION_UPTIME_30D_PCT of the probes of
+    // the last 30 days succeeded. Unknown (no figure stored yet) is not recommended.
+    .filter(r => hasSteadyUptime(r.uptime_30d_pct == null ? null : Number(r.uptime_30d_pct)))
     .sort((a, b) => (b.last_reliability_score as number) - (a.last_reliability_score as number))
     .slice(0, 5)
     .map(r => ({ url: r.url, name: publicMintName(r.name, r.url).name, reliabilityScore: r.last_reliability_score as number }))

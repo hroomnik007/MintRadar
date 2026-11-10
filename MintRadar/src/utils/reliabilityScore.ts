@@ -34,9 +34,69 @@ export {
 // Exported separately so the Reliability Score Breakdown UI shows exactly the numbers
 // that went into the total, rather than re-deriving them.
 
-/** Uptime over the last 24h — 40 points. */
-export function uptimeComponent(uptimePct: number): number {
-  return Math.round(uptimePct * 0.40)
+// ── Uptime component (40 points) ─────────────────────────────────────────────
+// Methodology 7: the 40 points are four parts. The last 24 hours say how the mint runs now; the last 30 days say
+// how it ran: the share of successful probes (total downtime), the longest single outage (how long funds were out
+// of reach) and the number of outages (how often a payment would have failed). An outage is two or more failed
+// probes in a row (backend/src/outages.ts, the same blocks the History tab lists).
+
+export const UPTIME_24H_MAX = 20
+export const UPTIME_30D_MAX = 10
+/** 30-day uptime at or below this scores 0 of UPTIME_30D_MAX; each whole percent above it scores one point. */
+export const UPTIME_30D_FLOOR_PCT = 90
+/** Longest outage in 30 days, [shorter than this many hours, points]; at or above the last limit: 0. */
+export const LONGEST_OUTAGE_BANDS: ReadonlyArray<readonly [number, number]> = [[1, 6], [6, 4], [24, 2]]
+export const LONGEST_OUTAGE_MAX = 6
+/** Outages in 30 days, [at most this many, points]; more than the last limit: 0. */
+export const OUTAGE_COUNT_BANDS: ReadonlyArray<readonly [number, number]> = [[2, 4], [5, 3], [10, 2], [20, 1]]
+export const OUTAGE_COUNT_MAX = 4
+
+/** The inputs of the uptime component; the 30-day figures cover the stored history of at most 30 days. */
+export interface UptimeInput {
+  /** Share of successful probes in the last 24 hours, whole percent. */
+  pct24h: number
+  /** Share of successful probes in the last 30 days, whole percent. */
+  pct30d: number
+  /** Outages (two or more failed probes in a row) in the last 30 days. */
+  outageCount30d: number
+  /** Duration of the longest of them in milliseconds, an ongoing one measured up to now. */
+  longestOutageMs30d: number
+  /** True while the mint is in an outage: the outage-count part then scores 0. */
+  ongoingOutage: boolean
+}
+
+export interface UptimeParts { last24h: number; last30d: number; longestOutage: number; outageCount: number }
+
+export function longestOutagePoints(longestOutageMs: number): number {
+  const hours = longestOutageMs / 3_600_000
+  for (const [limit, points] of LONGEST_OUTAGE_BANDS) if (hours < limit) return points
+  return 0
+}
+
+export function outageCountPoints(outageCount: number, ongoingOutage: boolean): number {
+  if (ongoingOutage) return 0
+  for (const [limit, points] of OUTAGE_COUNT_BANDS) if (outageCount <= limit) return points
+  return 0
+}
+
+export function uptimeParts(u: UptimeInput): UptimeParts {
+  return {
+    last24h: Math.round(u.pct24h * (UPTIME_24H_MAX / 100)),
+    last30d: Math.min(UPTIME_30D_MAX, Math.max(0, Math.round(u.pct30d) - UPTIME_30D_FLOOR_PCT)),
+    longestOutage: longestOutagePoints(u.longestOutageMs30d),
+    outageCount: outageCountPoints(u.outageCount30d, u.ongoingOutage),
+  }
+}
+
+/**
+ * Uptime — 40 points. With the 30-day inputs: the sum of the four parts above. With a plain number (only the
+ * 24-hour percentage is known: a chart bucket of the past, a mint the API has no 30-day figures for yet) that
+ * percentage stands in for all 40 points.
+ */
+export function uptimeComponent(uptime: number | UptimeInput): number {
+  if (typeof uptime === 'number') return Math.round(uptime * 0.40)
+  const p = uptimeParts(uptime)
+  return p.last24h + p.last30d + p.longestOutage + p.outageCount
 }
 
 /** NUT support — 15 points, capped at TRACKED_NUT_COUNT NUTs. */
@@ -139,6 +199,17 @@ export function hasFreshProbe(
   return now - t <= MAX_RECOMMENDATION_PROBE_AGE_HOURS * 3_600_000
 }
 
+/**
+ * A mint is recommended only if at least this share of its probes in the last 30 days succeeded (methodology 7).
+ * The score looks mostly at now; a recommendation is a stronger statement and asks for a month without long downtime.
+ * Unknown (no 30-day figure yet) is not eligible.
+ */
+export const MIN_RECOMMENDATION_UPTIME_30D_PCT = 95
+
+export function hasSteadyUptime(uptimePct30d: number | null | undefined): boolean {
+  return typeof uptimePct30d === 'number' && Number.isFinite(uptimePct30d) && uptimePct30d >= MIN_RECOMMENDATION_UPTIME_30D_PCT
+}
+
 /** The cashu.info audit inputs stored on mints.audit_cz_* (see shared/auditScore.ts). */
 export interface AuditInput {
   blamed: number | null
@@ -147,7 +218,7 @@ export interface AuditInput {
 }
 
 export function computeReliabilityScore(
-  uptimePct: number,
+  uptime: number | UptimeInput,
   nutCount: number | null,
   version: string | null,
   contactCount: number,
@@ -156,7 +227,7 @@ export function computeReliabilityScore(
   discoveredAt?: string | null,
   now: number = Date.now(),
 ): number {
-  const uScore = uptimeComponent(uptimePct)
+  const uScore = uptimeComponent(uptime)
   const nScore = nutComponent(nutCount)
   const vScore = versionComponent(version, latestVersions)
   const cScore = contactComponent(contactCount)

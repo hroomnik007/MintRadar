@@ -592,7 +592,7 @@
       "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 7
@@ -630,7 +630,7 @@
       "OK · <DATE>",
       "OK · <DATE>",
       "OK · <DATE>",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.",
       "The latest 4 swaps MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).",
@@ -677,7 +677,7 @@
       "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 6
@@ -712,7 +712,7 @@
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 8
@@ -752,7 +752,7 @@
       "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 7
@@ -789,7 +789,7 @@
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
       "Open this review on Nostr",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 7
@@ -824,7 +824,7 @@
       "Mint also advertises a .onion URL",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 7
@@ -851,7 +851,7 @@
       "MintRadar",
       "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low."
     ],
@@ -894,8 +894,8 @@
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Reliability Score capped at 75 for the first 30 days.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups."
     ],
@@ -933,8 +933,8 @@
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
       "Reliability Score capped at 75 for the first 30 days.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 7
@@ -963,7 +963,7 @@
       "Email, Twitter and Nostr contacts the mint lists. Three or more give the full 5 points.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.",
       "The mint's server is unreachable — the application behind the proxy may have crashed or restarted"
     ],
@@ -998,7 +998,7 @@
       "Excludes 1 review from a key that is both listed as the mint's Nostr contact and the author of its NIP-87 announcement. The Reviews tab still lists it, marked Operator.",
       "MintRadar",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 6
@@ -1036,7 +1036,7 @@
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
       "Open this review on Nostr",
       "Open this review on Nostr",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 7
@@ -1072,7 +1072,7 @@
       "MintRadar",
       "Not for real funds — for testing and development only",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 7
@@ -1103,7 +1103,7 @@
       "MintRadar",
       "Not for real funds — for testing and development only",
       "Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.",
-      "Percentage of successful checks over the last 24h. 100% uptime = full points.",
+      "Successful checks in the last 24h (20 points) and 30 days (10), plus the longest outage (6) and the number of outages (4) in those 30 days.",
       "Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25."
     ],
     "triggers": 6

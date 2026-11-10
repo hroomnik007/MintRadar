@@ -11,8 +11,31 @@ export const METHODOLOGY_PAGE = {
 
   uptime: {
     windowHours: 24,
-    /** Points = round(uptimePercent x this factor); uptimePercent is rounded to a whole number first. */
-    factor: 0.4,
+    /** Window of the three 30-day parts; a mint tracked for less is measured on the history that exists. */
+    windowDays: 30,
+    /** Maximum of each of the four parts; they add up to weights.uptime. */
+    parts: { last24h: 20, last30d: 10, longestOutage: 6, outageCount: 4 },
+    /** 30-day part: uptime at or below this percentage scores 0, each whole percent above it one point. */
+    floorPct30d: 90,
+    /** An outage is at least this many failed probes in a row. */
+    outageMinProbes: 2,
+    /** Longest outage of the window: shorter than `belowHours` scores `points`; a day or more scores 0. */
+    longestOutageBands: [
+      { belowHours: 1, points: 6 },
+      { belowHours: 6, points: 4 },
+      { belowHours: 24, points: 2 },
+    ],
+    longestOutagePointsBeyond: 0,
+    /** Number of outages in the window: at most `upTo` scores `points`; more than the last limit scores 0. */
+    outageCountBands: [
+      { upTo: 2, points: 4 },
+      { upTo: 5, points: 3 },
+      { upTo: 10, points: 2 },
+      { upTo: 20, points: 1 },
+    ],
+    outageCountPointsBeyond: 0,
+    /** Only the 24-hour percentage known (no 30-day figures): points = round(percent x this factor). */
+    fallbackFactor: 0.4,
   },
 
   audit: {
@@ -60,7 +83,7 @@ export const METHODOLOGY_PAGE = {
   },
 
   newMint: { capPoints: 75, capDays: 30 },
-  recommendation: { minAgeDays: 14, maxProbeAgeHours: 3 },
+  recommendation: { minAgeDays: 14, maxProbeAgeHours: 3, minUptime30dPct: 95 },
 
   cadence: {
     probeMinutes: 5,

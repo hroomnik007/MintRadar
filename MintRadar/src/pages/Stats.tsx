@@ -17,7 +17,7 @@ import { nutOfferBreakdown } from '@/utils/nutFilters'
 import { NutDescription, NutSpecLink } from '@/components/NutSpec'
 import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
-import { isEligibleForRecommendation, hasFreshProbe } from '@/utils/reliabilityScore'
+import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
 import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
 import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -688,6 +688,9 @@ export default function Stats() {
       // Online AND probed recently (hasFreshProbe, methodology 6): "online" alone is only the newest stored probe,
       // however old, so a mint whose probes stopped landing would keep its place here.
       .filter(m => m.online === true && hasFreshProbe(m.lastCheckedAt) && m.uptimePct7d != null && !isNotRecommendedMint(m))
+      // A month without long downtime (methodology 7): a week-long outage that ended 8 days ago is 100 % on this 7-day
+      // window, so both lists of this panel ask for hasSteadyUptime.
+      .filter(m => hasSteadyUptime(m.uptimePct30d))
       .sort((a, b) => (b.uptimePct7d ?? 0) - (a.uptimePct7d ?? 0))
       .slice(0, 5)
   }, [knownMintsData])
@@ -705,6 +708,8 @@ export default function Stats() {
       // to NEW_MINT_RELIABILITY_CAP (which only discounts score, not eligibility).
       // Same gate as the backend's top5ByReliabilityScore (isEligibleForRecommendation).
       .filter(m => isEligibleForRecommendation(m.discoveredAt))
+      // And at least MIN_RECOMMENDATION_UPTIME_30D_PCT uptime in 30 days (methodology 7), as in /api/stats.
+      .filter(m => hasSteadyUptime(m.uptimePct30d))
       .sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
       .slice(0, 5)
   }, [knownMintsData])

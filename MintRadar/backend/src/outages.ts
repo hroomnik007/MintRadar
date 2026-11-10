@@ -26,6 +26,8 @@ export interface OutagesSummary {
   recoveredCount: number
   ongoing: boolean
   currentOutage: { startedAt: string; durationMs: number } | null
+  /** Duration of the longest outage in the window (an ongoing one up to now), 0 without one. Over ALL outages, not only the listed ones. */
+  longestOutageMs: number
   outages: Outage[]
 }
 
@@ -70,6 +72,7 @@ export function summarizeOutages(rows: readonly OutageRow[], now: number = Date.
     recoveredCount: recovered.length,
     ongoing: current !== null,
     currentOutage: current ? { startedAt: current.startedAt, durationMs: current.durationMs } : null,
+    longestOutageMs: outages.reduce((max, o) => Math.max(max, o.durationMs), 0),
     outages: outages.slice(-OUTAGES_LIST_MAX),
   }
 }

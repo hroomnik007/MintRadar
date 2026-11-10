@@ -35,6 +35,8 @@ function mintRow(overrides: Record<string, unknown> = {}) {
     // Old enough to clear the top5ByReliabilityScore MIN_RECOMMENDATION_AGE_DAYS (14)
     // gate by default — tests that specifically exercise that gate override this.
     discovered_at: daysAgo(365),
+    // 30-day uptime stored with the score: clears the MIN_RECOMMENDATION_UPTIME_30D_PCT (95) gate by default
+    uptime_30d_pct: 100,
     online: true,
     latency_ms: 100,
     // Newest probe: just now (the "Most Reliable" list needs a fresh probe, hasFreshProbe)
@@ -179,6 +181,24 @@ describe('GET /api/stats', () => {
     const urls = res.body.top5ByReliabilityScore.map((m: { url: string }) => m.url)
     expect(urls).not.toContain('https://brand-new.example')
     expect(urls).toContain('https://established.example')
+  })
+
+  it('keeps a mint with less than 95 % uptime in 30 days, or with no stored figure, out of top5ByReliabilityScore', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          mintRow({ url: 'https://week-down.example', last_reliability_score: 99, uptime_30d_pct: 77 }),
+          mintRow({ url: 'https://just-under.example', last_reliability_score: 98, uptime_30d_pct: '94' }),
+          mintRow({ url: 'https://unknown.example', last_reliability_score: 97, uptime_30d_pct: null }),
+          mintRow({ url: 'https://at-limit.example', last_reliability_score: 60, uptime_30d_pct: '95' }),
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ avg_latency: 100 }] })
+
+    const res = await request(app).get('/api/stats')
+
+    expect(res.status).toBe(200)
+    expect(res.body.top5ByReliabilityScore.map((m: { url: string }) => m.url)).toEqual(['https://at-limit.example'])
   })
 
   it('includes a mint in top5ByReliabilityScore once discovered at least 14 days ago', async () => {

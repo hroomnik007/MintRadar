@@ -3,6 +3,7 @@
 // for deterministic testing.
 
 import { PROBE_LOCATION } from '@/constants/probeLocation'
+import { MIN_RECOMMENDATION_UPTIME_30D_PCT } from '@/utils/reliabilityScore'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { duplicateNamesOf, mintHostname, resolveStrippedMintName, stripCleanedNameQuotes } from '@/utils/mintSlug'
 import type { MintStatus } from '@/utils/mintStatus'
@@ -409,6 +410,17 @@ export function uptimeColor(pct: number | null | undefined): string {
   if (pct >= 95) return 'var(--fast)'
   if (pct >= 80) return 'var(--med)'
   return 'var(--slow)'
+}
+
+// ── 30-day uptime (card chip, Mint Detail header line, Compare row) ──────────────
+/** True when a known 30-day uptime is below the recommendation limit (MIN_RECOMMENDATION_UPTIME_30D_PCT). */
+export function isUptime30dLow(pct: number | null | undefined): pct is number {
+  return typeof pct === 'number' && pct < MIN_RECOMMENDATION_UPTIME_30D_PCT
+}
+/** Quiet at or above the limit, the warning tone below it (the same token as the 80–95 % band of the 24 h chip). */
+export function uptime30dColor(pct: number | null | undefined): string {
+  if (pct === null || pct === undefined) return 'var(--t3)'
+  return isUptime30dLow(pct) ? 'var(--med)' : 'var(--text)'
 }
 
 // ── Audit reliability colour (Audit summary strip + Reliability Score Breakdown
