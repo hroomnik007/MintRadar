@@ -475,6 +475,8 @@ export function AppShell() {
                       placeholder="nsec1... or 64-char hex private key"
                       value={nsecInput}
                       onChange={e => { setNsecInput(e.target.value); setNsecError('') }}
+                      // Enter in the field is the Connect button (the same disabled rule), like any single-field form.
+                      onKeyDown={e => { if (e.key === 'Enter' && !isLoading && nsecInput.trim()) { e.preventDefault(); void handleModalConnect() } }}
                       autoFocus
                     />
                     {nsecError && <div className="nostr-nsec-error">{nsecError}</div>}
@@ -539,6 +541,7 @@ export function AppShell() {
                         placeholder="bunker://..."
                         value={bunkerInput}
                         onChange={e => { setBunkerInput(e.target.value); setBunkerError('') }}
+                        onKeyDown={e => { if (e.key === 'Enter' && !isLoading && bunkerInput.trim()) { e.preventDefault(); void handleModalConnect() } }}
                       />
                       <button
                         type="button"

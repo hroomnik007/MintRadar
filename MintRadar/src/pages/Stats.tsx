@@ -557,7 +557,8 @@ function NetworkHealthComponentRow({ component: c, compact }: {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 8, flexShrink: 0 }}>
           <span style={{ fontSize: compact ? 11.5 : 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
-          <span style={{ fontSize: compact ? 13 : 13, fontWeight: 600, color }}>{points}/{c.weight}</span>
+          {/* "pts": without a unit "30/30" read as a count of mints next to "49 mints online". */}
+          <span style={{ fontSize: compact ? 13 : 13, fontWeight: 600, color }}>{points}/{c.weight}<span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text3)' }}> pts</span></span>
         </div>
       </div>
       <div style={{ height: compact ? 3 : 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>

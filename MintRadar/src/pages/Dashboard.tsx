@@ -17,6 +17,8 @@ import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
+import { cardsLatencyNote } from '@/constants/probeLocation'
+import { listMobileColumn, type ListMobileColumn } from '@/utils/listColumns'
 import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
@@ -455,6 +457,10 @@ function MintListView({
   }
 
   const { shown, onlineTotal, collapsed } = collapseOnline(sortedFiltered, collapseOnlineTo)
+  // A phone has room for one more column next to Mint, status and Uptime 24h: the one the list is sorted by, so the
+  // order can be read off the rows (it used to hide Latency, Reliability and NUTs, the default sort key included).
+  const mobileKey = listMobileColumn(sortBy)
+  const mobileCol = (col: ListMobileColumn): string => (col === mobileKey ? '' : 'col-hide-mobile')
 
   return (
     <>
@@ -463,10 +469,11 @@ function MintListView({
           <thead>
             <tr>
               <th>Mint</th>
-              <th>Status</th>
+              <th><span className="sr-only-mobile">Status</span></th>
               <th>Uptime 24h</th>
-              <th className="col-hide-mobile">Latency</th>
-              <th className="col-hide-mobile">Reliability</th>
+              <th className={mobileCol('latency')}>Latency</th>
+              <th className={mobileCol('reliability')}>Reliability</th>
+              <th className={mobileCol('rating')}>Rating</th>
               <th className="col-hide-mobile">NUTs</th>
             </tr>
           </thead>
@@ -495,11 +502,18 @@ function MintListView({
                   <td style={{ color: uptimeColor(mint.uptimePct24h), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
                     {mint.uptimePct24h != null ? `${mint.uptimePct24h}%` : '—'}
                   </td>
-                  <td className="col-hide-mobile" style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
+                  <td className={mobileCol('latency')} style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
                     {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
                   </td>
-                  <td className="reliability-col col-hide-mobile" style={{ color: score != null ? reliabilityColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono-data)', fontSize: 12, fontWeight: 600 }}>
+                  <td className={`reliability-col ${mobileCol('reliability')}`} style={{ color: score != null ? reliabilityColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono-data)', fontSize: 12, fontWeight: 600 }}>
                     {score != null ? `${score}` : '—'}
+                  </td>
+                  <td className={`rating-col ${mobileCol('rating')}`} style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                    {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (
+                      <span aria-label={`${mint.reviewAvgRating.toFixed(1)} out of 5, ${mint.reviewCount} ${mint.reviewCount === 1 ? 'review' : 'reviews'}`}>
+                        <span aria-hidden="true" style={{ color: 'var(--yellow)' }}>★</span> {mint.reviewAvgRating.toFixed(1)} <span style={{ color: 'var(--text3)' }}>({mint.reviewCount})</span>
+                      </span>
+                    ) : '—'}
                   </td>
                   <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)' }}>
                     {mint.nutCount != null ? `${mint.nutCount}/${TRACKED_NUT_KEYS.length}` : '—'}
@@ -1338,7 +1352,10 @@ export default function Dashboard() {
             <span className="dash-status-item"><b>{knownLoading ? '—' : onlineCount}</b> online mints</span>
             <span className="dash-status-sep" aria-hidden="true" />
             <span className="dash-status-item"><b>{knownLoading ? '—' : knownTotal}</b> tracked mints</span>
-            <span className="dash-status-item dash-status-end">last checked {formatTimeAgo(lastCheckTime)}</span>
+            <span className="dash-status-item dash-status-end">
+              <span>last checked {formatTimeAgo(lastCheckTime)}</span>
+              <span className="dash-status-note" data-testid="dash-latency-note"><span className="dash-status-note-sep" aria-hidden="true"> · </span>{cardsLatencyNote()}</span>
+            </span>
           </div>
         </div>
       )}

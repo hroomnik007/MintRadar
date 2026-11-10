@@ -123,6 +123,8 @@ NUT-04/05 limits, click-through to `/mint/:url` — as far back as `781617d` (20
 was never a plain-text recommendation; that was a wrong assumption going into this pass, not
 an actual prior state of the code.
 
+> **UI review (2026-11-10), Best Mint wizard:** a result row is a two-line grid at every width (rank, icon, text, "View" on the first line; the chips and "Best match for your filters" under them), because the Tools page has two columns and the wizard is about 575px wide even at 1440px. A chosen priority has a ticked box at its right (`.wizard-opt-mark`); hover uses a lighter border than `.active` so a hovered option does not look chosen. The meta line puts " · " only between two facts. The reason line ("Reliability 98") stays: it lists the facts of the selected priorities by design.
+
 > **Methodology 7 (2026-11-10):** recommendation surfaces also require `hasSteadyUptime(uptimePct30d)` (at least 95 % uptime in 30 days) next to the 14-day gate described here; see `scoring-and-probing.md` ("Recommendation gate: 95 % uptime in 30 days").
 
 The real gap: `candidates` filtered `online`, `!isTestMint()`, and unit support, but was

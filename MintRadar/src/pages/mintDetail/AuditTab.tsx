@@ -9,7 +9,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { AuditCzTiles, AuditCzSwapTables } from '@/components/AuditCzCards'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { AUDIT_CZ_NEUTRAL_TITLE, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
-import { swapStripLabel, swapStripText } from '@/utils/mintDetailFacts'
+import { swapStripLabel, swapStripText, SWAP_STRIP_FAILED_NOTE } from '@/utils/mintDetailFacts'
 import { auditNoDataText, cashuInfoViewText } from '@/utils/tooltipTexts'
 
 // The Audit tiles' ⓘ sits 3 px after the label (the trigger's hit-area padding is compensated by InfoTooltip.css).
@@ -124,6 +124,9 @@ export function AuditTab({
             />
           ))}
         </div>
+        {auditSwapBarItems.some(s => s.state !== 'OK' && !s.neutral) && (
+          <p className="audit-cz-muted audit-swap-bar-note" data-testid="audit-swap-bar-note">{SWAP_STRIP_FAILED_NOTE}</p>
+        )}
       </>)}
 
       <AuditCzSwapTables view={czView} expandedFrom={showAllCzFrom} expandedTo={showAllCzTo} onToggleFrom={() => setShowAllCzFrom(v => !v)} onToggleTo={() => setShowAllCzTo(v => !v)} />

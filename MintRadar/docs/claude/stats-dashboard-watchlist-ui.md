@@ -2,6 +2,14 @@
 > Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
 ## Compare feature — shared picker + mobile layout
 
+> **UI review (2026-11-10), Dashboard, Compare, Stats, Watchlist:**
+> - **List view columns:** Mint · Status · Uptime 24h · Latency · Reliability · **Rating** (new: "★ 4.8 (89)" or "—") · NUTs. On a phone (≤768px) the table shows Mint, a status dot (no header text, `.sr-only-mobile`), Uptime 24h and ONE more column: the one the list is sorted by (`listMobileColumn(sortBy)` in `utils/listColumns.ts`: latency → Latency, rating / most reviewed → Rating, otherwise Reliability). It used to hide the default sort key.
+> - **Compare picker:** listed by the shown name (case-insensitive, numeric), test mints last, the Reliability Score as a plain number at the right of each row (`.md-picker-score`, hidden label for assistive tech). The caller's order no longer matters.
+> - **Compare "Limits" row** is top-aligned (`.cmp-val[data-row="limits"]`), so mints with a different number of limits can be read across.
+> - **Network health index rows** read "30/30 pts": without the unit the points looked like a count of mints next to "49 mints online".
+> - **Watchlist:** a visible page head (`PageHead`, "Watchlist") replaces the screen-reader-only h1. The logged-out gate lists what the list gives, has a "What is Nostr?" disclosure and a link back to the Dashboard. A notify pill carries a small box (empty while off, ticked while on) so an off pill does not look like a label.
+> - **Not changed on purpose:** the phone navbar keeps the Watchlist count on the label's corner and the account chip without a name (both are the documented fit for 360px, see `mobile-and-tooltips.md`); a local watchlist without login is a product decision that was not taken.
+
 > **Methodology 7 (2026-11-10):** the 30-day uptime is shown on the card (chip only below 95 %), in the Mint Detail header, under the breakdown's Uptime row, in Compare (row `uptime-30d`) and in the History tab's Outages panel; the Stats "Most Reliable" lists and the wizard require 95 % uptime in 30 days. Details in `scoring-and-probing.md` ("Where the 30-day figure is shown", "Recommendation gate: 95 % uptime in 30 days").
 
 

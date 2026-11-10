@@ -156,6 +156,10 @@ function ReliabilityBreakdownRow({ label, display, displayLabel, score, max, col
   )
 }
 
+const MINT_TABS = ['overview', 'history', 'nuts', 'audit', 'reviews'] as const
+type MintTab = typeof MINT_TABS[number]
+const MINT_TAB_LABELS: Record<MintTab, string> = { overview: 'Overview', history: 'History', nuts: 'NUTs', audit: 'Audit', reviews: 'Reviews' }
+
 function uptimeColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--text3)'
   if (pct >= 80) return 'var(--accent)'
@@ -438,7 +442,12 @@ function MintDetailContent({ url }: { url: string }) {
   const [reviewSuccess, setReviewSuccess] = useState(false)
   const [clientLatency, setClientLatency] = useState<number | string | null>(null)
   const [testingLatency, setTestingLatency] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'nuts' | 'audit' | 'reviews'>('overview')
+  const [activeTab, setActiveTab] = useState<MintTab>('overview')
+  const selectTab = (tab: MintTab) => {
+    setActiveTab(tab)
+    const newHash = `#${tab}`
+    if (window.location.hash !== newHash) window.history.replaceState(null, '', newHash)
+  }
   // cashu.info view: each of the two swap tables expands on its own.
   const [showAllCzFrom, setShowAllCzFrom] = useState(false)
   const [showAllCzTo, setShowAllCzTo] = useState(false)
@@ -1367,26 +1376,38 @@ function MintDetailContent({ url }: { url: string }) {
         </div>
       </div>
 
-      <div className="md-tabs">
-        {(['overview', 'history', 'nuts', 'audit', 'reviews'] as const).map(tab => (
+      {/* Tabs (WAI-ARIA tabs pattern): one tab stop, Left/Right/Home/End move and activate, the panel is labelled by its tab. */}
+      <div className="md-tabs" role="tablist" aria-label="Mint details">
+        {MINT_TABS.map((tab, i) => (
           <button
             key={tab}
+            type="button"
+            role="tab"
+            id={`md-tab-${tab}`}
+            aria-selected={activeTab === tab}
+            aria-controls="md-tabpanel"
+            tabIndex={activeTab === tab ? 0 : -1}
             className={`md-tab${activeTab === tab ? ' active' : ''}`}
-            onClick={() => {
-              setActiveTab(tab)
-              const newHash = `#${tab}`
-              if (window.location.hash !== newHash) {
-                window.history.replaceState(null, '', newHash)
-              }
+            onClick={() => selectTab(tab)}
+            onKeyDown={e => {
+              const to = e.key === 'ArrowRight' ? (i + 1) % MINT_TABS.length
+                : e.key === 'ArrowLeft' ? (i - 1 + MINT_TABS.length) % MINT_TABS.length
+                : e.key === 'Home' ? 0
+                : e.key === 'End' ? MINT_TABS.length - 1
+                : -1
+              if (to < 0) return
+              e.preventDefault()
+              selectTab(MINT_TABS[to]!)
+              document.getElementById(`md-tab-${MINT_TABS[to]!}`)?.focus()
             }}
           >
-            {{ overview: 'Overview', history: 'History', nuts: 'NUTs', audit: 'Audit', reviews: 'Reviews' }[tab]}
+            {MINT_TAB_LABELS[tab]}
           </button>
         ))}
       </div>
 
       <div className="md-body">
-        <div className="md-left">
+        <div className="md-left" role="tabpanel" id="md-tabpanel" aria-labelledby={`md-tab-${activeTab}`}>
 
           {activeTab === 'overview' && (
             <OverviewTab

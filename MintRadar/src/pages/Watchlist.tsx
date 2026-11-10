@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { PageHead } from '@/components/layout/PageHead'
+import { cardsLatencyNote } from '@/constants/probeLocation'
 import { useQuery } from '@tanstack/react-query'
 import { Zap } from 'lucide-react'
 import { nip19 } from 'nostr-tools'
@@ -302,6 +304,23 @@ export default function Watchlist() {
             <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Login via Nostr
           </button>
           <div className="wl-login-hint">Stored on Nostr. Optional DMs when a watched mint goes down or comes back up, plus key and fee changes.</div>
+          {/* Someone without Nostr used to meet a dead end here: one button and no word on what it is or what it gives. */}
+          <ul className="wl-login-points">
+            <li>Keep a short list of the mints you use, the same on every device.</li>
+            <li>Get an optional private message when one of them goes down or comes back.</li>
+            <li>No email and no password: you sign in with a key that stays in your signer.</li>
+          </ul>
+          <details className="wl-login-what">
+            <summary>What is Nostr?</summary>
+            <p>
+              Nostr is an open protocol in which your identity is a key pair, not an account at a company. A browser
+              extension or a signer app holds the key and approves each request; MintRadar only ever sees your public key.
+              If you have no key yet, a signer such as Alby (browser) or Amber (Android) creates one in a minute.
+            </p>
+          </details>
+          <p className="wl-login-browse">
+            <Link to="/">Browse the mints without logging in</Link>
+          </p>
         </div>
       </div>
     )
@@ -309,7 +328,7 @@ export default function Watchlist() {
 
   return (
     <div className="watchlist-page">
-      <h1 className="sr-only">Your Cashu Mints Watchlist</h1>
+      <PageHead title="Watchlist" srTitle="your Cashu mints" description="The mints you follow, synced over Nostr." />
       <div className="wl-body">
         <div className="wl-main-col">
           {syncStatus === 'error' && (
@@ -345,7 +364,7 @@ export default function Watchlist() {
                   </button>
                 </div>
               )}
-              <p className="wl-summary" data-testid="wl-summary">{watchlistSummaryText(watchlistSummary(orderedMints, knownMintsData ?? []))}</p>
+              <p className="wl-summary"><span data-testid="wl-summary">{watchlistSummaryText(watchlistSummary(orderedMints, knownMintsData ?? []))}</span><span data-testid="wl-latency-note"> · {cardsLatencyNote()}</span></p>
               <p className="wl-notify-explainer">{watchlistNotifyExplainer()}</p>
               <div className="wl-grid">
                 {orderedMints.slice(0, visibleCount).map(url => {

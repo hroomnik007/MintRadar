@@ -10,3 +10,11 @@ export const CLIENT_LATENCY_BUTTON_LABEL = 'Show my latency'
 export function latencyCaption(location: string = PROBE_LOCATION): string {
   return `server · ${location}`
 }
+
+/**
+ * Said ONCE above a list of cards (Dashboard status strip, Watchlist summary line): where every card's latency was
+ * measured. It used to be a "· Nuremberg" suffix on each card, which read as the mint's own location.
+ */
+export function cardsLatencyNote(location: string = PROBE_LOCATION): string {
+  return `latency from ${location}`
+}

@@ -31,7 +31,7 @@ async function setup(page: Page, width: number) {
   await page.route('**/api/mints/nostr-reviews**', r => r.fulfill({ json: reviews }))
   await page.setViewportSize({ width, height: 900 })
   await page.goto(`/mint/${encodeURIComponent(MINT_URL)}`)
-  await page.getByRole('button', { name: 'Reviews', exact: true }).click()
+  await page.getByRole('tab', { name: 'Reviews', exact: true }).click()
   await expect(page.locator('.review-card')).toHaveCount(texts.length)
 }
 

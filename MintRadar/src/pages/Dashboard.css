@@ -1018,7 +1018,13 @@
   justify-content: center;
   width: 10px;
   height: 10px;
+  /* An empty box while off, a filled one with the tick while on: without it an off pill looked like a plain label. */
+  box-sizing: content-box;
+  padding: 1px;
+  border: 1px solid var(--text3);
+  border-radius: 3px;
 }
+.notify-pill.on .notify-pill-icon { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .notify-spinner {
   width: 9px;
   height: 9px;
@@ -2340,6 +2346,9 @@
 
 @media (max-width: 768px) {
   .col-hide-mobile { display: none; }
+  /* The status column is only a dot on a phone: no header text, no spare width (the sorted column needs it). */
+  .sr-only-mobile { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .mint-list-table th:nth-child(2), .mint-list-table td:nth-child(2) { padding-inline: 2px; width: 14px; }
   .status-text-mobile-hide { display: none; }
   .mint-list-td-name { min-width: 0; max-width: none; }
   .mint-list-name { max-width: 120px; }
@@ -2652,3 +2661,17 @@
 }
 .show-all-mints-btn:hover { border-color: var(--accent); }
 .show-all-mints-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Compare, Limits row: mints list a different number of limits, so the cells start at the top (centred cells put the
+   first line of each mint at a different height and nothing could be read across). The label follows. */
+.cmp-val[data-row="limits"] { align-items: flex-start; }
+.cmp-lbl:has(+ .cmp-val[data-row="limits"]) { align-items: flex-start; align-self: stretch; }
+
+/* "latency from <probe location>" after "last checked …". On the narrowest phones it always takes its own line: next to
+   the time it fitted while the list was pending ("last checked —") and wrapped once the time arrived, which moved the
+   page (the strip must keep its box). */
+.dash-status-note { white-space: nowrap; }
+@media (max-width: 380px) {
+  .dash-status-note { display: block; }
+  .dash-status-note-sep { display: none; }
+}

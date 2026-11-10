@@ -175,6 +175,12 @@ export **before** rendering `MintDetailContent`. Fixes the "ghost mint" bug wher
 
 ### Reliability Score breakdown always visible on Overview (2026-09-20)
 
+> **UI review (2026-11-10), card and Mint Detail:**
+> - **Card latency:** no "· Nuremberg" suffix any more (it read as the mint's location and was repeated on every card). The probe location is said once above the cards: `cardsLatencyNote()` (`constants/probeLocation.ts`) in the Dashboard status strip ("last checked … · latency from Nuremberg") and in the Watchlist summary line. `cardLatencyLocationSuffix` and `.latency-source` are gone.
+> - **Latency colour, one rule for card and list** (`latencyColor`, `mintFormatting.ts`): plain text under `LATENCY_SLOW_MS` (2000), warning tone under `LATENCY_VERY_SLOW_MS` (5000), error tone above. No green and no warning at the network's typical half second. The card lifts the error tone like the uptime chip does.
+> - **Mint Detail tabs are a real tab list:** `.md-tabs` has `role="tablist"`, each button `role="tab"` with `aria-selected`, `aria-controls="md-tabpanel"` and a roving `tabIndex`; Left / Right / Home / End move and activate; `.md-left` is the `role="tabpanel"` labelled by the active tab. Tests select a tab with `getByRole('tab', …)` or `.md-tab`, never `getByRole('button', …)`. The Audit tab has a second tab list of its own (From / To), so scope role queries to `.md-tabs`.
+> - **Audit strip note:** when the strip holds a red mark a visible line follows it (`SWAP_STRIP_FAILED_NOTE`, `data-testid="audit-swap-bar-note"`): a red mark is any failed swap, the score counts only attributed ones. cashu.info gives the attribution as a 7-day total, not per swap, so the marks cannot be coloured by cause.
+
 > **Methodology 7 (2026-11-10):** the 30-day uptime is shown on the card (chip only below 95 %), in the Mint Detail header, under the breakdown's Uptime row, in Compare (row `uptime-30d`) and in the History tab's Outages panel; the Stats "Most Reliable" lists and the wizard require 95 % uptime in 30 days. Details in `scoring-and-probing.md` ("Where the 30-day figure is shown", "Recommendation gate: 95 % uptime in 30 days").
 
 

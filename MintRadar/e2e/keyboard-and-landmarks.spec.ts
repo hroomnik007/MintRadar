@@ -22,7 +22,7 @@ interface Stop { desc: string; w: number; h: number; hidden: boolean; inDomOrder
 /** Presses Tab `n` times from the top of the page and describes every stop. Also reports how many presses the first visible tabbable needed. */
 async function tabThrough(page: Page, n: number): Promise<{ stops: Stop[]; firstInteractiveAt: number }> {
   await page.evaluate(() => {
-    const tabbable = Array.from(document.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+    const tabbable = Array.from(document.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), details > summary, [tabindex]:not([tabindex="-1"])'))
     // No transitions: the style read right after the Tab press is the final one, not a frame of a fade.
     const off = document.createElement('style')
     off.textContent = '*,*::before,*::after{transition:none !important;animation:none !important}'

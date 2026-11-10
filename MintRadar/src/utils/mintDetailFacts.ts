@@ -190,6 +190,14 @@ export function swapStripText(count: number): string {
   return `The ${count === 1 ? 'latest swap' : `latest ${count} swaps`} MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).`
 }
 
+/**
+ * The visible line under the strip when it holds a red mark. The strip shows every failed swap, the tiles and the score
+ * count only failures attributed to the mint; without this line "2 failed" and red marks next to "100 % without a
+ * failure caused by this mint" read as a contradiction. cashu.info gives the attribution as a 7-day total, not per
+ * swap, so the marks themselves cannot be split by cause.
+ */
+export const SWAP_STRIP_FAILED_NOTE = 'A red mark is any failed swap, whoever caused it. The score counts only the failures cashu.info attributes to this mint.'
+
 // ── Small offline fallbacks ──────────────────────────────────────────────────────────────────────────────────────────
 
 /** Tor row: the tracked URL is .onion, the live /v1/info lists one, or the stored record says it did. */

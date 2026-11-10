@@ -79,7 +79,7 @@ test('only cz has data: header, four tiles from the stored detail, no checks car
 
   // One table at a time, behind a tablist; "From this mint" first.
   await expect(page.getByTestId('audit-cz-table')).toHaveCount(1)
-  await expect(page.getByRole('tab')).toHaveText(['From this mint (10)', 'To this mint (2)'])
+  await expect(page.locator('.md-audit-collapsible').getByRole('tab')).toHaveText(['From this mint (10)', 'To this mint (2)'])
   await expect(page.getByRole('tab', { name: /^From this mint/ })).toHaveAttribute('aria-selected', 'true')
   await expect(fromCard(page).locator('th')).toHaveText(['To', 'Amount', 'Fee', 'Duration', 'State'])
   await expect(fromCard(page).locator('tbody tr')).toHaveCount(5)
@@ -292,7 +292,7 @@ test.describe('tiles from the stored detail', () => {
 test.describe('the two tables', () => {
   test('no swaps yet: "No swaps collected yet" in both cards, no bar', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([]))
-    await expect(page.getByRole('tab')).toHaveText(['From this mint (0)', 'To this mint (0)'])
+    await expect(page.locator('.md-audit-collapsible').getByRole('tab')).toHaveText(['From this mint (0)', 'To this mint (0)'])
     await expect(fromCard(page).getByText('No swaps collected yet')).toBeVisible()
     await openTo(page)
     await expect(toCard(page).getByText('No swaps collected yet')).toBeVisible()
@@ -302,7 +302,7 @@ test.describe('the two tables', () => {
 
   test('only swaps to the mint: the "from" card says so, the "to" card lists them', async ({ page }) => {
     await gotoAuditTab(page, onlyCz(czSwapList([ok, ok]).map(s => ({ ...s, direction: 'to' as const }))))
-    await expect(page.getByRole('tab')).toHaveText(['From this mint (0)', 'To this mint (2)'])
+    await expect(page.locator('.md-audit-collapsible').getByRole('tab')).toHaveText(['From this mint (0)', 'To this mint (2)'])
     await expect(fromCard(page).getByText('No swaps collected yet')).toBeVisible()
     await openTo(page)
     await expect(toCard(page).locator('tbody tr')).toHaveCount(2)

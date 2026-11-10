@@ -15,7 +15,7 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { CARD_LATENCY_LABEL, cardUptime30dChip } from '@/utils/compareLabels'
-import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLatencyLocationSuffix, cardLightningLabel, uptimeColor, isUptime30dLow, formatTimeAgo, statusDotColor, mintStatusLabel } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLightningLabel, uptimeColor, latencyColor, isUptime30dLow, formatTimeAgo, statusDotColor, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { isTestMint } from '@/constants/testMints'
 import { sortUnits } from '@/utils/sortUnits'
@@ -97,6 +97,11 @@ export function MintCard({
   const upChipColor = (pct: number) => {
     const c = uptimeColor(pct)
     if (isOfflineDegraded) return offlineTone(c, 'var(--text2)')
+    return c === 'var(--slow)' ? 'color-mix(in srgb, var(--red) 85%, var(--text))' : c
+  }
+  // Latency is coloured only when slow (latencyColor, the list view's rule); the error tone is lifted like the chip's.
+  const latencyTone = (ms: number) => {
+    const c = latencyColor(ms)
     return c === 'var(--slow)' ? 'color-mix(in srgb, var(--red) 85%, var(--text))' : c
   }
   const displayName = mintDisplayName(mint, duplicateDisplayNames)
@@ -244,18 +249,12 @@ export function MintCard({
                   : 'Never seen online'}
               </div>
             ) : isOnline && mint.latencyMs !== null ? (
-              <div className="latency-value" style={{ color: 'var(--text)' }}>
+              <div className="latency-value" style={{ color: latencyTone(mint.latencyMs) }}>
                 {mint.latencyMs}<span className="latency-unit">ms</span>
-                {cardLatencyLocationSuffix(mint) && (
-                  <span className="latency-source"> {cardLatencyLocationSuffix(mint)}</span>
-                )}
               </div>
             ) : (
               <div className="latency-value muted">
                 {cardLatencyLabel(mint)}
-                {cardLatencyLocationSuffix(mint) && (
-                  <span className="latency-source"> {cardLatencyLocationSuffix(mint)}</span>
-                )}
               </div>
             )}
           </div>

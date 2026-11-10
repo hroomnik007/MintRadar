@@ -269,8 +269,9 @@ wallet API exposes it: `keysets` / `keysetsCheckedAt` (keysets of the latest suc
 ## Probe location label (2026-10-04)
 
 The production server is a Hetzner Cloud vServer in **Nuremberg, Germany** (datacenter `nbg1-dc3`, region `eu-central`);
-earlier text said Frankfurt, which was wrong. The label shown wherever latency is attributed to the probe (mint card
-`· Nuremberg`, Mint Detail latency tile + tooltip, Stats "from Nuremberg") comes from ONE constant,
+earlier text said Frankfurt, which was wrong. The label shown wherever latency is attributed to the probe (the line above
+the cards "latency from Nuremberg" on the Dashboard and the Watchlist, since 2026-11-10 instead of a suffix on every card;
+Mint Detail latency tile + tooltip, Stats "from Nuremberg") comes from ONE constant,
 `PROBE_LOCATION` in `src/constants/probeLocation.ts`. If the server ever moves, change that value, the root README
 "Real-Time Monitoring" line (`src/__tests__/readmeFacts.test.ts` pins it to the constant) and the SECURITY.md "single … IP" limitation, and update the e2e specs that pin the label
 (`e2e/mint-card-badges-copy.spec.ts`, `e2e/long-text-overflow.spec.ts`) plus `src/__tests__/mintFormatting.test.ts`.

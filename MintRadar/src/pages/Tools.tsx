@@ -14,7 +14,7 @@ import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { PaymentRequestInspector } from '@/components/PaymentRequestInspector'
 import { PageHead } from '@/components/layout/PageHead'
-import { Zap, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
+import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
@@ -818,6 +818,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
           <div className="wizard-opt-label">{label}</div>
           <div className="wizard-opt-sub">{sub}</div>
         </div>
+        {/* The chosen state has a mark of its own, not only a border and a fill (a hovered option has a border too). */}
+        <span className="wizard-opt-mark" aria-hidden="true">{active && <Check size={15} strokeWidth={2.6} />}</span>
       </button>
     )
   }
@@ -971,7 +973,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                     <div className="wizard-rec-name">{mintDisplayName(rec.mint, duplicateDisplayNames)}</div>
                     <div className="wizard-rec-meta">
                       {rec.latencyMs != null && <span>{rec.latencyMs}ms latency</span>}
-                      {rec.mint.uptimePct24h != null && <span> · {rec.mint.uptimePct24h}% uptime</span>}
+                      {/* The separator only between two facts: without a latency sample the line began with "· ". */}
+                      {rec.mint.uptimePct24h != null && <span>{rec.latencyMs != null ? ' · ' : ''}{rec.mint.uptimePct24h}% uptime</span>}
                     </div>
                     <div className="wizard-rec-limits">
                       {(mintRange ?? meltRange) !== null ? (

@@ -229,6 +229,8 @@ The Zustand-persisted auth state (`profile`, `method`, `nip65Relays` in sessionS
 
 ## Login methods (moved from CLAUDE.md, C3-6)
 
+> **Enter submits (2026-11-10):** Enter in the nsec field and in the `bunker://` field does what the Connect button does, under the same conditions (not while loading, not with an empty field). Before, Enter did nothing.
+
 Login modal (`src/components/layout/AppShell.tsx`) supports three methods selectable via radio cards:
 - **NIP-07** — calls `window.nostr.getPublicKey()`; all signing stays in the extension
 - **nsec** — decoded in `src/core/nostr/client.ts:loginWithNsec`, then held in a module-scoped variable (`activeNsecPrivkey`) for the session via `installNsecShim()` so the app can sign on the user's behalf (notifications, watchlist sync, reviews) — mirrors `installBunkerShim()`'s pattern. **Never written to any storage API** (sessionStorage/localStorage/IndexedDB) — in-memory only, so it does not survive a page reload. Zeroed via `.fill(0)` and cleared on logout by `removeNsecShim()` (called from `useAuthStore.logout()`, alongside `removeBunkerShim()`). The login modal explicitly discloses this to the user (nsec security notice box + footer line in `AppShell.tsx`).

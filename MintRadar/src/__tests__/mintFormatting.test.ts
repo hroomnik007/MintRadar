@@ -4,7 +4,7 @@ import {
   reliabilityScoreColor,
   reliabilityScoreInfo,
   reliabilityColor,
-  latencyColor,
+  latencyColor, LATENCY_SLOW_MS, LATENCY_VERY_SLOW_MS,
   formatTimeAgo,
   formatAuditSuccessRatio,
   auditReliabilityColor,
@@ -19,7 +19,6 @@ import {
   firstSeenLabel,
   cardReliabilityLabel,
   cardLatencyLabel,
-  cardLatencyLocationSuffix,
   cardLightningLabel,
   resolveMintDetailUrl,
   statusDotColor,
@@ -376,19 +375,6 @@ describe('cardLatencyLabel', () => {
   })
 })
 
-// ── cardLatencyLocationSuffix ("· Nuremberg" — sampled ms only) ──
-describe('cardLatencyLocationSuffix', () => {
-  it('renders "· Nuremberg" when a sample exists', () => {
-    expect(cardLatencyLocationSuffix({ latencyMs: 270 })).toBe('· Nuremberg')
-    expect(cardLatencyLocationSuffix({ latencyMs: 0 })).toBe('· Nuremberg')
-  })
-
-  it('is null when there is no sample (timeout, n/a, missing field)', () => {
-    expect(cardLatencyLocationSuffix({ latencyMs: null })).toBeNull()
-    expect(cardLatencyLocationSuffix({})).toBeNull()
-  })
-})
-
 // ── cardLightningLabel (optional MintCard Lightning chip) ─────
 describe('cardLightningLabel', () => {
   it('is "LN" when bolt11 is on both mint and melt', () => {
@@ -528,47 +514,21 @@ describe('reliabilityColor', () => {
 })
 
 // ── latencyColor ───────────────────────────────────────────────
-// null / 0 / negative → var(--t3) (muted)
-// < 500 ms  → var(--fast) | < 2000 ms → var(--med) | ≥ 2000 ms → var(--slow)
+// Coloured only when slow: plain under 2 s (the network median is about half a second), warning under 5 s, error above.
 describe('latencyColor', () => {
-  it('returns muted colour for null (mint offline)', () => {
-    expect(latencyColor(null)).toBe('var(--t3)')
+  it('no sample (null, undefined, 0, negative) is muted', () => {
+    for (const v of [null, undefined, 0, -1]) expect(latencyColor(v)).toBe('var(--t3)')
   })
-
-  it('returns muted colour for undefined', () => {
-    expect(latencyColor(undefined)).toBe('var(--t3)')
+  it('under LATENCY_SLOW_MS is plain text, not a tone', () => {
+    for (const v of [1, 48, 499, 500, 1999]) expect(latencyColor(v)).toBe('var(--text)')
+    expect(LATENCY_SLOW_MS).toBe(2000)
   })
-
-  it('returns muted colour for 0', () => {
-    expect(latencyColor(0)).toBe('var(--t3)')
-  })
-
-  it('returns muted colour for a negative value', () => {
-    expect(latencyColor(-1)).toBe('var(--t3)')
-  })
-
-  it('returns fast colour for 1 ms', () => {
-    expect(latencyColor(1)).toBe('var(--fast)')
-  })
-
-  it('returns fast colour for 499 ms (just below 500)', () => {
-    expect(latencyColor(499)).toBe('var(--fast)')
-  })
-
-  it('returns medium colour for 500 ms', () => {
-    expect(latencyColor(500)).toBe('var(--med)')
-  })
-
-  it('returns medium colour for 1999 ms (just below 2000)', () => {
-    expect(latencyColor(1999)).toBe('var(--med)')
-  })
-
-  it('returns slow colour for 2000 ms', () => {
-    expect(latencyColor(2000)).toBe('var(--slow)')
-  })
-
-  it('returns slow colour for very high latency', () => {
+  it('from LATENCY_SLOW_MS the warning tone, from LATENCY_VERY_SLOW_MS the error tone', () => {
+    expect(latencyColor(2000)).toBe('var(--med)')
+    expect(latencyColor(4999)).toBe('var(--med)')
+    expect(latencyColor(5000)).toBe('var(--slow)')
     expect(latencyColor(30000)).toBe('var(--slow)')
+    expect(LATENCY_VERY_SLOW_MS).toBe(5000)
   })
 })
 

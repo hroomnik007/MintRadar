@@ -199,14 +199,14 @@ test.describe('swap tables behind a tablist', () => {
     await expect(tabs.first()).toHaveAttribute('tabindex', '0')
     await expect(tabs.nth(1)).toHaveAttribute('tabindex', '-1')
     // exactly one table, labelled by the selected tab
-    await expect(page.getByRole('tabpanel')).toHaveCount(1)
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel')).toHaveCount(1)
     await expect(page.getByTestId('audit-cz-table')).toHaveCount(1)
-    await expect(page.getByRole('tabpanel')).toHaveAccessibleName('From this mint (7)')
-    await expect(page.getByRole('tabpanel').locator('th').first()).toHaveText('To')
-    await expect(page.getByRole('tabpanel').locator('tbody tr')).toHaveCount(5)
-    await expect(page.getByRole('tabpanel').locator('.audit-swaps-show-all-btn')).toHaveText('Show all (7)')
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel')).toHaveAccessibleName('From this mint (7)')
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel').locator('th').first()).toHaveText('To')
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel').locator('tbody tr')).toHaveCount(5)
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel').locator('.audit-swaps-show-all-btn')).toHaveText('Show all (7)')
     // the failed-row styling and the cashu.info link are kept
-    await expect(page.getByRole('tabpanel').locator('tr.audit-swap-row-fail')).toHaveCount(1)
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel').locator('tr.audit-swap-row-fail')).toHaveCount(1)
     await expect(page.getByRole('link', { name: 'Open on cashu.info →' })).toBeVisible()
   })
 
@@ -218,8 +218,8 @@ test.describe('swap tables behind a tablist', () => {
     await page.keyboard.press('ArrowRight')
     await expect(to).toBeFocused()
     await expect(to).toHaveAttribute('aria-selected', 'true')
-    await expect(page.getByRole('tabpanel').locator('th').first()).toHaveText('From')
-    await expect(page.getByRole('tabpanel').locator('tbody tr')).toHaveCount(2)
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel').locator('th').first()).toHaveText('From')
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel').locator('tbody tr')).toHaveCount(2)
     await page.keyboard.press('ArrowRight') // wraps
     await expect(from).toBeFocused()
     await page.keyboard.press('End')
@@ -244,14 +244,14 @@ test.describe('swap tables behind a tablist', () => {
     })
     const before = await above()
     await page.getByRole('tab', { name: /^To this mint/ }).click()
-    await expect(page.getByRole('tabpanel').locator('tbody tr')).toHaveCount(2)
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel').locator('tbody tr')).toHaveCount(2)
     expect(await above()).toEqual(before)
   })
 
   test('44 px touch targets on phones', async ({ page }) => {
     await resize(page, 390, 844)
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: twoDirections() })))
-    for (const tab of await page.getByRole('tab').all()) {
+    for (const tab of await page.locator('.md-audit-collapsible').getByRole('tab').all()) {
       const box = await tab.boundingBox()
       expect(box!.height).toBeGreaterThanOrEqual(44)
       expect(box!.width).toBeGreaterThanOrEqual(44)
@@ -260,7 +260,7 @@ test.describe('swap tables behind a tablist', () => {
 
   test('a direction with no failure rows shows no failed styling', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: czSwapList([ok, ok]) })))
-    await expect(page.getByRole('tabpanel').locator('tr.audit-swap-row-fail')).toHaveCount(0)
+    await expect(page.locator('.md-audit-collapsible').getByRole('tabpanel').locator('tr.audit-swap-row-fail')).toHaveCount(0)
   })
 })
 
@@ -406,7 +406,7 @@ for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const
       ...czSwapList([ok, melt]).map((s, i) => ({ ...s, id: `t${i}`, direction: 'to' as const, otherMintUrl: `https://a-rather-long-source-host-name-${i}.mint.example`, at: ago((90 + i) * 60_000) })),
     ]
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps })))
-    await expect(page.getByRole('tab')).toHaveCount(2)
+    await expect(page.locator('.md-audit-collapsible').getByRole('tab')).toHaveCount(2)
     await layoutReady(page)
     for (const panel of ['from', 'to'] as const) {
       if (panel === 'to') await page.getByRole('tab', { name: /^To this mint/ }).click()

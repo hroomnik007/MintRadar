@@ -1,8 +1,9 @@
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { IcClose } from '@/components/IcClose'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { displayName as mintDisplayName, mintHostname as getHostname } from '@/utils/mintFormatting'
+import { isTestMint } from '@/constants/testMints'
 import './MintComparePicker.css'
 
 // Shared "Compare with..." mint picker — opened from both Dashboard (per-card
@@ -38,7 +39,15 @@ export function MintComparePicker({
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const q = search.toLowerCase()
-  const filtered = candidates.filter(m =>
+  // Listed by the name the row shows (it used to be the caller's order, by hostname, which read as random next to the
+  // names); test mints go last, they are rarely what someone wants to compare with.
+  const sorted = useMemo(() => [...candidates].sort((a, b) => {
+    const test = Number(isTestMint(a.url)) - Number(isTestMint(b.url))
+    if (test !== 0) return test
+    const byName = mintDisplayName(a, duplicateDisplayNames).localeCompare(mintDisplayName(b, duplicateDisplayNames), 'en', { sensitivity: 'base', numeric: true })
+    return byName !== 0 ? byName : a.url.localeCompare(b.url)
+  }), [candidates, duplicateDisplayNames])
+  const filtered = sorted.filter(m =>
     q === '' || mintDisplayName(m, duplicateDisplayNames).toLowerCase().includes(q) || m.url.toLowerCase().includes(q)
   )
   // Roving tabindex: the one option in the Tab order. Clamped so a narrower search never points past the end.
@@ -114,6 +123,9 @@ export function MintComparePicker({
                       <span className="md-picker-name">{mintDisplayName(m, duplicateDisplayNames)}</span>
                       <span className="md-picker-host">{getHostname(m.url)}</span>
                     </span>
+                    {typeof m.reliabilityScore === 'number' && (
+                      <span className="md-picker-score"><span className="sr-only">Reliability Score </span>{m.reliabilityScore}</span>
+                    )}
                   </button>
                 )
               })}

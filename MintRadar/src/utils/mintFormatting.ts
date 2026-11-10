@@ -2,7 +2,6 @@
 // All functions are side-effect free and accept an optional `now` timestamp
 // for deterministic testing.
 
-import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { MIN_RECOMMENDATION_UPTIME_30D_PCT } from '@/utils/reliabilityScore'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { duplicateNamesOf, mintHostname, resolveStrippedMintName, stripCleanedNameQuotes } from '@/utils/mintSlug'
@@ -234,17 +233,6 @@ export function cardLatencyLabel(mint: {
   return 'n/a'
 }
 
-// The latency value is a measurement from OUR probe server, not a property of
-// the mint itself — this suffix makes that explicit next to a real sample
-// (same "from <probe location>" framing as the Stats page's Median Latency tile).
-// Only meaningful when an actual sample exists: "timeout"/"n/a" carry no
-// measurement to attribute to a location.
-export function cardLatencyLocationSuffix(mint: {
-  latencyMs?: number | null
-}): string | null {
-  return typeof mint.latencyMs === 'number' && mint.latencyMs >= 0 ? `· ${PROBE_LOCATION}` : null
-}
-
 // ── Mint age badge ─────────────────────────────────────────────
 // Thresholds: < FRESH_MINT_MONTHS (1) month → Fresh, < 6 months → Established,
 //             < 12 months → Veteran, ≥ 12 months → OG
@@ -395,12 +383,16 @@ export function reliabilityDonutArc(pct: number): DonutArc {
   }
 }
 
-// ── Latency colour (Dashboard card + list) ─────────────────────
-// null / 0 / negative → muted; < 500 ms → fast; < 2000 ms → medium; ≥ 2000 ms → slow
+// ── Latency colour (Dashboard card + list, Add-a-mint probe result) ─────────────
+// Coloured only when slow: a typical mint answers our probe in about half a second (the network median), so that is
+// plain text, not a warning. null / 0 / negative → muted; under LATENCY_SLOW_MS → plain; under LATENCY_VERY_SLOW_MS →
+// the warning tone; at or above it → the error tone. One rule for the card and the list view.
+export const LATENCY_SLOW_MS = 2000
+export const LATENCY_VERY_SLOW_MS = 5000
 export function latencyColor(ms: number | null | undefined): string {
   if (!ms || ms <= 0) return 'var(--t3)'
-  if (ms < 500)  return 'var(--fast)'
-  if (ms < 2000) return 'var(--med)'
+  if (ms < LATENCY_SLOW_MS) return 'var(--text)'
+  if (ms < LATENCY_VERY_SLOW_MS) return 'var(--med)'
   return 'var(--slow)'
 }
 

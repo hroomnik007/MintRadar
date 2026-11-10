@@ -137,7 +137,7 @@ test('Home: while the list is pending the header strip shows dashes (never "0 on
   await page.goto('/')
   await expect.poll(() => arrived, { message: 'the request is waiting at the mock' }).toBe(true)
   const strip = page.locator('.dash-status')
-  await expect(strip).toHaveText(/^\s*—\s*online mints\s*—\s*tracked mints\s*last checked —\s*$/)
+  await expect(strip).toHaveText(/^\s*—\s*online mints\s*—\s*tracked mints\s*last checked —\s*·\s*latency from Nuremberg\s*$/)
   await expect(page.locator('body')).not.toContainText(/\b0 (online|tracked) mints/i)
   letThrough()
   await expect(page.locator('.mint-grid .mint-card').first()).toBeVisible({ timeout: 15_000 })

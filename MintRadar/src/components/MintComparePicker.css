@@ -115,3 +115,6 @@
 @media (max-width: 480px) {
   .md-picker-footer { gap: 12px; }
 }
+/* The score at the right edge of a row: the plain number (a score is points, never a percent). */
+.md-picker-text { flex: 1 1 auto; }
+.md-picker-score { flex-shrink: 0; margin-left: auto; font-family: var(--font-mono-data); font-size: 14px; font-weight: 600; color: var(--text2); }
