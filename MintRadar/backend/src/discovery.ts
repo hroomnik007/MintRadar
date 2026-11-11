@@ -4,7 +4,7 @@ import type { Filter } from 'nostr-tools'
 import { RelayWebSocket } from './wsPolyfill.js'
 import { pool } from './db.js'
 import { setAppState, DISCOVERY_LAST_SUCCESS_KEY } from './appState.js'
-import { probeMintToDb, isValidCashuMint } from './prober.js'
+import { probeMintToDb, isFunctioningCashuMint } from './prober.js'
 import { checkMintAdmission } from './mintAdmission.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
 
@@ -261,14 +261,15 @@ export async function discoverMintsFromNostr(): Promise<number> {
   }
 
   let added38172 = 0
-  // NIP-87 events are untrusted input: a new URL must pass the new-mint caps (mintAdmission.ts) before the probe.
+  // NIP-87 events are untrusted input: a new URL must pass the new-mint caps (mintAdmission.ts, the 'nostr' budget, so
+  // published events cannot use up the slots for mints people add by hand) and then work as a mint (/v1/info + /v1/keys).
   let refused = 0
   for (const [url, meta] of discovered38172) {
-    if (!(await checkMintAdmission(url)).ok) { refused++; continue }
-    if (!(await isValidCashuMint(url))) continue
+    if (!(await checkMintAdmission(url, 'nostr')).ok) { refused++; continue }
+    if (!(await isFunctioningCashuMint(url))) continue
     const r = await pool.query(
-      `INSERT INTO mints (url, is_known, nostr_announced_at, nostr_announce_id, nostr_announce_pubkey, nostr_announce_d)
-       VALUES ($1, true, to_timestamp($2), $3, $4, $5)
+      `INSERT INTO mints (url, is_known, nostr_announced_at, nostr_announce_id, nostr_announce_pubkey, nostr_announce_d, added_via)
+       VALUES ($1, true, to_timestamp($2), $3, $4, $5, 'nostr')
        ON CONFLICT (url) DO UPDATE SET
          nostr_announced_at = CASE
            WHEN mints.nostr_announced_at IS NULL OR EXCLUDED.nostr_announced_at > mints.nostr_announced_at
@@ -294,10 +295,10 @@ export async function discoverMintsFromNostr(): Promise<number> {
 
   let added38000 = 0
   for (const url of discovered38000) {
-    if (!(await checkMintAdmission(url)).ok) { refused++; continue }
-    if (!(await isValidCashuMint(url))) continue
+    if (!(await checkMintAdmission(url, 'nostr')).ok) { refused++; continue }
+    if (!(await isFunctioningCashuMint(url))) continue
     const r = await pool.query(
-      'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
+      `INSERT INTO mints (url, is_known, added_via) VALUES ($1, true, 'nostr') ON CONFLICT (url) DO NOTHING`,
       [url]
     )
     if ((r.rowCount ?? 0) > 0) added38000++

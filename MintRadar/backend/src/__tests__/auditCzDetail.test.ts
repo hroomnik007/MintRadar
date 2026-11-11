@@ -21,7 +21,7 @@ const { db, queryMock, fetchMock, readMock, targets } = vi.hoisted(() => {
 })
 
 vi.mock('../db.js', () => ({ pool: { query: queryMock } }))
-vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn() }))
+vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn(), isFunctioningCashuMint: vi.fn() }))
 vi.mock('../ssrf.js', () => ({
   safeFetch: fetchMock,
   readJsonLimited: readMock,
