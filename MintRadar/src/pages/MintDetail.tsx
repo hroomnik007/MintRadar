@@ -1,7 +1,7 @@
 import { njumpEventUrl, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { nip87AnnouncementOf } from '@/utils/nip87Announcement'
 import { NIP87_ANNOUNCEMENT_LABEL, NIP87_NOT_SEEN_TEXT, nip87KeyText, nip87StoredSuffix, nip87CheckedLabel } from '@/utils/nip87Texts'
-import { useParams, useNavigate, Navigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-router-dom'
 import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
@@ -2039,6 +2039,7 @@ export default function MintDetail() {
   const params = useParams<{ url: string }>()
   const rawUrl = params['url']
   const navigate = useNavigate()
+  const { hash } = useLocation()
   const { data: knownMintsData, isError: knownError, refetch: refetchKnown } = useKnownMints()
 
   const slug = rawUrl === undefined ? null : safeDecode(rawUrl)
@@ -2062,7 +2063,8 @@ export default function MintDetail() {
 
   const resolution = resolveMintDetailUrl(slug, knownMintsData)
   if (resolution.kind === 'redirect') {
-    return <Navigate to={`/mint/${encodeURIComponent(resolution.url)}`} replace />
+    // The hash goes along (#audit, #history, #review-<id>…), so a short link can open a tab.
+    return <Navigate to={{ pathname: `/mint/${encodeURIComponent(resolution.url)}`, hash }} replace />
   }
   if (resolution.kind === 'not-tracked') {
     return <MintNotTracked slug={resolution.slug} suggestion={resolution.suggestion} />
