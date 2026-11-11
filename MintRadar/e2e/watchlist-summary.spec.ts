@@ -130,10 +130,24 @@ for (const [w, h] of [[1440, 900], [390, 844]] as const) {
     await setup(page, { urls: MIXED_URLS, known: MIXED_KNOWN, size: [w, h] })
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(6)
     await expect(summary(page)).toBeVisible()
-    const boxes = async () => {
+    const measure = async () => {
       const cards = await page.locator('.wl-grid .mint-card').evaluateAll(els => els.map(el => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y + window.scrollY, w: r.width, h: r.height } }))
       const ex = await page.locator('.wl-notify-explainer').evaluate(el => { const r = el.getBoundingClientRect(); return { y: r.y + window.scrollY, h: r.height } })
       return { cards, ex }
+    }
+    // Measure a settled layout: under parallel workers the cards' own requests and the web fonts can still arrive
+    // between the two measurements and change a card. Network idle and fonts loaded, then the same boxes for 300 ms.
+    const boxes = async () => {
+      await page.waitForLoadState('networkidle')
+      await page.evaluate(() => document.fonts.ready.then(() => undefined))
+      let last = await measure()
+      for (let i = 0; i < 20; i++) {
+        await page.waitForTimeout(300)
+        const next = await measure()
+        if (JSON.stringify(next) === JSON.stringify(last)) return next
+        last = next
+      }
+      return last
     }
     const withLine = await boxes()
     await page.addStyleTag({ content: '.wl-summary { display: none !important }' })

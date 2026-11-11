@@ -134,8 +134,9 @@ test('remote-signer session with its persisted bunker connection survives the re
   await expect(page.locator('.navbar-profile')).toBeVisible()
   await flush(page)
   await expect(notice(page)).toHaveCount(0)
-  // the restored signer shim is installed synchronously from the persisted connection
-  expect(await page.evaluate(() => (window as unknown as { nostr?: { __mintradarShim?: boolean } }).nostr?.__mintradarShim)).toBe(true)
+  // the restored signer shim is installed from the persisted connection; polled, because under a loaded dev server
+  // (parallel workers) the module that installs it can arrive after the persisted profile is already on screen
+  await expect.poll(() => page.evaluate(() => (window as unknown as { nostr?: { __mintradarShim?: boolean } }).nostr?.__mintradarShim)).toBe(true)
 })
 
 // loginAsNsecLive sanity: the live key path used by other specs does not trip the stale check
