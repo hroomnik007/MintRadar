@@ -38,9 +38,11 @@ export async function computeStats(): Promise<object> {
   const [mintsResult, latencyResult] = await Promise.all([
     pool.query(`
       SELECT m.url, m.name, m.last_reliability_score, m.nuts_limits, m.discovered_at,
-        -- 30-day uptime as stored with the score (scoreBreakdown.uptimeInputs); NULL until a probe has stored it.
-        CASE WHEN jsonb_typeof(m.score_breakdown->'uptimeInputs'->'uptime30dPct') = 'number'
-          THEN (m.score_breakdown->'uptimeInputs'->>'uptime30dPct')::numeric END AS uptime_30d_pct,
+        -- 30-day uptime UNROUNDED as stored with the score (scoreBreakdown.uptimeInputs.uptime30dExactPct, the figure
+        -- the recommendation gate compares: the whole-percent uptime30dPct would let 94.5 % pass as 95 %). NULL until a
+        -- probe has stored it (the first probe cycle after the deploy), so such a mint is not in the top 5 meanwhile.
+        CASE WHEN jsonb_typeof(m.score_breakdown->'uptimeInputs'->'uptime30dExactPct') = 'number'
+          THEN (m.score_breakdown->'uptimeInputs'->>'uptime30dExactPct')::numeric END AS uptime_30d_pct,
         latest.online AS online, latest.latency_ms, latest.checked_at
       FROM mints m
       LEFT JOIN LATERAL (

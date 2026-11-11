@@ -58,7 +58,7 @@ router.post('/api/mint/submit', (req: Request, res: Response): void => {
         return
       }
       // Before the outbound probe: a URL past the new-mint caps costs no fetch (mintAdmission.ts).
-      const admission = await checkMintAdmission(normalized)
+      const admission = await checkMintAdmission(normalized, 'manual')
       if (!admission.ok) {
         res.status(403).json({ error: admission.error })
         return
@@ -72,7 +72,7 @@ router.post('/api/mint/submit', (req: Request, res: Response): void => {
         return
       }
       const result = await pool.query(
-        'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
+        `INSERT INTO mints (url, is_known, added_via) VALUES ($1, true, 'manual') ON CONFLICT (url) DO NOTHING`,
         [normalized]
       )
       const isNew = (result.rowCount ?? 0) > 0
@@ -164,7 +164,7 @@ router.post('/api/mints/discover', async (req: Request, res: Response): Promise<
         results.push({ url: normalized, success: false, isNew: false, error: 'Invalid url' })
         continue
       }
-      const admission = await checkMintAdmission(normalized)
+      const admission = await checkMintAdmission(normalized, 'manual')
       if (!admission.ok) {
         results.push({ url: normalized, success: false, isNew: false, error: admission.error })
         continue
@@ -185,7 +185,7 @@ router.post('/api/mints/discover', async (req: Request, res: Response): Promise<
         continue
       }
       const result = await pool.query(
-        'INSERT INTO mints (url, is_known) VALUES ($1, true) ON CONFLICT (url) DO NOTHING',
+        `INSERT INTO mints (url, is_known, added_via) VALUES ($1, true, 'manual') ON CONFLICT (url) DO NOTHING`,
         [normalized]
       )
       const isNew = result.rowCount !== null && result.rowCount > 0

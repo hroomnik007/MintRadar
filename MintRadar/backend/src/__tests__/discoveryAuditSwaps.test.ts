@@ -9,7 +9,7 @@ const { connectMock, clientQueryMock, clientReleaseMock } = vi.hoisted(() => ({
 vi.mock('../db.js', () => ({
   pool: { connect: connectMock, query: vi.fn() },
 }))
-vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn() }))
+vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn(), isFunctioningCashuMint: vi.fn() }))
 vi.mock('../ssrf.js', () => ({ safeFetch: vi.fn() }))
 
 import {

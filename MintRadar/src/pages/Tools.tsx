@@ -748,8 +748,9 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       // just because it hasn't accumulated enough history to be penalized yet.
       .filter(m => isEligibleForRecommendation(m.discoveredAt))
       // And a month without long downtime (methodology 7): at least MIN_RECOMMENDATION_UPTIME_30D_PCT of the probes of
-      // the last 30 days succeeded, the same rule as the wallet API's eligibleForRecommendation.
-      .filter(m => hasSteadyUptime(m.uptimePct30d))
+      // the last 30 days succeeded, the same rule as the wallet API's eligibleForRecommendation. The unrounded share:
+      // the whole-percent uptimePct30d would let 94.5 % pass as 95 %.
+      .filter(m => hasSteadyUptime(m.uptimePct30dExact))
       // A mint that doesn't issue this unit can't serve the user at all, so it
       // is dropped before scoring rather than ranked and then explained away.
       .filter(m => (m.units ?? []).includes(selectedUnit))

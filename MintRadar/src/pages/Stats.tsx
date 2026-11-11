@@ -691,7 +691,7 @@ export default function Stats() {
       .filter(m => m.online === true && hasFreshProbe(m.lastCheckedAt) && m.uptimePct7d != null && !isNotRecommendedMint(m))
       // A month without long downtime (methodology 7): a week-long outage that ended 8 days ago is 100 % on this 7-day
       // window, so both lists of this panel ask for hasSteadyUptime.
-      .filter(m => hasSteadyUptime(m.uptimePct30d))
+      .filter(m => hasSteadyUptime(m.uptimePct30dExact)) // unrounded: 94.5 % must not pass as 95 %
       .sort((a, b) => (b.uptimePct7d ?? 0) - (a.uptimePct7d ?? 0))
       .slice(0, 5)
   }, [knownMintsData])
@@ -710,7 +710,7 @@ export default function Stats() {
       // Same gate as the backend's top5ByReliabilityScore (isEligibleForRecommendation).
       .filter(m => isEligibleForRecommendation(m.discoveredAt))
       // And at least MIN_RECOMMENDATION_UPTIME_30D_PCT uptime in 30 days (methodology 7), as in /api/stats.
-      .filter(m => hasSteadyUptime(m.uptimePct30d))
+      .filter(m => hasSteadyUptime(m.uptimePct30dExact)) // unrounded: 94.5 % must not pass as 95 %
       .sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
       .slice(0, 5)
   }, [knownMintsData])

@@ -6,7 +6,10 @@ import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { KnownMint } from '@/hooks/useKnownMints'
-import { MIN_RECOMMENDATION_UPTIME_30D_PCT, hasSteadyUptime } from '@/utils/reliabilityScore'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { MIN_RECOMMENDATION_UPTIME_30D_PCT, hasSteadyUptime, exactPct as feExactPct } from '@/utils/reliabilityScore'
+import { exactPct as beExactPct } from '../../backend/src/shared/reliabilityScore'
 import { isUptime30dLow, uptime30dColor } from '@/utils/mintFormatting'
 import { COMPARE_UPTIME_30D_LABEL, cardUptime30dChip } from '@/utils/compareLabels'
 
@@ -93,5 +96,26 @@ describe('Compare', () => {
     expect(row).toBeTruthy()
     expect(row.querySelector('th')?.textContent).toBe(COMPARE_UPTIME_30D_LABEL)
     expect(Array.from(row.querySelectorAll('td')).map(td => td.textContent)).toEqual(['100%', '77%'])
+  })
+})
+
+describe('the recommendation gate compares the unrounded 30-day share', () => {
+  const src = (rel: string) => readFileSync(resolve(__dirname, rel), 'utf8')
+  it('94.5 % does not pass although it is shown as 95 %', () => {
+    expect(hasSteadyUptime(94.5)).toBe(false)
+    expect(hasSteadyUptime(feExactPct(8204, 8640))).toBe(false)
+    expect(hasSteadyUptime(feExactPct(8208, 8640))).toBe(true)
+  })
+  it('frontend and backend round the share the same way', () => {
+    for (const [part, total] of [[8204, 8640], [189, 200], [10, 12], [0, 3], [7, 7]] as const) {
+      expect(feExactPct(part, total)).toBe(beExactPct(part, total))
+    }
+  })
+  it('Stats and the Best Mint wizard gate on uptimePct30dExact, never on the whole-percent uptimePct30d', () => {
+    for (const page of ['../pages/Stats.tsx', '../pages/Tools.tsx']) {
+      const code = src(page)
+      expect(code, page).toMatch(/hasSteadyUptime\(m\.uptimePct30dExact\)/)
+      expect(code, page).not.toMatch(/hasSteadyUptime\(m\.uptimePct30d\)/)
+    }
   })
 })

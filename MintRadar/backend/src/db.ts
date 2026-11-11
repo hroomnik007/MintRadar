@@ -425,6 +425,9 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_rearmed_mint_melt_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_rearmed_version_outdated_at TIMESTAMPTZ',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS alert_rearmed_nut_loss_at TIMESTAMPTZ',
+    // Where a mint row came from ('manual': submit / discover endpoints, 'nostr': NIP-87 discovery); NULL for rows
+    // inserted before the column, the seed list and audit.8333.space. The per-source daily budgets in mintAdmission.ts count it.
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS added_via TEXT',
     // Per-subscriber daily cap on notification DMs (dmQuota.ts): one row per pubkey, window = 24 h from the
     // first DM, count capped at cap+1 (bounded), summary_sent = the one "paused alerts" DM of the window.
     `CREATE TABLE IF NOT EXISTS notification_dm_quota (

@@ -6,7 +6,7 @@ const { safeFetchMock, queryMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('../db.js', () => ({ pool: { connect: vi.fn(), query: queryMock } }))
-vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn() }))
+vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn(), isFunctioningCashuMint: vi.fn() }))
 vi.mock('../ssrf.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../ssrf.js')>()
   // The test responses are plain objects with json() — the byte-capped reader is pass-through here.

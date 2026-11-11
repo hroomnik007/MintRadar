@@ -22,11 +22,13 @@
   font-size: 13px;
   line-height: 1.4;
 }
-.wg-label code, .wg-check code {
+/* Scoped under .wg-builder: the page's `.about-text code { font-size: 0.9em }` has the same specificity, loads later
+   and made these 11.7px. */
+.wg-builder .wg-label code, .wg-builder .wg-check code {
   margin-left: 4px;
   color: var(--text3);
   font-family: var(--mono-data);
-  font-size: 11.5px;
+  font-size: 12px; /* the 12px floor of every phone text (e2e/mobile-polish.spec.ts) */
 }
 .wg-hint { margin: 0; color: var(--text3); font-size: 12.5px; line-height: 1.4; }
 .wg-error { margin: 0; color: var(--copper); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; }
@@ -198,7 +200,7 @@
 /* Pretty-print option under the curl block: reuses the .wg-check control (44px row, native checkbox, focus ring). */
 .wg-pretty { display: flex; flex-direction: column; gap: 0; min-width: 0; }
 .wg-pretty .wg-hint { padding-left: 30px; }
-.wg-pretty .wg-hint code { color: var(--text2); font-family: var(--mono-data); font-size: 11.5px; }
+.wg-pretty .wg-hint code { color: var(--text2); font-family: var(--mono-data); font-size: 12px; }
 .wg-pretty .wg-check { align-self: flex-start; }
 
 /* Actions */

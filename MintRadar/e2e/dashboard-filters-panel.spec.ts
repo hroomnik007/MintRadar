@@ -615,6 +615,8 @@ test.describe('Filters panel — Reliability slider touch target', () => {
         expect(live).toBeLessThanOrEqual(90)
         await expect(page.locator('.filter-rel strong')).toHaveText(`${live}`)
         expect(await countText()).toBe(`Show ${expected(live)} of ${mints.length} mints`)
+        // "Reliability: any" became "Reliability ≥ N": the slider stays exactly where the finger found it.
+        expect(await slider.boundingBox(), 'the slider does not move when its label changes').toEqual(box)
 
         // Tap on the track, 18px above the centre line, moves the value back
         await page.touchscreen.tap(xAt(30), cy - 18)

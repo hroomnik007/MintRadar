@@ -217,6 +217,7 @@ describe('contract', () => {
         "units",
         "uptimePct24h",
         "uptimePct30d",
+        "uptimePct30dExact",
         "uptimePct7d",
         "url",
         "version",
@@ -797,18 +798,23 @@ describe('list filters nuts and eligible (replace /mints/recommend)', () => {
     expect(urls((await list('?nuts=4')).body)).not.toContain('https://nonuts.example.com')
   })
 
-  it('eligibleForRecommendation needs 95 % uptime in 30 days: the stored figure wins, the live count is the fallback', async () => {
-    const breakdown = (uptime30dPct: number) => ({
+  it('eligibleForRecommendation needs 95 % uptime in 30 days, compared unrounded: the stored figure wins, the live count is the fallback', async () => {
+    const breakdown = (uptime30dPct: number, uptime30dExactPct?: number) => ({
       uptime: { points: 34, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 15, max: 15 }, version: { points: 15, max: 15 }, contact: { points: 5, max: 5 },
       uptimeParts: { last24h: { points: 20, max: 20 }, last30d: { points: 4, max: 10 }, longestOutage: { points: 6, max: 6 }, outageCount: { points: 4, max: 4 } },
-      uptimeInputs: { uptime24hPct: 100, uptime30dPct, outageCount30d: 0, longestOutage30dMs: 0, ongoingOutage: false },
+      uptimeInputs: { uptime24hPct: 100, uptime30dPct, ...(uptime30dExactPct === undefined ? {} : { uptime30dExactPct }), outageCount30d: 0, longestOutage30dMs: 0, ongoingOutage: false },
       newMintCap: { points: 0, cap: 75 }, sum: 94,
     })
     query.mockResolvedValue({ rows: [
       row('https://steady.example.com', { last_reliability_score: 94 }),
-      row('https://live-under.example.com', { last_reliability_score: 94, online_count_30d: 8000 }), // 93 %
-      row('https://stored-under.example.com', { last_reliability_score: 94, score_breakdown: breakdown(94) }), // live count says 100
-      row('https://stored-ok.example.com', { last_reliability_score: 94, score_breakdown: breakdown(95), online_count_30d: 8000 }),
+      row('https://live-under.example.com', { last_reliability_score: 94, online_count_30d: 8000 }), // 92.59 %
+      row('https://live-rounds-up.example.com', { last_reliability_score: 94, online_count_30d: 8204 }), // 94.95 %, shown as 95
+      row('https://live-exact-95.example.com', { last_reliability_score: 94, online_count_30d: 8208 }), // 95.00 %
+      row('https://stored-under.example.com', { last_reliability_score: 94, score_breakdown: breakdown(94, 94.2) }), // live count says 100
+      row('https://stored-ok.example.com', { last_reliability_score: 94, score_breakdown: breakdown(95, 95.3), online_count_30d: 8000 }),
+      row('https://stored-94-5.example.com', { last_reliability_score: 94, score_breakdown: breakdown(95, 94.5) }), // live count says 100
+      // Stored before the unrounded figure: the live count (exact) decides, the stored whole percent stays the shown one.
+      row('https://stored-old.example.com', { last_reliability_score: 94, score_breakdown: breakdown(95), online_count_30d: 8204 }),
       row('https://no-history.example.com', { last_reliability_score: 94, total_30d: 0, online_count_30d: 0 }),
     ] })
     const mints = (await list('?includeUnscored=true')).body.mints as Array<{ url: string; eligibleForRecommendation: boolean; uptime30dPct: number | null }>
@@ -816,8 +822,12 @@ describe('list filters nuts and eligible (replace /mints/recommend)', () => {
     expect(by).toEqual({
       'https://steady.example.com': [true, 100],
       'https://live-under.example.com': [false, 93],
+      'https://live-rounds-up.example.com': [false, 95],
+      'https://live-exact-95.example.com': [true, 95],
       'https://stored-under.example.com': [false, 94],
       'https://stored-ok.example.com': [true, 95],
+      'https://stored-94-5.example.com': [false, 95],
+      'https://stored-old.example.com': [false, 95],
       'https://no-history.example.com': [false, null],
     })
   })

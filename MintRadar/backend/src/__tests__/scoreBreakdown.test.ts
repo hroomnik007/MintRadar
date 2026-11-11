@@ -96,7 +96,7 @@ describe('uptime parts in the breakdown', () => {
           const p = b.uptimeParts!
           expect(p.last24h.points + p.last30d.points + p.longestOutage.points + p.outageCount.points).toBe(b.uptime.points)
           expect([p.last24h.max, p.last30d.max, p.longestOutage.max, p.outageCount.max]).toEqual([20, 10, 6, 4])
-          expect(b.uptimeInputs).toEqual({ uptime24hPct: u.pct24h, uptime30dPct: u.pct30d, outageCount30d: u.outageCount30d, longestOutage30dMs: u.longestOutageMs30d, ongoingOutage: u.ongoingOutage })
+          expect(b.uptimeInputs).toEqual({ uptime24hPct: u.pct24h, uptime30dPct: u.pct30d, uptime30dExactPct: u.pct30dExact ?? u.pct30d, outageCount30d: u.outageCount30d, longestOutage30dMs: u.longestOutageMs30d, ongoingOutage: u.ongoingOutage })
         }
       }
     }
@@ -118,5 +118,17 @@ describe('uptime parts in the breakdown', () => {
     for (const partial of [wrongSum, noInputs, badInputs]) {
       expect(readStoredBreakdown(JSON.parse(JSON.stringify(partial)))).toEqual(plain)
     }
+  })
+
+  it('stores the unrounded 30-day share beside the whole percent; an older or malformed one is simply absent', () => {
+    const b = computeScoreBreakdown({ ...INPUTS[1]!, pct30d: 95, pct30dExact: 94.5 }, 10, 'Nutshell/0.21.0', 2, AUDITS[3]!, LATEST, null, NOW)
+    expect(b.uptimeInputs).toMatchObject({ uptime30dPct: 95, uptime30dExactPct: 94.5 })
+    const older = { ...b, uptimeInputs: { ...b.uptimeInputs! } }
+    delete older.uptimeInputs.uptime30dExactPct
+    expect(readStoredBreakdown(JSON.parse(JSON.stringify(older)))?.uptimeInputs).not.toHaveProperty('uptime30dExactPct')
+    const malformed = { ...b, uptimeInputs: { ...b.uptimeInputs!, uptime30dExactPct: 'x' } }
+    const read = readStoredBreakdown(JSON.parse(JSON.stringify(malformed)))
+    expect(read?.uptimeInputs).toMatchObject({ uptime30dPct: 95 })
+    expect(read?.uptimeInputs).not.toHaveProperty('uptime30dExactPct')
   })
 })

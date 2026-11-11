@@ -152,6 +152,12 @@ test.describe('Mint Detail — /mint/:url canonicalisation (bare-host collision 
     await expect(page.locator('.md-not-tracked')).toHaveCount(0)
   })
 
+  test('a bare host keeps its #tab through the redirect and opens that tab', async ({ page }) => {
+    await page.goto('/mint/alpha.mint.example#audit')
+    await expect(page).toHaveURL(u => u.pathname === `/mint/${encodeURIComponent(ALPHA)}` && u.hash === '#audit')
+    await expect(page.locator('.md-tab[aria-selected="true"]')).toHaveText('Audit')
+  })
+
   test('the canonical encoded URL still works directly', async ({ page }) => {
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()

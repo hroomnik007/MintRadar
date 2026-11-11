@@ -101,7 +101,8 @@ test('the choice survives a resize to the phone layout and back; the phone table
 
   await page.setViewportSize({ width: 1440, height: 900 })
   await expect(page.getByRole('switch', { name: 'Only differences' })).toHaveAttribute('aria-checked', 'true')
-  expect((await labels(page)).length).toBe(desktopRows)
+  // The desktop grid is rendered again after the resize settles; wait for it instead of reading it in the same tick.
+  await expect.poll(async () => (await labels(page)).length).toBe(desktopRows)
 })
 
 test('the switch is off again every time the modal opens', async ({ page }) => {

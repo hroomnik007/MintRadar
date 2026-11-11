@@ -1,18 +1,33 @@
-// Admission gate for NEW mint rows that come from untrusted input: POST /api/mint/submit, POST /api/mints/discover
-// and the NIP-87 discovery of kind:38172 / kind:38000 events (anyone can publish those). Without it one person with a
-// wildcard DNS record (*.example.com answering a fake /v1/info) could add thousands of "mints": every one is shown on
-// the Dashboard, listed in the sitemap and probed every 5 minutes. Two caps, both read from the database (so a
-// restart does not reset them) and checked only for a URL that is not tracked yet:
-//   - at most MAX_MINTS_PER_BASE_DOMAIN rows per base domain (all rows, archived ones too). The busiest base domain
-//     had 2 mints on 2026-11-08;
-//   - at most NEW_MINTS_PER_DAY new rows in the last 24 hours, all sources together. The real network adds a few mints
-//     a month (47 of the 61 public mints were seeded on the first day).
-// A concurrent burst can overshoot a cap by the few requests in flight; that is accepted. audit.8333.space records
-// (a fixed, trusted source) are not gated.
+// Admission gate for NEW mint rows that come from untrusted input: POST /api/mint/submit and POST /api/mints/discover
+// (source 'manual', a person adding mints) and the NIP-87 discovery of kind:38172 / kind:38000 events (source
+// 'nostr', anyone can publish those). Without it one person with a wildcard DNS record (*.example.com answering a fake
+// /v1/info) could add thousands of "mints": every one is shown on the Dashboard, listed in the sitemap and probed every
+// 5 minutes. Two caps, both read from the database (so a restart does not reset them) and checked only for a URL that
+// is not tracked yet:
+//   - at most MAX_MINTS_PER_BASE_DOMAIN rows per base domain (all rows, archived ones too). The base domain comes from
+//     the Public Suffix List including its private section (tldts), so every app on a shared host (foo.fly.dev,
+//     bar.onrender.com, baz.herokuapp.com, …) is its own base and one platform's tenants do not share five slots;
+//   - a daily budget of new rows per source, counted on mints.added_via: NEW_MANUAL_MINTS_PER_DAY for 'manual' and
+//     NEW_NOSTR_MINTS_PER_DAY for 'nostr'. Separate budgets, so published Nostr events can never use up the slots of
+//     people adding a mint by hand. Rows without added_via (inserted before the column, the seed list, audit.8333.space)
+//     count toward neither budget. The real network adds a few mints a month (47 of the 61 public mints were seeded on
+//     the first day).
+// Only an inserted row counts, and every insert path requires a successful probe first (Nostr discovery the stronger
+// /v1/info + /v1/keys check, isFunctioningCashuMint), so a URL that does not answer as a mint never uses up a budget.
+// A concurrent burst can overshoot a cap by the few requests in flight; that is accepted.
+import { getDomain } from 'tldts'
 import { pool } from './db.js'
 
 export const MAX_MINTS_PER_BASE_DOMAIN = 5
-export const NEW_MINTS_PER_DAY = 20
+export const NEW_MANUAL_MINTS_PER_DAY = 20
+export const NEW_NOSTR_MINTS_PER_DAY = 10
+
+export type AdmissionSource = 'manual' | 'nostr'
+
+export const DAILY_BUDGET: Readonly<Record<AdmissionSource, number>> = {
+  manual: NEW_MANUAL_MINTS_PER_DAY,
+  nostr: NEW_NOSTR_MINTS_PER_DAY,
+}
 
 export type AdmissionResult = { ok: true } | { ok: false; reason: 'domain_cap' | 'daily_cap'; error: string }
 
@@ -21,20 +36,25 @@ export const ADMISSION_ERRORS = {
   daily_cap: 'MintRadar has added the maximum number of new mints for today. Try again tomorrow.',
 } as const
 
-// Second-level labels under a two-letter country code that act as a public suffix (co.uk, com.br, …). A small list
-// on purpose: no Public Suffix List dependency. A miss only makes the cap coarser (it then counts per suffix).
-const CC_SECOND_LEVEL = new Set(['co', 'com', 'net', 'org', 'ac', 'gov', 'edu', 'ne', 'or'])
+// Multi-tenant hosts that the Public Suffix List does not (fully) list: each direct subdomain is a separate tenant.
+// (railway.app: only up.railway.app is in the list.)
+const EXTRA_SHARED_SUFFIXES = ['railway.app']
 
-/** "mint.a.example.co.uk" → "example.co.uk", "mint.example.com" → "example.com"; an IP literal or a single label as is. */
+/**
+ * The registrable domain of a host, by the Public Suffix List with its private (shared hosting) section:
+ * "mint.a.example.co.uk" → "example.co.uk", "mint.example.com" → "example.com", "mint.app.fly.dev" → "app.fly.dev".
+ * An IP literal, a single label or anything the list cannot split is returned as is.
+ */
 export function baseDomain(host: string): string {
   const h = host.toLowerCase().replace(/\.$/, '')
-  if (h.startsWith('[') || /^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return h
-  const labels = h.split('.')
-  if (labels.length <= 2) return h
-  const tld = labels[labels.length - 1]!
-  const second = labels[labels.length - 2]!
-  const take = tld.length === 2 && CC_SECOND_LEVEL.has(second) ? 3 : 2
-  return labels.slice(-take).join('.')
+  if (h.startsWith('[')) return h
+  const domain = getDomain(h, { allowPrivateDomains: true }) ?? h
+  // The list stops at an unlisted platform suffix ("x.railway.app" → "railway.app"): one label more.
+  if (EXTRA_SHARED_SUFFIXES.includes(domain) && h !== domain) {
+    const labels = h.slice(0, -domain.length - 1).split('.')
+    return `${labels[labels.length - 1]}.${domain}`
+  }
+  return domain
 }
 
 function hostOf(url: string): string | null {
@@ -44,19 +64,24 @@ function hostOf(url: string): string | null {
 type Query = (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>
 const defaultQuery: Query = (sql, params) => pool.query(sql, params)
 
-/** May `url` be inserted as a new mint? A URL that is already tracked is always admitted (nothing new is added). */
-export async function checkMintAdmission(url: string, query: Query = defaultQuery): Promise<AdmissionResult> {
+/**
+ * May `url` be inserted as a new mint from `source`? A URL that is already tracked is always admitted (nothing new is
+ * added). The caller stores `source` in mints.added_via on insert, which is what the daily budget counts.
+ */
+export async function checkMintAdmission(url: string, source: AdmissionSource, query: Query = defaultQuery): Promise<AdmissionResult> {
   const host = hostOf(url)
   if (host === null) return { ok: true }
   const res = await query(
-    `SELECT url, discovered_at > NOW() - INTERVAL '24 hours' AS recent FROM mints`,
+    `SELECT url, added_via, discovered_at > NOW() - INTERVAL '24 hours' AS recent FROM mints`,
   )
-  const rows = res.rows as { url: string; recent: boolean }[]
+  const rows = res.rows as { url: string; added_via?: string | null; recent: boolean }[]
   if (rows.some(r => r.url === url)) return { ok: true }
   const base = baseDomain(host)
   const sameBase = rows.filter(r => { const h = hostOf(r.url); return h !== null && baseDomain(h) === base }).length
   if (sameBase >= MAX_MINTS_PER_BASE_DOMAIN) return { ok: false, reason: 'domain_cap', error: ADMISSION_ERRORS.domain_cap }
-  if (rows.filter(r => r.recent).length >= NEW_MINTS_PER_DAY) return { ok: false, reason: 'daily_cap', error: ADMISSION_ERRORS.daily_cap }
+  if (rows.filter(r => r.recent && r.added_via === source).length >= DAILY_BUDGET[source]) {
+    return { ok: false, reason: 'daily_cap', error: ADMISSION_ERRORS.daily_cap }
+  }
   return { ok: true }
 }
 

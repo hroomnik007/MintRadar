@@ -32,6 +32,7 @@ function mints(): typeof MOCK_KNOWN_MINTS {
     uptimePct24h: 100 - (i % 9),
     uptimePct7d: 100 - (i % 7),
     uptimePct30d: 100,
+    uptimePct30dExact: 100,
     discoveredAt: new Date(Date.now() - (60 + i) * 86_400_000).toISOString(),
     serverLocation: LOCATIONS[i % LOCATIONS.length]!,
   }))

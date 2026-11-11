@@ -83,6 +83,11 @@ export interface UptimeInput {
   pct24h: number
   /** Share of successful probes in the last 30 days, whole percent. */
   pct30d: number
+  /**
+   * The same share unrounded (two decimals, rounded down), the figure the recommendation gate (hasSteadyUptime)
+   * compares, so 94.5 % does not pass as 95 %. Absent: pct30d stands in.
+   */
+  pct30dExact?: number
   /** Outages (two or more failed probes in a row) in the last 30 days. */
   outageCount30d: number
   /** Duration of the longest of them in milliseconds, an ongoing one measured up to now. */
@@ -226,12 +231,18 @@ export function hasFreshProbe(
 /**
  * A mint is recommended only if at least this share of its probes in the last 30 days succeeded (methodology 7).
  * The score looks mostly at now; a recommendation is a stronger statement and asks for a month without long downtime.
- * Unknown (no 30-day figure yet) is not eligible.
+ * Unknown (no 30-day figure yet) is not eligible. Pass the UNROUNDED share (uptime30dExactPct / uptimePct30dExact):
+ * the whole-percent figure shown in the UI would let 94.5 % pass as 95 %.
  */
 export const MIN_RECOMMENDATION_UPTIME_30D_PCT = 95
 
 export function hasSteadyUptime(uptimePct30d: number | null | undefined): boolean {
   return typeof uptimePct30d === 'number' && Number.isFinite(uptimePct30d) && uptimePct30d >= MIN_RECOMMENDATION_UPTIME_30D_PCT
+}
+
+/** `part` of `total` in percent with two decimals, rounded DOWN (a share just under a limit never reaches it). */
+export function exactPct(part: number, total: number): number {
+  return Math.floor((part / total) * 10_000) / 100
 }
 
 /** The cashu.info audit inputs stored on mints.audit_cz_* (see shared/auditScore.ts). */

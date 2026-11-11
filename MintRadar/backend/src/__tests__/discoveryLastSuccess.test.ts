@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const h = vi.hoisted(() => ({ queryMock: vi.fn(), mode: { value: 'ok' as 'ok' | 'allFailed' | 'rejects' }, store: new Map<string, string>() }))
 
 vi.mock('../db.js', () => ({ pool: { query: h.queryMock } }))
-vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn().mockResolvedValue(true) }))
+vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn().mockResolvedValue(true), isFunctioningCashuMint: vi.fn().mockResolvedValue(true) }))
 vi.mock('../ssrf.js', () => ({ safeFetch: vi.fn(), readJsonLimited: vi.fn(), RESPONSE_CAPS: {} }))
 vi.mock('nostr-tools', () => ({
   verifyEvent: () => true,
