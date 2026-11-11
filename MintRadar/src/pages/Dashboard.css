@@ -126,11 +126,15 @@
   color: var(--text);
   margin-right: 4px;
   /* Reserves the width of a two-digit count: the "—" shown while /api/mints/known is pending and the numbers that
-     replace it take the same space, so nothing after them moves when the data arrives. */
-  display: inline-block;
-  min-width: 2ch;
+     replace it take the same space, so nothing after them moves when the data arrives. The reservation is a hidden
+     "00" in the same font sharing the grid cell with the value (a min-width in ch was a fraction of a pixel short of
+     "12" with some fonts, which moved everything after it). */
+  display: inline-grid;
   font-variant-numeric: tabular-nums;
 }
+.dash-status-item b > span,
+.dash-status-item b::after { grid-area: 1 / 1; }
+.dash-status-item b::after { content: '00'; visibility: hidden; }
 .dash-status-sep {
   width: 1px;
   height: 12px;
@@ -1743,12 +1747,19 @@
   letter-spacing: 0;
   font-family: var(--font-body);
 }
-.filter-group-label strong {
+.filter-group-label strong,
+.filter-rel-sizer b {
   color: var(--text);
   display: inline-block;
   min-width: 4ch; /* "100%" — the label doesn't change width while the slider moves */
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
+/* The Reliability label is as wide as its widest form ("Reliability ≥ 100" or "Reliability: any", whichever the font
+   makes wider): the sizers sit hidden in the same grid cell as the text, so the slider never shifts sideways. */
+.filter-rel-label { display: inline-grid; flex: 0 0 auto; }
+.filter-rel-label > * { grid-area: 1 / 1; white-space: nowrap; }
+.filter-rel-sizer { visibility: hidden; }
 
 .filter-slider {
   width: 140px;

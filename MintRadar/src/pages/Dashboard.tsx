@@ -1349,9 +1349,9 @@ export default function Dashboard() {
         <div className="dash-status">
           <div className="dash-status-btn">
             <span className="dash-status-live" aria-hidden="true" />
-            <span className="dash-status-item"><b>{knownLoading ? '—' : onlineCount}</b> online mints</span>
+            <span className="dash-status-item"><b><span>{knownLoading ? '—' : onlineCount}</span></b> online mints</span>
             <span className="dash-status-sep" aria-hidden="true" />
-            <span className="dash-status-item"><b>{knownLoading ? '—' : knownTotal}</b> tracked mints</span>
+            <span className="dash-status-item"><b><span>{knownLoading ? '—' : knownTotal}</span></b> tracked mints</span>
             <span className="dash-status-item dash-status-end">
               <span>last checked {formatTimeAgo(lastCheckTime)}</span>
               <span className="dash-status-note" data-testid="dash-latency-note"><span className="dash-status-note-sep" aria-hidden="true"> · </span>{cardsLatencyNote()}</span>
@@ -1619,7 +1619,13 @@ export default function Dashboard() {
                 Hide test mints
               </label>
               <div className="filter-rel">
-                <span className="filter-group-label">{pendingFilters.minReliabilityScore > 0 ? <>Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></> : <>Reliability: <strong>any</strong></>}</span>
+                {/* The two hidden sizers share the grid cell with the text and hold the label at its widest form, so the
+                    slider next to it never moves under the finger when the value changes (0 → "any" vs "≥ 80"). */}
+                <span className="filter-group-label filter-rel-label">
+                  <span className="filter-rel-text">{pendingFilters.minReliabilityScore > 0 ? <>Reliability ≥ <strong>{pendingFilters.minReliabilityScore}</strong></> : <>Reliability: <strong>any</strong></>}</span>
+                  <span className="filter-rel-sizer" aria-hidden="true">Reliability ≥ <b>100</b></span>
+                  <span className="filter-rel-sizer" aria-hidden="true">Reliability: <b>any</b></span>
+                </span>
                 <input
                   type="range" min={0} max={100} step={5}
                   value={pendingFilters.minReliabilityScore}

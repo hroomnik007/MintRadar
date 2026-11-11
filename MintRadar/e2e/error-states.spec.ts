@@ -37,6 +37,14 @@ async function setup(page: Page, mode: { current: Mode }, slow?: Slow) {
 async function seedWatchlist(page: Page) {
   await page.goto('/')
   await expect(page.locator('.navbar-profile')).toBeVisible()
+  // The app's login sync (useWatchlistSync Phase 1) clears the watchlist when the Dexie owner is not the logged-in
+  // user and records the owner as its last write. Seeding before that lands let the clear win now and then
+  // ("No mints watched yet", no error state to show), as in watchlist-load-more.spec.ts.
+  await expect.poll(() => page.evaluate(async () => {
+    const path = '/src/db/index.ts'
+    const { db } = await import(/* @vite-ignore */ path)
+    return (await db.meta.get('watchlistOwner'))?.value ?? null
+  }), { timeout: 10000 }).toBe(TEST_PUBKEY_HEX)
   await page.evaluate(async ({ urls, owner }) => {
     const path = '/src/db/index.ts'
     const { db } = await import(/* @vite-ignore */ path)
