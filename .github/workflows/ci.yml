@@ -31,12 +31,16 @@ jobs:
           cache-dependency-path: |
             MintRadar/backend/package-lock.json
             MintRadar/package-lock.json
+      # Both installs first: frontend modules import from backend/src, so the frontend typecheck follows those imports
+      # and needs backend/node_modules (pg, express, ws, ...).
+      - name: Install dependencies (frontend and backend)
+        run: cd MintRadar && npm ci && cd backend && npm ci
       - name: Frontend lint (eslint src e2e, internal links, lockfile libc)
-        run: cd MintRadar && npm ci && npm run lint
+        run: cd MintRadar && npm run lint
       - name: Frontend typecheck (app + e2e)
         run: cd MintRadar && npm run typecheck
       - name: Backend lint and typecheck
-        run: cd MintRadar/backend && npm ci && npm run lint && npm run typecheck
+        run: cd MintRadar/backend && npm run lint && npm run typecheck
 
   e2e:
     name: E2E (shard ${{ matrix.shard }}/4)
