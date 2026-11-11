@@ -1,0 +1,84 @@
+name: CI (lint + e2e)
+# Lint, typecheck and the Playwright e2e suite, on every pull request and on every push to main. The unit tests stay
+# in tests.yml (pull requests) and deploy.yml (push to main, before the deploy). The e2e suite runs against the Vite
+# dev server with mocked API responses (e2e/fixtures/mocks.ts): no backend, no secrets.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per PR (a new push cancels the old one); on main every push keeps its own run.
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint and typecheck
+    # Same runner pin as deploy.yml (see the note there).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.4
+          cache: npm
+          cache-dependency-path: |
+            MintRadar/backend/package-lock.json
+            MintRadar/package-lock.json
+      - name: Frontend lint (eslint src e2e, internal links, lockfile libc)
+        run: cd MintRadar && npm ci && npm run lint
+      - name: Frontend typecheck (app + e2e)
+        run: cd MintRadar && npm run typecheck
+      - name: Backend lint and typecheck
+        run: cd MintRadar/backend && npm ci && npm run lint && npm run typecheck
+
+  e2e:
+    name: E2E (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-24.04
+    # A shard takes a few minutes; this only catches a hang.
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.4
+          cache: npm
+          cache-dependency-path: MintRadar/package-lock.json
+      - name: Install dependencies
+        run: cd MintRadar && npm ci
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./MintRadar/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+      - name: Install Chromium (cache miss)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: cd MintRadar && npx playwright install --with-deps chromium
+      - name: Install Chromium system dependencies (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: cd MintRadar && npx playwright install-deps chromium
+      - name: Run e2e
+        run: cd MintRadar && npx playwright test --shard=${{ matrix.shard }}/4 --reporter=github,line
+      - name: Upload test results (traces of retried tests)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results-shard-${{ matrix.shard }}
+          path: MintRadar/test-results/
+          retention-days: 7
