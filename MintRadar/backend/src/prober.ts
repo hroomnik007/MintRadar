@@ -4,7 +4,7 @@ import pLimit from 'p-limit'
 import { pool } from './db.js'
 import { hasNulByte } from './hostnameGuard.js'
 import { checkUrlSafety, safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
-import { computeReliabilityScore, TRACKED_NUT_KEYS, type UptimeInput } from './shared/reliabilityScore.js'
+import { computeReliabilityScore, TRACKED_NUT_KEYS, exactPct, type UptimeInput } from './shared/reliabilityScore.js'
 import { isNutOffered } from './shared/nutSupport.js'
 import { notifySubscribers, notifyAlert, recordAlertClear, isNotificationServiceEnabled, type AlertKind } from './nostrService.js'
 import { mintMeltCondition, versionCondition, nutLossTransition, type Condition } from './alertTriggers.js'
@@ -345,9 +345,10 @@ const REVALIDATION_REAP_DAYS = 7
 // runs once a day and isn't latency-sensitive.
 const REVALIDATION_CONCURRENCY = 6
 
-// Stronger than isValidCashuMint(), and used ONLY here (never the lenient
-// submit/discovery gate, which must not start rejecting an unusual-but-real
-// mint). A functioning Cashu mint serves a non-empty /v1/info `nuts` object
+// Stronger than isValidCashuMint(), used here and as the NIP-87 discovery gate
+// (isFunctioningCashuMint below: published events are untrusted, so a discovered URL
+// must already work as a mint). The manual submit/discover gate stays lenient, so a
+// person can still add an unusual-but-real mint. A functioning Cashu mint serves a non-empty /v1/info `nuts` object
 // AND a /v1/keys response carrying at least one keyset. Crucially it separates
 // "reachable but not a mint" (repoint target, redirect, a `{"nuts":{}}` stub,
 // an HTML page) from "transiently unreachable" (5xx, timeout, DNS failure) —
@@ -385,6 +386,15 @@ async function revalidateMintContent(url: string): Promise<RevalidationStatus> {
   } catch {
     return 'not-a-mint' // a 200 whose body isn't a mint's JSON
   }
+}
+
+/**
+ * The admission probe of NIP-87 discovery (discovery.ts): a non-empty /v1/info `nuts` object AND /v1/keys with at
+ * least one keyset. Anyone can publish a kind:38172 / kind:38000 event, so a discovered URL is added only when it
+ * already works as a mint; the new-mint budgets (mintAdmission.ts) then count only real ones.
+ */
+export async function isFunctioningCashuMint(url: string): Promise<boolean> {
+  return (await revalidateMintContent(url)) === 'ok'
 }
 
 export async function revalidateMints(): Promise<{ checked: number; invalid: number; reaped: number }> {
@@ -718,6 +728,7 @@ export async function uptimeInputFor(url: string, uptimePct24h: number, online: 
   return {
     pct24h: uptimePct24h,
     pct30d: total === 0 ? (online ? 100 : 0) : Math.round((onlineCount / total) * 100),
+    pct30dExact: total === 0 ? (online ? 100 : 0) : exactPct(onlineCount, total),
     outageCount30d: outages.outageCount,
     longestOutageMs30d: outages.longestOutageMs,
     ongoingOutage: outages.ongoing,

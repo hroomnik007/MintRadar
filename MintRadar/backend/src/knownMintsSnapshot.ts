@@ -4,7 +4,7 @@ import { pool } from './db.js'
 import { appStateTimeIso } from './appState.js'
 import { getLatestVersionsMap } from './versionCatalog.js'
 import type { LatestVersions } from './shared/versionRule.js'
-import { splitVersionString, canonicalSoftwareName } from './shared/reliabilityScore.js'
+import { splitVersionString, canonicalSoftwareName, exactPct } from './shared/reliabilityScore.js'
 import { pendingOf, WALLET_CHANGES_PER_MINT, type PendingSource } from './mintChanges.js'
 import { computeDegraded } from './degraded.js'
 import { globalMeanRating, weightedRating } from './weightedRating.js'
@@ -236,6 +236,8 @@ export function computeKnownMints(): Promise<Snapshot> {
           // score's 30-day part use. The value stored with the score at the newest probe; the live count only until
           // the first probe after a deploy has stored one.
           uptimePct30d: uptime30dPctOf(r),
+          // Unrounded (two decimals, rounded down): what the recommendation gate compares (hasSteadyUptime).
+          uptimePct30dExact: uptime30dExactPctOf(r),
           serverLocation: (r.server_location as string | null) ?? null,
           ipAddress: (r.ip_address as string | null) ?? null,
           netAsn: (r.net_asn as number | null) ?? null,
@@ -294,6 +296,7 @@ export function computeKnownMints(): Promise<Snapshot> {
           downSince: r.down_since ? new Date(r.down_since as string | Date).toISOString() : null,
           scoreBreakdown: readStoredBreakdown(r.score_breakdown),
           uptime30dPct: uptime30dPctOf(r),
+          uptime30dExactPct: uptime30dExactPctOf(r),
           latency24h: latency24hOf(r.latency_p50_24h, r.latency_p95_24h, r.latency_samples_24h),
           keysets: keysetsOf(r.keysets_json),
           keysetsCheckedAt: r.keysets_checked_at ? new Date(r.keysets_checked_at as string | Date).toISOString() : null,
@@ -306,6 +309,18 @@ export function computeKnownMints(): Promise<Snapshot> {
       const now = Date.now()
       return { data, computedAt: now, reviewFallback, walletExtra }
     })
+}
+
+/**
+ * 30-day uptime unrounded (two decimals, rounded down) for the recommendation gate: the figure stored with the score,
+ * else the live count of the snapshot query (exact as well), else null. Never the whole-percent value, which would let
+ * 94.5 % pass as 95 %.
+ */
+function uptime30dExactPctOf(r: Record<string, unknown>): number | null {
+  const stored = readStoredBreakdown(r.score_breakdown)?.uptimeInputs?.uptime30dExactPct
+  if (stored !== undefined) return stored
+  const total = Number(r.total_30d ?? 0)
+  return total === 0 ? null : exactPct(Number(r.online_count_30d ?? 0), total)
 }
 
 /** 30-day uptime in whole percent: the figure stored with the score, else the live count of the snapshot query, else null. */

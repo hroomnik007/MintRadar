@@ -24,6 +24,8 @@ export interface UptimeBreakdownParts {
 export interface UptimeBreakdownInputs {
   uptime24hPct: number
   uptime30dPct: number
+  /** The unrounded 30-day share the recommendation gate uses (two decimals, rounded down); absent in older rows. */
+  uptime30dExactPct?: number
   outageCount30d: number
   longestOutage30dMs: number
   ongoingOutage: boolean
@@ -86,7 +88,7 @@ export function computeScoreBreakdown(
 
 function inputsOf(u: UptimeInput): UptimeBreakdownInputs {
   return {
-    uptime24hPct: u.pct24h, uptime30dPct: u.pct30d, outageCount30d: u.outageCount30d,
+    uptime24hPct: u.pct24h, uptime30dPct: u.pct30d, uptime30dExactPct: u.pct30dExact ?? u.pct30d, outageCount30d: u.outageCount30d,
     longestOutage30dMs: u.longestOutageMs30d, ongoingOutage: u.ongoingOutage,
   }
 }
@@ -135,7 +137,9 @@ function readUptimeInputs(raw: unknown): UptimeBreakdownInputs | null {
   const o = raw as Record<string, unknown>
   const pct = (v: unknown): v is number => isNum(v) && v >= 0 && v <= 100
   const count = (v: unknown): v is number => isNum(v) && v >= 0
-  const { uptime24hPct, uptime30dPct, outageCount30d, longestOutage30dMs, ongoingOutage } = o
+  const { uptime24hPct, uptime30dPct, uptime30dExactPct, outageCount30d, longestOutage30dMs, ongoingOutage } = o
   if (!pct(uptime24hPct) || !pct(uptime30dPct) || !count(outageCount30d) || !count(longestOutage30dMs) || typeof ongoingOutage !== 'boolean') return null
-  return { uptime24hPct, uptime30dPct, outageCount30d, longestOutage30dMs, ongoingOutage }
+  // Optional (stored since the unrounded gate); a malformed value is dropped, not the whole inputs object.
+  const exact = pct(uptime30dExactPct) ? { uptime30dExactPct } : {}
+  return { uptime24hPct, uptime30dPct, ...exact, outageCount30d, longestOutage30dMs, ongoingOutage }
 }

@@ -790,6 +790,7 @@ components:
           properties:
             uptime24hPct: { type: integer, minimum: 0, maximum: 100 }
             uptime30dPct: { type: integer, minimum: 0, maximum: 100, description: Over the stored history of at most 30 days. }
+            uptime30dExactPct: { type: number, minimum: 0, maximum: 100, description: 'The same share unrounded (two decimals, rounded down), the figure the 95 % recommendation gate compares. Absent in a breakdown stored before 2026-11-11.' }
             outageCount30d: { type: integer, minimum: 0, description: Outages of two or more failed probes in a row. }
             longestOutage30dMs: { type: integer, minimum: 0, description: 'Milliseconds; an ongoing outage is measured up to the probe.' }
             ongoingOutage: { type: boolean }

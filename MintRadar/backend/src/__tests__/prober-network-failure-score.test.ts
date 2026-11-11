@@ -211,7 +211,7 @@ describe('probeMintToDb — the 30-day uptime inputs are stored with the score (
     await probe()
 
     // 12 stored probes one day apart (the mock), 10 of them successful; the outage runs from the first failed probe to now
-    expect(storedBreakdown!['uptimeInputs']).toEqual({ uptime24hPct: 83, uptime30dPct: 83, outageCount30d: 1, longestOutage30dMs: expect.any(Number), ongoingOutage: true })
+    expect(storedBreakdown!['uptimeInputs']).toEqual({ uptime24hPct: 83, uptime30dPct: 83, uptime30dExactPct: 83.33, outageCount30d: 1, longestOutage30dMs: expect.any(Number), ongoingOutage: true })
     const longest = (storedBreakdown!['uptimeInputs'] as { longestOutage30dMs: number }).longestOutage30dMs
     expect(Math.round(longest / 3_600_000)).toBe(24)
     // 24 h: round(83 * 0.2) = 17; 30 days: 83 % is under the 90 % floor = 0; longest outage a day or more = 0; ongoing = 0

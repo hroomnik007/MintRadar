@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { computeServerReliabilityScore } from '../prober.js'
 import {
   TRACKED_NUT_COUNT, TRACKED_NUT_KEYS, isEligibleForRecommendation, MIN_RECOMMENDATION_AGE_DAYS, versionComponent,
-  uptimeComponent, uptimeParts, longestOutagePoints, outageCountPoints, hasSteadyUptime,
+  uptimeComponent, uptimeParts, longestOutagePoints, outageCountPoints, hasSteadyUptime, exactPct,
   UPTIME_24H_MAX, UPTIME_30D_MAX, UPTIME_30D_FLOOR_PCT, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX, MIN_RECOMMENDATION_UPTIME_30D_PCT,
   type AuditInput, type UptimeInput,
 } from '../shared/reliabilityScore.js'
@@ -311,5 +311,23 @@ describe('hasSteadyUptime (recommendation gate, 30-day uptime)', () => {
     expect(hasSteadyUptime(null)).toBe(false)
     expect(hasSteadyUptime(undefined)).toBe(false)
     expect(hasSteadyUptime(Number.NaN)).toBe(false)
+  })
+
+  it('compares the unrounded share: 94.5 and 94.99 do not pass, 95.00 does', () => {
+    expect(hasSteadyUptime(94.5)).toBe(false)
+    expect(hasSteadyUptime(94.99)).toBe(false)
+    expect(hasSteadyUptime(exactPct(8204, 8640))).toBe(false) // 94.953… %, shown as 95
+    expect(hasSteadyUptime(exactPct(8208, 8640))).toBe(true) // exactly 95 %
+  })
+})
+
+describe('exactPct (two decimals, rounded down)', () => {
+  it('never rounds a share up to a limit', () => {
+    expect(exactPct(8204, 8640)).toBe(94.95)
+    expect(exactPct(189, 200)).toBe(94.5)
+    expect(exactPct(18999, 20000)).toBe(94.99)
+    expect(exactPct(10, 12)).toBe(83.33)
+    expect(exactPct(1, 1)).toBe(100)
+    expect(exactPct(0, 5)).toBe(0)
   })
 })

@@ -71,6 +71,8 @@ export interface WalletExtra {
   scoreBreakdown: ScoreBreakdown | null
   /** Share of successful probes in the last 30 days, in percent; null without probes in that window. */
   uptime30dPct?: number | null
+  /** The same share unrounded (two decimals, rounded down): what eligibleForRecommendation compares. */
+  uptime30dExactPct?: number | null
   /** Latency percentiles of the successful probes of the last 24 hours; null without such a probe. */
   latency24h?: WalletLatency24h | null
   /** Keysets present in the latest successful keysets check, ordered by id. */
@@ -391,7 +393,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
       },
     eligibleForRecommendation:
       isEligibleForRecommendation(m.discoveredAt, now) && !test && status === 'online' && score !== null &&
-      hasFreshProbe(m.lastCheckedAt, now) && hasSteadyUptime(extra?.uptime30dPct),
+      hasFreshProbe(m.lastCheckedAt, now) && hasSteadyUptime(extra?.uptime30dExactPct),
     pubkey: typeof m.pubkey === 'string' && PUBKEY_RE.test(m.pubkey) ? m.pubkey.toLowerCase() : null,
     firstSeenAt: toIso(m.discoveredAt),
     lastOnlineAt: toIso(m.lastOnlineAt),

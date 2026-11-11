@@ -60,6 +60,8 @@ export interface KnownMint {
   uptimePct7d?: number | null
   /** 30-day uptime in whole percent, the figure the score's 30-day part and the recommendation gate use; null without history. */
   uptimePct30d?: number | null
+  /** The same share unrounded (two decimals, rounded down): what the recommendation gate (hasSteadyUptime) compares. */
+  uptimePct30dExact?: number | null
   serverLocation?: string | null
   /** Public IPv4 of the mint host, resolved by our backend. */
   ipAddress?: string | null
