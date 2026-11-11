@@ -6,7 +6,8 @@ import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import * as T from '@/utils/tooltipTexts'
 import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL } from '@/utils/auditScore'
-import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, computeReliabilityScore, contactComponent, UPTIME_24H_MAX, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX } from '@/utils/reliabilityScore'
+import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, computeReliabilityScore, contactComponent, uptimeComponent, uptimeParts, UPTIME_24H_MAX, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX, type UptimeInput } from '@/utils/reliabilityScore'
+import { formatDuration, type StoredScoreBreakdown } from '@/utils/mintDetailFacts'
 import { UNKNOWN_SOFTWARE_POINTS, classifyMintVersion, pointsForMinorsBehind } from '@/utils/versionRule'
 import { NHI_WEIGHTS, DEGRADED_AFTER_HOURS, nhiOnlineSetText, nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption } from '@/utils/networkHealthIndex'
 import { TRACKED_NUTS } from '@/constants/nuts'
@@ -197,5 +198,123 @@ describe('tooltip style rules', () => {
     expect(styleProblems('A DLEQ proof is fine')).toEqual([])
     expect(styleProblems('A secure, trusted mint')).toHaveLength(2)
     expect(styleProblems('Recommended by guaranteed minter')).toHaveLength(3)
+  })
+})
+
+// The Uptime row's tooltip of the Reliability Score breakdown: the four parts with the figures and points of THIS mint
+// (it replaced the visible line "24 h 100%: 20/20 · 30 days …" under the row).
+describe('uptimeRowTooltip: the four uptime parts from the stored record', () => {
+  const MIN = 60_000
+  const HOUR = 60 * MIN
+  // The maxima of the shared source (reliabilityScore.ts), as the backend stores them in scoreBreakdown.uptimeParts.
+  const MAX = { last24h: UPTIME_24H_MAX, last30d: UPTIME_30D_MAX, longestOutage: LONGEST_OUTAGE_MAX, outageCount: OUTAGE_COUNT_MAX }
+  /** A stored record built the way the backend builds it: points from uptimeParts(), maxima from the constants. */
+  const storedFor = (u: UptimeInput): StoredScoreBreakdown => {
+    const p = uptimeParts(u)
+    return {
+      uptime: { points: uptimeComponent(u), max: T.UPTIME_POINTS },
+      uptimeParts: {
+        last24h: { points: p.last24h, max: MAX.last24h }, last30d: { points: p.last30d, max: MAX.last30d },
+        longestOutage: { points: p.longestOutage, max: MAX.longestOutage }, outageCount: { points: p.outageCount, max: MAX.outageCount },
+      },
+      uptimeInputs: { uptime24hPct: u.pct24h, uptime30dPct: u.pct30d, outageCount30d: u.outageCount30d, longestOutage30dMs: u.longestOutageMs30d, ongoingOutage: u.ongoingOutage },
+      audit: { points: 25, max: 25 }, nuts: { points: 15, max: 15 }, version: { points: 15, max: 15 }, contact: { points: 5, max: 5 },
+      newMintCap: { points: 0, cap: NEW_MINT_RELIABILITY_CAP }, sum: 100,
+    }
+  }
+  const tip = (s: Parameters<typeof T.uptimeRowTooltip>[0]) => T.uptimeRowTooltip(s, formatDuration)
+  const full: UptimeInput = { pct24h: 100, pct30d: 100, outageCount30d: 1, longestOutageMs30d: 10 * MIN, ongoingOutage: false }
+  const bracketPoints = (text: string) => [...text.matchAll(/\((\d+(?:\.\d+)?) of (\d+(?:\.\d+)?)/g)].map(m => ({ points: Number(m[1]), max: Number(m[2]) }))
+
+  it('full data: the sentence for 100% / 100% / one outage of 10 min', () => {
+    expect(tip(storedFor(full))).toBe('Last 24 h: 100% of probes succeeded (20 of 20 points). Last 30 days: 100% (10 of 10). Longest outage in 30 days: 10 min (6 of 6). Outages in 30 days: 1 (4 of 4).')
+  })
+
+  it('the maxima and windows come from the shared constants, the points from the stored parts', () => {
+    const s = storedFor({ pct24h: 100, pct30d: 77, outageCount30d: 8, longestOutageMs30d: 162 * HOUR, ongoingOutage: false })
+    const p = s.uptimeParts!
+    const text = tip(s)!
+    expect(text).toBe(
+      `Last ${T.UPTIME_WINDOW_HOURS} h: 100% of probes succeeded (${p.last24h.points} of ${UPTIME_24H_MAX} points). Last ${T.UPTIME_30D_WINDOW_DAYS} days: 77% (${p.last30d.points} of ${UPTIME_30D_MAX}). ` +
+      `Longest outage in ${T.UPTIME_30D_WINDOW_DAYS} days: 6d 18h (${p.longestOutage.points} of ${LONGEST_OUTAGE_MAX}). Outages in ${T.UPTIME_30D_WINDOW_DAYS} days: 8 (${p.outageCount.points} of ${OUTAGE_COUNT_MAX}).`,
+    )
+    // exactly the points the score used: they add up to the row, and the maxima to the component's weight
+    const pairs = bracketPoints(text)
+    expect(pairs.reduce((a, x) => a + x.points, 0)).toBe(s.uptime.points)
+    expect(pairs.map(x => x.max)).toEqual([UPTIME_24H_MAX, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX])
+    expect(pairs.reduce((a, x) => a + x.max, 0)).toBe(T.UPTIME_POINTS)
+    // a maximum that changes in the stored record changes in the text (nothing is typed into the string)
+    const other = { ...s, uptimeParts: { ...p, last24h: { points: 7, max: 21 }, outageCount: { points: 1, max: 3 } } }
+    expect(tip(other)).toContain('(7 of 21 points)')
+    expect(tip(other)).toContain(`Outages in ${T.UPTIME_30D_WINDOW_DAYS} days: 8 (1 of 3).`)
+  })
+
+  it('one outage and several: the count as a number; an ongoing one is named', () => {
+    expect(tip(storedFor(full))).toContain('Outages in 30 days: 1 (')
+    expect(tip(storedFor({ ...full, outageCount30d: 3 }))).toContain('Outages in 30 days: 3 (')
+    expect(tip(storedFor({ ...full, ongoingOutage: true }))).toMatch(/Outages in 30 days: 1, ongoing \(\d of 4\)\.$/)
+    expect(tip(storedFor({ ...full, outageCount30d: 3, ongoingOutage: true }))).toMatch(/Outages in 30 days: 3, one ongoing \(\d of 4\)\.$/)
+  })
+
+  it('durations use the app formatter: minutes, hours, days', () => {
+    expect(tip(storedFor({ ...full, longestOutageMs30d: 45 * MIN }))).toContain('Longest outage in 30 days: 45 min (')
+    expect(tip(storedFor({ ...full, longestOutageMs30d: 3 * HOUR + 20 * MIN }))).toContain('Longest outage in 30 days: 3h 20m (')
+    expect(tip(storedFor({ ...full, longestOutageMs30d: 162 * HOUR }))).toContain('Longest outage in 30 days: 6d 18h (')
+  })
+
+  it('no outage: both statements say so, with the points the score gave', () => {
+    const s = storedFor({ pct24h: 100, pct30d: 100, outageCount30d: 0, longestOutageMs30d: 0, ongoingOutage: false })
+    expect(tip(s)).toBe('Last 24 h: 100% of probes succeeded (20 of 20 points). Last 30 days: 100% (10 of 10). No outage in the last 30 days (6 of 6). Outages in 30 days: 0 (4 of 4).')
+    // never "ongoing" without an outage, whatever the flag says
+    expect(tip({ ...s, uptimeInputs: { ...s.uptimeInputs!, ongoingOutage: true } })).not.toContain('ongoing')
+  })
+
+  it('a part without data says "no data" (never 0, undefined, NaN or null) and keeps the stored points', () => {
+    const s = storedFor(full)
+    const broken = (inputs: Record<string, unknown>) => ({ ...s, uptimeInputs: { ...s.uptimeInputs!, ...inputs } }) as unknown as StoredScoreBreakdown
+    const no30d = tip(broken({ uptime30dPct: null, outageCount30d: null, longestOutage30dMs: null }))!
+    expect(no30d).toBe('Last 24 h: 100% of probes succeeded (20 of 20 points). Last 30 days: no data (10 of 10). Longest outage in 30 days: no data (6 of 6). Outages in 30 days: no data (4 of 4).')
+    const cases = [
+      tip(broken({ uptime24hPct: undefined })), tip(broken({ uptime24hPct: NaN, uptime30dPct: Infinity })),
+      tip(broken({ outageCount30d: undefined })), tip(broken({ longestOutage30dMs: NaN })), tip(broken({ outageCount30d: '3' })),
+      tip({ ...s, uptimeInputs: undefined } as unknown as StoredScoreBreakdown),
+      tip({ ...s, uptimeParts: { ...s.uptimeParts!, last30d: undefined, outageCount: { points: NaN, max: 4 } } } as unknown as StoredScoreBreakdown),
+      no30d,
+    ]
+    for (const text of cases) {
+      expect(text).not.toBeNull()
+      expect(text).not.toMatch(/undefined|NaN|null|Infinity/)
+      expect(text!.match(/\. |\.$/g)).toHaveLength(4) // still four sentences
+    }
+    expect(cases[0]).toContain('Last 24 h: no data (20 of 20 points).')
+    // without the stored inputs every figure is "no data" and the stored points stay
+    expect(cases[5]).toBe('Last 24 h: no data (20 of 20 points). Last 30 days: no data (10 of 10). Longest outage in 30 days: no data (6 of 6). Outages in 30 days: no data (4 of 4).')
+    // a missing or malformed part has no points bracket instead of made-up points
+    expect(cases[6]).toContain('Last 30 days: 100%. ')
+    expect(cases[6]).toMatch(/Outages in 30 days: 1\.$/)
+    // a known count with an unknown length, and the reverse
+    expect(tip(broken({ longestOutage30dMs: null }))).toContain('Longest outage in 30 days: no data (6 of 6).')
+    expect(tip(broken({ outageCount30d: null }))).toContain('Longest outage in 30 days: 10 min (6 of 6). Outages in 30 days: no data (4 of 4).')
+  })
+
+  it('null without the stored parts (a record from before methodology 7, no record): the row keeps the general text', () => {
+    const old: StoredScoreBreakdown = { ...storedFor(full) }
+    delete old.uptimeParts
+    delete old.uptimeInputs
+    expect(tip(old)).toBeNull()
+    expect(tip(null)).toBeNull()
+    expect(tip(undefined)).toBeNull()
+  })
+
+  it('style: at most 220 characters, no verdict words, for every case above', () => {
+    const texts = [
+      storedFor(full), storedFor({ pct24h: 0, pct30d: 0, outageCount30d: 999, longestOutageMs30d: 29 * 24 * HOUR + 23 * HOUR, ongoingOutage: true }),
+      storedFor({ pct24h: 100, pct30d: 100, outageCount30d: 0, longestOutageMs30d: 0, ongoingOutage: false }),
+      { ...storedFor(full), uptimeInputs: undefined } as unknown as StoredScoreBreakdown,
+    ].map(s => tip(s)!)
+    for (const text of texts) {
+      expect(styleProblems(text)).toEqual([])
+      expect(text).not.toMatch(/\b(good|bad|safe|trusted|recommended)\b/i)
+    }
   })
 })

@@ -10,7 +10,7 @@
 > - **Watchlist:** a visible page head (`PageHead`, "Watchlist") replaces the screen-reader-only h1. The logged-out gate lists what the list gives, has a "What is Nostr?" disclosure and a link back to the Dashboard. A notify pill carries a small box (empty while off, ticked while on) so an off pill does not look like a label.
 > - **Not changed on purpose:** the phone navbar keeps the Watchlist count on the label's corner and the account chip without a name (both are the documented fit for 360px, see `mobile-and-tooltips.md`); a local watchlist without login is a product decision that was not taken.
 
-> **Methodology 7 (2026-11-10):** the 30-day uptime is shown on the card (chip only below 95 %), in the Mint Detail header, under the breakdown's Uptime row, in Compare (row `uptime-30d`) and in the History tab's Outages panel; the Stats "Most Reliable" lists and the wizard require 95 % uptime in 30 days. Details in `scoring-and-probing.md` ("Where the 30-day figure is shown", "Recommendation gate: 95 % uptime in 30 days").
+> **Methodology 7 (2026-11-10):** the 30-day uptime is shown on the card (chip only below 95 %), in the Mint Detail header, in the breakdown's Uptime row (its value and its ⓘ), in Compare (row `uptime-30d`) and in the History tab's Outages panel; the Stats "Most Reliable" lists and the wizard require 95 % uptime in 30 days. Details in `scoring-and-probing.md` ("Where the 30-day figure is shown", "Recommendation gate: 95 % uptime in 30 days").
 
 
 - **`MintComparePicker`** (`src/components/MintComparePicker.tsx` + its own `.css`) is the

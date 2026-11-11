@@ -186,7 +186,7 @@ export **before** rendering `MintDetailContent`. Fixes the "ghost mint" bug wher
 > - **Left as they are:** the card's score bar (decorative, `aria-hidden`, the number above it is its label) and wallet logos (generic platform icons; real logos would be third-party assets to host and license).
 > - **Audit strip note:** when the strip holds a red mark a visible line follows it (`SWAP_STRIP_FAILED_NOTE`, `data-testid="audit-swap-bar-note"`): a red mark is any failed swap, the score counts only attributed ones. cashu.info gives the attribution as a 7-day total, not per swap, so the marks cannot be coloured by cause.
 
-> **Methodology 7 (2026-11-10):** the 30-day uptime is shown on the card (chip only below 95 %), in the Mint Detail header, under the breakdown's Uptime row, in Compare (row `uptime-30d`) and in the History tab's Outages panel; the Stats "Most Reliable" lists and the wizard require 95 % uptime in 30 days. Details in `scoring-and-probing.md` ("Where the 30-day figure is shown", "Recommendation gate: 95 % uptime in 30 days").
+> **Methodology 7 (2026-11-10):** the 30-day uptime is shown on the card (chip only below 95 %), in the Mint Detail header, in the breakdown's Uptime row (its value and its ⓘ), in Compare (row `uptime-30d`) and in the History tab's Outages panel; the Stats "Most Reliable" lists and the wizard require 95 % uptime in 30 days. Details in `scoring-and-probing.md` ("Where the 30-day figure is shown", "Recommendation gate: 95 % uptime in 30 days").
 
 
 The desktop `.md-reliability-panel` sidebar (Overview tab, ≥901px) now renders all 5 Reliability Score

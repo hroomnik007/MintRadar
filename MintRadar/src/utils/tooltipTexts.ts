@@ -19,6 +19,7 @@ import {
 import { UNKNOWN_SOFTWARE_POINTS, pointsForMinorsBehind } from './versionRule'
 import { pluralize } from './plural'
 import { FRESH_MINT_MONTHS } from './mintFormatting'
+import type { StoredPart, StoredScoreBreakdown } from './mintDetailFacts'
 
 // ── Facts that only the backend defines (compared with it by the unit test) ───────────────────────────────────
 /** Window of the uptime figure (backend/src/prober.ts: the last 24 hours of probes). */
@@ -99,6 +100,39 @@ export function scoreFormulaText(): string {
 /** Breakdown rows. */
 export function uptimeRowText(): string {
   return `Successful checks in the last ${UPTIME_WINDOW_HOURS}h (${UPTIME_24H_MAX} points) and ${UPTIME_30D_WINDOW_DAYS} days (${UPTIME_30D_MAX}), plus the longest outage (${LONGEST_OUTAGE_MAX}) and the number of outages (${OUTAGE_COUNT_MAX}) in those ${UPTIME_30D_WINDOW_DAYS} days.`
+}
+const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+/** " (20 of 20 points)" from the stored part (its own points and maximum); empty when the part is missing or malformed. */
+function partPointsText(part: StoredPart | null | undefined, unit = ''): string {
+  return part && finite(part.points) && finite(part.max) ? ` (${part.points} of ${part.max}${unit})` : ''
+}
+/**
+ * The Uptime row's tooltip for a mint whose stored record carries the four uptime parts (methodology 7): each part with
+ * the figure it used and the points the score gave it, all from the stored record (`scoreBreakdown.uptimeParts` and
+ * `uptimeInputs`; the maxima are the stored parts' own `max`). A figure that is missing reads "no data", never 0.
+ * null without the stored parts (a record from before methodology 7, or the live fallback): the caller then shows
+ * the general `uptimeRowText()`.
+ */
+export function uptimeRowTooltip(stored: StoredScoreBreakdown | null | undefined, fmt: (ms: number) => string): string | null {
+  const p = stored?.uptimeParts
+  if (!p || typeof p !== 'object') return null
+  const i = stored?.uptimeInputs
+  const pct = (v: unknown) => (finite(v) ? `${v}%` : null)
+  const pct24 = pct(i?.uptime24hPct)
+  const pct30 = pct(i?.uptime30dPct)
+  const count = finite(i?.outageCount30d) ? i.outageCount30d : null
+  const longest = finite(i?.longestOutage30dMs) ? i.longestOutage30dMs : null
+  const days = UPTIME_30D_WINDOW_DAYS
+  const longestText = count === 0
+    ? `No outage in the last ${days} days`
+    : `Longest outage in ${days} days: ${longest !== null && (count !== null || longest > 0) ? fmt(longest) : 'no data'}`
+  const ongoing = count !== null && count > 0 && i?.ongoingOutage === true ? (count === 1 ? ', ongoing' : ', one ongoing') : ''
+  return [
+    `Last ${UPTIME_WINDOW_HOURS} h: ${pct24 ? `${pct24} of probes succeeded` : 'no data'}${partPointsText(p.last24h, ' points')}.`,
+    `Last ${days} days: ${pct30 ?? 'no data'}${partPointsText(p.last30d)}.`,
+    `${longestText}${partPointsText(p.longestOutage)}.`,
+    `Outages in ${days} days: ${count ?? 'no data'}${ongoing}${partPointsText(p.outageCount)}.`,
+  ].join(' ')
 }
 export function auditRowText(): string {
   return `Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last ${AUDIT_WINDOW_DAYS} days (failures caused elsewhere are not counted against it). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral ${AUDIT_NEUTRAL} of ${AUDIT_POINTS}.`

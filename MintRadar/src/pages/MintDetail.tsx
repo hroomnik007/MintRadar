@@ -12,7 +12,7 @@ import { useMintChanges } from '@/hooks/useMintChanges'
 import { infoDates, infoTitle, keysetDates, keysetPending } from '@/utils/changeDates'
 import { useMintProbe } from '@/hooks/useMintProbe'
 import {
-  reviewSurgeText, uptimeRowText, auditRowText, NUT_ROW_TEXT,
+  reviewSurgeText, uptimeRowText, uptimeRowTooltip, auditRowText, NUT_ROW_TEXT,
   versionRowText, contactRowText, scoreFormulaText,
   HTTP_ERROR_EXPLANATIONS, NON_HTTP_ERROR_EXPLANATIONS, operatorExcludedText,
   KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote,
@@ -63,7 +63,7 @@ import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocu
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
-import { auditSuccessText, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, uptimePartsDetail, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -836,12 +836,13 @@ function MintDetailContent({ url }: { url: string }) {
   const rowVScore = breakdownRowScore(storedBreakdown, 'version', breakdownVScore)
   const rowCScore = breakdownRowScore(storedBreakdown, 'contact', breakdownCScore)
   // Methodology 7: the stored record carries the four uptime parts and the 30-day figures they used. The row then
-  // names both windows, and the line under it lists each part with its points (they add up to the row's points).
+  // names both windows, and its ⓘ lists each part with the figure it used and its points (they add up to the row's
+  // points). Without the stored parts the ⓘ is the general explanation. No line under the row besides the source.
   const storedUptimeInputs = storedBreakdown?.uptimeParts ? storedBreakdown.uptimeInputs : undefined
   const uptimeRowDisplay = storedUptimeInputs ? `${uptimePct}% · 30d ${storedUptimeInputs.uptime30dPct}%` : `${uptimePct}%`
-  const uptimeDetail = uptimePartsDetail(storedBreakdown, formatDuration)
+  const uptimeTooltip = uptimeRowTooltip(storedBreakdown, formatDuration) ?? uptimeRowText()
   const reliabilityBreakdownRows = [
-    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : uptimeRowDisplay, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), ...(uptimeDetail ? { detail: uptimeDetail } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeRowText() },
+    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : uptimeRowDisplay, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeTooltip },
     { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: rowAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: NUT_ROW_LABEL, display: `${offeredNuts.length} / ${TRACKED_NUTS.length} NUTs${disabledNuts.length > 0 ? ` · ${disabledNuts.length} disabled` : ''}`, source: infoSource, score: rowNScore, max: NUT_POINTS, color: storedBreakdown ? breakdownPointsColor(rowNScore, NUT_POINTS) : offeredNuts.length >= 12 ? 'var(--accent)' : offeredNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
     { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: rowVScore, max: VERSION_POINTS, color: breakdownPointsColor(rowVScore, VERSION_POINTS), tooltip: versionRowText() },

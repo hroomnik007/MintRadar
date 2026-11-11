@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor, uptimePartsDetail, formatDuration,
+  outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor, formatDuration,
   readLastInfo, averageReliability, latencyPercentilesText, swapStripText, swapStripLabel, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT, auditSuccessText,
   type OutagesResponse, type StoredScoreBreakdown, type BreakdownPart,
 } from '@/utils/mintDetailFacts'
@@ -187,8 +187,9 @@ describe('Audit row value: the same "x / y" as Compare\'s "No mint fault (7d)"',
   })
 })
 
-// Methodology 7: the longest outage under "Time to recover" and the four uptime parts under the Uptime row.
-describe('longest outage and the uptime parts line', () => {
+// Methodology 7: the longest outage under "Time to recover". The four uptime parts are the Uptime row's tooltip
+// (uptimeRowTooltip, tooltipTexts.test.ts).
+describe('longest outage', () => {
   const base: OutagesResponse = { sinceLastOutageMs: 10 * 24 * H, avgRecoveryMs: 21 * H, outageCount: 8, recoveredCount: 8, ongoing: false, currentOutage: null, outages: [] }
   it('the recover tile names the longest outage when there is more than one outage', () => {
     const t = outageTiles({ ...base, longestOutageMs: 162.5 * H }, 'Outages (30d)', formatDuration)
@@ -203,30 +204,5 @@ describe('longest outage and the uptime parts line', () => {
   })
   it('formatDuration: seconds, minutes, hours and days', () => {
     expect([30_000, 45 * 60_000, 3 * H + 20 * 60_000, 6 * H, 162 * H, 48 * H].map(formatDuration)).toEqual(['30s', '45 min', '3h 20m', '6h', '6d 18h', '2d'])
-  })
-
-  const stored: StoredScoreBreakdown = {
-    uptime: { points: 22, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: 15, max: 15 }, version: { points: 15, max: 15 }, contact: { points: 5, max: 5 },
-    uptimeParts: { last24h: { points: 20, max: 20 }, last30d: { points: 0, max: 10 }, longestOutage: { points: 0, max: 6 }, outageCount: { points: 2, max: 4 } },
-    uptimeInputs: { uptime24hPct: 100, uptime30dPct: 77, outageCount30d: 8, longestOutage30dMs: 162 * H, ongoingOutage: false },
-    newMintCap: { points: 0, cap: 75 }, sum: 82,
-  }
-  it('each part with the figure it used and its points; the points add up to the row', () => {
-    const line = uptimePartsDetail(stored, formatDuration)!
-    expect(line).toBe('24 h 100%: 20/20 · 30 days 77%: 0/10 · longest outage 6d 18h: 0/6 · 8 outages: 2/4')
-    const pts = [...line.matchAll(/: (\d+)\/\d+/g)].map(m => Number(m[1]))
-    expect(pts.reduce((a, b) => a + b, 0)).toBe(stored.uptime.points)
-  })
-  it('no outage reads "none", one outage is singular, an ongoing one is named', () => {
-    const clean = { ...stored, uptimeInputs: { ...stored.uptimeInputs!, outageCount30d: 0, longestOutage30dMs: 0 } }
-    expect(uptimePartsDetail(clean, formatDuration)).toContain('longest outage none: 0/6 · 0 outages: 2/4')
-    const one = { ...stored, uptimeInputs: { ...stored.uptimeInputs!, outageCount30d: 1, ongoingOutage: true } }
-    expect(uptimePartsDetail(one, formatDuration)).toContain('1 outage, one ongoing: 2/4')
-  })
-  it('null without the stored parts (a record from before methodology 7, no record)', () => {
-    const old: StoredScoreBreakdown = { uptime: stored.uptime, audit: stored.audit, nuts: stored.nuts, version: stored.version, contact: stored.contact, newMintCap: stored.newMintCap, sum: stored.sum }
-    expect(uptimePartsDetail(old, formatDuration)).toBeNull()
-    expect(uptimePartsDetail({ ...old, uptimeParts: stored.uptimeParts! }, formatDuration)).toBeNull()
-    expect(uptimePartsDetail(null, formatDuration)).toBeNull()
   })
 })

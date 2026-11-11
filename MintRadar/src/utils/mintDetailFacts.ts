@@ -92,24 +92,6 @@ export function breakdownRowScore(stored: StoredScoreBreakdown | null | undefine
   return stored ? stored[part].points : live
 }
 
-/**
- * The line under the Uptime row: each of its four parts with the figure it used and its points, from the stored record.
- * null without the stored parts (a record from before methodology 7, or the live fallback).
- */
-export function uptimePartsDetail(stored: StoredScoreBreakdown | null | undefined, fmt: (ms: number) => string): string | null {
-  const p = stored?.uptimeParts
-  const i = stored?.uptimeInputs
-  if (!p || !i) return null
-  const pts = (part: StoredPart) => `${part.points}/${part.max}`
-  const outages = `${i.outageCount30d} ${i.outageCount30d === 1 ? 'outage' : 'outages'}${i.ongoingOutage ? ', one ongoing' : ''}`
-  return [
-    `24 h ${i.uptime24hPct}%: ${pts(p.last24h)}`,
-    `30 days ${i.uptime30dPct}%: ${pts(p.last30d)}`,
-    `longest outage ${i.outageCount30d === 0 ? 'none' : fmt(i.longestOutage30dMs)}: ${pts(p.longestOutage)}`,
-    `${outages}: ${pts(p.outageCount)}`,
-  ].join(' · ')
-}
-
 /** Colour by share of the part's maximum (the same bands the version and contact rows used: 80 % / 40 %). */
 export function breakdownPointsColor(points: number | null, max: number): string {
   if (points === null) return 'var(--text3)'
