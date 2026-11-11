@@ -29,16 +29,20 @@ async function openBreakdown(page: Page, audit: { total: number | null; blamed: 
   return panel
 }
 
-/** Reads the five displayed "points/max" values and the score next to them. */
+/** Reads the five displayed "points/max" values and the score next to them, in one tick (the live probe can still
+ *  change a part while the page settles, so the parts and the total must come from the same render). */
 async function readParts(panel: ReturnType<Page['locator']>) {
-  const scores = await panel.locator('.rb-row-score').allTextContents()
+  const { scores, gauge } = await panel.evaluate(el => ({
+    scores: Array.from(el.querySelectorAll('.rb-row-score')).map(e => e.textContent ?? ''),
+    gauge: (el.querySelector('.gauge-num') as HTMLElement | null)?.innerText ?? '',
+  }))
   expect(scores).toHaveLength(5)
   const parts = scores.map(s => {
     const m = /^(\d+(?:\.\d+)?)\/(\d+)$/.exec(s.trim())
     expect(m, `"${s}" is points/max`).not.toBeNull()
     return { points: Number(m![1]), max: Number(m![2]) }
   })
-  const total = Number((await panel.locator('.gauge-num').innerText()).replace('%', ''))
+  const total = Number(gauge.replace('%', ''))
   return { parts, total }
 }
 
@@ -83,7 +87,13 @@ test.describe('Reliability breakdown: audit row', () => {
       if (c.note) await expect(row.locator('.rb-row-note')).toHaveText(c.note)
       else await expect(row.locator('.rb-row-note')).toHaveCount(0)
 
-      // The score beside the breakdown is the (rounded, capped) sum of the five displayed parts.
+      // The score beside the breakdown is the (rounded, capped) sum of the five displayed parts, once the page has
+      // settled (the live probe may still update a part right after the first render).
+      const mismatch = async () => {
+        const { parts, total } = await readParts(panel)
+        return total - Math.min(100, Math.round(parts.reduce((a, p) => a + p.points, 0)))
+      }
+      await expect.poll(mismatch, { message: 'the score equals the rounded sum of the displayed parts' }).toBe(0)
       const { parts, total } = await readParts(panel)
       expect(parts.map(p => p.max)).toEqual([40, 25, 15, 15, 5])
       const sum = parts.reduce((a, p) => a + p.points, 0)
