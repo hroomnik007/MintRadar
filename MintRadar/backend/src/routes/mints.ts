@@ -562,9 +562,15 @@ router.get('/api/mint/icon', (req: Request, res: Response): void => {
       // again without the header and gets the bytes below. Everything else (.ico, AVIF, HEAD, a caller without the
       // header: local development, e2e, an nginx without that block) is answered as before.
       if (req.method === 'GET' && req.headers['x-icon-resize'] === '1' && isResizableIcon(icon.body)) {
+        // Every header nginx copies from THIS response onto the resized one must be absent here, or it is sent twice:
+        // nginx keeps Content-Type, Cache-Control, Expires, Content-Disposition, Accept-Ranges and Set-Cookie of the
+        // redirecting response. A `Cache-Control: no-store` here reached the browser next to the 7-day one of the
+        // second response (seen live on 2026-11-13) and would have switched icon caching off.
         res.removeHeader('Content-Type')
         res.removeHeader('ETag')
-        res.setHeader('Cache-Control', 'no-store')
+        res.removeHeader('Cache-Control')
+        res.removeHeader('Content-Security-Policy')
+        res.removeHeader('Cross-Origin-Resource-Policy')
         res.setHeader('X-Accel-Redirect', `${ICON_RESIZE_LOCATION}?url=${encodeURIComponent(rawUrl)}`)
         res.status(200).end()
         return

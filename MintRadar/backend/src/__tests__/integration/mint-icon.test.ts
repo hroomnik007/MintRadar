@@ -244,7 +244,10 @@ describe('GET /api/mint/icon', () => {
       expect(res.headers['x-accel-redirect']).toBe('/internal/mint-icon?url=https%3A%2F%2Fmint.example')
       expect(res.headers['content-type']).toBeUndefined()
       expect(res.headers['etag']).toBeUndefined()
-      expect(res.headers['cache-control']).toBe('no-store')
+      // nginx copies Cache-Control (and Content-Type) of this response onto the resized one: neither may be set here.
+      expect(res.headers['cache-control']).toBeUndefined()
+      expect(res.headers['expires']).toBeUndefined()
+      expect(res.headers['set-cookie']).toBeUndefined()
       expect(res.text ?? '').toBe('')
     })
 

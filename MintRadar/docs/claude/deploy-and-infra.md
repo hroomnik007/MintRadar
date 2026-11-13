@@ -372,7 +372,7 @@ After a deploy the previous build's hashed lazy chunks (`Stats-<hash>.js`, …) 
 
 `mintOgDescription()` in `backend/src/og.ts`: "Reliability Score: 98/100 · Online · 100% uptime (24h) · 14 NUTs · rated 4.7/5 in 90 reviews". Score and status first (unchanged prefix); each later part only when known (24h probes exist, `nut_count` > 0, `review_avg_rating` with `review_rated_count` > 0). Numbers only, nothing mint-supplied. The image is still the one static `og-image-reliability.png`.
 
-### Mint icons resized by nginx (2026-11-13; in the repo file, NOT yet applied to the server when written)
+### Mint icons resized by nginx (2026-11-13, APPLIED to server01 the same day)
 
 Why: the mint list loaded every icon at full size (26 files, 1429 KB, largest 250 KB) for images shown at 18 to 72 CSS px. The owner chose nginx over an image library in the backend (no new npm dependency).
 
@@ -397,4 +397,6 @@ Why: the mint list loaded every icon at full size (26 files, 1429 KB, largest 25
 | other `/api/` paths | unchanged |
 
 - **Cost:** each uncached icon request is two backend requests (both from the 6-hour in-process cache) and one decode + resize in the nginx worker (a few ms for a normal icon). Browsers keep an icon 7 days. No nginx cache was added.
-- **Apply (owner or with the owner's go-ahead):** `apt-get install libnginx-mod-http-image-filter`, backup of the live `mintradar.org.conf`, copy of `deploy/nginx.conf`, `nginx -t`, reload. Check: `curl -s -o /dev/null -w '%{size_download} %{content_type}\n' 'https://mintradar.org/api/mint/icon?url=https%3A%2F%2Fmint.macadamia.cash'` (about 18 KB instead of 250 KB). Rollback: restore the backup and reload (the package may stay installed; unused it does nothing).
+- **Applied 2026-11-13 (with the owner's go-ahead):** the package installed 32 packages in all (libgd3 and its libraries; nothing upgraded or removed, nginx itself unchanged; its trigger reloaded nginx, no restart), backup `/etc/nginx/sites-available/mintradar.org.conf.bak-20261113-145206`, the live file equals the repo file. Live after: macadamia 250 381 B -> 18 152 B, sovran 205 052 -> 8 385, the mint list's first view 1395 KiB -> 223 KiB of icons (26 images), 204 / 400 / 304 as before, the other vhosts of the server answered as before the reload.
+- **One response header rule learned live:** nginx copies `Cache-Control` and `Content-Type` of the REDIRECTING response onto the final one. The first version of the route set `Cache-Control: no-store` on the redirect, and the resized icon went out with both `no-store` and the 7-day header. The redirect response now carries neither (pinned in `integration/mint-icon.test.ts`). The container stub had not sent that header, so the test above missed it.
+- **Apply steps, for the record:** `apt-get install libnginx-mod-http-image-filter`, backup of the live `mintradar.org.conf`, copy of `deploy/nginx.conf`, `nginx -t`, reload. Check: `curl -s -o /dev/null -w '%{size_download} %{content_type}\n' 'https://mintradar.org/api/mint/icon?url=https%3A%2F%2Fmint.macadamia.cash'` (about 18 KB instead of 250 KB). Rollback: restore the backup and reload (the package may stay installed; unused it does nothing).
