@@ -12,7 +12,7 @@ import { getAuditCzForMint, clampAuditCzLimit } from '../auditCz.js'
 import { normalizeUrl } from '../discovery.js'
 import { rateLimitKey } from '../mintAdmission.js'
 import { fetchOgMintData, renderMintOgHtml, renderPageOgHtml } from '../og.js'
-import { getMintIcon, iconEtag } from '../mintIcon.js'
+import { getMintIcon, iconEtag, isResizableIcon, ICON_RESIZE_LOCATION } from '../mintIcon.js'
 import { publicMintNameOrHost } from '../mintNames.js'
 import { recommendEnvelope, memoizedBody, buildCachedBody, sendCachedBody, ifNoneMatchMatches } from '../walletApi.js'
 import { readStoredContactChecks } from '../contactChecks.js'
@@ -555,6 +555,18 @@ router.get('/api/mint/icon', (req: Request, res: Response): void => {
       if (ifNoneMatchMatches(req.headers['if-none-match'], etag)) {
         res.removeHeader('Content-Type')
         res.status(304).end()
+        return
+      }
+      // Resizing is nginx's job (image_filter, deploy/nginx.conf). Its public icon location asks with X-Icon-Resize: 1;
+      // for a file the filter can read we send no body and point nginx at its internal resizing location, which asks
+      // again without the header and gets the bytes below. Everything else (.ico, AVIF, HEAD, a caller without the
+      // header: local development, e2e, an nginx without that block) is answered as before.
+      if (req.method === 'GET' && req.headers['x-icon-resize'] === '1' && isResizableIcon(icon.body)) {
+        res.removeHeader('Content-Type')
+        res.removeHeader('ETag')
+        res.setHeader('Cache-Control', 'no-store')
+        res.setHeader('X-Accel-Redirect', `${ICON_RESIZE_LOCATION}?url=${encodeURIComponent(rawUrl)}`)
+        res.status(200).end()
         return
       }
       res.end(icon.body)

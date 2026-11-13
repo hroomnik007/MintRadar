@@ -131,6 +131,79 @@ export function sniffRasterImageType(buf: Buffer): string | null {
   return null
 }
 
+// Largest side, in pixels, of an icon we serve. nginx resizes the icon on its way out (image_filter, deploy/nginx.conf) and
+// decodes the whole bitmap to do so: a 249 KB PNG declaring 16000 x 16000 pixels kept a worker busy for 6.8 s and took
+// 500 MB (measured 2026-11-13). The byte cap above does not bound that, the declared size does. 2048 is twice the largest
+// real icon seen that day (1084 px) and at most about 16 MB decoded.
+export const MAX_ICON_DIMENSION = 2048
+
+/**
+ * Pixel size declared in the header of a PNG, JPEG, GIF or WebP file, read without decoding it; null when the bytes
+ * are not one of the four or the header is cut short or malformed. These are the formats nginx's image filter decodes
+ * (it sniffs the bytes itself and ignores Content-Type), so this reads the same fields its decoder will trust.
+ */
+export function imageDimensions(buf: Buffer): { width: number; height: number } | null {
+  const type = sniffRasterImageType(buf)
+  if (type === 'image/png') {
+    // signature (8) + chunk length (4) + "IHDR" (4) + width (4) + height (4)
+    if (buf.length < 24 || buf.toString('latin1', 12, 16) !== 'IHDR') return null
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+  }
+  if (type === 'image/gif') {
+    if (buf.length < 10) return null
+    return { width: buf.readUInt16LE(6), height: buf.readUInt16LE(8) }
+  }
+  if (type === 'image/webp') {
+    if (buf.length < 30) return null
+    const chunk = buf.toString('latin1', 12, 16)
+    if (chunk === 'VP8 ') return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff }
+    if (chunk === 'VP8L') {
+      if (buf[20] !== 0x2f) return null
+      const bits = buf.readUInt32LE(21)
+      return { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 }
+    }
+    if (chunk === 'VP8X') return { width: buf.readUIntLE(24, 3) + 1, height: buf.readUIntLE(27, 3) + 1 }
+    return null
+  }
+  if (type === 'image/jpeg') {
+    // Walk the segments to the first start-of-frame marker (C0..CF except C4 DHT, C8 JPG, CC DAC).
+    let i = 2
+    while (i + 9 <= buf.length) {
+      if (buf[i] !== 0xff) return null
+      const marker = buf[i + 1]!
+      if (marker === 0xff) { i += 1; continue } // fill byte
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { i += 2; continue } // no length
+      if (marker === 0xd9 || marker === 0xda) return null // end of image / scan data before any frame header
+      const len = buf.readUInt16BE(i + 2)
+      if (len < 2) return null
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { height: buf.readUInt16BE(i + 5), width: buf.readUInt16BE(i + 7) }
+      }
+      i += 2 + len
+    }
+    return null
+  }
+  return null
+}
+
+/**
+ * False for a PNG, JPEG, GIF or WebP (by its bytes, whatever type was declared) whose declared size is unreadable, zero
+ * or above MAX_ICON_DIMENSION on a side. Other bytes (ICO, AVIF) are not decoded by nginx and pass.
+ */
+export function iconDimensionsAllowed(buf: Buffer): boolean {
+  if (sniffRasterImageType(buf) === null) return true
+  const d = imageDimensions(buf)
+  return d !== null && d.width > 0 && d.height > 0 && d.width <= MAX_ICON_DIMENSION && d.height <= MAX_ICON_DIMENSION
+}
+
+/** The internal nginx location that resizes an icon (deploy/nginx.conf, `location = /internal/mint-icon`). */
+export const ICON_RESIZE_LOCATION = '/internal/mint-icon'
+
+/** True for the bytes nginx's image filter reads (PNG, JPEG, GIF, WebP by signature); an .ico or AVIF file is not. */
+export function isResizableIcon(buf: Buffer): boolean {
+  return sniffRasterImageType(buf) !== null
+}
+
 async function fetchMintIcon(mintUrl: string): Promise<MintIcon | null> {
   const result = await pool.query('SELECT icon_url FROM mints WHERE url = $1', [mintUrl])
   if (result.rows.length === 0) return null // not a known mint — refuse to proxy
@@ -162,6 +235,7 @@ async function fetchMintIcon(mintUrl: string): Promise<MintIcon | null> {
     contentType = sniffRasterImageType(body)
   }
   if (!contentType) return null
+  if (!iconDimensionsAllowed(body)) return null
 
   return { body, contentType }
 }

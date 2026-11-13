@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import type { Express } from 'express'
 import { createHash } from 'node:crypto'
+import { pngOf } from '../helpers/iconFixtures.js'
 
 // GET /api/mint/icon — SSRF-safe favicon proxy (see backend/src/mintIcon.ts).
 // The frontend routes every mint <img> here instead of fetching a mint-supplied
@@ -31,7 +32,7 @@ let app: Express
 let query: ReturnType<typeof vi.fn>
 let safeFetch: ReturnType<typeof vi.fn>
 
-const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
+const PNG = pngOf(64, 64)
 
 function fakeRes(opts: { ok?: boolean; contentType?: string; body?: Buffer }) {
   const headers = new Map<string, string>()
@@ -228,5 +229,67 @@ describe('GET /api/mint/icon', () => {
         expect(res.status).not.toBe(429)
       })
     }
+  })
+  describe('resizing hand-off to nginx (X-Icon-Resize, 2026-11-13)', () => {
+    const ICON_URL = '/api/mint/icon?url=https://mint.example'
+    const arrange = (body: Buffer, contentType = 'image/png') => {
+      query.mockResolvedValue({ rows: [{ icon_url: 'https://mint.example/icon' }] })
+      safeFetch.mockResolvedValue(fakeRes({ contentType, body }))
+    }
+    const ICO = Buffer.from([0, 0, 1, 0, 1, 0, 16, 16, 0, 0, 1, 0, 32, 0])
+
+    it('asked by nginx for a readable image: no body, an internal redirect that carries the encoded mint URL', async () => {
+      arrange(PNG)
+      const res = await request(app).get(ICON_URL).set('X-Icon-Resize', '1').expect(200)
+      expect(res.headers['x-accel-redirect']).toBe('/internal/mint-icon?url=https%3A%2F%2Fmint.example')
+      expect(res.headers['content-type']).toBeUndefined()
+      expect(res.headers['etag']).toBeUndefined()
+      expect(res.headers['cache-control']).toBe('no-store')
+      expect(res.text ?? '').toBe('')
+    })
+
+    it('the mint URL cannot add a header or a second query parameter to the redirect', async () => {
+      arrange(PNG)
+      const hostile = 'https://mint.example/a b&x=1\r\nX-Evil: 1'
+      const res = await request(app).get('/api/mint/icon').query({ url: hostile }).set('X-Icon-Resize', '1')
+      const loc = res.headers['x-accel-redirect'] as string | undefined
+      if (loc !== undefined) {
+        expect(loc.startsWith('/internal/mint-icon?url=')).toBe(true)
+        expect(loc.slice('/internal/mint-icon?url='.length)).toMatch(/^[A-Za-z0-9%._~!*'()-]+$/)
+      }
+      expect(res.headers['x-evil']).toBeUndefined()
+    })
+
+    it('without the header (the internal location, local development, e2e) the bytes are served as before', async () => {
+      arrange(PNG)
+      const res = await request(app).get(ICON_URL).expect(200)
+      expect(res.headers['x-accel-redirect']).toBeUndefined()
+      expect(res.headers['content-type']).toBe('image/png')
+      expect(Buffer.compare(res.body as Buffer, PNG)).toBe(0)
+    })
+
+    it('an .ico file is not handed to the filter: served as it is even when nginx asks', async () => {
+      arrange(ICO, 'image/x-icon')
+      const res = await request(app).get(ICON_URL).set('X-Icon-Resize', '1').expect(200)
+      expect(res.headers['x-accel-redirect']).toBeUndefined()
+      expect(res.headers['content-type']).toBe('image/x-icon')
+    })
+
+    it('no icon stays a 204, a matching If-None-Match stays a 304, and HEAD is not redirected', async () => {
+      arrange(PNG)
+      const first = await request(app).get(ICON_URL).expect(200)
+      await request(app).get(ICON_URL).set('X-Icon-Resize', '1').set('If-None-Match', `W/${first.headers['etag']}`).expect(304)
+      const head = await request(app).head(ICON_URL).set('X-Icon-Resize', '1').expect(200)
+      expect(head.headers['x-accel-redirect']).toBeUndefined()
+      query.mockResolvedValue({ rows: [] })
+      const none = await request(app).get('/api/mint/icon?url=https://unknown.example').set('X-Icon-Resize', '1').expect(204)
+      expect(none.headers['x-accel-redirect']).toBeUndefined()
+    })
+
+    it('a small file that declares a 16000 x 16000 bitmap is no icon at all (it never reaches the filter)', async () => {
+      arrange(pngOf(16000, 16000))
+      const res = await request(app).get(ICON_URL).set('X-Icon-Resize', '1').expect(204)
+      expect(res.headers['x-accel-redirect']).toBeUndefined()
+    })
   })
 })

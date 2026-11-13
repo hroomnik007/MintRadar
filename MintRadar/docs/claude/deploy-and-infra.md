@@ -371,3 +371,30 @@ After a deploy the previous build's hashed lazy chunks (`Stats-<hash>.js`, …) 
 ### Mint link preview description (2026-11-13)
 
 `mintOgDescription()` in `backend/src/og.ts`: "Reliability Score: 98/100 · Online · 100% uptime (24h) · 14 NUTs · rated 4.7/5 in 90 reviews". Score and status first (unchanged prefix); each later part only when known (24h probes exist, `nut_count` > 0, `review_avg_rating` with `review_rated_count` > 0). Numbers only, nothing mint-supplied. The image is still the one static `og-image-reliability.png`.
+
+### Mint icons resized by nginx (2026-11-13; in the repo file, NOT yet applied to the server when written)
+
+Why: the mint list loaded every icon at full size (26 files, 1429 KB, largest 250 KB) for images shown at 18 to 72 CSS px. The owner chose nginx over an image library in the backend (no new npm dependency).
+
+- **What:** `location = /api/mint/icon` + `location = /internal/mint-icon` (internal, `image_filter resize 144 144`, buffer 1M, JPEG / WebP quality 85) + `@mint_icon_none` in `deploy/nginx.conf`. Format and transparency are kept, an image already within 144 px passes untouched.
+- **Needs** the Debian package `libnginx-mod-http-image-filter` (same version as the distro nginx, 1.26.3 on server01; it enables itself in `/etc/nginx/modules-enabled/`). Without it `nginx -t` fails on the new directives, so install the package BEFORE copying the file.
+- **Two steps through the backend, not one filtered proxy.** The filter answers 415 for a body it cannot read (an `.ico`, AVIF, an empty 204, a HEAD), and after that nginx cannot proxy the same request again: both `error_page 415 = @named` and `= /uri` with a `proxy_pass` reset the connection (measured, HTTP/1.1 and HTTP/2). So the backend decides: asked with `X-Icon-Resize: 1` it answers a readable image with `X-Accel-Redirect` to the internal location (`docs/claude/backend-api-and-data.md`, "Icon size limit and resizing"). The internal location clears the header; with a client-sent copy the backend would redirect in a loop.
+- **Order of deploy does not matter:** an old backend ignores the header and serves the file; a new backend behind the old nginx never sees the header. Resizing starts when both are in place.
+- **The backend's 2048 px limit is part of this change.** Do not point `image_filter` at an upstream without it.
+- **Measured in a container** (`debian:trixie-slim` + `nginx` + the module, the repo file unchanged, self-signed certs at the `/etc/letsencrypt` paths, an nginx stub on `127.0.0.1:3002` that behaves like the backend, the 26 real icons):
+
+| Case | Result |
+|---|---|
+| 26 real icons | 1429 KB -> 228 KB; PNG 250 KB -> 18 KB, JPEG 162 KB -> 6 KB, WebP 82 KB -> 3 KB |
+| 128 px PNG | unchanged bytes, strong ETag kept |
+| `.ico` | served as it is (200, `image/x-icon`) |
+| no icon | 204 |
+| a file the backend offers but the filter cannot read | 204 (monogram) |
+| revalidation | resized responses carry a weak ETag `W/"…"`; `If-None-Match` with it gives 304 |
+| headers of a resized icon | the backend's `Cache-Control` (7 days), CSP `default-src 'none'; sandbox`, CORP, plus the server-level security headers, as before |
+| client sends `X-Icon-Resize: 1` itself | same resized image, no loop |
+| `/internal/mint-icon` from outside | an error status (415 from the filter over nginx's own 404 page), no upstream request |
+| other `/api/` paths | unchanged |
+
+- **Cost:** each uncached icon request is two backend requests (both from the 6-hour in-process cache) and one decode + resize in the nginx worker (a few ms for a normal icon). Browsers keep an icon 7 days. No nginx cache was added.
+- **Apply (owner or with the owner's go-ahead):** `apt-get install libnginx-mod-http-image-filter`, backup of the live `mintradar.org.conf`, copy of `deploy/nginx.conf`, `nginx -t`, reload. Check: `curl -s -o /dev/null -w '%{size_download} %{content_type}\n' 'https://mintradar.org/api/mint/icon?url=https%3A%2F%2Fmint.macadamia.cash'` (about 18 KB instead of 250 KB). Rollback: restore the backup and reload (the package may stay installed; unused it does nothing).

@@ -20,18 +20,14 @@ vi.mock('../ssrf.js', async (importOriginal) => {
 })
 vi.mock('../discovery.js', () => ({ normalizeUrl: (u: string) => u.trim() }))
 
-import { getMintIcon, _resetMintIconCache, sniffRasterImageType, iconEtag } from '../mintIcon.js'
+import { getMintIcon, _resetMintIconCache, sniffRasterImageType, iconEtag, imageDimensions, iconDimensionsAllowed, isResizableIcon, MAX_ICON_DIMENSION } from '../mintIcon.js'
+import { pngOf, jpegOf, gifOf, webpOf } from './helpers/iconFixtures.js'
 
 const MINT = 'https://mint.example'
-const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
-const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46])
-const GIF = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 2, 3, 4])
-const WEBP = Buffer.concat([
-  Buffer.from('RIFF', 'latin1'),
-  Buffer.from([0x00, 0x00, 0x00, 0x00]),
-  Buffer.from('WEBP', 'latin1'),
-  Buffer.from([1, 2, 3, 4]),
-])
+const PNG = pngOf(64, 64)
+const JPEG = jpegOf(64, 64)
+const GIF = gifOf(64, 64)
+const WEBP = webpOf(64, 64)
 const OVERSIZE = 600 * 1024 // over the 512 KB cap
 
 function fakeRes(opts: { ok?: boolean; contentType?: string; contentLength?: string; body?: Buffer }) {
@@ -242,5 +238,67 @@ describe('iconEtag', () => {
     expect(a).toMatch(/^"[0-9a-f]{32}"$/)
     expect(iconEtag(Buffer.from(PNG))).toBe(a)
     expect(iconEtag(Buffer.from(JPEG))).not.toBe(a)
+  })
+})
+
+describe('imageDimensions / iconDimensionsAllowed (2026-11-13: nginx resizes icons and decodes the whole bitmap)', () => {
+  it('reads the declared size of each format nginx decodes', () => {
+    expect(imageDimensions(pngOf(256, 128))).toEqual({ width: 256, height: 128 })
+    expect(imageDimensions(jpegOf(1024, 768))).toEqual({ width: 1024, height: 768 })
+    expect(imageDimensions(gifOf(300, 200))).toEqual({ width: 300, height: 200 })
+    expect(imageDimensions(webpOf(960, 540))).toEqual({ width: 960, height: 540 })
+  })
+
+  it('reads lossy (VP8) and lossless (VP8L) WebP headers too', () => {
+    const lossy = Buffer.alloc(30)
+    lossy.write('RIFF', 0, 'latin1'); lossy.write('WEBP', 8, 'latin1'); lossy.write('VP8 ', 12, 'latin1')
+    lossy.writeUInt16LE(160, 26); lossy.writeUInt16LE(120, 28)
+    expect(imageDimensions(lossy)).toEqual({ width: 160, height: 120 })
+    const lossless = Buffer.alloc(30)
+    lossless.write('RIFF', 0, 'latin1'); lossless.write('WEBP', 8, 'latin1'); lossless.write('VP8L', 12, 'latin1')
+    lossless[20] = 0x2f
+    lossless.writeUInt32LE((648 - 1) | ((480 - 1) << 14), 21)
+    expect(imageDimensions(lossless)).toEqual({ width: 648, height: 480 })
+  })
+
+  it('skips the segments before the JPEG frame header, including a progressive one (SOF2)', () => {
+    const j = jpegOf(400, 300)
+    const progressive = Buffer.from(j)
+    progressive[progressive.indexOf(Buffer.from([0xff, 0xc0])) + 1] = 0xc2
+    expect(imageDimensions(progressive)).toEqual({ width: 400, height: 300 })
+  })
+
+  it('is null for a cut-short or malformed header and for bytes that are none of the four', () => {
+    expect(imageDimensions(pngOf(64, 64).subarray(0, 20))).toBeNull()
+    expect(imageDimensions(Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]))).toBeNull()
+    expect(imageDimensions(Buffer.from([0xff, 0xd8, 0xff, 0xda, 0x00, 0x08, 1, 2, 3, 4, 5, 6]))).toBeNull()
+    expect(imageDimensions(Buffer.from([0, 0, 1, 0, 1, 0, 16, 16, 0, 0]))).toBeNull()
+    expect(imageDimensions(Buffer.from('not an image at all'))).toBeNull()
+  })
+
+  it('allows up to MAX_ICON_DIMENSION on a side and refuses more, zero, or an unreadable size', () => {
+    expect(iconDimensionsAllowed(pngOf(MAX_ICON_DIMENSION, MAX_ICON_DIMENSION))).toBe(true)
+    expect(iconDimensionsAllowed(pngOf(MAX_ICON_DIMENSION + 1, 16))).toBe(false)
+    expect(iconDimensionsAllowed(pngOf(16, 16000))).toBe(false)
+    expect(iconDimensionsAllowed(jpegOf(16000, 16000))).toBe(false)
+    expect(iconDimensionsAllowed(webpOf(5000, 16))).toBe(false)
+    expect(iconDimensionsAllowed(gifOf(0, 16))).toBe(false)
+    expect(iconDimensionsAllowed(pngOf(64, 64).subarray(0, 20))).toBe(false)
+  })
+
+  it('lets bytes nginx does not decode pass (an .ico file), and they are not offered for resizing', () => {
+    const ico = Buffer.from([0, 0, 1, 0, 1, 0, 16, 16, 0, 0, 1, 0, 32, 0])
+    expect(iconDimensionsAllowed(ico)).toBe(true)
+    expect(isResizableIcon(ico)).toBe(false)
+    expect(isResizableIcon(pngOf(64, 64))).toBe(true)
+  })
+
+  it('getMintIcon gives no icon for a small file that declares a huge bitmap, whatever type the mint declares', async () => {
+    for (const contentType of ['image/png', 'image/x-icon', 'application/octet-stream']) {
+      query.mockReset(); safeFetch.mockReset(); _resetMintIconCache()
+      query.mockResolvedValueOnce({ rows: [{ icon_url: 'https://cdn.example/icon.png' }] })
+      safeFetch.mockResolvedValueOnce(fakeRes({ contentType, body: pngOf(16000, 16000) }))
+      expect(await getMintIcon(MINT)).toBeNull()
+    }
   })
 })
