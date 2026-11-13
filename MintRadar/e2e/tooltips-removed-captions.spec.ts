@@ -26,7 +26,7 @@ for (const width of [1440, 768, 390, 320]) {
     await expect(tile).toHaveCount(1)
     await expect(triggers(tile)).toHaveCount(0)
     await expect(tile.locator('.stat-note')).toHaveText(avgUptimeCaption())
-    await expect(tile.locator('.stat-note')).toHaveText(`of mints not offline for ${DEGRADED_AFTER_HOURS}h+`)
+    await expect(tile.locator('.stat-note')).toHaveText(`excludes mints offline ${DEGRADED_AFTER_HOURS}h+`)
     expect(avgUptimeCaption().length).toBeLessThanOrEqual(32)
 
     const head = page.locator('.stats-nhi-panel .stats-panel-head')

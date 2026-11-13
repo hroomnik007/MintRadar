@@ -2,6 +2,7 @@ import { HIDE_TEST_MINTS_TEXT, hiddenMintsText } from '@/utils/tooltipTexts'
 import { DEGRADED_AFTER_HOURS } from '@/utils/networkHealthIndex'
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { PageHead } from '@/components/layout/PageHead'
 import { useQueryClient } from '@tanstack/react-query'
 import type { NostrEvent } from 'nostr-tools'
 import { loadSharedPool } from '@/core/nostr/lazy'
@@ -1329,7 +1330,13 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <h1 ref={headingRef} tabIndex={-1} className="sr-only" data-testid="dashboard-heading">MintRadar — Cashu Mints Reliability Score & Uptime Monitor</h1>
+      <PageHead
+        title="Cashu mints"
+        srTitle="Reliability Score & Uptime Monitor"
+        description={<>See how reliably each Cashu mint runs before you trust it with sats. New to Cashu? <Link to="/learn/cashu-basics">Start with the basics</Link>.</>}
+        titleRef={headingRef}
+        titleTestId="dashboard-heading"
+      />
 
       <div className="dash-intro">
         <div className="dash-actions" role="group" aria-label="Get started">

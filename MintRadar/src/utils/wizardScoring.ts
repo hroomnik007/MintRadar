@@ -1,5 +1,6 @@
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { bayesianRating, RATING_PRIOR } from '@/utils/bayesianRating'
+import { LATENCY_SLOW_MS, LATENCY_VERY_SLOW_MS } from '@/utils/mintFormatting'
 
 // Scoring behind the Tools page "Best mint for me" wizard. Pure; Tools.tsx supplies the inputs.
 
@@ -49,6 +50,24 @@ function baseWeightsFor(checks: Set<WizardCheck>): CoreWeights {
   }
   if (fast) return FAST_WEIGHTS
   return RELIABLE_WEIGHTS
+}
+
+/**
+ * Latency component, 0..1, from the browser measurement of one "Find my mint" click.
+ *
+ * "Fast from here" selected: relative to the slowest measured candidate, so a faster mint always ranks higher.
+ * Not selected: latency only penalises a slow mint, in the bands the cards colour (LATENCY_SLOW_MS,
+ * LATENCY_VERY_SLOW_MS). The relative value was used here too until 2026-11-13; it changes on every click
+ * (one measurement, network noise), and at the "Reliable" weight a few percent of it outweighed a whole
+ * Reliability point, so two identical searches could name a different #1.
+ * A mint without a measurement (failed, timed out, blocked by CORS) gets 0 in both modes.
+ */
+export function latencyScore(latencyMs: number | null, maxLatencyMs: number, fastSelected: boolean): number {
+  if (latencyMs === null) return 0
+  if (fastSelected) return 1 - latencyMs / Math.max(maxLatencyMs, 1)
+  if (latencyMs < LATENCY_SLOW_MS) return 1
+  if (latencyMs < LATENCY_VERY_SLOW_MS) return 0.5
+  return 0
 }
 
 // Larger stored balances carry more risk if the mint turns out unreliable, so

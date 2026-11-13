@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { escapeHtml, mintStatusLabel, renderMintOgHtml, renderPageOgHtml, type OgMintData } from '../og.js'
+import { escapeHtml, mintOgDescription, mintStatusLabel, renderMintOgHtml, renderPageOgHtml, type OgMintData } from '../og.js'
 import { PAGE_META, OG_PAGE_SLUGS } from '../shared/pageMeta.js'
 
 describe('escapeHtml', () => {
@@ -46,6 +46,14 @@ describe('renderMintOgHtml', () => {
     expect(html).toContain(`property="og:url" content="https://mintradar.org/mint/${encodeURIComponent(mintUrl)}"`)
     expect(html).toContain('name="twitter:card" content="summary_large_image"')
     expect(html).toContain('property="og:image" content="https://mintradar.org/og-image-reliability.png"')
+  })
+
+  it('adds 24h uptime, NUT count and the rating to the description when known, and leaves each out when not', () => {
+    const full: OgMintData = { name: 'Example Mint', reliabilityScore: 98, online: true, degraded: false, uptimePct24h: 100, nutCount: 14, reviewAvgRating: 4.66, reviewRatedCount: 90 }
+    expect(mintOgDescription(full)).toBe('Reliability Score: 98/100 · Online · 100% uptime (24h) · 14 NUTs · rated 4.7/5 in 90 reviews')
+    expect(mintOgDescription({ ...full, reviewRatedCount: 1 })).toContain('in 1 review')
+    expect(mintOgDescription({ ...full, uptimePct24h: null, nutCount: 0, reviewAvgRating: null })).toBe('Reliability Score: 98/100 · Online')
+    expect(mintOgDescription({ ...full, reviewRatedCount: 0 })).not.toContain('rated')
   })
 
   it('writes the score as points out of 100 and never with a percent sign (og:description, twitter:description, description)', () => {

@@ -358,7 +358,7 @@ export function AppShell() {
         {/* Tab segment group */}
         <div className="navbar-tabs">
           <NavLink to="/" end className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
-            Dashboard
+            Mints
           </NavLink>
           <NavLink to="/watchlist" className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
             Watchlist

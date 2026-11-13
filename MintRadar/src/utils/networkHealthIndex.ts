@@ -166,5 +166,5 @@ export function nhiAdvancedRowText(features: readonly AdvancedNut[] = ADVANCED_N
 
 /** Caption of the "average uptime" tile on the Stats page: which mints are averaged (the others are left out). */
 export function avgUptimeCaption(hours: number = DEGRADED_AFTER_HOURS): string {
-  return `of mints not offline for ${hours}h+`
+  return `excludes mints offline ${hours}h+`
 }

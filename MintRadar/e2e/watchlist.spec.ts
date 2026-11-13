@@ -76,6 +76,6 @@ test.describe('Watchlist', () => {
 
     // Logged in but nothing watched yet → the empty-state message + CTA.
     await expect(page.getByText('No mints watched yet')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Go to Dashboard' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Go to Mints' })).toBeVisible()
   })
 })

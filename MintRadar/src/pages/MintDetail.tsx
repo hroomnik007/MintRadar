@@ -63,7 +63,7 @@ import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocu
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
-import { auditSuccessText, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, auditScoredLine, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -879,6 +879,20 @@ function MintDetailContent({ url }: { url: string }) {
   const nip87Key = nip87 ? nip87KeyText(nip87) : null
   const nip87Checked = nip87 ? nip87CheckedLabel(nip87.checkedAt, now) : null
   const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId)
+  // Shown as a row of the Overview tab's "Mint info" panel (it was a line of the header until 2026-11-13: protocol detail
+  // above the fold of every mint page, and a link told apart from its sentence by colour alone).
+  const nip87Line = nip87 ? (
+    <span className="md-info-nip87" data-testid="md-nip87">
+      {nip87.announcement === 'seen' ? (<>
+        {nostrAnnounceHref ? (
+          <a href={nostrAnnounceHref} target="_blank" rel="noopener noreferrer">{NIP87_ANNOUNCEMENT_LABEL}</a>
+        ) : NIP87_ANNOUNCEMENT_LABEL}
+        {nip87StoredSuffix(nip87.eventCreatedAt)}
+      </>) : NIP87_NOT_SEEN_TEXT}
+      {nip87Checked && <>{nip87Checked.text}<span title={nip87Checked.title} data-testid="md-nip87-checked">{nip87Checked.label}</span></>}
+      {nip87Key && <span className="md-announce-key" data-testid="md-nip87-key">{nip87Key}</span>}
+    </span>
+  ) : null
   const isNew = isNewMint(discoveredAt)
   // No "Outdated" pill on an archived mint: the version is the last one it reported and it is no longer
   // probed, so comparing it with the current release adds nothing. The version text itself stays.
@@ -1156,18 +1170,6 @@ function MintDetailContent({ url }: { url: string }) {
                 <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>{firstSeen}</div>
               )}
               <div className="md-announce-row">
-              {nip87 && (
-                <div className="md-first-seen md-announce-label md-announce-nip87" data-testid="md-nip87">
-                  {nip87.announcement === 'seen' ? (<>
-                    {nostrAnnounceHref ? (
-                      <a href={nostrAnnounceHref} target="_blank" rel="noopener noreferrer">{NIP87_ANNOUNCEMENT_LABEL}</a>
-                    ) : NIP87_ANNOUNCEMENT_LABEL}
-                    {nip87StoredSuffix(nip87.eventCreatedAt)}
-                  </>) : NIP87_NOT_SEEN_TEXT}
-                  {nip87Checked && <>{nip87Checked.text}<span title={nip87Checked.title} data-testid="md-nip87-checked">{nip87Checked.label}</span></>}
-                  {nip87Key && <span className="md-announce-key" data-testid="md-nip87-key">{nip87Key}</span>}
-                </div>
-              )}
         <div className="md-hdr-actions">
         <div className="md-hdr-center">
           {!isOnline && knownMint?.lastError && (
@@ -1266,6 +1268,8 @@ function MintDetailContent({ url }: { url: string }) {
             {typeof knownMint?.uptimePct30d === 'number' && (
               <div className="md-sc-sub" data-testid="md-uptime-30d">
                 30 days <span style={{ color: uptime30dColor(knownMint.uptimePct30d), fontFamily: 'var(--font-mono-data)' }}>{knownMint.uptimePct30d}%</span>
+                {/* The percentage is a whole number: a short outage rounds to 100 %, so the count is said next to it. */}
+                {uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount)}
               </div>
             )}
           </div>
@@ -1431,6 +1435,7 @@ function MintDetailContent({ url }: { url: string }) {
               motdDatesLine={motdDatesLine}
               descriptionDates={descriptionDates}
               nameDates={nameDates}
+              nip87Line={nip87Line}
               pubkeyDates={pubkeyDates}
               nut4Disabled={nut4Disabled}
               nut5Disabled={nut5Disabled}
@@ -1502,6 +1507,7 @@ function MintDetailContent({ url }: { url: string }) {
               auditCzLoading={auditCzLoading}
               czView={czView}
               czSyncNote={czSyncNote}
+              scoredLine={auditState === 'scored' ? auditScoredLine(auditCzTotal, auditCzBlamed) : null}
               auditSwapBarItems={auditSwapBarItems}
               showAllCzFrom={showAllCzFrom}
               showAllCzTo={showAllCzTo}
@@ -1992,7 +1998,8 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
   useNoindex()
   return (
     <div className="mint-detail">
-      <div className="md-header">
+      {/* Only Back: no card around it (an empty bordered box read as a header that failed to load). */}
+      <div className="md-header md-header-bare">
         <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
       </div>
       <div className="md-not-tracked">
@@ -2016,6 +2023,11 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
         <p className="md-not-tracked-suggest">
           <button type="button" className="md-not-tracked-link" onClick={() => navigate('/')}>Browse tracked mints →</button>
         </p>
+        <p className="md-not-tracked-suggest">
+          {/* Opens the Dashboard's "Add a mint" dialog (location state openAddMint); nothing is submitted from here. */}
+          Know this mint?{' '}
+          <button type="button" className="md-not-tracked-link" data-testid="not-tracked-add" onClick={() => navigate('/', { state: { openAddMint: true } })}>Add a mint</button>
+        </p>
       </div>
     </div>
   )
@@ -2028,7 +2040,7 @@ function MintInvalidUrl() {
   useNoindex()
   return (
     <div className="mint-detail">
-      <div className="md-header">
+      <div className="md-header md-header-bare">
         <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
       </div>
       <h1 style={{ color: 'var(--red)', padding: '24px', fontSize: '14px', fontWeight: 400 }}>Invalid mint URL.</h1>

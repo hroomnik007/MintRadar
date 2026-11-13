@@ -17,6 +17,10 @@
   line-height: 1.2;
   margin: 0;
 }
+/* A heading that only receives focus from script (tabindex -1) shows no ring: it is a scroll/focus target, not a control. */
+.page-head-title[tabindex="-1"]:focus { outline: none; }
+/* A link inside the description sentence: underlined, so it is not told apart by colour alone. */
+.page-head-desc a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .page-head-desc {
   font-size: 14px;
   line-height: 1.5;

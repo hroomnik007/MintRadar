@@ -58,6 +58,8 @@ export interface OverviewTabProps {
   motdDatesLine: ReactNode
   descriptionDates: { title: string } | null
   nameDates: { title: string } | null
+  /** The NIP-87 announcement facts (built in MintDetail from stored discovery data); null when the mint has none. */
+  nip87Line: ReactNode
   pubkeyDates: InfoDates
   nut4Disabled: boolean
   nut5Disabled: boolean
@@ -83,7 +85,7 @@ export interface OverviewTabProps {
 export function OverviewTab({
   url, now, knownMint, data, probeLoading, probeError, refetchProbe,
   unavailableInfo, lastErrorText, scoreText, supportsBackupRestore, unavailableContacts,
-  motd, description, descriptionLong, infoLastSeenAt, motdDatesLine, descriptionDates, nameDates, pubkeyDates,
+  motd, description, descriptionLong, infoLastSeenAt, motdDatesLine, descriptionDates, nameDates, nip87Line, pubkeyDates,
   nut4Disabled, nut5Disabled, name, version, mintTime, pubkey, healthRecord, tosUrl, urls,
   email, twitter, nostr, operatorNip05, contactsAreLastSeen, lastContactsAt, contactSource,
   copiedContact, setCopiedContact,
@@ -203,6 +205,12 @@ export function OverviewTab({
             <span className="md-info-label">Discovered</span>
             <span className="md-info-value">NIP-87</span>
           </div>
+          {nip87Line && (
+            <div className="md-info-row md-info-row-nip87">
+              <span className="md-info-label">Nostr announcement</span>
+              <span className="md-info-value">{nip87Line}</span>
+            </div>
+          )}
           {mintTime && (
             <div className="md-info-row">
               <span className="md-info-label">Server time</span>

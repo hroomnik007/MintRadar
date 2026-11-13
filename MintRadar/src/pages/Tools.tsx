@@ -18,7 +18,7 @@ import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDow
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
-import { weightsFor, reviewsScore, softwarePreferenceCredit, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
+import { weightsFor, reviewsScore, latencyScore, softwarePreferenceCredit, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
 import { softwareChoices, rankWizardRecs, wizardReasonText, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
@@ -786,7 +786,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
     const scoredAll: WizardRec[] = candidates.map(m => {
       const latMs = latencyMap.get(m.url) ?? null
-      const latScore = latMs !== null ? 1 - latMs / maxLatency : 0
+      const latScore = latencyScore(latMs, maxLatency, checks.has('fast'))
       const reliabilityScore = (m.reliabilityScore ?? 0) / 100
       const nutsScore = (m.nutCount ?? 0) / maxNuts
       return {
@@ -975,7 +975,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                     <div className="wizard-rec-meta">
                       {rec.latencyMs != null && <span>{rec.latencyMs}ms latency</span>}
                       {/* The separator only between two facts: without a latency sample the line began with "· ". */}
-                      {rec.mint.uptimePct24h != null && <span>{rec.latencyMs != null ? ' · ' : ''}{rec.mint.uptimePct24h}% uptime</span>}
+                      {rec.mint.uptimePct24h != null && <span>{rec.latencyMs != null ? ' · ' : ''}{rec.mint.uptimePct24h}% uptime (24h)</span>}
                     </div>
                     <div className="wizard-rec-limits">
                       {(mintRange ?? meltRange) !== null ? (

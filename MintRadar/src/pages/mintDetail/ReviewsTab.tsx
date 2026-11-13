@@ -57,9 +57,14 @@ export function ReviewsTab({
             <div className="md-panel">
               <div className="reviews-header">
                 <div className="md-panel-title" style={{marginBottom:0}}>Reviews</div>
-                {isLoggedIn && (
+                {isLoggedIn ? (
                   <button className="reviews-write-btn" onClick={() => setShowReviewModal(true)}>
                     Write a review
+                  </button>
+                ) : (
+                  // Logged out: the same place says how to write one and opens the login dialog (AppShell listens).
+                  <button type="button" className="reviews-write-btn" data-testid="reviews-login-btn" onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}>
+                    Log in to write a review
                   </button>
                 )}
               </div>

@@ -45,7 +45,7 @@ test('nsec session seeded without a key loads logged out, shows the notice once,
 
   // not repeated on later navigation
   await page.getByRole('link', { name: 'Stats' }).click()
-  await page.getByRole('link', { name: 'Dashboard' }).click()
+  await page.getByRole('link', { name: 'Mints', exact: true }).click()
   await expect(notice(page)).toHaveCount(1) // still the same single, undismissed notice
 
   // dismissible

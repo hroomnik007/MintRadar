@@ -73,7 +73,7 @@ across components.
   the adjacent NIP-87 announcement line (was "Announced on Nostr" until 2026-10-30) — this one is `discovered_at` (when MintRadar's own
   probe/discovery first indexed the mint), the other is the mint's own NIP-87 announcement date,
   and the two can differ substantially.
-- **NIP-87 announcement line (2026-10-30)** in `.md-announce-row` under the URL (`data-testid="md-nip87"`): facts from
+- **NIP-87 announcement line (2026-10-30; since 2026-11-13 a row "Nostr announcement" of the Overview tab's "Mint info" panel, `.md-info-nip87`, built in `MintDetail.tsx` as `nip87Line` and passed to `OverviewTab`; it was in `.md-announce-row` under the URL, moved out of the header because it is protocol detail and its link was told apart by colour alone, axe `link-in-text-block`; the link is now underlined)** (`data-testid="md-nip87"`): facts from
   `nip87AnnouncementOf()` (`src/utils/nip87Announcement.ts`, byte-identical to `backend/src/shared/nip87Announcement.ts`,
   pinned by `sharedModules.test.ts`) over the stored `nostrAnnouncedAt` / `nostrAnnounceD` and the /v1/info `pubkey`; texts in
   `src/utils/nip87Texts.ts`. Found: "NIP-87 announcement (kind:38172) · event dated 14 Mar 2026 · stored when first seen" (the label links
@@ -517,3 +517,13 @@ Test: `e2e/layout-shift-tools-mint.spec.ts` ("#audit deep link at 390px": the ri
 - **Cashu.me is hidden** when NUT-04 OR NUT-05 is disabled (`walletActionsOff`; adding a mint that does not issue or pay out right now is a dead end). Mint QR stays (the URL is still a fact).
 - **Not changed on purpose:** the fallback score, the Score tab NUT row and `nutComponent` still use the declared `supportedNuts` (the backend score counts declared NUTs; changing that needs a methodology bump, reported to the user).
 - Tests: `e2e/mint-detail-disabled-nuts.spec.ts` (1280 + 390), `nutFilters.test.ts`, `sharedModules.test.ts`, backend `nutSupport.test.ts`.
+
+## External UI/UX review fixes (2026-11-13)
+
+Source: an external review of the live site dated 2026-11-11. Tests: `e2e/ux-review-1113.spec.ts`, `src/__tests__/uxReview1113.test.ts`.
+
+- **Audit tab, scored line** (`.audit-scored-line`, `data-testid="audit-scored-line"`, above the tiles, only while the Audit part is scored): `auditScoredLine(auditCzTotal, auditCzBlamed)`, "Counted in the Reliability Score: 12 swaps of the last 7 days, none failed because of this mint. The figures below also show older swaps and failures caused elsewhere." The tab shows four different denominators (strip, tiles, tables, breakdown); this sentence says which one the score uses. Per-swap colouring by cause is still not possible (cashu.info gives the attribution as a 7-day total).
+- **30-day uptime of a rounded 100 %** (`md-uptime-30d`): `uptime30dOutageNote()` adds " · 1 outage" from the Outages query (same 30-day window) when the whole-number percentage reads 100 and the window had outages. The percentage itself stays a whole number (the API value is unchanged).
+- **Reviews tab, logged out:** the button in the panel head reads "Log in to write a review" (`reviews-login-btn`) and dispatches `mintradar:open-login`; logged in it is "Write a review" as before.
+- **"Not a tracked mint" / invalid URL:** `.md-header.md-header-bare` (only Back, no card); a second line "Know this mint? Add a mint" navigates to `/` with location state `openAddMint` (the Dashboard's existing hook). Nothing is submitted from the mint page.
+- **Header:** the NIP-87 line moved to "Mint info" (see the NIP-87 bullet above).

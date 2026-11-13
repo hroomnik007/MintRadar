@@ -42,3 +42,28 @@ describe('reviewsScore', () => {
     expect(reviewsScore(m({ reviewAvgRating: 1, reviewRatedCount: 1000, reviewCount: 1000 }))).toBeGreaterThanOrEqual(0)
   })
 })
+
+describe('latencyScore (2026-11-13: stable order without "Fast from here")', () => {
+  it('without Fast: every mint under LATENCY_SLOW_MS scores the same, so measurement noise cannot reorder the results', async () => {
+    const { latencyScore } = await import('@/utils/wizardScoring')
+    expect(latencyScore(64, 1380, false)).toBe(1)
+    expect(latencyScore(458, 1380, false)).toBe(1)
+    expect(latencyScore(1999, 1380, false)).toBe(1)
+    expect(latencyScore(2000, 4000, false)).toBe(0.5)
+    expect(latencyScore(5000, 5000, false)).toBe(0)
+    expect(latencyScore(null, 1380, false)).toBe(0)
+  })
+  it('with Fast: relative to the slowest measured candidate, faster is higher', async () => {
+    const { latencyScore } = await import('@/utils/wizardScoring')
+    expect(latencyScore(100, 1000, true)).toBeCloseTo(0.9)
+    expect(latencyScore(1000, 1000, true)).toBe(0)
+    expect(latencyScore(null, 1000, true)).toBe(0)
+    expect(latencyScore(64, 1000, true)).toBeGreaterThan(latencyScore(458, 1000, true))
+  })
+  it('"Reliable" alone: one Reliability point now decides between two mints of normal speed', async () => {
+    const { latencyScore, weightsFor } = await import('@/utils/wizardScoring')
+    const w = weightsFor(new Set(['reliable']), 'medium')
+    const score = (rel: number, ms: number) => w.latency * latencyScore(ms, 1380, false) + w.reliability * (rel / 100)
+    expect(score(98, 458)).toBeGreaterThan(score(97, 64))
+  })
+})

@@ -65,6 +65,8 @@ export interface AuditTabProps {
   /** The cashu.info view of this mint; null when cashu.info has no stored detail for it. */
   czView: AuditCzView | null
   czSyncNote: { text: string; stale: boolean; tip: string | null } | null
+  /** auditScoredLine(): which swaps count towards the score; null while the Audit part is not scored. */
+  scoredLine: string | null
   auditSwapBarItems: AuditSwapRow[]
   showAllCzFrom: boolean
   showAllCzTo: boolean
@@ -73,7 +75,7 @@ export interface AuditTabProps {
 }
 
 export function AuditTab({
-  auditCzLoading, czView, czSyncNote, auditSwapBarItems, showAllCzFrom, showAllCzTo, setShowAllCzFrom, setShowAllCzTo,
+  auditCzLoading, czView, czSyncNote, scoredLine, auditSwapBarItems, showAllCzFrom, showAllCzTo, setShowAllCzFrom, setShowAllCzTo,
 }: AuditTabProps) {
   if (auditCzLoading) {
     return <div className="md-audit-loading" style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)'}} role="status">Loading audit data…</div>
@@ -106,6 +108,8 @@ export function AuditTab({
         <AuditSourceInfoIcon text={infoText} />
         {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync-mobile" />}
       </div>
+
+      {scoredLine && <p className="audit-cz-muted audit-scored-line" data-testid="audit-scored-line">{scoredLine}</p>}
 
       <AuditCzTiles view={czView} />
 

@@ -16,7 +16,7 @@ export default function NotFound() {
         There is no page at this address. It may have moved, or the link may be mistyped.
       </p>
       <p className="not-found-links">
-        <Link to="/">Dashboard</Link>
+        <Link to="/">Mints</Link>
         <Link to="/about">About</Link>
       </p>
     </div>

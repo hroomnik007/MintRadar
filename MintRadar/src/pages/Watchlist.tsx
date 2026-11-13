@@ -349,9 +349,9 @@ export default function Watchlist() {
             <div className="wl-empty">
               <div className="wl-empty-icon"><IcRadar /></div>
               <div className="wl-empty-title">No mints watched yet</div>
-              <div className="wl-empty-sub">Add mints from the Dashboard with + Watch. Your list syncs over Nostr. Turn on Nostr DMs per mint if you want to hear when its status, key or fee changes.</div>
+              <div className="wl-empty-sub">Add mints from the Mints page with + Watch. Your list syncs over Nostr. Turn on Nostr DMs per mint if you want to hear when its status, key or fee changes.</div>
               <button type="button" className="wl-add-btn" onClick={() => navigate('/')}>
-                Go to Dashboard
+                Go to Mints
               </button>
             </div>
           ) : (

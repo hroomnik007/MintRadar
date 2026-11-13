@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 test.describe('Primary navigation', () => {
   test('navigates between all top-level tabs', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Mints', exact: true })).toBeVisible()
 
     // Dashboard (home)
     await expect(page).toHaveURL('http://localhost:5173/')
@@ -31,7 +31,7 @@ test.describe('Primary navigation', () => {
     await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
 
     // Back to Dashboard
-    await page.getByRole('link', { name: 'Dashboard' }).click()
+    await page.getByRole('link', { name: 'Mints', exact: true }).click()
     await expect(page).toHaveURL('http://localhost:5173/')
   })
 

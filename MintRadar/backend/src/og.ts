@@ -14,6 +14,25 @@ export interface OgMintData {
   reliabilityScore: number | null
   online: boolean | null
   degraded: boolean
+  /** Extra facts of the link preview (2026-11-13); each is left out of the description when absent. */
+  uptimePct24h?: number | null
+  nutCount?: number | null
+  reviewAvgRating?: number | null
+  reviewRatedCount?: number | null
+}
+
+// The description of a mint's link preview: score and status first (as before), then the facts we have. Numbers only,
+// nothing mint-supplied, so there is nothing to escape beyond what renderHtml already does.
+export function mintOgDescription(mint: OgMintData): string {
+  const reliabilityScoreText = mint.reliabilityScore !== null ? `${mint.reliabilityScore}/100` : 'N/A'
+  const parts = [`Reliability Score: ${reliabilityScoreText}`, mintStatusLabel(mint)]
+  if (typeof mint.uptimePct24h === 'number' && Number.isFinite(mint.uptimePct24h)) parts.push(`${mint.uptimePct24h}% uptime (24h)`)
+  if (typeof mint.nutCount === 'number' && mint.nutCount > 0) parts.push(`${mint.nutCount} NUTs`)
+  const n = mint.reviewRatedCount ?? 0
+  if (typeof mint.reviewAvgRating === 'number' && Number.isFinite(mint.reviewAvgRating) && n > 0) {
+    parts.push(`rated ${mint.reviewAvgRating.toFixed(1)}/5 in ${n} ${n === 1 ? 'review' : 'reviews'}`)
+  }
+  return parts.join(' · ')
 }
 
 // Escapes text for safe interpolation into both HTML body text and
@@ -59,8 +78,7 @@ export function renderMintOgHtml(mint: OgMintData | null, mintUrl: string): stri
   const displayName = publicMintName(mint.name, mintUrl).name
     ?? (isHiddenMintName(mintUrl) ? hostnameOf(mintUrl) : mintUrl)
   const title = `${displayName} — MintRadar`
-  const reliabilityScoreText = mint.reliabilityScore !== null ? `${mint.reliabilityScore}/100` : 'N/A'
-  const description = `Reliability Score: ${reliabilityScoreText} · ${mintStatusLabel(mint)}`
+  const description = mintOgDescription(mint)
 
   return renderHtml(title, description, pageUrl)
 }
@@ -116,9 +134,15 @@ export function renderPageOgHtml(slug: unknown): string | null {
 // reuses the same shape (24h window join + LATERAL latest probe) so
 // computeDegraded() behaves identically, without pulling in the full
 // known-mints payload (icon/NUTs/audit/etc.) that this fragment doesn't need.
+function numOrNull(v: unknown): number | null {
+  if (v === null || v === undefined) return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
 export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
   const result = await pool.query(
-    `SELECT m.name, m.last_reliability_score,
+    `SELECT m.name, m.last_reliability_score, m.nut_count, m.review_avg_rating, m.review_rated_count,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         latest.online AS latest_online,
@@ -130,7 +154,7 @@ export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
         WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
       ) latest ON true
       WHERE m.url = $1
-      GROUP BY m.name, m.last_reliability_score, latest.online, latest.checked_at`,
+      GROUP BY m.name, m.last_reliability_score, m.nut_count, m.review_avg_rating, m.review_rated_count, latest.online, latest.checked_at`,
     [url]
   )
 
@@ -147,5 +171,9 @@ export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
     reliabilityScore: (row['last_reliability_score'] as number | null) ?? null,
     online: latestOnline,
     degraded: computeDegraded(total, onlineCount, latestOnline, latestCheckedAt),
+    uptimePct24h: total > 0 ? Math.round((onlineCount / total) * 100) : null,
+    nutCount: numOrNull(row['nut_count']),
+    reviewAvgRating: numOrNull(row['review_avg_rating']),
+    reviewRatedCount: numOrNull(row['review_rated_count']),
   }
 }

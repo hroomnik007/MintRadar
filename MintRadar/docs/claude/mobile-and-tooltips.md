@@ -296,7 +296,7 @@ breakdowns and every other tooltip stay. Where each fact lives now:
 - Stats **"Network health index"** header: the subtitle `nhiSubtitle()` is "Weighted from five factors." at every width (the gauge hint "Tap or click the gauge for the breakdown." was removed 2026-10-17: the "Show details ›" link says the same)
   - that is where the gauge (`.nhi-wrap`, `role=button`, tabbable, Enter/Space) opens the dialog; above 768 px the breakdown is inline and the gauge is not clickable, so the hint
   would be false. The weights are the "(30%)" in each breakdown row; the online-set sentence (`nhiOnlineSetText()`) is in the dialog footer and the Online row's tooltip (on desktop only there).
-- Stats **"average uptime"** tile: the caption `avgUptimeCaption()` is "of mints not offline for {DEGRADED_AFTER_HOURS}h+" (was "of active mints"). The rule is the code's: mints with
+- Stats **"average uptime"** tile: the caption `avgUptimeCaption()` is "excludes mints offline {DEGRADED_AFTER_HOURS}h+" (2026-11-13; was "of mints not offline for {N}h+", before that "of active mints"; the unit test caps it at 32 characters). The rule is the code's: mints with
   `degraded === true` (backend `computeDegraded`: >= 4 probes in 24 h and none online, or offline with the last probe older than 24 h) and mints without probe data are left out.
   Not carried (32-character limit): the 24-hour window, "mints without probe data are skipped", "test mints are included"; `Methodology` has the full definition.
 - Mint Detail **"Reliability Score"** card header: the five weights are the row labels ("Uptime (40%)" ...), the new-mint cap is the `.rb-new-note` line when it applies, and the

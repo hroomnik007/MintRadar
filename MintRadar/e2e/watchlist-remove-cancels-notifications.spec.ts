@@ -94,7 +94,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
     await expect.poll(() => unsubscribeCalls(api).length).toBe(1)
 
-    await page.getByRole('link', { name: 'Dashboard' }).click()
+    await page.getByRole('link', { name: 'Mints', exact: true }).click()
     const dashStar = page.locator('.mint-card', { has: page.locator('.card-name', { hasText: NAME[ALPHA]! }) }).getByRole('button', { name: `Add ${NAME[ALPHA]} to watchlist` })
     await dashStar.click()
     await page.getByRole('link', { name: 'Watchlist' }).click()
@@ -110,7 +110,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     const api = await mockNotifyApi(page)
     await openWatchlist(page, { seed: [{ url: ALPHA, down: true, up: false, confirmed: true }] })
     api.mode = '500'
-    await page.getByRole('link', { name: 'Dashboard' }).click()
+    await page.getByRole('link', { name: 'Mints', exact: true }).click()
     await page.locator('.mint-card', { has: page.locator('.card-name', { hasText: NAME[ALPHA]! }) })
       .getByRole('button', { name: `Remove ${NAME[ALPHA]} from watchlist` }).click()
     await expect.poll(() => unsubscribeCalls(api).length).toBe(1)

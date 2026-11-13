@@ -135,8 +135,8 @@ describe('Network Health Index texts come from the constants', () => {
     expect(nhiFormulaText()).toContain(nhiOnlineSetText())
     expect(nhiOnlineSetText(48)).toContain('48h')
     expect(nhiOnlineRowText(10, NHI_WEIGHTS, 48)).toContain('48h')
-    expect(avgUptimeCaption(48)).toBe('of mints not offline for 48h+')
-    expect(avgUptimeCaption()).toBe(`of mints not offline for ${DEGRADED_AFTER_HOURS}h+`)
+    expect(avgUptimeCaption(48)).toBe('excludes mints offline 48h+')
+    expect(avgUptimeCaption()).toBe(`excludes mints offline ${DEGRADED_AFTER_HOURS}h+`)
   })
 
   it('the advanced row lists exactly the computed features, in order', () => {
@@ -234,7 +234,7 @@ describe('NHI subtitle and the average-uptime caption (they replaced two tooltip
   })
 
   it('the caption is built from DEGRADED_AFTER_HOURS, stays within 32 characters and follows the constant', () => {
-    expect(avgUptimeCaption()).toBe(`of mints not offline for ${DEGRADED_AFTER_HOURS}h+`)
+    expect(avgUptimeCaption()).toBe(`excludes mints offline ${DEGRADED_AFTER_HOURS}h+`)
     expect(avgUptimeCaption().length).toBeLessThanOrEqual(32)
     expect(avgUptimeCaption(72)).not.toBe(avgUptimeCaption())
     expect(avgUptimeCaption(72)).toContain('72h')

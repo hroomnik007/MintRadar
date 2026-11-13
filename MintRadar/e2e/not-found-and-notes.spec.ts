@@ -22,12 +22,12 @@ test.describe('Not found page', () => {
     await expect(page.getByText(/This page couldn.t load\./)).toHaveCount(0)
   })
 
-  test('its Dashboard link goes to the Dashboard', async ({ page }) => {
+  test('its Mints link goes to the mint list', async ({ page }) => {
     await page.goto('/nope-missing')
-    await page.locator('.not-found-links').getByRole('link', { name: 'Dashboard' }).click()
+    await page.locator('.not-found-links').getByRole('link', { name: 'Mints', exact: true }).click()
 
     await expect.poll(() => new URL(page.url()).pathname).toBe('/')
-    await expect(page.getByRole('heading', { level: 1, name: /Cashu Mints Reliability Score/ })).toBeAttached()
+    await expect(page.getByRole('heading', { level: 1, name: /Cashu mints/ })).toBeAttached()
     await expect(page.getByRole('heading', { name: 'Page not found' })).toHaveCount(0)
   })
 
@@ -53,15 +53,15 @@ test.describe('Not found page', () => {
 })
 
 test.describe('Watchlist empty state', () => {
-  test('the "Go to Dashboard" button navigates to the Dashboard', async ({ page }) => {
+  test('the "Go to Mints" button navigates to the Dashboard', async ({ page }) => {
     await loginAs(page)
     await page.goto('/watchlist')
     await expect(page.getByText('No mints watched yet')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Go to Dashboard' }).click()
+    await page.getByRole('button', { name: 'Go to Mints' }).click()
 
     await expect.poll(() => new URL(page.url()).pathname).toBe('/')
-    await expect(page.getByRole('heading', { level: 1, name: /Cashu Mints Reliability Score/ })).toBeAttached()
+    await expect(page.getByRole('heading', { level: 1, name: /Cashu mints/ })).toBeAttached()
     await expect(page.getByPlaceholder(/Search mints/)).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Page not found' })).toHaveCount(0)
   })

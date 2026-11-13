@@ -4,6 +4,7 @@
 import type { ContactCheckFact } from './contactChecks'
 import { formatAuditSuccessRatio } from './mintFormatting'
 import { limitsSource } from './feesLimits'
+import { AUDIT_WINDOW_DAYS } from './tooltipTexts'
 
 // ── Outages ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -179,6 +180,24 @@ export function swapStripText(count: number): string {
  * swap, so the marks themselves cannot be split by cause.
  */
 export const SWAP_STRIP_FAILED_NOTE = 'A red mark is any failed swap, whoever caused it. The score counts only the failures cashu.info attributes to this mint.'
+
+/**
+ * The one sentence above the Audit tiles when the Audit part of the score is scored: which of the many numbers below
+ * count. The tiles, the strip and the tables show more swaps (both directions, older than the window) and every failure;
+ * the score uses only this window and only the failures cashu.info attributes to the mint. Null without a stored total.
+ */
+export function auditScoredLine(total: number | null | undefined, blamed: number | null | undefined): string | null {
+  if (total === null || total === undefined || total <= 0) return null
+  const b = Math.min(Math.max(blamed ?? 0, 0), total)
+  const failed = b === 0 ? 'none failed because of this mint' : `${b} failed because of this mint`
+  return `Counted in the Reliability Score: ${total === 1 ? '1 swap' : `${total} swaps`} of the last ${AUDIT_WINDOW_DAYS} days, ${failed}. The figures below also show older swaps and failures caused elsewhere.`
+}
+
+/** " · 1 outage" next to a 30-day uptime of a rounded 100 % that still had outages in the window; '' otherwise. */
+export function uptime30dOutageNote(pct: number | null | undefined, outageCount: number | null | undefined): string {
+  if (pct !== 100 || !outageCount || outageCount <= 0) return ''
+  return ` · ${outageCount === 1 ? '1 outage' : `${outageCount} outages`}`
+}
 
 // ── Small offline fallbacks ──────────────────────────────────────────────────────────────────────────────────────────
 
