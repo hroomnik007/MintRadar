@@ -79,6 +79,8 @@ export interface AuditCzView {
   long: { windowDays: number; swaps: number; attributedFailures: number } | null
   /** Everything stored so far; null when nothing is, or when it is no more than the long window. */
   since: { day: string; swaps: number; attributedFailures: number } | null
+  /** The single longer-window line; null while the long window is 7 days or shorter. */
+  longer: { day: string; swaps: number; attributedFailures: number } | null
 }
 
 function swapState(status: string): string {
@@ -226,24 +228,52 @@ export function auditVerdictHeadline(v: AuditVerdict): string {
   return `Last ${AUDIT_WINDOW_DAYS} days: ${swapsWord(v.total)}, ${failuresWord(v.blamed)} caused by this mint`
 }
 
-/** Successful swaps / all swaps in the last 7 days, as a whole percent; null when there were none. */
+/** Successful swaps / all swaps in the last 7 days, to one decimal; null when there were none. */
 export function auditSuccessRate(v: AuditVerdict): number | null {
   if (v.total <= 0) return null
-  return Math.round((v.ok / v.total) * 100)
+  return Math.round((v.ok / v.total) * 1000) / 10
 }
 
-/** "92%" or "—" when there were no swaps. */
+/** "92.4%" / "100%" (en-US, no trailing .0) or "—" when there were no swaps. */
 export function auditSuccessRateText(v: AuditVerdict): string {
   const rate = auditSuccessRate(v)
-  return rate === null ? '—' : `${rate}%`
+  if (rate === null) return '—'
+  return `${rate.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(rate) ? 0 : 1, maximumFractionDigits: 1 })}%`
+}
+
+export type AuditSuccessRateTone = 'good' | 'ok' | 'bad' | 'empty'
+
+/** Colour band for the success-rate tile: green ≥ 95, amber ≥ 80, red below, neutral when there were no swaps. */
+export function auditSuccessRateTone(v: AuditVerdict): AuditSuccessRateTone {
+  const rate = auditSuccessRate(v)
+  if (rate === null) return 'empty'
+  if (rate >= 95) return 'good'
+  if (rate >= 80) return 'ok'
+  return 'bad'
+}
+
+export function auditSuccessRateCaption(): string {
+  return `Success rate · ${AUDIT_WINDOW_DAYS} days`
 }
 
 /** Under the success rate: the score still ignores failures the source does not attribute to this mint. */
 export const AUDIT_SCORE_HINT = 'The score only counts failures caused by this mint.'
 
-/** "Last 28 days: 2 of 212 swaps failed because of this mint." */
-export function auditLongLine(l: { windowDays: number; swaps: number; attributedFailures: number }): string {
-  return `Last ${l.windowDays} days: ${fmt(l.attributedFailures)} of ${swapsWord(l.swaps)} failed because of this mint.`
+/**
+ * The one longer-window figure the Audit tab shows. Hidden while the long window is 7 days or
+ * shorter (methodology 8 ignores it then). When `since` holds more than the long window, those
+ * totals and its start day are used; otherwise the long window's totals, with `since.day` when
+ * the server sent one, or a start day `windowDays` back from `now`.
+ */
+export function auditLongerWindow(
+  long: { windowDays: number; swaps: number; attributedFailures: number } | null | undefined,
+  since: { day: string; swaps: number; attributedFailures: number } | null | undefined,
+  now: number,
+): { day: string; swaps: number; attributedFailures: number } | null {
+  if (!isLongerAuditWindow(long)) return null
+  if (since && since.swaps > long.swaps) return since
+  const day = since?.day ?? new Date(now - long.windowDays * 86_400_000).toISOString().slice(0, 10)
+  return { day, swaps: long.swaps, attributedFailures: long.attributedFailures }
 }
 
 /** "Longer window (since 13 Nov 2026): 420 swaps, 3 failures caused by this mint" (`dayText` is the formatted first day.) */
@@ -300,6 +330,7 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     long: isLongerAuditWindow(data.long) ? data.long : null,
     // Hidden while the long window is 7 days or shorter (Methodology 8 ignores it then), or when it adds nothing beyond that window.
     since: data.since && isLongerAuditWindow(data.long) && data.since.swaps > data.long.swaps ? data.since : null,
+    longer: auditLongerWindow(data.long, data.since, now),
   }
 }
 

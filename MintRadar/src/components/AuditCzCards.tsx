@@ -2,7 +2,8 @@ import { Fragment, useState, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import {
   auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
-  auditVerdictHeadline, auditSuccessRateText, AUDIT_SCORE_HINT, auditLongLine, auditSinceLine, isLongerAuditWindow,
+  auditVerdictHeadline, auditSuccessRateText, auditSuccessRateTone, auditSuccessRateCaption, AUDIT_SCORE_HINT,
+  auditSinceLine,
   type AuditCzView, type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
 } from '@/utils/auditCz'
 import { mintHostname, formatTimeAgo } from '@/utils/mintFormatting'
@@ -17,17 +18,27 @@ import { formatDate, formatDateTimeUtc, DATE_MONTHS } from '@/utils/formatDate'
 
 const ROWS_DEFAULT = 8
 
-/** The 7-day heading, the raw success rate, and (when it counts) the longer window. */
+/** The success-rate tile, the 7-day heading, and (when it counts) the one longer-window line. */
 export function AuditVerdictBlock({ verdict, view }: { verdict: AuditVerdict; view: AuditCzView }) {
   const rate = auditSuccessRateText(verdict)
+  const tone = auditSuccessRateTone(verdict)
+  const caption = auditSuccessRateCaption()
   return (
     <div className="au-verdict" data-testid="audit-verdict">
+      <div
+        className={`au-rate-tile au-rate-${tone}`}
+        data-testid="audit-success-rate"
+        data-tone={tone}
+        role="group"
+        aria-label={`${caption}: ${rate}`}
+      >
+        <span className="au-rate-value">{rate}</span>
+        <span className="au-rate-caption">{caption}</span>
+      </div>
       <div className="au-verdict-text">
         <strong className={verdict.blamed > 0 ? 'au-verdict-bad' : undefined} data-testid="audit-verdict-headline">{auditVerdictHeadline(verdict)}</strong>
-        <span className={`au-verdict-rate${verdict.total === 0 ? ' au-verdict-rate-empty' : ''}`} data-testid="audit-success-rate">Success rate {rate}</span>
         <span className="au-verdict-hint" data-testid="audit-score-hint">{AUDIT_SCORE_HINT}</span>
-        {isLongerAuditWindow(view.long) && view.long && <span className="au-verdict-more" data-testid="audit-long-line">{auditLongLine(view.long)}</span>}
-        {isLongerAuditWindow(view.long) && view.since && <span className="au-verdict-more" data-testid="audit-since-line">{auditSinceLine(view.since, formatDate(`${view.since.day}T00:00:00Z`))}</span>}
+        {view.longer && <span className="au-verdict-more" data-testid="audit-longer-line">{auditSinceLine(view.longer, formatDate(`${view.longer.day}T00:00:00Z`))}</span>}
       </div>
     </div>
   )

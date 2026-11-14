@@ -60,10 +60,15 @@ test('only cz has data: header, verdict, bar, directions, one swap list with a f
 
   // The verdict is the score's 7-day window: 126 swaps, 0 caused by this mint. Success rate is raw (107/126), not the score.
   await expect(page.getByTestId('audit-verdict-headline')).toHaveText('Last 7 days: 126 swaps, 0 failures caused by this mint')
-  await expect(page.getByTestId('audit-success-rate')).toHaveText('Success rate 85%')
+  const rateTile = page.getByTestId('audit-success-rate')
+  await expect(rateTile.locator('.au-rate-value')).toHaveText('84.9%') // 107/126
+  await expect(rateTile.locator('.au-rate-caption')).toHaveText('Success rate · 7 days')
+  await expect(rateTile).toHaveAttribute('data-tone', 'ok')
+  await expect(rateTile).toHaveAttribute('aria-label', 'Success rate · 7 days: 84.9%')
   await expect(page.getByTestId('audit-score-hint')).toHaveText('The score only counts failures caused by this mint.')
   await expect(page.getByTestId('audit-legend').locator('span')).toHaveText(['107 succeeded', '19 failed elsewhere', '0 caused by this mint'])
-  // No long window in the response: neither of its lines is shown.
+  // No long window in the response: the longer-window line is hidden.
+  await expect(page.getByTestId('audit-longer-line')).toHaveCount(0)
   await expect(page.getByTestId('audit-long-line')).toHaveCount(0)
   await expect(page.getByTestId('audit-since-line')).toHaveCount(0)
 
@@ -197,7 +202,8 @@ test.describe('verdict and directions from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(105, 16, 0) }))
     await expect(headline(page)).toHaveText('Last 7 days: 105 swaps, 0 failures caused by this mint')
     await expect(headline(page)).not.toHaveClass(/au-verdict-bad/)
-    await expect(rate(page)).toHaveText('Success rate 85%') // 89/105
+    await expect(rate(page).locator('.au-rate-value')).toHaveText('84.8%') // 89/105
+    await expect(rate(page)).toHaveAttribute('data-tone', 'ok')
     await expect(legend(page)).toHaveText(['89 succeeded', '16 failed elsewhere', '0 caused by this mint'])
     await expect(page.locator('.au-stack .au-seg-mint')).toHaveCount(0) // red only when the mint caused a failure
   })
@@ -206,7 +212,8 @@ test.describe('verdict and directions from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(229, 207, 202) }))
     await expect(headline(page)).toHaveText('Last 7 days: 229 swaps, 202 failures caused by this mint')
     await expect(headline(page)).toHaveClass(/au-verdict-bad/)
-    await expect(rate(page)).toHaveText('Success rate 10%') // 22/229
+    await expect(rate(page).locator('.au-rate-value')).toHaveText('9.6%') // 22/229
+    await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
     await expect(legend(page)).toHaveText(['22 succeeded', '5 failed elsewhere', '202 caused by this mint'])
     await expect(page.locator('.au-stack .au-seg-mint')).toHaveCount(1)
   })
@@ -214,7 +221,8 @@ test.describe('verdict and directions from the stored detail', () => {
   test('no failed swaps: 100% success rate, a bar of one colour', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 0, 0) }))
     await expect(headline(page)).toHaveText('Last 7 days: 50 swaps, 0 failures caused by this mint')
-    await expect(rate(page)).toHaveText('Success rate 100%')
+    await expect(rate(page).locator('.au-rate-value')).toHaveText('100%')
+    await expect(rate(page)).toHaveAttribute('data-tone', 'good')
     await expect(page.locator('.au-stack i')).toHaveCount(1)
     await expect(page.locator('.au-stack .au-seg-ok')).toHaveCount(1)
   })
@@ -222,39 +230,54 @@ test.describe('verdict and directions from the stored detail', () => {
   test('fewer than 10 swaps still shows the numbers', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(4, 0, 0) }))
     await expect(headline(page)).toHaveText('Last 7 days: 4 swaps, 0 failures caused by this mint')
-    await expect(rate(page)).toHaveText('Success rate 100%')
+    await expect(rate(page).locator('.au-rate-value')).toHaveText('100%')
+    await expect(rate(page)).toHaveAttribute('data-tone', 'good')
   })
 
   test('one swap and one blamed failure use the singular', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(1, 1, 1) }))
     await expect(headline(page)).toHaveText('Last 7 days: 1 swap, 1 failure caused by this mint')
-    await expect(rate(page)).toHaveText('Success rate 0%')
+    await expect(rate(page).locator('.au-rate-value')).toHaveText('0%')
+    await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
   })
 
   test('blamed above total is clamped', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(20, 20, 999) }))
     await expect(headline(page)).toHaveText('Last 7 days: 20 swaps, 20 failures caused by this mint')
     await expect(legend(page)).toHaveText(['0 succeeded', '0 failed elsewhere', '20 caused by this mint'])
-    await expect(rate(page)).toHaveText('Success rate 0%')
+    await expect(rate(page).locator('.au-rate-value')).toHaveText('0%')
+    await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
   })
 
   test('total 0: heading and a dash for the rate, no bar, the directions stay', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(0, 0, 0) }))
     await expect(page.locator('.au-dirs .au-dir')).toHaveCount(3)
     await expect(headline(page)).toHaveText('Last 7 days: 0 swaps')
-    await expect(rate(page)).toHaveText('Success rate —')
+    await expect(rate(page).locator('.au-rate-value')).toHaveText('—')
+    await expect(rate(page).locator('.au-rate-caption')).toHaveText('Success rate · 7 days')
+    await expect(rate(page)).toHaveAttribute('data-tone', 'empty')
+    await expect(rate(page)).toHaveAttribute('aria-label', 'Success rate · 7 days: —')
     await expect(page.locator('.au-stack')).toHaveCount(0)
   })
 
-  test('the long window and the since line appear when the long window is longer than 7 days; the points pill is gone', async ({ page }) => {
+  test('one longer-window line when the long window is longer than 7 days; the points pill is gone', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { long: { windowDays: 28, swaps: 410, attributedFailures: 2 }, since: { day: '2026-08-01', swaps: 900, attributedFailures: 3 } }))
-    await expect(page.getByTestId('audit-long-line')).toHaveText('Last 28 days: 2 of 410 swaps failed because of this mint.')
-    await expect(page.getByTestId('audit-since-line')).toHaveText('Longer window (since 1 Aug 2026): 900 swaps, 3 failures caused by this mint')
+    await expect(page.getByTestId('audit-longer-line')).toHaveText('Longer window (since 1 Aug 2026): 900 swaps, 3 failures caused by this mint')
+    await expect(page.getByTestId('audit-long-line')).toHaveCount(0)
+    await expect(page.getByTestId('audit-since-line')).toHaveCount(0)
     await expect(page.getByTestId('audit-points-pill')).toHaveCount(0)
+  })
+
+  test('a long window with no extra since history still uses the since-style line and the start day', async ({ page }) => {
+    await gotoAuditTab(page, onlyCz([], { long: { windowDays: 28, swaps: 410, attributedFailures: 2 }, since: { day: '2026-10-10', swaps: 410, attributedFailures: 2 } }))
+    await expect(page.getByTestId('audit-longer-line')).toHaveText('Longer window (since 10 Oct 2026): 410 swaps, 2 failures caused by this mint')
+    await expect(page.getByTestId('audit-long-line')).toHaveCount(0)
+    await expect(page.getByTestId('audit-since-line')).toHaveCount(0)
   })
 
   test('a 7-day long window is ignored, and so is a since line without a longer window', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { long: { windowDays: 7, swaps: 126, attributedFailures: 0 }, since: { day: '2026-11-07', swaps: 900, attributedFailures: 3 } }))
+    await expect(page.getByTestId('audit-longer-line')).toHaveCount(0)
     await expect(page.getByTestId('audit-long-line')).toHaveCount(0)
     await expect(page.getByTestId('audit-since-line')).toHaveCount(0)
     await expect(headline(page)).toBeVisible()

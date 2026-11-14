@@ -2804,12 +2804,37 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* ── Audit tab, new layout (2026-11-13): verdict, one bar, directions, swaps per day, one swap list ──────────────
    Red (--red) is only the failures cashu.info attributes to THIS mint. A single failed swap is amber: the source
    does not say per swap who caused it. "Failed elsewhere" is a hatched neutral. */
-.au-verdict { display: flex; align-items: flex-start; margin: 6px 0 18px; }
-.au-verdict-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.45; color: var(--text2); }
+.au-verdict { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 6px 0 18px; }
+/* Success-rate tile: same language as the Mint Detail score tile (big mono figure, caption under it). */
+.au-rate-tile {
+  flex: 0 1 auto;
+  min-width: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.au-rate-value {
+  font-family: var(--font-mono-data);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.au-rate-caption { font-size: 13px; line-height: 1.3; color: var(--text2); font-family: var(--font-body); }
+.au-rate-good .au-rate-value { color: var(--green-bright); }
+.au-rate-ok .au-rate-value { color: var(--amber); }
+/* Mixed toward --text so red-on-surface stays readable, same as Low Reliability. */
+.au-rate-bad .au-rate-value { color: color-mix(in srgb, var(--red) 75%, var(--text)); }
+.au-rate-empty .au-rate-value { color: var(--text3); }
+.au-verdict-text { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.45; color: var(--text2); }
 .au-verdict-text strong { font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.3; }
 .au-verdict-text strong.au-verdict-bad { color: var(--red); }
-.au-verdict-rate { font-family: var(--font-mono); font-size: 15px; line-height: 1.3; color: var(--text); font-variant-numeric: tabular-nums; }
-.au-verdict-rate-empty { color: var(--text3); }
 .au-verdict-hint { font-size: 13px; line-height: 1.4; color: var(--text3); }
 .au-verdict-more { color: var(--text3); font-size: 13px; }
 .au-seg-ok { background: var(--accent); }
@@ -2923,6 +2948,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .au-res-fail { color: var(--amber); background: color-mix(in srgb, var(--amber) 13%, transparent); }
 .au-res-neutral { color: var(--text3); padding-left: 0; }
 @media (max-width: 767px) {
+  .au-verdict { flex-direction: column; align-items: stretch; gap: 12px; }
+  .au-rate-tile { width: 100%; min-width: 0; box-sizing: border-box; }
   .au-dirs { grid-template-columns: 1fr; }
   .au-dir { padding: 12px 0; }
   .au-dir + .au-dir { border-left: 0; border-top: 1px solid var(--border); padding-left: 0; }
