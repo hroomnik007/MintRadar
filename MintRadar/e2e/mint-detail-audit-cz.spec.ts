@@ -61,8 +61,8 @@ test('only cz has data: header, verdict, bar, directions, one swap list with a f
   // The verdict is the score's 7-day window: 126 swaps, 0 caused by this mint. Success rate is raw (107/126), not the score.
   await expect(page.getByTestId('audit-verdict-headline')).toHaveText('Last 7 days: 126 swaps, 0 failures caused by this mint')
   const rateTile = page.getByTestId('audit-success-rate')
-  await expect(rateTile.locator('.au-rate-value')).toHaveText('84.9%') // 107/126
-  await expect(rateTile.locator('.au-rate-caption')).toHaveText('Success rate · 7 days')
+  await expect(rateTile.locator('.au-dir-value')).toHaveText('84.9%') // 107/126
+  await expect(rateTile.locator('.au-dir-label')).toHaveText('Success rate · 7 days')
   await expect(rateTile).toHaveAttribute('data-tone', 'ok')
   await expect(rateTile).toHaveAttribute('aria-label', 'Success rate · 7 days: 84.9%')
   await expect(page.getByTestId('audit-score-hint')).toHaveText('The score only counts failures caused by this mint.')
@@ -72,10 +72,10 @@ test('only cz has data: header, verdict, bar, directions, one swap list with a f
   await expect(page.getByTestId('audit-long-line')).toHaveCount(0)
   await expect(page.getByTestId('audit-since-line')).toHaveCount(0)
 
-  // Directions and the average, in order; sentence case.
-  await expect(page.locator('.au-dirs .au-dir')).toHaveCount(3)
-  await expect(page.locator('.au-dirs .au-dir-value')).toHaveText(['56 of 62', '51 of 64', '8.3 s'])
-  await expect(page.locator('.au-dirs .au-dir-label')).toHaveText(['Deposits (mint)', 'Withdrawals (melt)', 'Average swap time'])
+  // Deposits and withdrawals in one row, then success rate and average swap time in the next, sentence case.
+  await expect(page.locator('.au-dirs .au-dir')).toHaveCount(4)
+  await expect(page.locator('.au-dirs .au-dir-value')).toHaveText(['56 of 62', '51 of 64', '84.9%', '8.3 s'])
+  await expect(page.locator('.au-dirs .au-dir-label')).toHaveText(['Deposits (mint)', 'Withdrawals (melt)', 'Success rate · 7 days', 'Average swap time'])
   await expect(tile(page, 'mints').locator('.au-dir-sub')).toHaveText('6 failed')
   await expect(tile(page, 'melts').locator('.au-dir-sub')).toHaveText('13 failed')
   expect(await tile(page, 'melts').locator('.au-dir-label').evaluate(e => getComputedStyle(e).textTransform)).toBe('none')
@@ -202,7 +202,7 @@ test.describe('verdict and directions from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(105, 16, 0) }))
     await expect(headline(page)).toHaveText('Last 7 days: 105 swaps, 0 failures caused by this mint')
     await expect(headline(page)).not.toHaveClass(/au-verdict-bad/)
-    await expect(rate(page).locator('.au-rate-value')).toHaveText('84.8%') // 89/105
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('84.8%') // 89/105
     await expect(rate(page)).toHaveAttribute('data-tone', 'ok')
     await expect(legend(page)).toHaveText(['89 succeeded', '16 failed elsewhere', '0 caused by this mint'])
     await expect(page.locator('.au-stack .au-seg-mint')).toHaveCount(0) // red only when the mint caused a failure
@@ -212,7 +212,7 @@ test.describe('verdict and directions from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(229, 207, 202) }))
     await expect(headline(page)).toHaveText('Last 7 days: 229 swaps, 202 failures caused by this mint')
     await expect(headline(page)).toHaveClass(/au-verdict-bad/)
-    await expect(rate(page).locator('.au-rate-value')).toHaveText('9.6%') // 22/229
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('9.6%') // 22/229
     await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
     await expect(legend(page)).toHaveText(['22 succeeded', '5 failed elsewhere', '202 caused by this mint'])
     await expect(page.locator('.au-stack .au-seg-mint')).toHaveCount(1)
@@ -221,7 +221,7 @@ test.describe('verdict and directions from the stored detail', () => {
   test('no failed swaps: 100% success rate, a bar of one colour', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 0, 0) }))
     await expect(headline(page)).toHaveText('Last 7 days: 50 swaps, 0 failures caused by this mint')
-    await expect(rate(page).locator('.au-rate-value')).toHaveText('100%')
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('100%')
     await expect(rate(page)).toHaveAttribute('data-tone', 'good')
     await expect(page.locator('.au-stack i')).toHaveCount(1)
     await expect(page.locator('.au-stack .au-seg-ok')).toHaveCount(1)
@@ -230,14 +230,14 @@ test.describe('verdict and directions from the stored detail', () => {
   test('fewer than 10 swaps still shows the numbers', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(4, 0, 0) }))
     await expect(headline(page)).toHaveText('Last 7 days: 4 swaps, 0 failures caused by this mint')
-    await expect(rate(page).locator('.au-rate-value')).toHaveText('100%')
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('100%')
     await expect(rate(page)).toHaveAttribute('data-tone', 'good')
   })
 
   test('one swap and one blamed failure use the singular', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(1, 1, 1) }))
     await expect(headline(page)).toHaveText('Last 7 days: 1 swap, 1 failure caused by this mint')
-    await expect(rate(page).locator('.au-rate-value')).toHaveText('0%')
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('0%')
     await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
   })
 
@@ -245,16 +245,16 @@ test.describe('verdict and directions from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(20, 20, 999) }))
     await expect(headline(page)).toHaveText('Last 7 days: 20 swaps, 20 failures caused by this mint')
     await expect(legend(page)).toHaveText(['0 succeeded', '0 failed elsewhere', '20 caused by this mint'])
-    await expect(rate(page).locator('.au-rate-value')).toHaveText('0%')
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('0%')
     await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
   })
 
   test('total 0: heading and a dash for the rate, no bar, the directions stay', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(0, 0, 0) }))
-    await expect(page.locator('.au-dirs .au-dir')).toHaveCount(3)
+    await expect(page.locator('.au-dirs .au-dir')).toHaveCount(4)
     await expect(headline(page)).toHaveText('Last 7 days: 0 swaps')
-    await expect(rate(page).locator('.au-rate-value')).toHaveText('—')
-    await expect(rate(page).locator('.au-rate-caption')).toHaveText('Success rate · 7 days')
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('—')
+    await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 7 days')
     await expect(rate(page)).toHaveAttribute('data-tone', 'empty')
     await expect(rate(page)).toHaveAttribute('aria-label', 'Success rate · 7 days: —')
     await expect(page.locator('.au-stack')).toHaveCount(0)
@@ -287,7 +287,7 @@ test.describe('verdict and directions from the stored detail', () => {
     const rest: Record<string, unknown> = { ...LNPAY_DETAIL.swaps7d }
     delete rest['asSource']
     await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...rest, all: { ...LNPAY_DETAIL.swaps7d.all, avgMs: 640 } } }) }))
-    await expect(page.locator('.au-dirs .au-dir')).toHaveCount(3)
+    await expect(page.locator('.au-dirs .au-dir')).toHaveCount(4)
     await expect(tileValue(page, 'melts')).toHaveText('No data')
     await expect(tile(page, 'melts').locator('.au-dir-sub')).toHaveCount(0)
     await expect(tileValue(page, 'mints')).toHaveText('56 of 62')
@@ -687,11 +687,29 @@ test.describe('verdict-to-bar spacing', () => {
   const clean = onlyCz([], { detail: cleanCase(50, 0, 0) })
   const empty = onlyCz([], { detail: cleanCase(0, 0, 0) })
 
+
+  /** Deposits | Withdrawals on one row, Success rate | Average swap time on the row below; rate is not above the heading. */
+  const expectTwoColumnFigures = async (page: Page) => {
+    const [headline, rate, avg, mints, melts] = await measureSettled(page, [
+      '[data-testid="audit-verdict-headline"]',
+      '[data-testid="audit-success-rate"]',
+      '[data-testid="audit-avg-swap"]',
+      '.au-dirs [data-tile="mints"]',
+      '.au-dirs [data-tile="melts"]',
+    ])
+    expect(mints!.x + mints!.width).toBeLessThanOrEqual(melts!.x + 1)
+    expect(Math.abs(mints!.y - melts!.y)).toBeLessThan(8)
+    expect(rate!.x + rate!.width).toBeLessThanOrEqual(avg!.x + 1)
+    expect(Math.abs(rate!.y - avg!.y)).toBeLessThan(8)
+    expect(mints!.y + mints!.height).toBeLessThanOrEqual(rate!.y + 1)
+    expect(rate!.y).toBeGreaterThan(headline!.y + headline!.height)
+  }
+
   /** Leftover inside the text block, and the gap from the verdict to the bar (or the direction tiles when there is no bar). */
   const spacing = async (page: Page) => {
     await expect(page.getByTestId('audit-verdict')).toBeVisible()
     const [text, last, verdict] = await measureSettled(page, ['.au-verdict-text', '.au-verdict-text > :last-child', '.au-verdict'])
-    const nextSel = (await page.locator('.au-stack-wrap').count()) ? '.au-stack-wrap' : '.au-dirs'
+    const nextSel = (await page.locator('.au-stack-wrap').count()) ? '.au-stack-wrap' : '.au-figures'
     const [next] = await measureSettled(page, [nextSel])
     return {
       leftover: text!.y + text!.height - (last!.y + last!.height),
@@ -713,6 +731,7 @@ test.describe('verdict-to-bar spacing', () => {
         // .au-verdict margin-bottom is 18px; a 240px column flex-basis left ~130px here.
         expect(s.gapToNext).toBeGreaterThanOrEqual(0)
         expect(s.gapToNext).toBeLessThan(28)
+        await expectTwoColumnFigures(page)
       })
 
       test('clean (0 failures): the bar follows the heading with normal spacing', async ({ page }) => {
@@ -722,17 +741,19 @@ test.describe('verdict-to-bar spacing', () => {
         expect(s.leftover).toBeLessThan(4)
         expect(s.gapToNext).toBeGreaterThanOrEqual(0)
         expect(s.gapToNext).toBeLessThan(28)
+        await expectTwoColumnFigures(page)
       })
 
       test('0 swaps: no leftover under the heading before the direction tiles', async ({ page }) => {
         await gotoAuditTab(page, empty)
         await expect(page.locator('.au-stack')).toHaveCount(0)
         const s = await spacing(page)
-        expect(s.next).toBe('.au-dirs')
+        expect(s.next).toBe('.au-figures')
         expect(s.leftover).toBeLessThan(4)
-        // verdict margin-bottom 18px + .au-dirs margin-top 20px
+        // verdict margin-bottom 18px + .au-figures margin-top 20px
         expect(s.gapToNext).toBeGreaterThanOrEqual(0)
         expect(s.gapToNext).toBeLessThan(48)
+        await expectTwoColumnFigures(page)
       })
     })
   }
@@ -740,15 +761,13 @@ test.describe('verdict-to-bar spacing', () => {
   test.describe('1440px', () => {
     test.use({ viewport: { width: 1440, height: 900 } })
 
-    test('failures: tile sits beside the heading; the bar still follows the verdict', async ({ page }) => {
+    test('failures: the bar follows the heading; success rate sits left of average swap time below the directions', async ({ page }) => {
       await gotoAuditTab(page, failures)
-      const [tile, text, last, verdict, bar] = await measureSettled(page, ['.au-rate-tile', '.au-verdict-text', '.au-verdict-text > :last-child', '.au-verdict', '.au-stack-wrap'])
+      const [text, last, verdict, bar] = await measureSettled(page, ['.au-verdict-text', '.au-verdict-text > :last-child', '.au-verdict', '.au-stack-wrap'])
       expect(text!.y + text!.height - (last!.y + last!.height)).toBeLessThan(4)
       expect(bar!.y - (verdict!.y + verdict!.height)).toBeGreaterThanOrEqual(0)
       expect(bar!.y - (verdict!.y + verdict!.height)).toBeLessThan(28)
-      // Row: the tile is to the left of the text, not stacked above it.
-      expect(tile!.x + tile!.width).toBeLessThanOrEqual(text!.x + 1)
-      expect(Math.abs(tile!.y - text!.y)).toBeLessThan(40)
+      await expectTwoColumnFigures(page)
     })
   })
 })

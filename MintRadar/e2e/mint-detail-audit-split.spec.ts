@@ -20,7 +20,9 @@ test.describe('direction figures', () => {
   test('Deposits (mint) first, then Withdrawals (melt): successful of attempts and "N failed"', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
     // asDest (62 attempts, 56 ok, 6 failed) is the deposit side, asSource (64, 51, 13) the withdrawal side
-    await expect(page.locator('.au-dirs .au-dir-label')).toHaveText(['Deposits (mint)', 'Withdrawals (melt)', 'Average swap time'])
+    await expect(page.locator('.au-dirs .au-dir-label')).toHaveText(['Deposits (mint)', 'Withdrawals (melt)', 'Success rate · 7 days', 'Average swap time'])
+    await expect(page.getByTestId('audit-avg-swap').locator('.au-dir-value')).toHaveText('8.3 s')
+    await expect(page.getByTestId('audit-success-rate').locator('.au-dir-value')).toBeVisible()
     await expect(tile(page, 'mints').locator('.au-dir-value')).toHaveText('56 of 62')
     await expect(tile(page, 'mints').locator('.au-dir-sub')).toHaveText('6 failed')
     await expect(tile(page, 'melts').locator('.au-dir-value')).toHaveText('51 of 64')
@@ -61,7 +63,7 @@ test.describe('direction figures', () => {
 test.describe('no source line; header tooltip', () => {
   test('no cashu.info source line under the figures (uptime and DLEQ are shown elsewhere)', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
-    await expect(page.locator('.au-dirs')).toBeVisible()
+    await expect(page.locator('.au-figures')).toBeVisible()
     await expect(page.locator('.audit-cz-source')).toHaveCount(0)
     await expect(page.locator('body')).not.toContainText('DLEQ valid')
     await expect(page.locator('body')).not.toContainText('uptime 30d')

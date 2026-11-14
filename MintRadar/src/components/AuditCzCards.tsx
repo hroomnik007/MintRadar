@@ -18,23 +18,10 @@ import { formatDate, formatDateTimeUtc, DATE_MONTHS } from '@/utils/formatDate'
 
 const ROWS_DEFAULT = 8
 
-/** The success-rate tile, the 7-day heading, and (when it counts) the one longer-window line. */
+/** The 7-day heading, the score hint, and (when it counts) the one longer-window line. */
 export function AuditVerdictBlock({ verdict, view }: { verdict: AuditVerdict; view: AuditCzView }) {
-  const rate = auditSuccessRateText(verdict)
-  const tone = auditSuccessRateTone(verdict)
-  const caption = auditSuccessRateCaption()
   return (
     <div className="au-verdict" data-testid="audit-verdict">
-      <div
-        className={`au-rate-tile au-rate-${tone}`}
-        data-testid="audit-success-rate"
-        data-tone={tone}
-        role="group"
-        aria-label={`${caption}: ${rate}`}
-      >
-        <span className="au-rate-value">{rate}</span>
-        <span className="au-rate-caption">{caption}</span>
-      </div>
       <div className="au-verdict-text">
         <strong className={verdict.blamed > 0 ? 'au-verdict-bad' : undefined} data-testid="audit-verdict-headline">{auditVerdictHeadline(verdict)}</strong>
         <span className="au-verdict-hint" data-testid="audit-score-hint">{AUDIT_SCORE_HINT}</span>
@@ -64,31 +51,56 @@ export function AuditStack({ verdict }: { verdict: AuditVerdict }) {
   )
 }
 
-/** Deposits, withdrawals and the average swap time of the same 7 days. */
-export function AuditDirections({ directions, avgSwapTime }: { directions: AuditDirectionFigure[]; avgSwapTime: string | null }) {
+/** Deposits and withdrawals side by side, then success rate and average swap time in the same figure style. */
+export function AuditDirections({ directions, avgSwapTime, verdict }: {
+  directions: AuditDirectionFigure[]
+  avgSwapTime?: string | null
+  verdict?: AuditVerdict | null
+}) {
+  const rate = verdict ? auditSuccessRateText(verdict) : null
+  const tone = verdict ? auditSuccessRateTone(verdict) : null
+  const caption = auditSuccessRateCaption()
   return (
-    <div className="au-dirs">
-      {directions.map(d => (
-        <div className="au-dir" key={d.key} data-tile={d.key}>
-          <span className="au-dir-label">{d.label}<InfoTooltip text={d.tooltip} width={240} iconSize={11} label={`About ${d.label}`} /></span>
-          {d.ok === null || d.total === null ? (
-            <span className="au-dir-value au-dir-nodata">No data</span>
-          ) : (<>
-            <span className="au-dir-value">{d.ok.toLocaleString('en-US')} <small>of {d.total.toLocaleString('en-US')}</small></span>
-            {d.total > 0 && (
-              <div className="au-mini" aria-hidden="true">
-                {d.ok > 0 && <i className="au-seg-ok" style={{ flexGrow: d.ok }} />}
-                {d.failed > 0 && <i className="au-seg-fail" style={{ flexGrow: d.failed }} />}
-              </div>
-            )}
-            {d.failed > 0 && <span className="au-dir-sub">{d.failed.toLocaleString('en-US')} failed</span>}
-          </>)}
-        </div>
-      ))}
-      {avgSwapTime && (
-        <div className="au-dir" data-tile="avg">
-          <span className="au-dir-label">Average swap time</span>
-          <span className="au-dir-value">{avgSwapTime}</span>
+    <div className="au-figures">
+      <div className="au-dirs">
+        {directions.map(d => (
+          <div className="au-dir" key={d.key} data-tile={d.key}>
+            <span className="au-dir-label">{d.label}<InfoTooltip text={d.tooltip} width={240} iconSize={11} label={`About ${d.label}`} /></span>
+            {d.ok === null || d.total === null ? (
+              <span className="au-dir-value au-dir-nodata">No data</span>
+            ) : (<>
+              <span className="au-dir-value">{d.ok.toLocaleString('en-US')} <small>of {d.total.toLocaleString('en-US')}</small></span>
+              {d.total > 0 && (
+                <div className="au-mini" aria-hidden="true">
+                  {d.ok > 0 && <i className="au-seg-ok" style={{ flexGrow: d.ok }} />}
+                  {d.failed > 0 && <i className="au-seg-fail" style={{ flexGrow: d.failed }} />}
+                </div>
+              )}
+              {d.failed > 0 && <span className="au-dir-sub">{d.failed.toLocaleString('en-US')} failed</span>}
+            </>)}
+          </div>
+        ))}
+      </div>
+      {(verdict || avgSwapTime) && (
+        <div className="au-dirs au-dirs-metrics">
+          {verdict && (
+            <div
+              className={`au-dir au-dir-rate au-rate-${tone}`}
+              data-testid="audit-success-rate"
+              data-tone={tone ?? undefined}
+              role="group"
+              aria-label={`${caption}: ${rate}`}
+            >
+              <span className="au-dir-label">{caption}</span>
+              <span className="au-dir-value">{rate}</span>
+            </div>
+          )}
+          {avgSwapTime && (
+            <div className="au-dir" data-tile="avg" data-testid="audit-avg-swap" role="group" aria-label={`Average swap time: ${avgSwapTime}`}>
+              <span className="au-dir-label">Average swap time</span>
+              <span className="au-dir-value">{avgSwapTime}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

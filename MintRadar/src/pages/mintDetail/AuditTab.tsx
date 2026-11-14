@@ -98,7 +98,7 @@ export function AuditTab({ auditCzLoading, czView, czSyncNote, now }: AuditTabPr
 
       {czView.verdict && <AuditVerdictBlock verdict={czView.verdict} view={czView} />}
       {czView.verdict && <AuditStack verdict={czView.verdict} />}
-      <AuditDirections directions={czView.directions} avgSwapTime={czView.avgSwapTime} />
+      <AuditDirections directions={czView.directions} avgSwapTime={czView.avgSwapTime} verdict={czView.verdict} />
       <AuditDays daily={czView.daily} />
       <AuditSwapList rows={czView.swaps} now={now} />
 
