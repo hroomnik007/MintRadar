@@ -5,6 +5,7 @@
 import type { KnownMint } from '@/hooks/useKnownMints'
 import type { BreakdownPart } from '@/utils/mintDetailFacts'
 import { auditDataState } from '@/utils/auditScore'
+import { auditLongOf } from '@/utils/auditWindows'
 import { UPTIME_POINTS, AUDIT_POINTS, NUT_POINTS, VERSION_POINTS, CONTACT_POINTS } from '@/utils/tooltipTexts'
 import { nip87AnnouncementOf } from '@/utils/nip87Announcement'
 import { formatDate } from '@/utils/formatDate'
@@ -33,7 +34,7 @@ export function scorePointsText(mint: KnownMint, part: BreakdownPart, now: numbe
   const stored = mint.reliabilityScore != null ? (mint.scoreBreakdown ?? null) : null
   if (!stored) return COMPARE_NO_VALUE
   const text = `${stored[part].points} / ${row.max}`
-  if (part === 'audit' && auditDataState(mint.auditCzBlamed ?? null, mint.auditCzTotal ?? null, mint.auditCzFetchedAt ?? null, now) !== 'scored') return `${text} · neutral`
+  if (part === 'audit' && auditDataState(mint.auditCzBlamed ?? null, mint.auditCzTotal ?? null, mint.auditCzFetchedAt ?? null, now, auditLongOf(mint)) !== 'scored') return `${text} · neutral`
   return text
 }
 

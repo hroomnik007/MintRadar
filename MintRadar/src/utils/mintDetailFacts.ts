@@ -4,7 +4,6 @@
 import type { ContactCheckFact } from './contactChecks'
 import { formatAuditSuccessRatio } from './mintFormatting'
 import { limitsSource } from './feesLimits'
-import { AUDIT_WINDOW_DAYS } from './tooltipTexts'
 
 // ── Outages ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -161,36 +160,6 @@ export function latencyPercentilesText(p50: number | null | undefined, p95: numb
   if (p50 == null && p95 == null) return null
   const f = (v: number | null | undefined) => (v == null ? '—' : `${Math.round(v)} ms`)
   return `Median ${f(p50)} · p95 ${f(p95)}${period ? ` over ${PERIOD_TEXT[period]}` : ''}`
-}
-
-/** The muted label above the swap strip on the Audit tab (its ⓘ sits next to it): "Last 35 swaps". */
-export function swapStripLabel(count: number): string {
-  return count === 1 ? 'Last swap' : `Last ${count} swaps`
-}
-
-/** The swap strip's ⓘ on the Audit tab: what the coloured marks are (was a paragraph under the strip). */
-export function swapStripText(count: number): string {
-  return `The ${count === 1 ? 'latest swap' : `latest ${count} swaps`} MintRadar stored from cashu.info, both directions, newest first. Green: succeeded. Red: failed. Grey: not counted against the mint (below the mint's minimum, the auditor's balance, or no outcome yet).`
-}
-
-/**
- * The visible line under the strip when it holds a red mark. The strip shows every failed swap, the tiles and the score
- * count only failures attributed to the mint; without this line "2 failed" and red marks next to "100 % without a
- * failure caused by this mint" read as a contradiction. cashu.info gives the attribution as a 7-day total, not per
- * swap, so the marks themselves cannot be split by cause.
- */
-export const SWAP_STRIP_FAILED_NOTE = 'A red mark is any failed swap, whoever caused it. The score counts only the failures cashu.info attributes to this mint.'
-
-/**
- * The one sentence above the Audit tiles when the Audit part of the score is scored: which of the many numbers below
- * count. The tiles, the strip and the tables show more swaps (both directions, older than the window) and every failure;
- * the score uses only this window and only the failures cashu.info attributes to the mint. Null without a stored total.
- */
-export function auditScoredLine(total: number | null | undefined, blamed: number | null | undefined): string | null {
-  if (total === null || total === undefined || total <= 0) return null
-  const b = Math.min(Math.max(blamed ?? 0, 0), total)
-  const failed = b === 0 ? 'none failed because of this mint' : `${b} failed because of this mint`
-  return `Counted in the Reliability Score: ${total === 1 ? '1 swap' : `${total} swaps`} of the last ${AUDIT_WINDOW_DAYS} days, ${failed}. The figures below also show older swaps and failures caused elsewhere.`
 }
 
 /** " · 1 outage" next to a 30-day uptime of a rounded 100 % that still had outages in the window; '' otherwise. */

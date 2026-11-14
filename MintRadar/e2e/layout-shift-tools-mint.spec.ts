@@ -156,7 +156,7 @@ test('Mint Detail #audit deep link at 390px: the right column stays below the fi
   expect(await rightTop(), 'right column while loading').toBeGreaterThanOrEqual(viewport)
 
   await audit.release()
-  await expect(page.locator('.audit-cz-tiles')).toBeVisible()
+  await expect(page.locator('.au-dirs')).toBeVisible()
   await networkQuiet(page)
   await layoutReady(page)
   await frames(page, 3)

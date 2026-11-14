@@ -4,7 +4,7 @@ import { auditCzResponse, czSwapList } from './fixtures/auditCz'
 
 const ALPHA = MOCK_MINTS[0]!.url
 const detailPath = `/mint/${encodeURIComponent(ALPHA)}`
-const TOOLTIP_RE = /combined cashu\.info number for the last 7 days/i
+const TOOLTIP_RE = /worse result of two cashu\.info windows/i
 
 type Page = import('@playwright/test').Page
 
@@ -55,8 +55,8 @@ test.describe('Audit stats heading — with data', () => {
       await info.tap()
       await expect(page.getByText(TOOLTIP_RE)).toBeVisible()
 
-      // The tiles are always visible; there is no collapsible body.
-      await expect(page.locator('.audit-cz-tiles')).toBeVisible()
+      // The figures are always visible; there is no collapsible body.
+      await expect(page.locator('.au-dirs')).toBeVisible()
 
       await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-header-mobile.png' })
     })

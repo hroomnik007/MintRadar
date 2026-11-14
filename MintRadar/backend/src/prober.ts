@@ -792,6 +792,7 @@ async function recordProbeResult(url: string, result: ProbeResult): Promise<void
       `SELECT
         m.nut_count, m.version, m.contact_count,
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
+        m.audit_cz_long_total, m.audit_cz_long_blamed, m.audit_cz_long_days,
         m.discovered_at,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count
@@ -799,7 +800,8 @@ async function recordProbeResult(url: string, result: ProbeResult): Promise<void
        LEFT JOIN mint_history h
          ON h.url = m.url AND h.checked_at > NOW() - INTERVAL '24 hours'
        WHERE m.url = $1
-       GROUP BY m.nut_count, m.version, m.contact_count, m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at, m.discovered_at`,
+       GROUP BY m.nut_count, m.version, m.contact_count, m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
+                m.audit_cz_long_total, m.audit_cz_long_blamed, m.audit_cz_long_days, m.discovered_at`,
       [url]
     )
     const row = statsRes.rows[0]
@@ -820,6 +822,11 @@ async function recordProbeResult(url: string, result: ProbeResult): Promise<void
         blamed: row.audit_cz_blamed as number | null,
         total: row.audit_cz_total as number | null,
         fetchedAt: row.audit_cz_fetched_at as Date | string | null,
+        long: {
+          blamed: row.audit_cz_long_blamed as number | null,
+          total: row.audit_cz_long_total as number | null,
+          days: row.audit_cz_long_days as number | null,
+        },
       }
       // One `now` for the score and its breakdown, written in the same UPDATE (scoreBreakdown.ts).
       const scoreNow = Date.now()

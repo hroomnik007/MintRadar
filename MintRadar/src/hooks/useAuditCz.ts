@@ -41,6 +41,12 @@ export interface AuditCzData {
   } | null
   /** The validated subset of cashu.info's per-mint detail (stored by our 30-minute job) plus when it was stored. null / absent: none stored yet. */
   detail?: AuditCzDetail | null
+  /** MintRadar's own count of the stored swaps per UTC day, last 7 days, oldest first. */
+  daily7d?: Array<{ day: string; ok: number; failed: number; other: number }>
+  /** The long window of the score (up to 28 days); null while only 7 days are stored. */
+  long?: { windowDays: number; swaps: number; attributedFailures: number } | null
+  /** Every stored 7-day total that does not overlap, added up. */
+  since?: { day: string; swaps: number; attributedFailures: number } | null
 }
 
 export interface AuditCzDirectionCounts { total?: number; success?: number; failed?: number; avgMs?: number }

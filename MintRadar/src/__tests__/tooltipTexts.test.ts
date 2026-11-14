@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import * as T from '@/utils/tooltipTexts'
-import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL } from '@/utils/auditScore'
+import { AUDIT_LONG_WINDOW_DAYS, AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL } from '@/utils/auditScore'
 import { NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, computeReliabilityScore, contactComponent, uptimeComponent, uptimeParts, UPTIME_24H_MAX, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX, type UptimeInput } from '@/utils/reliabilityScore'
 import { formatDuration, type StoredScoreBreakdown } from '@/utils/mintDetailFacts'
 import { UNKNOWN_SOFTWARE_POINTS, classifyMintVersion, pointsForMinorsBehind } from '@/utils/versionRule'
@@ -60,9 +60,9 @@ describe('numbers in the built texts equal their sources', () => {
   it('uptime row: 24 h (20 points), 30 days (10), longest outage (6), number of outages (4)', () => {
     expect(numbers(T.uptimeRowText())).toEqual([T.UPTIME_WINDOW_HOURS, UPTIME_24H_MAX, T.UPTIME_30D_WINDOW_DAYS, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX, T.UPTIME_30D_WINDOW_DAYS])
   })
-  it('audit row: 7 days, 10 swaps, neutral 12.5 of 25', () => {
+  it('audit row: 7 and 28 days, 10 swaps, neutral 12.5 of 25', () => {
     expect(T.AUDIT_WINDOW_DAYS).toBe(AUDIT_MAX_AGE_HOURS / 24)
-    expect(numbers(T.auditRowText())).toEqual([T.AUDIT_WINDOW_DAYS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, T.AUDIT_POINTS])
+    expect(numbers(T.auditRowText())).toEqual([T.AUDIT_WINDOW_DAYS, AUDIT_LONG_WINDOW_DAYS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, T.AUDIT_POINTS])
     expect(T.AUDIT_POINTS).toBe(25)
   })
   it('NUT row names no number, and the app tracks TRACKED_NUT_COUNT NUTs', () => {
@@ -103,14 +103,10 @@ describe('numbers in the built texts equal their sources', () => {
   it('cashu.info tiles: 7 days', () => {
     expect(numbers(T.depositsTileText())).toEqual([T.AUDIT_WINDOW_DAYS])
     expect(numbers(T.withdrawalsTileText())).toEqual([T.AUDIT_WINDOW_DAYS])
-    const f = (n: number) => String(n)
-    expect(T.cleanTileText(107, 126, 0, 19, f)).toBe('107 of 126 swaps in the last 7 days, 19 failed for other reasons')
-    expect(T.cleanTileText(120, 126, 4, 2, f)).toBe('120 of 126 swaps in the last 7 days, 4 attributed to this mint, 2 other failures')
-    expect(T.cleanTileText(126, 126, 0, 0, f)).toBe('126 of 126 swaps in the last 7 days')
   })
-  it('cashu.info view text: the score uses the combined number, the tiles are the same data split by direction', () => {
-    expect(T.cashuInfoViewText()).toBe('The Reliability Score uses the combined cashu.info number for the last 7 days. Deposits and withdrawals are the same data split by direction.')
-    expect(numbers(T.cashuInfoViewText())).toEqual([T.AUDIT_WINDOW_DAYS])
+  it('cashu.info view text: the score takes the worse of two windows, the directions are the 7 days split', () => {
+    expect(T.cashuInfoViewText()).toBe('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. Deposits and withdrawals are the 7 days split by direction.')
+    expect(numbers(T.cashuInfoViewText())).toEqual([T.AUDIT_WINDOW_DAYS, AUDIT_LONG_WINDOW_DAYS, T.AUDIT_WINDOW_DAYS])
   })
   it('Audit tab texts do not name audit.8333.space (no longer shown)', () => {
     expect(T.cashuInfoViewText()).not.toMatch(/8333/)
@@ -149,7 +145,6 @@ const BUILT: Record<string, string> = {
   REVIEWS_NIP87_TEXT: T.REVIEWS_NIP87_TEXT, SIGNATURE_CHECK_TEXT: T.SIGNATURE_CHECK_TEXT, INPUT_FEE_TEXT: T.INPUT_FEE_TEXT, FEE_PER_COIN_TEXT: T.FEE_PER_COIN_TEXT, KEYSET_FEE_TEXT: T.KEYSET_FEE_TEXT,
   compareAuditSuccessText: T.compareAuditSuccessText(), sameOperatorText: T.sameOperatorText(['alpha.mint.example', 'twin.mint.example']),
   depositsTileText: T.depositsTileText(), withdrawalsTileText: T.withdrawalsTileText(),
-  cleanTileText: T.cleanTileText(120, 126, 4, 2, n => n.toLocaleString('en-US')),
   cashuInfoViewText: T.cashuInfoViewText(), auditNoDataText: T.auditNoDataText(),
   moreAlertsNote: T.moreAlertsNote(), KEYSETS_HINT: T.KEYSETS_HINT, newMintBadgeText: T.newMintBadgeText(), newMintCapNote: T.newMintCapNote(), OPERATOR_REVIEW_NOTE: T.OPERATOR_REVIEW_NOTE, operatorExcludedText: T.operatorExcludedText(2),
   nhiOnlineSetText: nhiOnlineSetText(), nhiOnlineRowText: nhiOnlineRowText(26), nhiReliabilityRowText: nhiReliabilityRowText(),

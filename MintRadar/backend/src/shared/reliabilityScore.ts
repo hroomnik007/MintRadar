@@ -12,7 +12,7 @@
 // workspace set up between backend/ and the frontend), so src/utils/reliabilityScore.ts
 // is a manually-synced copy — if you change the logic here, mirror it there too.
 // The same arrangement exists for shared/auditScore.ts.
-import { auditComponent } from './auditScore.js'
+import { auditComponent, type AuditLongWindow } from './auditScore.js'
 import { classifyMintVersion, type LatestVersions } from './versionRule.js'
 
 /**
@@ -250,6 +250,8 @@ export interface AuditInput {
   blamed: number | null
   total: number | null
   fetchedAt: string | Date | null
+  /** The long window (up to 28 days); absent or null = only the 7-day window is known. */
+  long?: AuditLongWindow | null
 }
 
 export function computeReliabilityScore(
@@ -266,7 +268,7 @@ export function computeReliabilityScore(
   const nScore = nutComponent(nutCount)
   const vScore = versionComponent(version, latestVersions)
   const cScore = contactComponent(contactCount)
-  const aScore = auditComponent(audit.blamed, audit.total, audit.fetchedAt, now)
+  const aScore = auditComponent(audit.blamed, audit.total, audit.fetchedAt, now, audit.long)
   const total = Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
   return applyNewMintCap(total, discoveredAt, now)
 }

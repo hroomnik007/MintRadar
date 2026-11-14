@@ -52,6 +52,7 @@ export function computeKnownMints(): Promise<Snapshot> {
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
+        m.audit_cz_long_total, m.audit_cz_long_blamed, m.audit_cz_long_days,
         m.discovered_at, m.nostr_announced_at, m.nostr_announce_id, m.nostr_announce_pubkey, m.nostr_announce_d, (SELECT a.value FROM app_state a WHERE a.key = 'discovery_last_success_at') AS nostr_checked_at, (SELECT s.last_created_at FROM attestation_state s WHERE s.mint_url = m.url) AS health_published_at, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_operator_count, m.review_rated_count, m.review_count_7d_ago, m.review_count_7d_ago_at,
         m.contact_nostr, m.contact_checks,
@@ -133,6 +134,7 @@ export function computeKnownMints(): Promise<Snapshot> {
         m.audit_n_mints, m.audit_n_melts, m.audit_n_errors, m.audit_checked_at,
         m.audit_synced_at, m.audit_recent_total, m.audit_recent_errors, m.audit_avg_time_ms,
         m.audit_cz_total, m.audit_cz_blamed, m.audit_cz_fetched_at,
+        m.audit_cz_long_total, m.audit_cz_long_blamed, m.audit_cz_long_days,
         m.discovered_at, m.last_reliability_score, m.last_error, m.server_location, m.ip_address, m.net_asn, m.net_org, m.net_country, m.has_onion,
         m.review_count, m.review_avg_rating, m.review_count_7d_ago, m.review_count_7d_ago_at,
         h7.total_7d, h7.online_count_7d, h7.total_30d, h7.online_count_30d,
@@ -198,6 +200,11 @@ export function computeKnownMints(): Promise<Snapshot> {
           auditCzBlamed: (r.audit_cz_blamed as number | null) ?? null,
           auditCzTotal: (r.audit_cz_total as number | null) ?? null,
           auditCzFetchedAt: r.audit_cz_fetched_at ? new Date(r.audit_cz_fetched_at as string | Date).toISOString() : null,
+          // The long window of the same source (methodology 8): sums of up to four 7-day totals that do not
+          // overlap, and the days they cover (7, 14, 21 or 28). Null until the first daily row is stored.
+          auditCzLongBlamed: (r.audit_cz_long_blamed as number | null) ?? null,
+          auditCzLongTotal: (r.audit_cz_long_total as number | null) ?? null,
+          auditCzLongDays: (r.audit_cz_long_days as number | null) ?? null,
           // Mean time_taken (ms) over the OK swaps in the same rolling window
           // as auditRecentTotal/Errors — see mint_audit_swaps / computeSwapStats()
           // in discovery.ts. Null when the window has no OK swap with a known time.

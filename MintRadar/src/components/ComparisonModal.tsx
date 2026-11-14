@@ -13,6 +13,7 @@ import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
+import { auditLongOf } from '@/utils/auditWindows'
 import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT, mintStatusLabel, uptime30dColor } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { useNow } from '@/hooks/useNow'
@@ -49,7 +50,9 @@ function uptimeColor(pct: number | null | undefined): string {
 function auditSuccessDisplay(mint: KnownMint, now: number): { text: string; color: string } {
   const total = mint.auditCzTotal ?? null
   const blamed = mint.auditCzBlamed ?? null
-  if (auditDataState(blamed, total, mint.auditCzFetchedAt ?? null, now) !== 'scored') {
+  const long = auditLongOf(mint)
+  // The row is the 7-day figure (its label says so); the points row below it carries the long window's effect.
+  if (auditDataState(blamed, total, mint.auditCzFetchedAt ?? null, now, long) !== 'scored' || total === null || total < AUDIT_MIN_SAMPLES) {
     return { text: 'n/a', color: 'var(--text3)' }
   }
   return {

@@ -6,7 +6,7 @@
 // so the frontend copy src/utils/methodology.ts is byte-identical (code, comments aside);
 // src/__tests__/sharedModules.test.ts fails when they drift.
 
-export const METHODOLOGY_VERSION = 7
+export const METHODOLOGY_VERSION = 8
 
 export interface MethodologyChange {
   version: number
@@ -23,4 +23,5 @@ export const METHODOLOGY_CHANGES: readonly MethodologyChange[] = [
   { version: 5, date: '2026-10-27', summary: 'NUT part: a NUT the mint has switched off (NUT-04 minting or NUT-05 melting with "disabled": true in /v1/info) no longer counts for the NUT component.' },
   { version: 6, date: '2026-10-28', summary: 'Recommendation gate: a mint is eligible only if its newest probe is at most 3 hours old; the score formula is unchanged.' },
   { version: 7, date: '2026-11-10', summary: 'Uptime part (40) now has four parts: last 24 hours 20, last 30 days 10, longest outage in 30 days 6, number of outages in 30 days 4. Recommendation gate: at least 95% uptime in 30 days.' },
+  { version: 8, date: '2026-11-13', summary: 'Audit part: the worse result of two windows, the last 7 days and up to 28 days (four 7-day totals that do not overlap, stored from 2026-11-13 on). A failure blamed on the mint now counts for up to 28 days instead of 7; a window with fewer than 10 swaps is not used.' },
 ]

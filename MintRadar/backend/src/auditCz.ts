@@ -12,7 +12,7 @@ import { pool } from './db.js'
 import { normalizeUrl } from './discovery.js'
 import { publicMintName } from './mintNames.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
-import type { StoredAuditCzDetail, AuditCzDetailResponse } from './auditCzDetail.js'
+import { sumLongWindow, utcDay, LONG_STEP_DAYS, type StoredAuditCzDetail, type AuditCzDetailResponse, type DailyRow } from './auditCzDetail.js'
 
 // Historical identifier (the service was audit.cashu.cz): stays as the stored `source` column value.
 export const AUDIT_CZ_SOURCE = 'audit.cashu.cz'
@@ -36,6 +36,8 @@ const MAX_NAME_LEN = 100
 const MAX_ALIASES = 20
 const SWAP_RETENTION_DAYS = 14
 const SWAP_MAX_ROWS = 20_000
+
+const STATS_WINDOW_DAYS = 7
 
 export const AUDIT_CZ_MINT_STATES = ['ok', 'warn', 'error'] as const
 // `stage` and `status` are open-ended on their side (the live feed also sends e.g. stage
@@ -411,9 +413,50 @@ export interface AuditCzResponse {
   stats7d: AuditCzStats7d | null
   /** The validated subset of cashu.info's per-mint detail (stored by the 30-minute cron) plus `fetchedAt`; null when none is stored yet. Absent when the mint is not covered. */
   detail?: AuditCzDetailResponse | null
+  /** MintRadar's own count of the stored swaps per UTC day, the last 7 days, oldest first (a day without swaps is all zeros). Absent when the mint is not covered. */
+  daily7d?: AuditCzDay[]
+  /** The long window of the score (audit_cz_daily, up to 28 days); null while only one 7-day total is stored. Absent when the mint is not covered. */
+  long?: { windowDays: number; swaps: number; attributedFailures: number } | null
+  /** Every stored 7-day total that does not overlap the others, added up; `day` is the first day the sum covers. Null when nothing is stored. */
+  since?: { day: string; swaps: number; attributedFailures: number } | null
 }
 
-const STATS_WINDOW_DAYS = 7
+export interface AuditCzDay { day: string; ok: number; failed: number; other: number }
+
+/** Pure: grouped (day, outcome, n) rows → 7 entries ending at `today`, oldest first, zero-filled. */
+export function buildAuditCzDaily(rows: Array<{ day: string; outcome: string; n: unknown }>, today: string): AuditCzDay[] {
+  const t0 = Date.parse(`${today}T00:00:00Z`)
+  const days: AuditCzDay[] = []
+  for (let i = STATS_WINDOW_DAYS - 1; i >= 0; i--) days.push({ day: utcDay(t0 - i * 86_400_000), ok: 0, failed: 0, other: 0 })
+  const byDay = new Map(days.map(d => [d.day, d]))
+  for (const r of rows) {
+    const d = byDay.get(r.day)
+    if (!d) continue
+    const n = Number(r.n) || 0
+    if (r.outcome === 'paid') d.ok += n
+    else if (r.outcome === 'failed') d.failed += n
+    else d.other += n
+  }
+  return days
+}
+
+/** Pure: every stored row whose distance from `today` is a multiple of 7 days (they do not overlap), added up. */
+export function sumSince(rows: DailyRow[], today: string): { day: string; swaps: number; attributedFailures: number } | null {
+  const t0 = Date.parse(`${today}T00:00:00Z`)
+  let swaps = 0
+  let blamed = 0
+  let first: number | null = null
+  for (const r of rows) {
+    const t = Date.parse(`${r.day}T00:00:00Z`)
+    const diff = Math.round((t0 - t) / 86_400_000)
+    if (!Number.isFinite(t) || diff < 0 || diff % LONG_STEP_DAYS !== 0) continue
+    swaps += r.total
+    blamed += Math.min(r.blamed, r.total)
+    if (first === null || t < first) first = t
+  }
+  return first === null ? null : { day: utcDay(first - LONG_STEP_DAYS * 86_400_000), swaps, attributedFailures: blamed }
+}
+
 
 /** One row per (direction, outcome) from the grouped query in getAuditCzForMint. */
 export interface AuditCzStatsRow {
@@ -542,6 +585,26 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
     }
   })
   const detail = await readAuditCzDetail(canonical)
+  const today = utcDay(Date.now())
+  // Per UTC day, the same 7 days and outcome rule as stats7d; a swap is counted once (both directions).
+  const dq = await pool.query(
+    `SELECT to_char((at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS day,
+            CASE WHEN status = 'success' THEN 'paid' WHEN status = 'failed' THEN 'failed' ELSE 'pending' END AS outcome,
+            COUNT(*) AS n
+       FROM audit_cz_swaps
+      WHERE at >= $2::date - 6 AND (from_url = ANY($1) OR to_url = ANY($1))
+      GROUP BY 1, 2`,
+    [urls, today],
+  )
+  const daily7d = buildAuditCzDaily(dq.rows as Array<{ day: string; outcome: string; n: unknown }>, today)
+  const dr = await pool.query(
+    `SELECT to_char(day, 'YYYY-MM-DD') AS day, total, blamed FROM audit_cz_daily WHERE url = $1 AND day <= $2::date`,
+    [canonical, today],
+  )
+  const dailyRows = dr.rows as DailyRow[]
+  const longSum = sumLongWindow(dailyRows, today)
+  const long = longSum && longSum.days > LONG_STEP_DAYS ? { windowDays: longSum.days, swaps: longSum.total, attributedFailures: longSum.blamed } : null
+  const since = sumSince(dailyRows, today)
   return {
     source: AUDIT_CZ_API_SOURCE,
     // Rebuilt from the id, so a row stored under the old host is served with the new page URL.
@@ -561,5 +624,8 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
     swaps,
     stats7d,
     detail,
+    daily7d,
+    long,
+    since,
   }
 }

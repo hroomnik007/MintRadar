@@ -2800,3 +2800,75 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-info-nip87 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 /* Audit tab: the sentence that says which swaps count towards the score, above the tiles. */
 .audit-scored-line { margin: 2px 0 12px; font-size: 13px; color: var(--text2); max-width: 78ch; }
+
+/* ── Audit tab, new layout (2026-11-13): verdict, one bar, directions, swaps per day, one swap list ──────────────
+   Red (--red) is only the failures cashu.info attributes to THIS mint. A single failed swap is amber: the source
+   does not say per swap who caused it. "Failed elsewhere" is a hatched neutral. */
+.au-verdict { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 6px 0 18px; }
+.au-verdict-num { font-family: var(--font-mono); font-size: 44px; line-height: 1; font-weight: 500; color: var(--accent); font-variant-numeric: tabular-nums; }
+.au-verdict-num-bad { color: var(--red); }
+.au-verdict-text { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 1.45; color: var(--text2); }
+.au-verdict-text strong { font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.3; }
+.au-verdict-more { color: var(--text3); font-size: 13px; }
+.au-pill { font-family: var(--font-mono); font-size: 12px; line-height: 1.4; padding: 5px 10px; border-radius: 99px; white-space: nowrap; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.au-seg-ok { background: var(--accent); }
+.au-seg-else { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text3) 70%, var(--bg)) 0 4px, color-mix(in srgb, var(--text3) 40%, var(--bg)) 4px 8px); }
+.au-seg-mint { background: var(--red); }
+.au-seg-fail { background: var(--amber); }
+.au-stack { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; }
+.au-stack i { display: block; height: 100%; flex-basis: 0; min-width: 3px; }
+.au-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; line-height: 1.4; color: var(--text2); }
+.au-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.au-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.au-legend-small { font-size: 12px; color: var(--text3); margin-top: 8px; }
+.au-dirs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 20px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.au-dir { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 14px 16px 14px 0; }
+.au-dir + .au-dir { border-left: 1px solid var(--border); padding-left: 16px; }
+.au-dir-label { font-size: 13px; line-height: 1.4; color: var(--text3); }
+.au-dir-label .info-tooltip { vertical-align: middle; --tt-ml: 3px; }
+.au-dir-value { font-family: var(--font-mono); font-size: 20px; line-height: 1.2; color: var(--text); font-variant-numeric: tabular-nums; }
+.au-dir-value small { font-size: 13px; color: var(--text3); }
+.au-dir-nodata { font-size: 15px; color: var(--text3); }
+.au-dir-sub { font-size: 12px; line-height: 1.4; color: var(--text3); }
+.au-mini { display: flex; gap: 1px; height: 5px; border-radius: 3px; overflow: hidden; }
+.au-mini i { display: block; height: 100%; flex-basis: 0; min-width: 2px; }
+.au-days-wrap { margin-bottom: 20px; }
+.au-days-title { font-size: 13px; line-height: 1.4; color: var(--text2); margin-bottom: 8px; }
+.au-days-title span { color: var(--text3); font-size: 12px; margin-left: 6px; }
+.au-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.au-day { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; }
+.au-day-count { font-family: var(--font-mono); font-size: 12px; line-height: 1.3; min-height: 16px; color: var(--text3); text-align: center; }
+.au-day-col { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 72px; border-bottom: 1px solid var(--border); }
+.au-day-col i { display: block; border-radius: 2px; }
+.au-day-label { font-family: var(--font-mono); font-size: 12px; line-height: 1.3; color: var(--text3); text-align: center; }
+.au-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.au-chip { font-family: var(--font-body); font-size: 13px; line-height: 1.4; padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border2); background: none; color: var(--text2); cursor: pointer; transition: all var(--transition); }
+.au-chip:hover { color: var(--text); }
+.au-chip[aria-pressed="true"] { background: var(--surface-2); color: var(--text); border-color: var(--accent); }
+.au-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.au-chip-n { font-family: var(--font-mono); font-size: 12px; color: var(--text3); margin-left: 2px; }
+.au-table .au-num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.au-table .au-mono { font-family: var(--font-mono); }
+.au-table td, .au-table th { white-space: nowrap; }
+.au-res { display: inline-block; font-family: var(--font-mono); font-size: 12px; line-height: 1.5; min-height: 24px; box-sizing: border-box; padding: 3px 8px; border-radius: 99px; white-space: normal; }
+.au-res-ok { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.au-res-fail { color: var(--amber); background: color-mix(in srgb, var(--amber) 13%, transparent); }
+.au-res-neutral { color: var(--text3); padding-left: 0; }
+@media (max-width: 767px) {
+  .au-verdict { gap: 12px; }
+  .au-verdict-num { font-size: 36px; }
+  .au-dirs { grid-template-columns: 1fr; }
+  .au-dir { padding: 12px 0; }
+  .au-dir + .au-dir { border-left: 0; border-top: 1px solid var(--border); padding-left: 0; }
+  .au-days { gap: 4px; }
+  .au-chip { min-height: 44px; }
+  /* Phones: four columns that fit 320 px without a sideways scroll; the host is cut with an ellipsis. */
+  .au-table .au-col-when, .au-table .au-col-fee, .au-table .au-col-dur { display: none; }
+  .au-table { table-layout: fixed; font-size: 12px; }
+  .au-table td, .au-table th { white-space: normal; padding-right: 6px; }
+  .au-table th:nth-child(2), .au-table td:nth-child(2) { width: 82px; }
+  .au-table th:nth-child(3), .au-table td:nth-child(3) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .au-table th:nth-child(4), .au-table td:nth-child(4) { width: 58px; }
+  .au-table th:nth-child(7), .au-table td:nth-child(7) { width: 78px; padding-right: 0; }
+  .au-res { padding: 2px 6px; border-radius: 8px; }
+}

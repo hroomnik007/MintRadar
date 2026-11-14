@@ -12,7 +12,7 @@
 //
 // `latestVersions` (family -> latest) is the value the API sends with each mint (`softwareLatest`);
 // pass it so the breakdown uses the same "latest" as the stored score. There is no static fallback.
-import { auditComponent } from './auditScore'
+import { auditComponent, type AuditLongWindow } from './auditScore'
 import { classifyMintVersion, type LatestVersions } from './versionRule'
 
 /**
@@ -226,6 +226,8 @@ export interface AuditInput {
   blamed: number | null
   total: number | null
   fetchedAt: string | Date | null
+  /** The long window (up to 28 days); absent or null = only the 7-day window is known. */
+  long?: AuditLongWindow | null
 }
 
 export function computeReliabilityScore(
@@ -242,7 +244,7 @@ export function computeReliabilityScore(
   const nScore = nutComponent(nutCount)
   const vScore = versionComponent(version, latestVersions)
   const cScore = contactComponent(contactCount)
-  const aScore = auditComponent(audit.blamed, audit.total, audit.fetchedAt, now)
+  const aScore = auditComponent(audit.blamed, audit.total, audit.fetchedAt, now, audit.long)
   const total = Math.min(100, Math.round(uScore + nScore + vScore + cScore + aScore))
   return applyNewMintCap(total, discoveredAt, now)
 }

@@ -487,6 +487,23 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_total INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_blamed INTEGER',
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_fetched_at TIMESTAMPTZ',
+    // Methodology 8: the long audit window. audit_cz_daily keeps the FIRST 7-day totals stored on each UTC day
+    // (one row per source mint and day); four rows 7 days apart do not overlap and add up to 28 days. The sum
+    // and the days it covers (7, 14, 21, 28) are copied onto the tracked mint by the detail cron
+    // (auditCzDetail.ts) and read by the audit part of the score (shared/auditScore.ts). Rows are never
+    // deleted: the Audit tab also shows the sum since the first stored day.
+    `CREATE TABLE IF NOT EXISTS audit_cz_daily (
+       url TEXT NOT NULL,
+       day DATE NOT NULL,
+       total INTEGER NOT NULL,
+       blamed INTEGER NOT NULL,
+       failed INTEGER,
+       fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+       PRIMARY KEY (url, day)
+     )`,
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_long_total INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_long_blamed INTEGER',
+    'ALTER TABLE mints ADD COLUMN IF NOT EXISTS audit_cz_long_days SMALLINT',
     // Backfill from the stored detail rows so scores don't drop to neutral between a deploy and the
     // next detail cron run. Idempotent (a second run matches nothing); a mint with no detail row stays NULL.
     AUDIT_CZ_BACKFILL_SQL,

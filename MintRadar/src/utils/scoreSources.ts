@@ -1,6 +1,6 @@
 // The muted line under each Reliability Score breakdown row: "source · window · sample · time". Every value is a
 // real one (a constant, a count the page has, a stored timestamp); a part that is not known is left out, never guessed.
-import { auditDataState, AUDIT_MIN_SAMPLES } from './auditScore'
+import { auditDataState, AUDIT_MIN_SAMPLES, type AuditLongWindow } from './auditScore'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { UPTIME_WINDOW_HOURS, AUDIT_WINDOW_DAYS } from './tooltipTexts'
 import { formatTimeAgo } from './mintFormatting'
@@ -39,11 +39,16 @@ export function auditSourceLine(i: {
   total: number | null | undefined
   fetchedAt: string | null | undefined
   now: number
+  long?: AuditLongWindow | null
 }): SourceLine {
   const parts = ['cashu.info', `${AUDIT_WINDOW_DAYS} days`]
-  const state = auditDataState(i.blamed, i.total, i.fetchedAt, i.now)
+  const state = auditDataState(i.blamed, i.total, i.fetchedAt, i.now, i.long)
   const swaps = typeof i.total === 'number' ? `${i.total} ${i.total === 1 ? 'swap' : 'swaps'}` : null
-  if (state === 'scored' && swaps) parts.push(swaps)
+  const l = i.long
+  const longSwaps = l && typeof l.total === 'number' && typeof l.days === 'number' && l.days > AUDIT_WINDOW_DAYS
+    ? `${l.days} days: ${l.total} ${l.total === 1 ? 'swap' : 'swaps'}`
+    : null
+  if (state === 'scored' && swaps) { parts.push(swaps); if (longSwaps) parts.push(longSwaps) }
   else if (state === 'too-few' && swaps) parts.push(`${swaps}, fewer than ${AUDIT_MIN_SAMPLES} (neutral)`)
   else if (state === 'too-old') parts.push(`detail older than ${AUDIT_WINDOW_DAYS} days (neutral)`)
   else if (state === 'no-data') parts.push('no data (neutral)')

@@ -36,6 +36,10 @@ export interface KnownMint {
   auditCzBlamed?: number | null
   auditCzTotal?: number | null
   auditCzFetchedAt?: string | null
+  // The long audit window (methodology 8): sums of 7-day totals that do not overlap and the days they cover.
+  auditCzLongBlamed?: number | null
+  auditCzLongTotal?: number | null
+  auditCzLongDays?: number | null
   discoveredAt?: string | null
   nostrAnnouncedAt?: string | null
   nostrAnnounceId?: string | null

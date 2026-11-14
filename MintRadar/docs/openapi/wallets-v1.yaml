@@ -69,7 +69,7 @@ paths:
         then `uptime7dPct` descending (null last), then `name` (the hostname when `name` is null), then `url`.
         A query value that is present but invalid (a repeated parameter included; the boolean flags take exactly `true` or `false`) is a `400`; unknown parameters are ignored.
         `total` counts the mints that match the filters before `limit` is applied; `truncated` is true when `limit` cut the list.
-        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h`, `nip87`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
+        The heavier fields (`pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `auditLong`, `latency24h`, `nip87`, `keysets`, `keysetsCheckedAt`, `methods`, `scoreBreakdown`) are only in the objects when `include` asks for them.
       parameters:
         - name: unit
           in: query
@@ -132,7 +132,7 @@ paths:
           in: query
           description: >-
             Comma-separated list of `facts`, `keysets`, `methods`, `breakdown`, `changes`: add the heavier fields of that name to every object
-            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h` and `nip87`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
+            (`facts` brings `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `auditLong`, `latency24h` and `nip87`; `keysets` brings `keysets` and `keysetsCheckedAt`; `methods` brings
             `methods`; `breakdown` brings `scoreBreakdown`; `changes` brings the newest 10 `changes` of each mint and `changesPending`).
             An unknown value is a `400`. Added 2026-10-20.
           schema: { type: string, pattern: '^(facts|keysets|methods|breakdown|changes)(,(facts|keysets|methods|breakdown|changes))*$' }
@@ -372,7 +372,7 @@ components:
         error messages, reviewer keys, review texts or contact values. It does carry the mint's own public key (`pubkey`),
         whether it advertises a Tor address (`hasOnion`) and its probe response times (`latency24h`). The fields from `pubkey` on were added on
         2026-10-20; `pubkey`, `firstSeenAt`, `lastOnlineAt`, `sample`, `keysets`, `keysetsCheckedAt`, `methods`,
-        `scoreBreakdown`, `changes`, `changesPending`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `latency24h` and `nip87` are only present on the single-mint endpoint and in the list with the matching `include` value.
+        `scoreBreakdown`, `changes`, `changesPending`, `contactChecks`, `feeExamples`, `limits`, `auditByDirection`, `auditLong`, `latency24h` and `nip87` are only present on the single-mint endpoint and in the list with the matching `include` value.
       required:
         - url
         - name
@@ -526,6 +526,14 @@ components:
             the same stored data the audit part of the score counts in total (the score uses the combined number). Added 2026-10-21.
           allOf:
             - $ref: '#/components/schemas/AuditByDirection'
+        auditLong:
+          description: >-
+            Only with `include=facts` (always on the single-mint endpoint). The long audit window of the score (methodology 8):
+            the sum of 7-day totals of cashu.info that do not overlap, stored 7 days apart. The audit part of the score is the
+            worse result of the 7-day window (`audit`) and of this one. Null until two such totals are stored. Added 2026-11-13.
+          oneOf:
+            - $ref: '#/components/schemas/AuditLong'
+            - type: 'null'
         latency24h:
           description: >-
             Only with `include=facts` (always on the single-mint endpoint). Response time of the successful probes of the last 24 hours:
@@ -812,9 +820,16 @@ components:
       properties:
         points: { type: number, minimum: 0 }
         max: { type: integer, description: 'uptime 40 (its parts 20, 10, 6, 4), audit 25, nuts 15, version 15, contact 5.' }
+    AuditLong:
+      type: object
+      required: [swaps, attributedFailures, windowDays]
+      properties:
+        swaps: { type: integer, minimum: 0, description: All swaps in the window. }
+        attributedFailures: { type: integer, minimum: 0, description: Failures cashu.info attributes to this mint, never more than `swaps`. }
+        windowDays: { type: integer, enum: [14, 21, 28], description: Days the sum covers. }
     Audit:
       type: object
-      description: The 7-day swap window published by cashu.info. Fewer than 10 swaps, or data older than 168 hours, scores neutral in the Reliability Score.
+      description: The 7-day swap window published by cashu.info. The Reliability Score takes the worse result of this window and of the long window (`auditLong`); a window with fewer than 10 swaps is not used, and data older than 168 hours scores neutral.
       required: [swaps7d, attributedFailures, fetchedAt]
       properties:
         swaps7d: { type: integer, minimum: 0, description: All swaps in the window. }

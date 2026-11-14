@@ -11,17 +11,17 @@ type Page = import('@playwright/test').Page
 
 const row = (page: Page, host: string) => page.locator('.audit-swaps-table tbody tr', { hasText: host })
 const czLink = (page: Page) => page.getByRole('link', { name: 'Open on cashu.info →' })
-// cashu.info view: tile by key; the two swap tables sit behind a tablist ("From this mint (N)" | "To this mint (M)"), one panel at a time.
-const tile = (page: Page, key: string) => page.locator(`.audit-cz-tiles [data-tile="${key}"]`)
+// cashu.info view (2026-11-13 layout): the verdict, one bar, the direction figures by key, swaps per day and ONE swap
+// list with a filter ("All | Deposits | Withdrawals | Failed"), 8 rows until "Show all".
+const tile = (page: Page, key: string) => page.locator(`.au-dirs [data-tile="${key}"]`)
+const tileValue = (page: Page, key: string) => tile(page, key).locator('.au-dir-value')
+const verdict = (page: Page) => page.getByTestId('audit-verdict')
 const checksCard = (page: Page) => page.getByTestId('audit-cz-checks')
-const tableCard = (page: Page) => page.getByTestId('audit-cz-table')
-const fromCard = tableCard // the default panel
-const toCard = tableCard // after openTo()
-const openTo = async (page: Page) => { await page.getByRole('tab', { name: /^To this mint/ }).click() }
-/** Expands the "Swaps from this mint" card (every spec row is a `from` swap unless it says otherwise). */
-// The card shows 5 rows by default: expand only when there is something to expand.
+const swapList = (page: Page) => page.getByTestId('audit-swap-list')
+const chip = (page: Page, name: string) => swapList(page).getByRole('button', { name: new RegExp(`^${name} \\d+$`) })
+/** Shows every row of the list (it shows 8 by default): expands only when there is something to expand. */
 const expandFrom = async (page: Page) => {
-  const card = fromCard(page)
+  const card = swapList(page)
   await expect(card.locator('tbody tr').first()).toBeVisible()
   const b = card.locator('.audit-swaps-show-all-btn')
   if (await b.count()) await b.click()
@@ -46,11 +46,11 @@ const onlyCz = (swaps: ReturnType<typeof czSwapList>, extra: Record<string, unkn
   ({ alpha: NO_8333, cz: auditCzResponse({ swaps, ...extra }) })
 
 // ── a) cz is the only source ────────────────────────────────────
-test('only cz has data: header, four tiles from the stored detail, no checks card, two tables, safe link, no switch', async ({ page }) => {
+test('only cz has data: header, verdict, bar, directions, one swap list with a filter, safe link, no switch', async ({ page }) => {
   // 7 OK, 2 failed melts, 1 below-minimum row = 10 swaps from this mint, plus 2 swaps to it.
   const swaps = [
     ...czSwapList([ok, ok, melt, ok, ok, limits, ok, melt, ok, ok]),
-    ...czSwapList([ok, ok]).map((s, i) => ({ ...s, id: `t${i}`, direction: 'to' as const, otherMintUrl: `https://src${i}.example`, at: ago((20 + i) * 60_000) })),
+    ...czSwapList([ok, ok]).map((s, i) => ({ ...s, id: `t${i}`, direction: 'to' as const, otherMintUrl: `https://src${i}.example`, at: ago((200 + i) * 60_000) })),
   ]
   await gotoAuditTab(page, onlyCz(swaps))
 
@@ -58,44 +58,49 @@ test('only cz has data: header, four tiles from the stored detail, no checks car
   await expect(header).toBeVisible()
   await expect(header).toHaveText(/^Audit stats\s*·\s*via cashu\.info/, { useInnerText: true })
 
-  // Four tiles from the LNpay detail, in order; the label is sentence case. The one success figure is the
-  // score's: 0 attributed of 126 swaps is 100%, the 19 failures of other causes are only in the tooltip.
-  await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(4)
-  await expect(page.locator('.audit-cz-tiles .audit-summary-value')).toHaveText(['56 / 62', '51 / 64', '100%', '8.3 s'])
-  await expect(page.locator('.audit-cz-tiles .audit-cz-tile-label')).toHaveText(
-    ['Deposits (mint)', 'Withdrawals (melt)', 'Without a failure caused by this mint', 'Avg swap time'])
-  await tile(page, 'clean').locator('.info-tooltip').hover()
-  await expect(page.getByRole('tooltip')).toHaveText('126 of 126 swaps in the last 7 days, 19 failed for other reasons')
-  await expect(page.locator('.audit-cz-tile-caption')).toHaveCount(0)
-  await expect(page.getByText('Success rate')).toHaveCount(0)
-  expect(await tile(page, 'melts').locator('.audit-cz-tile-label').evaluate(e => getComputedStyle(e).textTransform)).toBe('none') // sentence case, like the swap strip labels
-  // The old Recent success rate tile is gone from this view.
-  await expect(page.getByText('Recent success rate')).toHaveCount(0)
+  // The verdict is the score's 7-day window: 0 attributed of 126 swaps; the 19 failures of other causes are named, not counted.
+  await expect(page.getByTestId('audit-verdict-num')).toHaveText('0')
+  await expect(verdict(page)).toContainText('of 126 swaps failed because of this mint')
+  await expect(verdict(page)).toContainText('19 swaps failed for other reasons and do not count against it.')
+  await expect(page.getByTestId('audit-legend').locator('span')).toHaveText(['107 succeeded', '19 failed elsewhere', '0 caused by this mint'])
+  // No long window in the response: neither of its lines is shown.
+  await expect(page.getByTestId('audit-long-line')).toHaveCount(0)
+  await expect(page.getByTestId('audit-since-line')).toHaveCount(0)
 
-  // The bar shows both directions together.
-  await expect(page.locator('.audit-swap-bar-mark')).toHaveCount(12)
+  // Directions and the average, in order; sentence case.
+  await expect(page.locator('.au-dirs .au-dir')).toHaveCount(3)
+  await expect(page.locator('.au-dirs .au-dir-value')).toHaveText(['56 of 62', '51 of 64', '8.3 s'])
+  await expect(page.locator('.au-dirs .au-dir-label')).toHaveText(['Deposits (mint)', 'Withdrawals (melt)', 'Average swap time'])
+  await expect(tile(page, 'mints').locator('.au-dir-sub')).toHaveText('6 failed')
+  await expect(tile(page, 'melts').locator('.au-dir-sub')).toHaveText('13 failed')
+  await expect(page.getByText('Success rate')).toHaveCount(0)
+  expect(await tile(page, 'melts').locator('.au-dir-label').evaluate(e => getComputedStyle(e).textTransform)).toBe('none')
 
   await expect(checksCard(page)).toHaveCount(0)
 
-  // One table at a time, behind a tablist; "From this mint" first.
-  await expect(page.getByTestId('audit-cz-table')).toHaveCount(1)
-  await expect(page.locator('.md-audit-collapsible').getByRole('tab')).toHaveText(['From this mint (10)', 'To this mint (2)'])
-  await expect(page.getByRole('tab', { name: /^From this mint/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(fromCard(page).locator('th')).toHaveText(['To', 'Amount', 'Fee', 'Duration', 'State'])
-  await expect(fromCard(page).locator('tbody tr')).toHaveCount(5)
-  await expect(fromCard(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show all (10)')
-  await fromCard(page).locator('.audit-swaps-show-all-btn').click()
-  await expect(fromCard(page).locator('tbody tr')).toHaveCount(10)
-  await expect(fromCard(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show fewer')
-  await openTo(page)
-  await expect(page.getByTestId('audit-cz-table')).toHaveCount(1)
-  await expect(page.getByRole('tab', { name: /^To this mint/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(toCard(page).locator('th')).toHaveText(['From', 'Amount', 'Fee', 'Duration', 'State'])
-  await expect(toCard(page).locator('tbody tr')).toHaveCount(2)
-  await expect(toCard(page).locator('.audit-swaps-show-all-btn')).toHaveCount(0)
-  await expect(toCard(page).locator('tbody tr').first().locator('td').first()).toHaveText('src0.example')
-  await page.getByRole('tab', { name: /^From this mint/ }).click()
-  await expect(fromCard(page).locator('tbody tr')).toHaveCount(10) // the expansion of the other panel is kept
+  // One list with a filter; "All" first and pressed.
+  await expect(swapList(page).getByRole('group', { name: 'Filter swaps' }).getByRole('button')).toHaveText(['All 12', 'Deposits 2', 'Withdrawals 10', 'Failed 2'])
+  await expect(chip(page, 'All')).toHaveAttribute('aria-pressed', 'true')
+  await expect(swapList(page).locator('th')).toHaveText(['When', 'Direction', 'Other mint', 'Amount', 'Fee', 'Duration', 'Result'])
+  await expect(swapList(page).locator('tbody tr')).toHaveCount(8)
+  await expect(swapList(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show all (12)')
+  await swapList(page).locator('.audit-swaps-show-all-btn').click()
+  await expect(swapList(page).locator('tbody tr')).toHaveCount(12)
+  await expect(swapList(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show fewer')
+  await chip(page, 'Deposits').click()
+  await expect(chip(page, 'Deposits')).toHaveAttribute('aria-pressed', 'true')
+  await expect(chip(page, 'All')).toHaveAttribute('aria-pressed', 'false')
+  await expect(swapList(page).locator('tbody tr')).toHaveCount(2)
+  await expect(swapList(page).locator('.audit-swaps-show-all-btn')).toHaveCount(0)
+  await expect(swapList(page).locator('tbody tr').first().locator('td').nth(1)).toHaveText('Deposit')
+  await expect(swapList(page).locator('tbody tr').first().locator('td').nth(2)).toHaveText('src0.example')
+  // "Failed" leaves out the grey below-minimum row: it is not counted against the mint.
+  await chip(page, 'Failed').click()
+  await expect(swapList(page).locator('tbody tr')).toHaveCount(2)
+  await expect(swapList(page).locator('tbody tr .au-res-fail')).toHaveCount(2)
+  await chip(page, 'Withdrawals').click()
+  await expect(swapList(page).locator('tbody tr')).toHaveCount(8) // a filter change folds the list again
+  await expect(swapList(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show all (10)')
 
   const link = czLink(page)
   await expect(link).toHaveCount(1)
@@ -139,14 +144,14 @@ test('the browser never requests cashu.info: only /api/mints/audit-cz?direction=
 })
 
 // ── c) neutral rows ─────────────────────────────────────────────
-test('limits, balance and pending rows are neutral, failures red; the bar follows the same split', async ({ page }) => {
+test('limits, balance and pending rows are neutral, failures amber, OK green: one Result chip per row', async ({ page }) => {
   // 5 OK, 3 failed (melt), 3 limits, 2 balance, 1 pending, interleaved so no position implies the kind.
   const swaps = czSwapList([ok, melt, limits, ok, balance, pending, ok, melt, limits, balance, ok, limits, melt, ok])
   expect(swaps).toHaveLength(14)
   await gotoAuditTab(page, onlyCz(swaps))
 
   await expandFrom(page)
-  await expect(fromCard(page).locator('tbody tr')).toHaveCount(14)
+  await expect(swapList(page).locator('tbody tr')).toHaveCount(14)
 
   const state = (host: string) => expect.poll(() => visibleState(page, host))
   const style = (host: string) => row(page, host).locator('td').first().evaluate(td => {
@@ -160,113 +165,119 @@ test('limits, balance and pending rows are neutral, failures red; the bar follow
   await state('pending5.example').toBe('pending')
   for (const host of ['ok0', 'ok3', 'ok6', 'ok10', 'ok13']) await state(`${host}.example`).toBe('OK')
 
-  const failed = await style('melt1.example')
-  const okRow = await style('ok0.example')
+  // The Result chip carries the outcome: one class per kind, and a failed row is not the red of "caused by this mint".
+  const res = (host: string) => row(page, host).locator('.au-res')
+  for (const host of ['melt1', 'melt7', 'melt12']) await expect(res(`${host}.example`)).toHaveClass(/au-res-fail/)
+  for (const host of ['ok0', 'ok3', 'ok6', 'ok10', 'ok13']) await expect(res(`${host}.example`)).toHaveClass(/au-res-ok/)
+  for (const host of ['limits2', 'balance4', 'pending5']) await expect(res(`${host}.example`)).toHaveClass(/au-res-neutral/)
+  const color = (host: string) => res(host).evaluate(e => getComputedStyle(e).color)
+  const failed = await color('melt1.example')
+  expect(failed).not.toBe(await color('ok0.example'))
+  expect(failed).not.toBe(await color('limits2.example'))
+  expect(failed).not.toBe(await page.evaluate(() => { const p = document.createElement('i'); p.style.color = 'var(--red)'; document.body.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return c }))
+  // limits, balance and pending share one neutral row style, the same opacity as an OK row.
   const neutral = [await style('limits2.example'), await style('balance4.example'), await style('pending5.example')]
-  // Failed rows are the muted red; the neutral rows must look like neither a failure nor a dimmed row.
-  expect(failed.color).not.toBe(okRow.color)
-  for (const n of neutral) {
-    expect(n.color).not.toBe(failed.color)
-    expect(n.opacity).toBe(okRow.opacity)
-  }
-  // limits, balance and pending share one neutral style.
+  const okRow = await style('ok0.example')
+  for (const n of neutral) expect(n.opacity).toBe(okRow.opacity)
   expect(neutral[1]).toEqual(neutral[0])
   expect(neutral[2]).toEqual(neutral[0])
-  // the other failed rows look like the first one
-  expect(await style('melt7.example')).toEqual(failed)
-  expect(await style('melt12.example')).toEqual(failed)
-
-  // The outcome bar: 5 OK, 3 failed, 6 neutral (limits + balance + pending).
-  await expect(page.locator('.audit-swap-bar-mark')).toHaveCount(14)
-  await expect(page.locator('.audit-swap-bar-ok')).toHaveCount(5)
-  await expect(page.locator('.audit-swap-bar-fail')).toHaveCount(3)
-  await expect(page.locator('.audit-swap-bar-neutral')).toHaveCount(6)
+  // The filter counts follow the same split: 3 failed, the 6 neutral rows are not among them.
+  await expect(chip(page, 'Failed')).toHaveText('Failed 3')
+  // The old outcome strip is gone.
+  await expect(page.locator('.audit-swap-bar')).toHaveCount(0)
 })
 
 // ── d) tiles, checks and tables from the stored detail ──────────
-test.describe('tiles from the stored detail', () => {
+test.describe('verdict and directions from the stored detail', () => {
   const cleanCase = (total: number, failed: number, blamed: number) => czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, errorsBlamed: blamed, all: { ...LNPAY_DETAIL.swaps7d.all, total, failed, success: total - failed } } })
+  const num = (page: Page) => page.getByTestId('audit-verdict-num')
+  const legend = (page: Page) => page.getByTestId('audit-legend').locator('span')
 
-  test('LNpay-like: 0 attributed of 105 with 16 failed is 100%', async ({ page }) => {
+  test('LNpay-like: 0 attributed of 105 with 16 failed', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(105, 16, 0) }))
-    await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
-    await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('105 of 105 swaps in the last 7 days, 16 failed for other reasons')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
-    await expect(tile(page, 'clean')).not.toContainText('0 / 16')
+    await expect(num(page)).toHaveText('0')
+    await expect(num(page)).not.toHaveClass(/au-verdict-num-bad/)
+    await expect(verdict(page)).toContainText('of 105 swaps failed because of this mint')
+    await expect(verdict(page)).toContainText('16 swaps failed for other reasons and do not count against it.')
+    await expect(legend(page)).toHaveText(['89 succeeded', '16 failed elsewhere', '0 caused by this mint'])
+    await expect(page.locator('.au-stack .au-seg-mint')).toHaveCount(0) // red only when the mint caused a failure
   })
 
-  test('lnw.cash-like: 202 attributed of 229 with 207 failed is 12%', async ({ page }) => {
+  test('lnw.cash-like: 202 attributed of 229 with 207 failed', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(229, 207, 202) }))
-    await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('12%')
-    await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('27 of 229 swaps in the last 7 days, 202 attributed to this mint, 5 other failures')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+    await expect(num(page)).toHaveText('202')
+    await expect(num(page)).toHaveClass(/au-verdict-num-bad/)
+    await expect(verdict(page)).toContainText('of 229 swaps failed because of this mint')
+    await expect(verdict(page)).toContainText('5 swaps failed for other reasons and do not count against it.')
+    await expect(legend(page)).toHaveText(['22 succeeded', '5 failed elsewhere', '202 caused by this mint'])
+    await expect(page.locator('.au-stack .au-seg-mint')).toHaveCount(1)
   })
 
-  test('1 attributed of 200 shows 99%, not 100%', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz([], { detail: cleanCase(200, 1, 1) }))
-    await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('99%')
-    await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('199 of 200 swaps in the last 7 days, 1 attributed to this mint')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
-  })
-
-  test('no failed swaps: the tooltip is only the swap count', async ({ page }) => {
+  test('no failed swaps: one sentence, a bar of one colour', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 0, 0) }))
-    await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
-    await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('50 of 50 swaps in the last 7 days')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+    await expect(verdict(page)).toContainText('Every swap of the last 7 days succeeded.')
+    await expect(page.locator('.au-stack i')).toHaveCount(1)
+    await expect(page.locator('.au-stack .au-seg-ok')).toHaveCount(1)
   })
 
-  test('fewer than 10 swaps still shows the number', async ({ page }) => {
+  test('fewer than 10 swaps still shows the numbers', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(4, 0, 0) }))
-    await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('100%')
-    await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('4 of 4 swaps in the last 7 days')
+    await expect(num(page)).toHaveText('0')
+    await expect(verdict(page)).toContainText('of 4 swaps failed because of this mint')
   })
 
-  test('one other failure and one attributed use the singular', async ({ page }) => {
+  test('one other failure and one swap use the singular', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 1, 0) }))
-    await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('50 of 50 swaps in the last 7 days, 1 failed for other reasons')
-    await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 3, 2) }))
-    await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('48 of 50 swaps in the last 7 days, 2 attributed to this mint, 1 other failure')
+    await expect(verdict(page)).toContainText('1 swap failed for other reasons and does not count against it.')
+    await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 2, 2) }))
+    await expect(verdict(page)).toContainText('No other swap failed.')
   })
 
   test('blamed above total is clamped', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(20, 20, 999) }))
-    await expect(tile(page, 'clean').locator('.audit-summary-value')).toHaveText('0%')
-    await tile(page, 'clean').locator('.info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('0 of 20 swaps in the last 7 days, 20 attributed to this mint')
-    await expect(tile(page, 'clean').locator('.audit-cz-tile-caption')).toHaveCount(0)
+    await expect(num(page)).toHaveText('20')
+    await expect(legend(page)).toHaveText(['0 succeeded', '0 failed elsewhere', '20 caused by this mint'])
   })
 
-  test('total 0 hides the tile', async ({ page }) => {
+  test('total 0: no verdict and no bar, the directions stay', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(0, 0, 0) }))
-    await expect(tile(page, 'clean')).toHaveCount(0)
-    await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(3)
+    await expect(page.locator('.au-dirs .au-dir')).toHaveCount(3)
+    await expect(verdict(page)).toHaveCount(0)
+    await expect(page.locator('.au-stack')).toHaveCount(0)
+  })
+
+  test('the points pill repeats the breakdown row; the long window and the since line appear when the server sends them', async ({ page }) => {
+    await gotoAuditTab(page, onlyCz([], { long: { windowDays: 28, swaps: 410, attributedFailures: 2 }, since: { day: '2026-08-01', swaps: 900, attributedFailures: 3 } }))
+    await expect(page.getByTestId('audit-long-line')).toHaveText('Last 28 days: 2 of 410 swaps failed because of this mint.')
+    await expect(page.getByTestId('audit-since-line')).toHaveText('Since 1 Aug 2026: 3 of 900 swaps.')
+    const pill = page.getByTestId('audit-points-pill')
+    const row = page.locator('.md-reliability-panel .rb-row', { hasText: 'Audit reliability (25%)' }).locator('.rb-row-score')
+    const pts = ((await row.textContent()) ?? '').replace('/', ' / ')
+    await expect(pill).toHaveText(`Audit part ${pts}`)
   })
 
   test('a direction without numbers reads "No data"; under a second the average is in ms', async ({ page }) => {
     const rest: Record<string, unknown> = { ...LNPAY_DETAIL.swaps7d }
     delete rest['asSource']
     await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...rest, all: { ...LNPAY_DETAIL.swaps7d.all, avgMs: 640 } } }) }))
-    await expect(page.locator('.audit-cz-tiles .audit-summary-cell')).toHaveCount(4)
-    await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('No data')
-    await expect(tile(page, 'melts').locator('.audit-cz-tile-sub')).toHaveCount(0)
-    await expect(tile(page, 'mints').locator('.audit-summary-value')).toHaveText('56 / 62')
-    await expect(tile(page, 'avg').locator('.audit-summary-value')).toHaveText('640 ms')
+    await expect(page.locator('.au-dirs .au-dir')).toHaveCount(3)
+    await expect(tileValue(page, 'melts')).toHaveText('No data')
+    await expect(tile(page, 'melts').locator('.au-dir-sub')).toHaveCount(0)
+    await expect(tileValue(page, 'mints')).toHaveText('56 of 62')
+    await expect(tileValue(page, 'avg')).toHaveText('640 ms')
   })
 
-  test('tiles use one neutral number colour, whatever the numbers', async ({ page }) => {
-    await gotoAuditTab(page, onlyCz([], { detail: czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, errorsBlamed: 12 } }) }))
-    await expect(page.locator('.audit-cz-tiles .audit-summary-value').first()).toBeVisible() // the tiles exist before their colours are read
-    const colors = await page.locator('.audit-cz-tiles .audit-summary-value').evaluateAll(els => els.map(e => getComputedStyle(e).color))
-    expect(colors.length).toBeGreaterThan(1)
-    expect(new Set(colors).size).toBe(1)
+  test('swaps per day: one column per day with its count; absent while no day has a swap', async ({ page }) => {
+    const day = (back: number) => new Date(Date.now() - back * 86_400_000).toISOString().slice(0, 10)
+    const daily7d = [6, 5, 4, 3, 2, 1, 0].map(b => ({ day: day(b), ok: b === 0 ? 3 : b === 2 ? 1 : 0, failed: b === 0 ? 1 : 0, other: 0 }))
+    await gotoAuditTab(page, onlyCz([], { daily7d }))
+    const days = page.getByTestId('audit-days')
+    await expect(days.locator('.au-day')).toHaveCount(7)
+    await expect(days.locator('.au-day-count')).toHaveText(['', '', '', '', '1', '', '4'])
+    await expect(days.locator('.au-day').last().locator('.au-seg-fail')).toHaveCount(1)
+    await gotoAuditTab(page, onlyCz([], { daily7d: daily7d.map(d => ({ ...d, ok: 0, failed: 0 })) }))
+    await expect(verdict(page)).toBeVisible()
+    await expect(page.getByTestId('audit-days')).toHaveCount(0)
   })
 
   test('the info icons carry the honest tooltips', async ({ page }) => {
@@ -274,38 +285,43 @@ test.describe('tiles from the stored detail', () => {
     const expected: Record<string, string> = {
       mints: 'Deposits into this mint (mint operations) in the last 7 days, counted by cashu.info: successful of all.',
       melts: 'Withdrawals from this mint (melt operations) in the last 7 days, counted by cashu.info: successful of all.',
-      clean: '126 of 126 swaps in the last 7 days, 19 failed for other reasons',
     }
     for (const [key, text] of Object.entries(expected)) {
       await tile(page, key).locator('.info-tooltip').hover()
       await expect(page.getByRole('tooltip')).toHaveText(text)
-      // A standard tooltip: sentence case and normal spacing, not the uppercase of the tile label.
+      // A standard tooltip: sentence case and normal spacing.
       const pop = await page.getByRole('tooltip').evaluate(e => { const c = getComputedStyle(e); return { t: c.textTransform, l: c.letterSpacing, f: c.fontSize } })
       expect(pop).toEqual({ t: 'none', l: 'normal', f: '10px' })
       await page.mouse.move(0, 0)
     }
-    // Avg swap time has no ⓘ: its label says it, and the window and source are in the sibling tooltips.
+    // Average swap time has no ⓘ: its label says it, and the window and source are in the sibling tooltips.
     await expect(tile(page, 'avg').locator('.info-tooltip')).toHaveCount(0)
   })
 })
 
-test.describe('the two tables', () => {
-  test('no swaps yet: "No swaps collected yet" in both cards, no bar', async ({ page }) => {
+test.describe('the swap list', () => {
+  test('no swaps in the window: one sentence, no table and no filter', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([]))
-    await expect(page.locator('.md-audit-collapsible').getByRole('tab')).toHaveText(['From this mint (0)', 'To this mint (0)'])
-    await expect(fromCard(page).getByText('No swaps collected yet')).toBeVisible()
-    await openTo(page)
-    await expect(toCard(page).getByText('No swaps collected yet')).toBeVisible()
+    await expect(page.getByTestId('audit-swaps-empty')).toHaveText('No swaps collected in the last 7 days.')
     await expect(page.locator('.audit-swaps-table')).toHaveCount(0)
-    await expect(page.locator('.audit-swap-bar')).toHaveCount(0)
+    await expect(swapList(page)).toHaveCount(0)
   })
 
-  test('only swaps to the mint: the "from" card says so, the "to" card lists them', async ({ page }) => {
+  test('only deposits: the Withdrawals filter says that nothing matches', async ({ page }) => {
     await gotoAuditTab(page, onlyCz(czSwapList([ok, ok]).map(s => ({ ...s, direction: 'to' as const }))))
-    await expect(page.locator('.md-audit-collapsible').getByRole('tab')).toHaveText(['From this mint (0)', 'To this mint (2)'])
-    await expect(fromCard(page).getByText('No swaps collected yet')).toBeVisible()
-    await openTo(page)
-    await expect(toCard(page).locator('tbody tr')).toHaveCount(2)
+    await expect(swapList(page).getByRole('group', { name: 'Filter swaps' }).getByRole('button')).toHaveText(['All 2', 'Deposits 2', 'Withdrawals 0', 'Failed 0'])
+    await chip(page, 'Withdrawals').click()
+    await expect(page.getByTestId('audit-swaps-none')).toHaveText('No swaps match this filter.')
+    await chip(page, 'Deposits').click()
+    await expect(swapList(page).locator('tbody tr')).toHaveCount(2)
+  })
+
+  test('a swap older than 7 days is not listed: the list is the window of the figures above it', async ({ page }) => {
+    const swaps = czSwapList([ok, ok, ok])
+    swaps[2] = { ...swaps[2]!, at: ago(8 * 86_400_000) }
+    await gotoAuditTab(page, onlyCz(swaps))
+    await expect(swapList(page).locator('tbody tr')).toHaveCount(2)
+    await expect(chip(page, 'All')).toHaveText('All 2')
   })
 })
 
@@ -320,7 +336,7 @@ test.describe('cz does not cover the mint (covered: false)', () => {
       expect(h.czQueries().length).toBeGreaterThan(0) // the answer really came from the endpoint
       await expect(page.locator('.md-audit-header')).not.toContainText('8333')
       await expect(page.getByRole('link', { name: /audit\.8333\.space/ })).toHaveCount(0)
-      await expect(page.locator('.audit-summary-strip')).toHaveCount(0)
+      await expect(page.locator('.au-dirs')).toHaveCount(0)
       await expect(segGroup(page)).toHaveCount(0)
     })
   }
@@ -354,12 +370,12 @@ test('while the audit-cz response is held: "Loading audit data…", then the cz 
   await expect.poll(() => h.heldAtMock(), { message: 'the audit-cz request is in flight at the mock, held' }).toBe(true)
   // (the Reliability Score breakdown has its own, different "No audit data available" row: match the panel's full sentence)
   await expect(page.getByText('No audit data available for this mint.')).toHaveCount(0)
-  await expect(page.locator('.md-audit-header, .md-audit-header-main, .audit-summary-strip')).toHaveCount(0)
+  await expect(page.locator('.md-audit-header, .md-audit-header-main, .au-dirs')).toHaveCount(0)
 
   release() // only after the request reached the mock (asserted above): it can never run ahead of it
   await expect(page.locator('.md-audit-header-main')).toContainText('via cashu.info')
   await expect(loading).toHaveCount(0)
-  await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('51 / 64')
+  await expect(tileValue(page, 'melts')).toHaveText('51 of 64')
   expect(await page.evaluate(() => (window as unknown as { __flash8333: boolean }).__flash8333)).toBe(false)
 })
 
@@ -380,7 +396,7 @@ test('hostile text from the endpoint is shown as text: no element, no dialog, no
 
   // `stage` and the destination are displayed: literally, as text. (`error` and `otherMintName` are not shown.)
   expect(await visibleState(page, 'stage2.example')).toBe(`failed (${XSS})`)
-  await expect(page.locator('.audit-swaps-table tbody tr').nth(3).locator('td').first()).toHaveText(XSS)
+  await expect(page.locator('.audit-swaps-table tbody tr').nth(3).locator('td').nth(2)).toHaveText(XSS)
   await expect(page.locator('.audit-swaps-table')).toContainText(XSS)
 
   // (the page has legitimate <img>s elsewhere, e.g. the mint icon: look at the audit card and for the payload itself)
@@ -405,11 +421,11 @@ test('hostile values in the detail fields are shown as nothing or as plain text:
     integrity: { proof_state: { checked: XSS, spent: XSS, pending: XSS } },
   })
   const h = await gotoAuditTab(page, onlyCz(czSwapList([ok, ok]), { detail }))
-  // Strings where numbers belong are not numbers: a direction tile reads "No data", the other tiles are hidden, nothing is printed.
-  await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('No data')
-  await expect(tile(page, 'clean')).toHaveCount(0)
+  // Strings where numbers belong are not numbers: a direction reads "No data", the verdict and the average are hidden, nothing is printed.
+  await expect(tileValue(page, 'melts')).toHaveText('No data')
+  await expect(verdict(page)).toHaveCount(0)
   await expect(tile(page, 'avg')).toHaveCount(0)
-  await expect(tile(page, 'mints').locator('.audit-summary-value')).toHaveText('56 / 62')
+  await expect(tileValue(page, 'mints')).toHaveText('56 of 62')
   await expect(checksCard(page)).toHaveCount(0)
   await expect(page.locator('.md-audit-collapsible')).not.toContainText('onerror')
   await expect(page.locator('.md-audit-collapsible img')).toHaveCount(0)
@@ -436,7 +452,7 @@ test.describe('the page link must be exactly https://cashu.info/mint/<id>', () =
     test(`${name}: no link, the card still renders`, async ({ page }) => {
       const h = await gotoAuditTab(page, onlyCz(czSwapList([ok, ok, melt]), { sourceUrl }))
       await expect(page.locator('.md-audit-header-main')).toContainText('via cashu.info')
-      await expect(tile(page, 'melts').locator('.audit-summary-value')).toHaveText('51 / 64')
+      await expect(tileValue(page, 'melts')).toHaveText('51 of 64')
       await expect(page.locator('.audit-external-link')).toHaveCount(0)
       await expect(page.getByRole('link', { name: /cashu\.info/ })).toHaveCount(0)
       await expect(page.locator('.md-audit-collapsible a[href]')).toHaveCount(0)
@@ -542,9 +558,9 @@ test.describe('failure reason in the State cell', () => {
       const cellEl = stateCell(page, host)
       await expect(cellEl.locator('.sr-only')).toHaveText(XSS)
       expect(await stateTip(page, host)).toMatch(new RegExp(`${XSS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
-      // only the tooltip button (with its text span) and the hidden span: nothing the text could have created
+      // only the chip span, the tooltip button (with its text span) and the hidden span: nothing the text could have created
       await expect(cellEl.locator('*:not(button):not(span)')).toHaveCount(0)
-      await expect(cellEl.locator('*')).toHaveCount(3)
+      await expect(cellEl.locator('*')).toHaveCount(4)
     }
     await expect(page.locator('.md-audit-collapsible img')).toHaveCount(0)
     await expect(page.locator('[onerror], img[src="x"]')).toHaveCount(0)
@@ -636,7 +652,7 @@ test.describe('390px viewport', () => {
 // ── score breakdown row: identical whether or not the Audit tab was opened ──
 test.describe('Reliability breakdown: audit row', () => {
   const auditRow = (page: Page) => page.locator('.md-reliability-panel .rb-row', { hasText: 'Audit reliability (25%)' })
-  const TIP = 'Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last 7 days (failures caused elsewhere are not counted against it). Under 10 swaps or no recent data: neutral 12.5 of 25.'
+  const TIP = 'Swaps without a failure that cashu.info attributes to this mint, out of all its swaps. The worse of two windows counts: the last 7 days and up to 28 days. Under 10 swaps or no recent data: neutral 12.5 of 25.'
   const detail = () => czDetail({ swaps7d: { all: { total: 105, success: 89, failed: 16, avgMs: 9418 }, asSource: { total: 54, success: 42, failed: 12 }, asDest: { total: 51, success: 47, failed: 4 }, errorsBlamed: 0, dleq: { valid: 47, invalid: 0, missing: 0 } } })
   const snapshot = async (page: Page) => ({
     detail: await auditRow(page).locator('.rb-row-detail').count(),
@@ -657,7 +673,7 @@ test.describe('Reliability breakdown: audit row', () => {
     expect(czRequests()).toHaveLength(0)
 
     await page.locator('.md-tab', { hasText: 'Audit' }).click()
-    await expect(tile(page, 'clean')).toBeVisible()
+    await expect(verdict(page)).toBeVisible()
     expect(czRequests()).toHaveLength(1)
     await page.locator('.md-tab', { hasText: 'Overview' }).click()
     expect(await snapshot(page)).toEqual(before)

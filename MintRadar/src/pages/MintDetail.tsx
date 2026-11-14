@@ -18,7 +18,7 @@ import {
   KEYSETS_HINT, KEYSET_FEE_TEXT, newMintBadgeText, newMintCapNote,
   UPTIME_ROW_LABEL, AUDIT_ROW_LABEL, NUT_ROW_LABEL, VERSION_ROW_LABEL, CONTACT_ROW_LABEL,
   UPTIME_POINTS, AUDIT_POINTS, NUT_POINTS, VERSION_POINTS, CONTACT_POINTS,
-  auditTooFewDetail, auditTooOldDetail, OUTAGES_WINDOW_DAYS, TEST_MINT_TEXT,
+  auditTooFewDetail, auditTooOldDetail, OUTAGES_WINDOW_DAYS, TEST_MINT_TEXT, AUDIT_WINDOW_DAYS,
 } from '@/utils/tooltipTexts'
 import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
@@ -47,6 +47,7 @@ import { cleanMintNameDetailed } from '@/utils/cleanMintName'
 import { formatKeysetFee, urlIsOnion, listHasOnion } from '@/utils/mintProbeDisplay'
 import { keysetExpiry, keysetExpiryMs } from '@/utils/keysetExpiry'
 import { auditComponent, auditDataState, auditAgeHours, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
+import { auditLongOf, decidingAuditWindow } from '@/utils/auditWindows'
 import { IcClose } from '@/components/IcClose'
 import { useAuditCz } from '@/hooks/useAuditCz'
 import { adaptAuditCz, auditCzSyncNote } from '@/utils/auditCz'
@@ -63,7 +64,7 @@ import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocu
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
-import { auditSuccessText, auditScoredLine, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -449,8 +450,6 @@ function MintDetailContent({ url }: { url: string }) {
     if (window.location.hash !== newHash) window.history.replaceState(null, '', newHash)
   }
   // cashu.info view: each of the two swap tables expands on its own.
-  const [showAllCzFrom, setShowAllCzFrom] = useState(false)
-  const [showAllCzTo, setShowAllCzTo] = useState(false)
   // Keysets card: inactive keysets are folded by default. Keyed by mint like reviewsPageState, so switching mints folds them again without a reset effect.
   const [keysetsExpandedFor, setKeysetsExpandedFor] = useState<string | null>(null)
   // cashu.info data: fetched (from our own /api/mints/audit-cz, never from them) only while
@@ -632,6 +631,7 @@ function MintDetailContent({ url }: { url: string }) {
       blamed: knownMint?.auditCzBlamed ?? null,
       total: knownMint?.auditCzTotal ?? null,
       fetchedAt: knownMint?.auditCzFetchedAt ?? null,
+      long: auditLongOf(knownMint),
     }
     const emailVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'email')?.info
     const twitterVal = data?.info?.contact?.find((c: { method: string }) => c.method === 'twitter')?.info
@@ -770,7 +770,7 @@ function MintDetailContent({ url }: { url: string }) {
   // The stored (server-side) score wins. Without one, the score is computed here from the 24 h uptime: until that history
   // has arrived (or when its request failed) there is no score to show, and computing it with uptime 0 showed a wrong
   // number for a moment (Task F3). Every place below shows SCORE_PENDING_* while `reliabilityScore` is null.
-  const fallbackScore = () => computeReliabilityScore(uptimePct, offeredNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null }, versionLatestMap)
+  const fallbackScore = () => computeReliabilityScore(uptimePct, offeredNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null, long: auditLongOf(knownMint) }, versionLatestMap)
   const reliabilityScore: number | null = knownMint?.reliabilityScore ?? (uptime24hData ? fallbackScore() : null)
   const scorePending = reliabilityScore === null
   const scoreText = scorePending ? SCORE_PENDING_TEXT : String(reliabilityScore)
@@ -802,8 +802,11 @@ function MintDetailContent({ url }: { url: string }) {
   const auditCzBlamed = knownMint?.auditCzBlamed ?? null
   const auditCzTotal = knownMint?.auditCzTotal ?? null
   const auditCzFetchedAt = knownMint?.auditCzFetchedAt ?? null
-  const breakdownAScore = auditComponent(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
-  const auditState = auditDataState(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now)
+  const auditLong = auditLongOf(knownMint)
+  const breakdownAScore = auditComponent(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now, auditLong)
+  const auditState = auditDataState(auditCzBlamed, auditCzTotal, auditCzFetchedAt, now, auditLong)
+  // The window the part takes its points from (the worse one); its numbers are the ones the row shows.
+  const auditWindow = decidingAuditWindow(auditCzBlamed, auditCzTotal, auditLong)
   const auditAgeH = auditAgeHours(auditCzFetchedAt, now)
   // A scored row has no line under it; only the neutral states explain themselves.
   const auditDetailText = auditState === 'scored'
@@ -815,11 +818,13 @@ function MintDetailContent({ url }: { url: string }) {
         : 'No cashu.info audit data: neutral'
   // Swaps without an attributed failure / all swaps, the same figure as Compare's "No mint fault (7d)" row (it used to show the
   // attributed failures, "0 / 13", next to 25/25, which read as 0 successes).
-  const breakdownAuditDisplay = auditState === 'scored' ? (auditSuccessText(auditCzBlamed, auditCzTotal) ?? 'neutral') : 'neutral'
+  const breakdownAuditDisplay = auditState === 'scored' && auditWindow
+    ? `${auditSuccessText(auditWindow.blamed, auditWindow.total) ?? 'neutral'}${auditWindow.days > AUDIT_WINDOW_DAYS ? ` · ${auditWindow.days}d` : ''}`
+    : 'neutral'
   const auditAgeDays = auditAgeH !== null && auditAgeH > 24 && (auditState === 'scored' || auditState === 'too-few') ? Math.floor(auditAgeH / 24) : null
   const auditStaleNote = auditAgeDays !== null ? `data ${auditAgeDays} ${auditAgeDays === 1 ? 'day' : 'days'} old` : undefined
   // Breakdown row colour: same error-rate colouring over the cashu.info window, muted while neutral.
-  const auditRowColor = auditReliabilityColor(auditState === 'scored' ? auditCzTotal : null, auditCzBlamed, AUDIT_MIN_SAMPLES)
+  const auditRowColor = auditReliabilityColor(auditState === 'scored' && auditWindow ? auditWindow.total : null, auditWindow?.blamed ?? null, AUDIT_MIN_SAMPLES)
   // Audit tab: the cashu.info view (the audit source of the score); null while the mint has no stored detail.
   const czView = czData
   const czSyncNote = czView ? auditCzSyncNote(czView, now) : null
@@ -827,7 +832,7 @@ function MintDetailContent({ url }: { url: string }) {
   // Latest successful /v1/info fetch: the latest probe while the mint is online, else the last time it was seen online.
   const infoFetchedAt = isOnline ? knownMint?.lastCheckedAt : knownMint?.lastOnlineAt
   const uptimeSource = uptimeSourceLine({ checks: uptime24hData ? headerTotalChecks : null, lastProbeAt: knownMint?.lastCheckedAt, now })
-  const auditRowSource = auditSourceLine({ blamed: auditCzBlamed, total: auditCzTotal, fetchedAt: auditCzFetchedAt, now })
+  const auditRowSource = auditSourceLine({ blamed: auditCzBlamed, total: auditCzTotal, fetchedAt: auditCzFetchedAt, now, long: auditLong })
   const infoSource = infoSourceLine({ fetchedAt: infoFetchedAt, now })
   const versionSource = infoSourceLine({ fetchedAt: infoFetchedAt, now, comparedWithLatest: true })
   const rowUScore = breakdownRowScore(storedBreakdown, 'uptime', uptimeRowPending ? null : breakdownUScore)
@@ -853,7 +858,7 @@ function MintDetailContent({ url }: { url: string }) {
     ? <div className="rb-cap-line" data-testid="rb-cap-line">New-mint cap: {storedBreakdown.newMintCap.points} (score capped at {storedBreakdown.newMintCap.cap})</div>
     : null
   // "Limited data": the audit part is neutral, or the new-mint cap applies (the score's own constants).
-  const limitedReasons = limitedDataReasons({ auditBlamed: auditCzBlamed, auditTotal: auditCzTotal, auditFetchedAt: auditCzFetchedAt, discoveredAt, now })
+  const limitedReasons = limitedDataReasons({ auditBlamed: auditCzBlamed, auditTotal: auditCzTotal, auditFetchedAt: auditCzFetchedAt, auditLong, discoveredAt, now })
   const limitedDataLabel = limitedReasons.length > 0 ? (
     <InfoTooltip className="md-limited-data" width={240} text={limitedDataText(limitedReasons)}>
       <span className="md-limited-data-chip">Limited data</span>
@@ -897,10 +902,6 @@ function MintDetailContent({ url }: { url: string }) {
   // No "Outdated" pill on an archived mint: the version is the last one it reported and it is no longer
   // probed, so comparing it with the current release adds nothing. The version text itself stays.
   const isOutdated = !isArchived && classifyMintVersion(version, versionLatestMap).label === 'outdated'
-
-  // The swap strip shows the stored cashu.info swaps of both directions together, newest first.
-  const AUDIT_SWAP_BAR_MAX = 44
-  const auditSwapBarItems = (czView?.swaps ?? []).slice(0, AUDIT_SWAP_BAR_MAX)
 
   // The mint's operator keys: a nostr contact it lists that ALSO authored its NIP-87 announcement
   // (both must agree, decision 2026-10-05). Their reviews stay in the list, labelled "Operator",
@@ -1507,12 +1508,8 @@ function MintDetailContent({ url }: { url: string }) {
               auditCzLoading={auditCzLoading}
               czView={czView}
               czSyncNote={czSyncNote}
-              scoredLine={auditState === 'scored' ? auditScoredLine(auditCzTotal, auditCzBlamed) : null}
-              auditSwapBarItems={auditSwapBarItems}
-              showAllCzFrom={showAllCzFrom}
-              showAllCzTo={showAllCzTo}
-              setShowAllCzFrom={setShowAllCzFrom}
-              setShowAllCzTo={setShowAllCzTo}
+              auditPoints={auditState === 'scored' ? `${rowAScore} / ${AUDIT_POINTS}` : null}
+              now={now}
             />
           )}
 

@@ -107,6 +107,61 @@ async function fetchDetail(id: string): Promise<unknown | null> {
   }
 }
 
+/** Days between two rows of the long window, and how many rows it sums at most (4 x 7 = 28 days). */
+export const LONG_STEP_DAYS = 7
+export const LONG_MAX_ROWS = 4
+
+export interface DailyRow { day: string; total: number; blamed: number }
+
+/** UTC day of a timestamp as YYYY-MM-DD. */
+export function utcDay(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10)
+}
+
+/**
+ * Pure: the long window from the stored daily rows. Starting at `today`, rows exactly 7, 14 and 21 days older
+ * are added while each one exists; the first missing row ends the sum (no gaps inside the window). Null when
+ * today's row is missing.
+ */
+export function sumLongWindow(rows: DailyRow[], today: string): { total: number; blamed: number; days: number } | null {
+  const byDay = new Map(rows.map(r => [r.day, r]))
+  const t0 = Date.parse(`${today}T00:00:00Z`)
+  let total = 0
+  let blamed = 0
+  let n = 0
+  for (; n < LONG_MAX_ROWS; n++) {
+    const r = byDay.get(utcDay(t0 - n * LONG_STEP_DAYS * 86_400_000))
+    if (!r) break
+    total += r.total
+    blamed += Math.min(r.blamed, r.total)
+  }
+  return n === 0 ? null : { total, blamed, days: n * LONG_STEP_DAYS }
+}
+
+/**
+ * Stores the day's row (only the FIRST usable totals of a UTC day are kept, so rows 7 days apart cover 7-day
+ * spans that do not overlap) and returns the long window ending today. A database error returns null: the mint
+ * is then scored from the 7-day window alone until the next run.
+ */
+async function storeDailyAndSumLong(url: string, total: number, blamed: number, failed: number | undefined, nowMs: number): Promise<{ total: number; blamed: number; days: number } | null> {
+  try {
+    const today = utcDay(nowMs)
+    await pool.query(
+      `INSERT INTO audit_cz_daily (url, day, total, blamed, failed) VALUES ($1, $2::date, $3, $4, $5)
+       ON CONFLICT (url, day) DO NOTHING`,
+      [url, today, total, blamed, failed ?? null],
+    )
+    const r = await pool.query(
+      `SELECT to_char(day, 'YYYY-MM-DD') AS day, total, blamed FROM audit_cz_daily
+        WHERE url = $1 AND day > $2::date - $3::integer AND day <= $2::date`,
+      [url, today, LONG_STEP_DAYS * LONG_MAX_ROWS],
+    )
+    return sumLongWindow(r.rows as DailyRow[], today)
+  } catch {
+    return null
+  }
+}
+
 let running = false
 
 /**
@@ -151,6 +206,7 @@ export async function syncAuditCzDetails(opts: DetailRunOptions = {}): Promise<D
         const total = detail.swaps7d?.all?.total
         const blamed = detail.swaps7d?.errorsBlamed
         const usable = typeof total === 'number' && typeof blamed === 'number'
+        const long = usable ? await storeDailyAndSumLong(row.url, total, blamed, detail.swaps7d?.all?.failed, now()) : null
         await pool.query(
           `WITH up AS (
              INSERT INTO audit_cz_detail (url, detail, fetched_at) VALUES ($1, $2::jsonb, NOW())
@@ -160,10 +216,13 @@ export async function syncAuditCzDetails(opts: DetailRunOptions = {}): Promise<D
            UPDATE mints m
               SET audit_cz_total = $3::integer,
                   audit_cz_blamed = $4::integer,
-                  audit_cz_fetched_at = CASE WHEN $3::integer IS NULL OR $4::integer IS NULL THEN NULL ELSE NOW() END
+                  audit_cz_fetched_at = CASE WHEN $3::integer IS NULL OR $4::integer IS NULL THEN NULL ELSE NOW() END,
+                  audit_cz_long_total = $5::integer,
+                  audit_cz_long_blamed = $6::integer,
+                  audit_cz_long_days = $7::smallint
             WHERE rtrim(m.url, '/') = $1
                OR rtrim(m.url, '/') IN (SELECT a.alias_url FROM audit_cz_aliases a WHERE a.mint_url = $1)`,
-          [row.url, JSON.stringify(detail), usable ? total : null, usable ? blamed : null],
+          [row.url, JSON.stringify(detail), usable ? total : null, usable ? blamed : null, long?.total ?? null, long?.blamed ?? null, long?.days ?? null],
         )
         stats.stored++
       } catch {

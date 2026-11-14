@@ -32,6 +32,7 @@ const FULL: KnownMintLike = {
   url: 'https://mint.example.com', name: 'Example Mint', archived: false, degraded: false, online: true,
   version: 'Nutshell/0.21.0', softwareLatest: { major: 0, minor: 21 }, nutsLimits: { '4': {}, '5': {}, '7': {} },
   units: ['sat'], auditCzTotal: 104, auditCzBlamed: 0, auditCzFetchedAt: '2026-10-12T17:40:00.000Z',
+  auditCzLongTotal: 410, auditCzLongBlamed: 1, auditCzLongDays: 28,
   discoveredAt: '2026-01-01T00:00:00.000Z', reliabilityScore: 92, uptimePct24h: 100, uptimePct7d: 99,
   lastCheckedAt: '2026-10-13T11:59:00.000Z', reviewCount: 12, reviewRatedCount: 10, reviewAvgRating: 4.6,
   operatorReviewCount: 1, latencyMs: 120,
@@ -56,7 +57,7 @@ const FULL_EXTRA: WalletExtra = {
 }
 const EMPTY: KnownMintLike = {
   ...FULL, name: null, online: null, version: null, softwareLatest: null, nutsLimits: null, units: null,
-  auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null, discoveredAt: null, reliabilityScore: null,
+  auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null, auditCzLongTotal: null, auditCzLongBlamed: null, auditCzLongDays: null, discoveredAt: null, reliabilityScore: null,
   uptimePct24h: null, uptimePct7d: null, lastCheckedAt: null, reviewCount: null, reviewRatedCount: null,
   reviewAvgRating: null, operatorReviewCount: null,
   pubkey: null, hasOnion: null, lastOnlineAt: null, mintMethods: null, meltMethods: null,
@@ -85,7 +86,7 @@ describe('mint object: the field table equals the real mapper', () => {
     expect([...WALLET_MINT_FIELDS.map(f => f.name)].sort()).toEqual([...new Set([...flatten(full), ...flatten(empty)])].sort())
     expect(flatten(full)).not.toContain('nip87.checkedAt')
     // the same keys with every input missing, except the nested ones of an object that is null then
-    expect(flatten(empty).sort()).toEqual([...flatten(full).filter(k => !/^(audit|authRequired|methods|limits|scoreBreakdown|changesPending|latency24h)\./.test(k)), 'nip87.checkedAt'].sort())
+    expect(flatten(empty).sort()).toEqual([...flatten(full).filter(k => !/^(audit|auditLong|authRequired|methods|limits|scoreBreakdown|changesPending|latency24h)\./.test(k)), 'nip87.checkedAt'].sort())
   })
 
   it('"Null: yes" is exactly the fields the mapper can return as null', () => {

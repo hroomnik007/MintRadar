@@ -11,7 +11,7 @@
 // possible and 220 at most, no ALL CAPS, no verdict words (safe, secure, trusted, guaranteed, recommended), nothing that
 // implies solvency, the terms "Reliability Score", "Community Rating", "audit data from cashu.info", "attributed to this
 // mint", "probe", "mint".
-import { AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, auditComponent } from './auditScore'
+import { AUDIT_LONG_WINDOW_DAYS, AUDIT_MAX_AGE_HOURS, AUDIT_MIN_SAMPLES, AUDIT_NEUTRAL, auditComponent } from './auditScore'
 import {
   NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, TRACKED_NUT_COUNT, contactComponent, nutComponent, uptimeComponent,
   UPTIME_24H_MAX, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX,
@@ -135,7 +135,7 @@ export function uptimeRowTooltip(stored: StoredScoreBreakdown | null | undefined
   ].join(' ')
 }
 export function auditRowText(): string {
-  return `Swaps without a failure that cashu.info attributes to this mint, out of all its swaps in the last ${AUDIT_WINDOW_DAYS} days (failures caused elsewhere are not counted against it). Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral ${AUDIT_NEUTRAL} of ${AUDIT_POINTS}.`
+  return `Swaps without a failure that cashu.info attributes to this mint, out of all its swaps. The worse of two windows counts: the last ${AUDIT_WINDOW_DAYS} days and up to ${AUDIT_LONG_WINDOW_DAYS} days. Under ${AUDIT_MIN_SAMPLES} swaps or no recent data: neutral ${AUDIT_NEUTRAL} of ${AUDIT_POINTS}.`
 }
 export const NUT_ROW_TEXT = 'Number of NUT specifications (cashu protocol features) this mint supports out of all tracked NUTs. A NUT the mint has switched off does not count.'
 export function versionRowText(): string {
@@ -197,17 +197,10 @@ export function depositsTileText(): string {
 export function withdrawalsTileText(): string {
   return `Withdrawals from this mint (melt operations) in the last ${AUDIT_WINDOW_DAYS} days, counted by cashu.info: successful of all.`
 }
-/** The "without a failure" tile: `clean` of `total` swaps, `blamed` attributed to the mint, `other` failures for other reasons. */
-export function cleanTileText(clean: number, total: number, blamed: number, other: number, fmt: (n: number) => string): string {
-  const head = `${fmt(clean)} of ${fmt(total)} swaps in the last ${AUDIT_WINDOW_DAYS} days`
-  if (blamed === 0 && other === 0) return head
-  if (blamed === 0) return `${head}, ${fmt(other)} failed for other reasons`
-  return `${head}, ${fmt(blamed)} attributed to this mint${other > 0 ? `, ${fmt(other)} other failure${other === 1 ? '' : 's'}` : ''}`
-}
 
 /** Audit tab: the ⓘ of the cashu.info view. */
 export function cashuInfoViewText(): string {
-  return `The Reliability Score uses the combined cashu.info number for the last ${AUDIT_WINDOW_DAYS} days. Deposits and withdrawals are the same data split by direction.`
+  return `The Reliability Score takes the worse result of two cashu.info windows: the last ${AUDIT_WINDOW_DAYS} days and up to ${AUDIT_LONG_WINDOW_DAYS} days. Deposits and withdrawals are the ${AUDIT_WINDOW_DAYS} days split by direction.`
 }
 
 /** Audit tab: the ⓘ of the "No audit data" panel. */

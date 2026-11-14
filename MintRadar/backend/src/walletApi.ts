@@ -38,6 +38,9 @@ export interface KnownMintLike {
   auditCzTotal: number | null
   auditCzBlamed: number | null
   auditCzFetchedAt: string | null
+  auditCzLongTotal?: number | null
+  auditCzLongBlamed?: number | null
+  auditCzLongDays?: number | null
   discoveredAt: string | Date | null
   reliabilityScore: number | null
   uptimePct24h: number | null
@@ -205,13 +208,15 @@ export interface WalletMint {
   limits: { mint: WalletLimit[]; melt: WalletLimit[] } | null
   /** Only with include=facts: cashu.info's 7-day swaps per direction. A part is null when that direction has no stored numbers. */
   auditByDirection: { mint: AuditDirection | null; melt: AuditDirection | null }
+  /** The long audit window of the score (methodology 8): sums of 7-day totals that do not overlap; null until two of them are stored. */
+  auditLong: { swaps: number; attributedFailures: number; windowDays: number } | null
   /** Only with include=facts (additive 2026-10-25): latency percentiles of the successful probes of the last 24 hours. */
   latency24h: WalletLatency24h | null
   /** Only with include=facts (additive 2026-10-30): the stored NIP-87 kind:38172 announcement (shared/nip87Announcement.ts). checkedAt is present only for "not_seen" and omitted until a discovery run has reached the relays. */
   nip87: Nip87AnnouncementFacts
 }
 
-const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection', 'latency24h', 'nip87'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes', 'changesPending'] } as const
+const HEAVY_KEYS = { facts: ['pubkey', 'firstSeenAt', 'lastOnlineAt', 'sample', 'contactChecks', 'feeExamples', 'limits', 'auditByDirection', 'auditLong', 'latency24h', 'nip87'], keysets: ['keysets', 'keysetsCheckedAt'], methods: ['methods'], breakdown: ['scoreBreakdown'], changes: ['changes', 'changesPending'] } as const
 
 function toIso(v: string | Date | null | undefined): string | null {
   if (v === null || v === undefined) return null
@@ -345,9 +350,16 @@ export function keysetsOf(raw: unknown): WalletKeyset[] {
   return out
 }
 
+/** The long window as the API shows it; null while it holds no more than the 7-day window does. */
+function auditLongOf(m: KnownMintLike): WalletMint['auditLong'] {
+  const { auditCzLongTotal: total, auditCzLongBlamed: blamed, auditCzLongDays: days } = m
+  if (typeof total !== 'number' || typeof blamed !== 'number' || typeof days !== 'number' || days <= 7) return null
+  return { swaps: total, attributedFailures: Math.min(blamed, total), windowDays: days }
+}
+
 /** Why the audit component is neutral (shared/auditScore.ts decides); null while it is scored. */
 function auditNeutralReasonOf(m: KnownMintLike, now: number): AuditNeutralReason | null {
-  switch (auditDataState(m.auditCzBlamed, m.auditCzTotal, m.auditCzFetchedAt, now)) {
+  switch (auditDataState(m.auditCzBlamed, m.auditCzTotal, m.auditCzFetchedAt, now, { blamed: m.auditCzLongBlamed, total: m.auditCzLongTotal, days: m.auditCzLongDays })) {
     case 'scored': return null
     case 'too-few': return 'low_sample'
     case 'too-old': return 'stale'
@@ -414,6 +426,7 @@ export function toWalletMint(m: KnownMintLike, now: number = Date.now(), reviews
     feeExamples: feeExamplesOf(extra?.keysets ?? []),
     limits: limitsOf(m.mintMethods, m.meltMethods),
     auditByDirection: auditByDirectionOf(extra?.auditDirections),
+    auditLong: auditLongOf(m),
     latency24h: extra?.latency24h ?? null,
     nip87: nip87AnnouncementOf({ announcedAt: m.nostrAnnouncedAt, announceD: m.nostrAnnounceD, infoPubkey: m.pubkey, checkedAt: m.nostrCheckedAt }),
   }

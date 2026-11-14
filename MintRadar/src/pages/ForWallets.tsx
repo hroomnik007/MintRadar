@@ -197,7 +197,7 @@ export default function ForWallets() {
             reviewer keys, review texts or contact values. They do carry the mint&apos;s own public key (<code>pubkey</code>),
             whether it advertises a Tor address (<code>hasOnion</code>) and its probe response times (<code>latency24h</code>). The heavier fields{' '}
             <code>keysets</code>, <code>keysetsCheckedAt</code>, <code>methods</code> and <code>scoreBreakdown</code> are
-            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code>, <code>contactChecks</code>, <code>feeExamples</code>, <code>limits</code>, <code>auditByDirection</code>, <code>latency24h</code> and <code>nip87</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
+            in the list only with <code>include=</code> (so are <code>pubkey</code>, <code>firstSeenAt</code>, <code>lastOnlineAt</code>, <code>sample</code>, <code>contactChecks</code>, <code>feeExamples</code>, <code>limits</code>, <code>auditByDirection</code>, <code>auditLong</code>, <code>latency24h</code> and <code>nip87</code>, as <code>include=facts</code>) and always in the single-mint answer.{' '}
             <code>scoreBreakdown</code> is what the score used at its last computation, written together with the score.
             Longer notes and the history of additions are in docs/API.md and the OpenAPI file.
           </p>

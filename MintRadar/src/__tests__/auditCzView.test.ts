@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditVerdictDetail, auditLongLine, auditSinceLine, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -30,78 +30,75 @@ const data = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial
 })
 const view = (swaps: Row[], detail: AuditCzData['detail'] = LNPAY, over: Partial<AuditCzData> = {}, now = Date.parse('2026-10-07T07:30:00Z')): AuditCzView =>
   adaptAuditCz(data(swaps, detail, over), now) as AuditCzView
-const tiles = (d: AuditCzDetail) => Object.fromEntries(view([], d).tiles.map(t => [t.key, t]))
+const dirs = (d: AuditCzDetail) => Object.fromEntries(view([], d).directions.map(t => [t.key, t]))
+const verdict = (all: Record<string, unknown>, errorsBlamed: unknown) => view([], { ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all, errorsBlamed } } as AuditCzDetail).verdict
 
-describe('tiles from the stored detail (LNpay values)', () => {
-  it('fractions, the one success tile and average time', () => {
-    const t = tiles(LNPAY)
-    expect(t['mints']).toMatchObject({ value: '56 / 62', label: 'Deposits (mint)', sub: '6 failed' })
-    expect(t['melts']).toMatchObject({ value: '51 / 64', label: 'Withdrawals (melt)', sub: '13 failed' })
-    expect(t['clean']).toMatchObject({ value: '100%', label: 'Without a failure caused by this mint', tooltip: '126 of 126 swaps in the last 7 days, 19 failed for other reasons' })
-    expect(t['clean']).not.toHaveProperty('caption')
-    expect(t['clean']).not.toHaveProperty('captionNote')
-    expect(t['avg']).toMatchObject({ value: '8.3 s', label: 'Avg swap time' })
-    // four tiles, no overall "Success rate" that mixes in unattributed failures
-    expect(view([]).tiles.map(x => x.key)).toEqual(['mints', 'melts', 'clean', 'avg'])
-    expect(view([]).tiles.map(x => x.label)).not.toContain('Success rate')
+describe('verdict, directions and average from the stored detail (LNpay values)', () => {
+  it('the verdict is the numbers the score reads; directions and the average come from the same detail', () => {
+    const v = view([])
+    expect(v.verdict).toEqual({ total: 126, blamed: 0, failedElsewhere: 19, ok: 107 })
+    expect(auditVerdictHeadline(v.verdict!)).toBe('of 126 swaps failed because of this mint')
+    expect(auditVerdictDetail(v.verdict!)).toBe('19 swaps failed for other reasons and do not count against it.')
+    expect(dirs(LNPAY)['mints']).toMatchObject({ label: 'Deposits (mint)', ok: 56, total: 62, failed: 6 })
+    expect(dirs(LNPAY)['melts']).toMatchObject({ label: 'Withdrawals (melt)', ok: 51, total: 64, failed: 13 })
+    expect(v.directions.map(x => x.key)).toEqual(['mints', 'melts'])
+    expect(v.avgSwapTime).toBe('8.3 s')
   })
-  it('success tile: LNpay-like, 0 blamed of 105 with 16 failed', () => {
-    const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 105, success: 89, failed: 16 }, errorsBlamed: 0 } })['clean']
-    expect(t).toMatchObject({ value: '100%', tooltip: '105 of 105 swaps in the last 7 days, 16 failed for other reasons' })
+  it('verdict: lnw.cash-like, 202 blamed of 229 with 207 failed', () => {
+    const v = verdict({ total: 229, success: 22, failed: 207 }, 202)!
+    expect(v).toEqual({ total: 229, blamed: 202, failedElsewhere: 5, ok: 22 })
+    expect(auditVerdictDetail(v)).toBe('5 swaps failed for other reasons and do not count against it.')
   })
-  it('success tile: lnw.cash-like, 202 blamed of 229 with 207 failed', () => {
-    const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 229, success: 22, failed: 207 }, errorsBlamed: 202 } })['clean']
-    expect(t).toMatchObject({ value: '12%', tooltip: '27 of 229 swaps in the last 7 days, 202 attributed to this mint, 5 other failures' })
+  it('verdict wording: singular, no other failure, a clean week', () => {
+    expect(auditVerdictDetail(verdict({ total: 50, success: 49, failed: 1 }, 0)!)).toBe('1 swap failed for other reasons and does not count against it.')
+    expect(auditVerdictDetail(verdict({ total: 50, success: 48, failed: 2 }, 2)!)).toBe('No other swap failed.')
+    expect(auditVerdictDetail(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe('Every swap of the last 7 days succeeded.')
+    expect(auditVerdictHeadline(verdict({ total: 1, success: 1, failed: 0 }, 0)!)).toBe('of 1 swap failed because of this mint')
   })
-  it('success tile: 1 blamed of 200 shows 99%, never 100%', () => {
-    const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 200, success: 199, failed: 1 }, errorsBlamed: 1 } })['clean']
-    expect(t).toMatchObject({ value: '99%', tooltip: '199 of 200 swaps in the last 7 days, 1 attributed to this mint' })
+  it('verdict: fewer than 10 swaps still shows the numbers', () => {
+    expect(verdict({ total: 4, success: 4, failed: 0 }, 0)).toEqual({ total: 4, blamed: 0, failedElsewhere: 0, ok: 4 })
   })
-  it('success tile: singular forms, no failures, never "x / y"', () => {
-    const oneOther = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 49, failed: 1 }, errorsBlamed: 0 } })['clean']
-    expect(oneOther?.tooltip).toBe('50 of 50 swaps in the last 7 days, 1 failed for other reasons')
-    const one = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 47, failed: 3 }, errorsBlamed: 2 } })['clean']
-    expect(one?.tooltip).toBe('48 of 50 swaps in the last 7 days, 2 attributed to this mint, 1 other failure')
-    const none = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 50, success: 50, failed: 0 }, errorsBlamed: 0 } })['clean']
-    expect(none).toMatchObject({ value: '100%', tooltip: '50 of 50 swaps in the last 7 days' })
-    for (const t of [one, none, oneOther]) expect(t?.value).not.toContain('/')
+  it('verdict: hostile numbers are clamped or hide it', () => {
+    expect(verdict({ total: 20, failed: 20 }, 999)).toEqual({ total: 20, blamed: 20, failedElsewhere: 0, ok: 0 })
+    expect(verdict({ total: 20, failed: 999 }, 1)).toEqual({ total: 20, blamed: 1, failedElsewhere: 19, ok: 0 })
+    expect(verdict({ total: 0, failed: 0 }, 0)).toBeNull()
+    expect(verdict({ total: NaN }, 0)).toBeNull()
+    expect(verdict({ total: -5 }, 0)).toBeNull()
+    expect(verdict({ total: 20 }, NaN)).toBeNull()
+    expect(verdict({ total: 20 }, -1)).toBeNull()
+    expect(verdict({ total: 20, failed: -3 }, 0)).toEqual({ total: 20, blamed: 0, failedElsewhere: 0, ok: 20 })
   })
-  it('success tile: fewer than 10 swaps still shows the number', () => {
-    const t = tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all: { total: 4, success: 4, failed: 0 }, errorsBlamed: 0 } })['clean']
-    expect(t).toMatchObject({ value: '100%', tooltip: '4 of 4 swaps in the last 7 days' })
+  it('a direction without numbers has no figures; nothing else is invented', () => {
+    expect(dirs({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } })['mints']).toMatchObject({ ok: null, total: null })
+    expect(dirs({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } })['melts']).toMatchObject({ ok: 1, total: 2 })
+    expect(dirs({ fetchedAt: null, swaps7d: { asDest: { success: 3 } } })['mints']).toMatchObject({ ok: null })
+    expect(dirs({ fetchedAt: null, swaps7d: { asDest: { success: -3, total: 4 } } })['mints']).toMatchObject({ ok: null })
+    const none = view([], { fetchedAt: null })
+    expect(none.verdict).toBeNull()
+    expect(none.avgSwapTime).toBeNull()
+    expect(view([], { fetchedAt: null, swaps7d: { errorsBlamed: 2 } }).verdict).toBeNull()
   })
-  it('success tile: hostile numbers are clamped or hide the tile', () => {
-    const w = (all: Record<string, unknown>, errorsBlamed: unknown) => tiles({ ...LNPAY, swaps7d: { ...LNPAY.swaps7d, all, errorsBlamed } } as AuditCzDetail)['clean']
-    expect(w({ total: 20, failed: 20 }, 999)).toMatchObject({ value: '0%', tooltip: '0 of 20 swaps in the last 7 days, 20 attributed to this mint' })
-    expect(w({ total: 0, failed: 0 }, 0)).toBeUndefined()
-    expect(w({ total: NaN }, 0)).toBeUndefined()
-    expect(w({ total: -5 }, 0)).toBeUndefined()
-    expect(w({ total: 20 }, NaN)).toBeUndefined()
-    expect(w({ total: 20 }, -1)).toBeUndefined()
-    expect(w({ total: 20, failed: -3 }, 0)).toMatchObject({ value: '100%', tooltip: '20 of 20 swaps in the last 7 days' })
+  it('failed per direction: as sent, clamped to the attempts', () => {
+    const t = dirs({ fetchedAt: null, swaps7d: { asSource: { total: 10, success: 10, failed: 0 }, asDest: { total: 1, success: 0, failed: 1 } } })
+    expect(t['melts']).toMatchObject({ ok: 10, total: 10, failed: 0 })
+    expect(t['mints']).toMatchObject({ ok: 0, total: 1, failed: 1 })
+    expect(dirs({ fetchedAt: null, swaps7d: { asSource: { total: 3, success: 0, failed: 99 } } })['melts']).toMatchObject({ failed: 3 })
   })
-  it('a direction without numbers reads "No data"; the other tiles are hidden when their field is missing', () => {
-    const keys = (d: AuditCzDetail) => view([], d).tiles.map(t => t.key)
-    const dir = (d: AuditCzDetail) => tiles(d)
-    expect(dir({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } })['mints']).toMatchObject({ value: 'No data', noData: true })
-    expect(dir({ fetchedAt: null, swaps7d: { asSource: { success: 1, total: 2 } } })['melts']).toMatchObject({ value: '1 / 2' })
-    expect(dir({ fetchedAt: null, swaps7d: { asDest: { success: 3 } } })['mints']).toMatchObject({ value: 'No data' })
-    expect(dir({ fetchedAt: null, swaps7d: { asDest: { success: -3, total: 4 } } })['mints']).toMatchObject({ value: 'No data' })
-    // no swaps block at all: the two direction tiles say "No data", nothing else is invented
-    expect(keys({ fetchedAt: null })).toEqual(['mints', 'melts'])
-    expect(dir({ fetchedAt: null })['melts']).toMatchObject({ value: 'No data' })
-    expect(keys({ fetchedAt: null, swaps7d: { errorsBlamed: 2 } })).toEqual(['mints', 'melts'])
-    expect(keys({ fetchedAt: null, swaps7d: { all: { total: 9 } } })).toEqual(['mints', 'melts'])
+  it('long window and since: shown only when they hold more than the shorter window', () => {
+    const long = { windowDays: 28, swaps: 410, attributedFailures: 2 }
+    expect(view([], LNPAY, { long }).long).toEqual(long)
+    expect(auditLongLine(long)).toBe('Last 28 days: 2 of 410 swaps failed because of this mint.')
+    expect(view([]).long).toBeNull()
+    const since = { day: '2026-08-01', swaps: 900, attributedFailures: 3 }
+    expect(view([], LNPAY, { long, since }).since).toEqual(since)
+    expect(view([], LNPAY, { long, since: { ...since, swaps: 410 } }).since).toBeNull()
+    expect(view([], LNPAY, { since: { ...since, swaps: 126 } }).since).toBeNull()
+    expect(auditSinceLine(since, '1 Aug 2026')).toBe('Since 1 Aug 2026: 3 of 900 swaps.')
   })
-  it('"N failed" only for a direction that has failures; one small sample is shown as it is', () => {
-    const t = tiles({ fetchedAt: null, swaps7d: { asSource: { total: 10, success: 10, failed: 0 }, asDest: { total: 1, success: 0, failed: 1 } } })
-    expect(t['melts']).toMatchObject({ value: '10 / 10' })
-    expect(t['melts']).not.toHaveProperty('sub')
-    expect(t['mints']).toMatchObject({ value: '0 / 1', sub: '1 failed' })
-    // no failed count sent: no subtext, never a number derived from the others
-    expect(tiles({ fetchedAt: null, swaps7d: { asSource: { total: 10, success: 7 } } })['melts']).not.toHaveProperty('sub')
-    // a hostile failed count above the attempts is clamped
-    expect(tiles({ fetchedAt: null, swaps7d: { asSource: { total: 3, success: 0, failed: 99 } } })['melts']).toMatchObject({ sub: '3 failed' })
+  it('swaps per day pass through; a missing list is empty', () => {
+    const daily7d = [{ day: '2026-10-07', ok: 3, failed: 1, other: 0 }]
+    expect(view([], LNPAY, { daily7d }).daily).toEqual(daily7d)
+    expect(view([]).daily).toEqual([])
   })
   it('formats the average: seconds with one decimal, under a second in ms', () => {
     expect(formatAvgSwapTime(8289)).toBe('8.3 s')
@@ -110,10 +107,12 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(formatAvgSwapTime(999.6)).toBe('1.0 s')
     expect(formatAvgSwapTime(0)).toBe('0 ms')
   })
-  it('formats a swap duration: ms under a minute, a short human form from a minute on', () => {
+  it('formats a swap duration: ms under a second, seconds under a minute, a short human form from a minute on', () => {
     expect(formatSwapDuration(0)).toBe('0 ms')
-    expect(formatSwapDuration(1759)).toBe('1759 ms')
-    expect(formatSwapDuration(59999)).toBe('59999 ms')
+    expect(formatSwapDuration(999)).toBe('999 ms')
+    expect(formatSwapDuration(1759)).toBe('1.7 s')
+    expect(formatSwapDuration(10934)).toBe('10.9 s')
+    expect(formatSwapDuration(59999)).toBe('59.9 s')
     expect(formatSwapDuration(60000)).toBe('1 min')
     expect(formatSwapDuration(62000)).toBe('1 min 2 s')
     expect(formatSwapDuration(3599999)).toBe('59 min 59 s')
@@ -124,12 +123,9 @@ describe('tiles from the stored detail (LNpay values)', () => {
     expect(formatSwapDuration(183600000)).toBe('2 d 3 h')
   })
   it('tooltips are the honest wording', () => {
-    const t = tiles(LNPAY)
+    const t = dirs(LNPAY)
     expect(t['mints']?.tooltip).toBe('Deposits into this mint (mint operations) in the last 7 days, counted by cashu.info: successful of all.')
     expect(t['melts']?.tooltip).toBe('Withdrawals from this mint (melt operations) in the last 7 days, counted by cashu.info: successful of all.')
-    expect(t['clean']?.tooltip).toBe('126 of 126 swaps in the last 7 days, 19 failed for other reasons')
-    // The Avg swap time tile has no ⓘ: its label says it, the window and source are in the sibling tooltips.
-    expect(t['avg']?.tooltip).toBeUndefined()
   })
   it('not covered or no detail stored: no view (the 8333 panel or the empty panel stays)', () => {
     expect(adaptAuditCz(data([], null), Date.now())).toBeNull()
@@ -138,13 +134,20 @@ describe('tiles from the stored detail (LNpay values)', () => {
   })
 })
 
-describe('the two tables, the bar rows and the freshness', () => {
-  const mixed = [row({ direction: 'from', otherMintUrl: 'https://dest.example' }), row({ direction: 'to', otherMintUrl: 'https://src.example' }), row({ direction: 'from' })]
-  it('splits by direction and keeps all rows for the bar, newest first order preserved', () => {
+describe('the swap list, its filter and the freshness', () => {
+  const mixed = [row({ direction: 'from', otherMintUrl: 'https://dest.example' }), row({ direction: 'to', otherMintUrl: 'https://src.example' }), row({ direction: 'from', status: 'failed', stage: 'melt' }), row({ direction: 'to', status: 'failed', stage: 'limits' })]
+  it('one list, newest first order preserved; the filter splits it', () => {
     const v = view(mixed)
-    expect(v.swaps).toHaveLength(3)
-    expect(v.fromRows.map(r => r.toUrl)).toEqual(['https://dest.example', 'https://o.example'])
-    expect(v.toRows.map(r => r.toUrl)).toEqual(['https://src.example'])
+    expect(v.swaps).toHaveLength(4)
+    expect(filterAuditSwaps(v.swaps, 'all')).toHaveLength(4)
+    expect(filterAuditSwaps(v.swaps, 'withdrawals').map(r => r.toUrl)).toEqual(['https://dest.example', 'https://o.example'])
+    expect(filterAuditSwaps(v.swaps, 'deposits').map(r => r.toUrl)).toEqual(['https://src.example', 'https://o.example'])
+    // "Failed" leaves out the grey rows that are not counted against the mint
+    expect(filterAuditSwaps(v.swaps, 'failed')).toHaveLength(1)
+  })
+  it('only the swaps of the last 7 days are listed (the window of the figures above)', () => {
+    const v = view([row({ at: '2026-10-06T10:00:00Z' }), row({ at: '2026-09-29T10:00:00Z' })])
+    expect(v.swaps).toHaveLength(1)
   })
   it('not updated recently only after 90 minutes (from the stored detail)', () => {
     expect(view([], LNPAY, {}, Date.parse('2026-10-07T08:29:00Z')).notRecent).toBe(false)

@@ -196,11 +196,13 @@ const NOTE_CASES = [
   { name: '30d window holds five changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '30d window holds four changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '30d window holds three changes, 7d none', date: '2026-11-09T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds three changes, 7d none (v5, v6, v7)', date: '2026-11-21T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds two changes, 7d none', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds one change, 7d none', date: '2026-12-05T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds four changes, 7d none (v5, v6, v7, v8)', date: '2026-11-21T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds three changes, 7d none (v6, v7, v8)', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds two changes, 7d none (v7, v8)', date: '2026-12-05T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '7d window holds no change', date: '2026-11-05T12:00:00Z', period: '7d', note7: false, note: false },
-  { name: '30d window holds no change', date: '2026-12-11T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds one change, 7d none (v8)', date: '2026-12-11T12:00:00Z', period: '30d', note7: false, note: true },
+  // Methodology 8 went live on 2026-11-13: its 30 days end on 2026-12-13.
+  { name: '30d window holds no change', date: '2026-12-15T12:00:00Z', period: '30d', note7: false, note: false },
 ] as const
 
 for (const width of [1440, 1024, 768, 390, 320]) {

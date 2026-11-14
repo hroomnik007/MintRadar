@@ -40,6 +40,10 @@ export const METHODOLOGY_PAGE = {
 
   audit: {
     windowDays: 7,
+    /** The long window: at most this many days, built from stored 7-day totals that do not overlap. */
+    longWindowDays: 28,
+    /** The day the long window started to be stored; it reaches its full length this many days later. */
+    longWindowSince: '2026-11-13',
     minSwaps: 10,
     maxAgeHours: 168,
     neutral: 12.5,

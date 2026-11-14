@@ -91,7 +91,7 @@ export default function Methodology() {
               </thead>
               <tbody>
                 <tr><th scope="row">Uptime</th><td>{w.uptime}</td><td>MintRadar probes of the last {M.uptime.windowHours} hours and of the last {M.uptime.windowDays} days</td></tr>
-                <tr><th scope="row">Audit reliability</th><td>{w.audit}</td><td>cashu.info swaps of the last {M.audit.windowDays} days</td></tr>
+                <tr><th scope="row">Audit reliability</th><td>{w.audit}</td><td>cashu.info swaps of the last {M.audit.windowDays} and {M.audit.longWindowDays} days</td></tr>
                 <tr><th scope="row">NUT support</th><td>{w.nuts}</td><td>NUTs the mint says it supports in <code>/v1/info</code> (an entry with <code>&quot;supported&quot;: false</code>, or a NUT-04/05 the mint has switched off, does not count)</td></tr>
                 <tr><th scope="row">Software version</th><td>{w.version}</td><td>The version the mint reports, against the newest stable release</td></tr>
                 <tr><th scope="row">Contact</th><td>{w.contact}</td><td>Contact channels the mint publishes</td></tr>
@@ -158,6 +158,15 @@ export default function Methodology() {
             outside the mint&apos;s limits) are not swaps and are not in the total. A count above the total is limited
             to the total.
           </p>
+          <p>
+            The rate is computed for <strong>two windows</strong> and the part scores the <strong>worse</strong> of the
+            two results: the last {M.audit.windowDays} days, and a long window of up to {M.audit.longWindowDays} days.
+            A failure blamed on the mint therefore lowers the score at once and keeps counting for up
+            to {M.audit.longWindowDays} days. cashu.info publishes only the {M.audit.windowDays}-day totals, so
+            MintRadar stores them once a day and adds up totals {M.audit.windowDays} days apart, which do not overlap.
+            Storing began on {M.audit.longWindowSince}; until a mint has that much history the long window is shorter.
+            A window with fewer than {M.audit.minSwaps} swaps is not used.
+          </p>
           <div className="doc-table-wrap" tabIndex={0} role="region" aria-label="Audit bands">
             <table className="doc-table">
               <thead>
@@ -176,7 +185,7 @@ export default function Methodology() {
           </div>
           <p>
             The score is <strong>neutral, {M.audit.neutral} of {w.audit}</strong>, instead of a penalty when the mint has
-            fewer than {M.audit.minSwaps} swaps in the window, when there is no cashu.info data for it, or when the
+            fewer than {M.audit.minSwaps} swaps in both windows, when there is no cashu.info data for it, or when the
             stored data is older than {M.audit.maxAgeHours} hours ({M.audit.windowDays} days).
           </p>
 

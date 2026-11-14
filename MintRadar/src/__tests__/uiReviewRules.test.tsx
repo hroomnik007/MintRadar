@@ -5,7 +5,6 @@ import { render } from '@testing-library/react'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { listMobileColumn } from '@/utils/listColumns'
 import { cardsLatencyNote, PROBE_LOCATION } from '@/constants/probeLocation'
-import { SWAP_STRIP_FAILED_NOTE } from '@/utils/mintDetailFacts'
 import { MintComparePicker } from '@/components/MintComparePicker'
 
 describe('list view: the phone column is the one the list is sorted by', () => {
@@ -21,13 +20,6 @@ describe('list view: the phone column is the one the list is sorted by', () => {
 describe('probe location is said once above the cards', () => {
   it('the note names the probe location', () => {
     expect(cardsLatencyNote()).toBe(`latency from ${PROBE_LOCATION}`)
-  })
-})
-
-describe('Audit swap strip note', () => {
-  it('says that a red mark is any failed swap and that the score counts only attributed failures', () => {
-    expect(SWAP_STRIP_FAILED_NOTE).toContain('any failed swap')
-    expect(SWAP_STRIP_FAILED_NOTE).toContain('attributes to this mint')
   })
 })
 

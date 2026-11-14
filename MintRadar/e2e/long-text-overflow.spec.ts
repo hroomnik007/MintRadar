@@ -272,15 +272,15 @@ for (const width of WIDTHS) {
       await expectNoOverflow(page, 'watchlist-empty')
     })
 
-    test('Audit tab: every summary tile keeps its text inside the tile', async ({ page }) => {
+    test('Audit tab: every verdict, direction and day figure keeps its text inside its box', async ({ page }) => {
       const { url } = await mount(page, {}, { width })
-      // The tiles are the cashu.info view (audit.8333.space's strip left the tab on 2026-11-08): give the mint a stored detail.
+      // The figures are the cashu.info view (audit.8333.space's strip left the tab on 2026-11-08): give the mint a stored detail.
       await page.route('**/api/mints/audit-cz**', r => r.fulfill({ json: auditCzResponse({ swaps: czSwapList([{ kind: 'ok' }, { kind: 'fail', status: 'failed', error: 'melt quote failed' }]) }) }))
       await page.goto(`/mint/${encodeURIComponent(url)}`)
       await expect(page.locator('.md-tabs')).toBeVisible()
       await page.locator('.md-tab', { hasText: 'Audit' }).click()
-      await expect(page.locator('.audit-summary-cell').first()).toBeVisible()
-      const spill = await page.locator('.audit-summary-cell').evaluateAll(cells => cells.flatMap(cell => {
+      await expect(page.locator('.au-dir').first()).toBeVisible()
+      const spill = await page.locator('.au-dir, .au-verdict').evaluateAll(cells => cells.flatMap(cell => {
         const box = cell.getBoundingClientRect()
         return [...cell.querySelectorAll('span')].flatMap(s => {
           const r = s.getBoundingClientRect()

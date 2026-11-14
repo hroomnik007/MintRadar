@@ -1,5 +1,5 @@
 import type { AuditCzData, AuditCzDetail, AuditCzDirectionCounts } from '@/hooks/useAuditCz'
-import { depositsTileText, withdrawalsTileText, cleanTileText } from './tooltipTexts'
+import { depositsTileText, withdrawalsTileText, AUDIT_WINDOW_DAYS } from './tooltipTexts'
 import { formatTimeAgo } from './mintFormatting'
 import { formatDateTimeUtc } from './formatDate'
 
@@ -36,18 +36,29 @@ export interface AuditSwapRow {
   reason?: string
 }
 
-export interface AuditCzTile {
-  key: 'melts' | 'mints' | 'clean' | 'avg'
-  value: string
-  /** Uppercase by CSS; a plain sentence-case string here. */
-  label: string
-  /** The ⓘ text; a tile whose label already says it all (Avg swap time) has none. */
-  tooltip?: string
-  /** Small muted line under the tile ("6 failed"); only a direction tile with failures has one. */
-  sub?: string
-  /** A direction tile whose numbers the source did not send: the value reads "No data". */
-  noData?: boolean
+/** The 7-day verdict above everything else: how many swaps failed because of this mint, of how many. */
+export interface AuditVerdict {
+  total: number
+  /** Failures cashu.info attributes to this mint (never more than total). */
+  blamed: number
+  /** Failed swaps cashu.info does not attribute to this mint. */
+  failedElsewhere: number
+  ok: number
 }
+
+/** One direction (deposits / withdrawals) of the same 7 days; ok and total are null when the source sent no numbers. */
+export interface AuditDirectionFigure {
+  key: 'mints' | 'melts'
+  label: string
+  tooltip: string
+  ok: number | null
+  total: number | null
+  failed: number
+}
+
+export interface AuditDay { day: string; ok: number; failed: number; other: number }
+
+export type AuditSwapFilter = 'all' | 'deposits' | 'withdrawals' | 'failed'
 
 export interface AuditCzView {
   sourceHref: string | null
@@ -55,13 +66,19 @@ export interface AuditCzView {
   checkedAt: string | null
   /** Older than 90 minutes (the detail job runs every 30). */
   notRecent: boolean
-  /** Both directions, newest first: the outcome bar reads this. */
+  /** The stored swaps of the last 7 days, both directions, newest first (at most the 100 the page loads). */
   swaps: AuditSwapRow[]
-  /** This mint paid out ("Swaps from this mint", first column To = the destination). */
-  fromRows: AuditSwapRow[]
-  /** This mint received ("Swaps to this mint", first column From = the source). */
-  toRows: AuditSwapRow[]
-  tiles: AuditCzTile[]
+  /** Null when the source sent no usable totals. */
+  verdict: AuditVerdict | null
+  directions: AuditDirectionFigure[]
+  /** "8.3 s"; null when the source sent no average. */
+  avgSwapTime: string | null
+  /** MintRadar's own count per UTC day, oldest first; empty when the server sent none. */
+  daily: AuditDay[]
+  /** The long window of the score; null while it holds no more than 7 days. */
+  long: { windowDays: number; swaps: number; attributedFailures: number } | null
+  /** Everything stored so far; null when nothing is, or when it is no more than the long window. */
+  since: { day: string; swaps: number; attributedFailures: number } | null
 }
 
 function swapState(status: string): string {
@@ -151,13 +168,14 @@ export function formatAvgSwapTime(ms: number): string {
 }
 
 /**
- * The Duration cell of a swap row. Under 60 s: "{n} ms", as before. From 60 s: the two biggest units, whole numbers
+ * The Duration cell of a swap row. Under 1 s: "{n} ms"; under 60 s: seconds with one decimal ("10.9 s"). From 60 s: the two biggest units, whole numbers
  * (cut, not rounded) and a zero part left out: "1 min 2 s", "4 h 48 min", "2 d 3 h", "1 d". A failed swap can run for hours
  * before it fails or expires, which was unreadable in milliseconds.
  */
 export function formatSwapDuration(ms: number): string {
   const r = Math.round(ms)
-  if (r < 60_000) return `${r} ms`
+  if (r < 1000) return `${r} ms`
+  if (r < 60_000) return `${(Math.floor(r / 100) / 10).toFixed(1)} s` // cut, not rounded: 59 999 ms is never "60.0 s"
   const parts = (big: number, bigUnit: string, rest: number, restUnit: string) => (rest > 0 ? `${big} ${bigUnit} ${rest} ${restUnit}` : `${big} ${bigUnit}`)
   const totalS = Math.floor(r / 1000)
   if (totalS < 3600) return parts(Math.floor(totalS / 60), 'min', totalS % 60, 's')
@@ -169,42 +187,60 @@ export function formatSwapDuration(ms: number): string {
 
 const fmt = (n: number) => n.toLocaleString('en-US')
 
-/** One direction tile: successful / attempts, "N failed" under it when the source counts failures, "No data" when the numbers are missing. */
-function directionTile(key: 'melts' | 'mints', label: string, tooltip: string, d: AuditCzDirectionCounts | undefined): AuditCzTile {
+function directionFigure(key: 'mints' | 'melts', label: string, tooltip: string, d: AuditCzDirectionCounts | undefined): AuditDirectionFigure {
   const ok = num(d?.success), all = num(d?.total), failed = num(d?.failed)
-  if (ok === undefined || all === undefined) return { key, value: 'No data', label, tooltip, noData: true }
-  return { key, value: `${fmt(ok)} / ${fmt(all)}`, label, tooltip, ...(failed !== undefined && failed > 0 ? { sub: `${fmt(Math.min(failed, all))} failed` } : {}) }
+  if (ok === undefined || all === undefined) return { key, label, tooltip, ok: null, total: null, failed: 0 }
+  return { key, label, tooltip, ok: Math.min(ok, all), total: all, failed: Math.min(failed ?? all - ok, all) }
 }
 
-function auditCzTiles(d: AuditCzDetail): AuditCzTile[] {
+/** Deposits (mint) first: asDest = this mint was the destination of a swap. Withdrawals (melt) = asSource. */
+export function auditDirections(d: AuditCzDetail): AuditDirectionFigure[] {
   const s = d.swaps7d
-  // Deposits (mint) first: asDest = this mint was the destination of a swap. Withdrawals (melt) = asSource.
-  const tiles: AuditCzTile[] = [
-    directionTile('mints', 'Deposits (mint)', depositsTileText(), s?.asDest),
-    directionTile('melts', 'Withdrawals (melt)', withdrawalsTileText(), s?.asSource),
+  return [
+    directionFigure('mints', 'Deposits (mint)', depositsTileText(), s?.asDest),
+    directionFigure('melts', 'Withdrawals (melt)', withdrawalsTileText(), s?.asSource),
   ]
-  if (!s) return tiles
-  // The one success figure of this view is the one the Reliability Score's audit part uses: swaps without a
-  // failure that cashu.info attributes to this mint, (total - blamed) / total of the same 7-day window.
-  // Never "x / y" in the big number; whole percent, capped at 99 while anything is attributed so "1 of 200 caused" cannot read as 100%.
-  const total = num(s.all?.total), blamedRaw = num(s.errorsBlamed)
-  if (total !== undefined && total > 0 && blamedRaw !== undefined) {
-    const blamed = Math.min(blamedRaw, total)
-    const clean = total - blamed
-    const failed = Math.max(num(s.all?.failed) ?? blamed, blamed)
-    const other = failed - blamed
-    const tooltip = cleanTileText(clean, total, blamed, other, fmt)
-    tiles.push({
-      key: 'clean', value: `${blamed > 0 ? Math.min(99, Math.round((clean / total) * 100)) : 100}%`,
-      label: 'Without a failure caused by this mint',
-      tooltip,
-    })
-  }
-  const avg = num(s.all?.avgMs)
-  if (avg !== undefined) tiles.push({
-    key: 'avg', value: formatAvgSwapTime(avg), label: 'Avg swap time',
-  })
-  return tiles
+}
+
+/** The numbers of the score's 7-day window: (total, blamed) are exactly what the audit part reads. */
+export function auditVerdict(d: AuditCzDetail): AuditVerdict | null {
+  const s = d.swaps7d
+  const total = num(s?.all?.total), blamedRaw = num(s?.errorsBlamed)
+  if (total === undefined || total <= 0 || blamedRaw === undefined) return null
+  const blamed = Math.min(blamedRaw, total)
+  const failed = Math.min(Math.max(num(s?.all?.failed) ?? blamed, blamed), total)
+  return { total, blamed, failedElsewhere: failed - blamed, ok: total - failed }
+}
+
+const swapsWord = (n: number) => (n === 1 ? '1 swap' : `${fmt(n)} swaps`)
+
+/** "of 53 swaps failed because of this mint" (the number in front of it is `blamed`). */
+export function auditVerdictHeadline(v: AuditVerdict): string {
+  return `of ${swapsWord(v.total)} failed because of this mint`
+}
+
+/** The line under the headline: what happened to the other swaps. */
+export function auditVerdictDetail(v: AuditVerdict): string {
+  if (v.failedElsewhere === 0) return v.blamed === 0 ? `Every swap of the last ${AUDIT_WINDOW_DAYS} days succeeded.` : 'No other swap failed.'
+  return `${swapsWord(v.failedElsewhere)} failed for other reasons and ${v.failedElsewhere === 1 ? 'does' : 'do'} not count against it.`
+}
+
+/** "Last 28 days: 2 of 212 swaps failed because of this mint." */
+export function auditLongLine(l: { windowDays: number; swaps: number; attributedFailures: number }): string {
+  return `Last ${l.windowDays} days: ${fmt(l.attributedFailures)} of ${swapsWord(l.swaps)} failed because of this mint.`
+}
+
+/** "Since 13 Nov 2026: 3 of 420 swaps." (`dayText` is the formatted first day.) */
+export function auditSinceLine(s: { swaps: number; attributedFailures: number }, dayText: string): string {
+  return `Since ${dayText}: ${fmt(s.attributedFailures)} of ${swapsWord(s.swaps)}.`
+}
+
+/** The rows a filter chip shows. "Failed" leaves out the grey rows that are not counted against the mint. */
+export function filterAuditSwaps(rows: AuditSwapRow[], filter: AuditSwapFilter): AuditSwapRow[] {
+  if (filter === 'deposits') return rows.filter(r => r.direction === 'to')
+  if (filter === 'withdrawals') return rows.filter(r => r.direction === 'from')
+  if (filter === 'failed') return rows.filter(r => r.state !== 'OK' && !r.neutral)
+  return rows
 }
 
 /** Returns null when the mint is not covered or no detail is stored (the caller then shows the audit.8333.space panel or the empty panel). */
@@ -231,15 +267,22 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     return neutral ? { ...r, neutral } : r
   })
   const checkedAt = data.detail.fetchedAt ?? data.fetchedAt
+  const avg = num(data.detail.swaps7d?.all?.avgMs)
   const checkedMs = checkedAt ? new Date(checkedAt).getTime() : NaN
   return {
     sourceHref: data.sourceUrl && AUDIT_CZ_PAGE_RE.test(data.sourceUrl) ? data.sourceUrl : null,
     checkedAt,
     notRecent: Number.isFinite(checkedMs) && now - checkedMs > AUDIT_CZ_NOT_RECENT_MS,
-    swaps: rows,
-    fromRows: rows.filter(r => r.direction === 'from'),
-    toRows: rows.filter(r => r.direction === 'to'),
-    tiles: auditCzTiles(data.detail),
+    swaps: rows.filter(r => {
+      const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN
+      return !Number.isFinite(t) || now - t <= AUDIT_WINDOW_DAYS * 86_400_000
+    }),
+    verdict: auditVerdict(data.detail),
+    directions: auditDirections(data.detail),
+    avgSwapTime: avg !== undefined ? formatAvgSwapTime(avg) : null,
+    daily: Array.isArray(data.daily7d) ? data.daily7d : [],
+    long: data.long ?? null,
+    since: data.since && (!data.long || data.since.swaps > data.long.swaps) && data.since.swaps > (num(data.detail.swaps7d?.all?.total) ?? 0) ? data.since : null,
   }
 }
 

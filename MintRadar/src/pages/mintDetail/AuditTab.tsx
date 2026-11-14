@@ -1,19 +1,14 @@
-// Mint Detail "Audit" tab: the Audit stats panel of cashu.info (the audit source of the Reliability Score) — tiles, the
-// sync note, the swap strip and the two swap tables. The audit query (useAuditCz), the expand states and every derived
+// Mint Detail "Audit" tab: the Audit stats panel of cashu.info (the audit source of the Reliability Score) — the
+// sync note, the 7-day verdict, the bar, the directions, swaps per day and one swap list. The audit query (useAuditCz), the expand states and every derived
 // figure stay in MintDetail and are passed in, so fetch timing and caching are unchanged; this component holds no state
 // of its own (AuditSyncNote keeps its local wrap measurement).
 // audit.8333.space is no longer shown (the service has not answered since 2026-09-27); the backend still syncs and
 // serves its fields (/api/mints/known, /api/mints/swaps, /health sources.audit8333) for API clients.
-import { useLayoutEffect, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { AuditCzTiles, AuditCzSwapTables } from '@/components/AuditCzCards'
-import { formatDateTimeUtc } from '@/utils/formatDate'
-import { AUDIT_CZ_NEUTRAL_TITLE, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
-import { swapStripLabel, swapStripText, SWAP_STRIP_FAILED_NOTE } from '@/utils/mintDetailFacts'
+import { AuditVerdictBlock, AuditStack, AuditDirections, AuditDays, AuditSwapList } from '@/components/AuditCzCards'
+import type { AuditCzView } from '@/utils/auditCz'
 import { auditNoDataText, cashuInfoViewText } from '@/utils/tooltipTexts'
-
-// The Audit tiles' ⓘ sits 3 px after the label (the trigger's hit-area padding is compensated by InfoTooltip.css).
-const TT_GAP_LEFT = { '--tt-ml': '3px' } as CSSProperties
 
 // ⓘ next to the "Audit stats" heading. A local component so the identical icon can be dropped into both the desktop
 // header and the mobile heading.
@@ -65,18 +60,12 @@ export interface AuditTabProps {
   /** The cashu.info view of this mint; null when cashu.info has no stored detail for it. */
   czView: AuditCzView | null
   czSyncNote: { text: string; stale: boolean; tip: string | null } | null
-  /** auditScoredLine(): which swaps count towards the score; null while the Audit part is not scored. */
-  scoredLine: string | null
-  auditSwapBarItems: AuditSwapRow[]
-  showAllCzFrom: boolean
-  showAllCzTo: boolean
-  setShowAllCzFrom: Dispatch<SetStateAction<boolean>>
-  setShowAllCzTo: Dispatch<SetStateAction<boolean>>
+  /** "25 / 25": the points of the audit part as the score breakdown shows them; null while the part is not scored. */
+  auditPoints: string | null
+  now: number
 }
 
-export function AuditTab({
-  auditCzLoading, czView, czSyncNote, scoredLine, auditSwapBarItems, showAllCzFrom, showAllCzTo, setShowAllCzFrom, setShowAllCzTo,
-}: AuditTabProps) {
+export function AuditTab({ auditCzLoading, czView, czSyncNote, auditPoints, now }: AuditTabProps) {
   if (auditCzLoading) {
     return <div className="md-audit-loading" style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)'}} role="status">Loading audit data…</div>
   }
@@ -109,31 +98,11 @@ export function AuditTab({
         {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync-mobile" />}
       </div>
 
-      {scoredLine && <p className="audit-cz-muted audit-scored-line" data-testid="audit-scored-line">{scoredLine}</p>}
-
-      <AuditCzTiles view={czView} />
-
-      {/* Outcome strip: the stored swaps, newest left. Nothing renders until there are swaps — never a fake/empty bar. */}
-      {auditSwapBarItems.length > 0 && (<>
-        <div className="audit-cz-muted audit-swap-bar-label" data-testid="audit-swap-bar-caption">
-          {swapStripLabel(auditSwapBarItems.length)}
-          <InfoTooltip iconSize={12} width={300} label="About the swap strip" style={TT_GAP_LEFT} text={swapStripText(auditSwapBarItems.length)} />
-        </div>
-        <div className="audit-swap-bar audit-swap-bar-labelled" title="Last swaps, newest first">
-          {auditSwapBarItems.map(s => (
-            <div
-              key={s.swapId}
-              className={`audit-swap-bar-mark ${s.state === 'OK' ? 'audit-swap-bar-ok' : s.neutral ? 'audit-swap-bar-neutral' : 'audit-swap-bar-fail'}`}
-              title={s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TITLE[s.neutral] : `${s.state}${s.stage ? ` (${s.stage})` : ''}${s.createdAt ? ` · ${formatDateTimeUtc(s.createdAt)}` : ''}`}
-            />
-          ))}
-        </div>
-        {auditSwapBarItems.some(s => s.state !== 'OK' && !s.neutral) && (
-          <p className="audit-cz-muted audit-swap-bar-note" data-testid="audit-swap-bar-note">{SWAP_STRIP_FAILED_NOTE}</p>
-        )}
-      </>)}
-
-      <AuditCzSwapTables view={czView} expandedFrom={showAllCzFrom} expandedTo={showAllCzTo} onToggleFrom={() => setShowAllCzFrom(v => !v)} onToggleTo={() => setShowAllCzTo(v => !v)} />
+      {czView.verdict && <AuditVerdictBlock verdict={czView.verdict} points={auditPoints} view={czView} />}
+      {czView.verdict && <AuditStack verdict={czView.verdict} />}
+      <AuditDirections directions={czView.directions} avgSwapTime={czView.avgSwapTime} />
+      <AuditDays daily={czView.daily} />
+      <AuditSwapList rows={czView.swaps} now={now} />
 
       {czView.sourceHref && (
         <a href={czView.sourceHref} target="_blank" rel="noopener noreferrer" className="audit-external-link">

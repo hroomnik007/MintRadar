@@ -63,7 +63,7 @@ export function computeScoreBreakdown(
 ): ScoreBreakdown {
   const uptime = uptimeComponent(uptimeInput)
   const parts = typeof uptimeInput === 'number' ? null : uptimeParts(uptimeInput)
-  const auditPts = auditComponent(audit.blamed, audit.total, audit.fetchedAt, now)
+  const auditPts = auditComponent(audit.blamed, audit.total, audit.fetchedAt, now, audit.long)
   const nuts = nutComponent(nutCount)
   const versionPts = versionComponent(version, latestVersions)
   const contact = contactComponent(contactCount)

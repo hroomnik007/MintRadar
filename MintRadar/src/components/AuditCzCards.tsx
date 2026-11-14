@@ -1,78 +1,119 @@
-import { Fragment, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, type AuditCzView, type AuditSwapRow } from '@/utils/auditCz'
-import { mintHostname } from '@/utils/mintFormatting'
+import {
+  auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
+  auditVerdictHeadline, auditVerdictDetail, auditLongLine, auditSinceLine,
+  type AuditCzView, type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
+} from '@/utils/auditCz'
+import { mintHostname, formatTimeAgo } from '@/utils/mintFormatting'
+import { formatDate, formatDateTimeUtc, DATE_MONTHS } from '@/utils/formatDate'
 
-// The cashu.info view of the Audit tab below the header: four tiles, the auditor's checks and two
-// swap tables. Every string from the source is rendered as plain text (React escapes it).
+// The cashu.info view of the Audit tab below the header: one verdict for the 7 days the score reads, the same swaps
+// as one bar and per direction, MintRadar's own count per day, and one swap list with a filter. Every string from
+// the source is rendered as plain text (React escapes it).
+//
+// Colours: red is only the failures cashu.info attributes to THIS mint (a 7-day total, the verdict and the bar).
+// A single failed swap is amber: the source does not say per swap who caused it.
 
-const ROWS_DEFAULT = 5
+const ROWS_DEFAULT = 8
 
-export function AuditCzTiles({ view }: { view: AuditCzView }) {
-  if (view.tiles.length === 0) return null
+/** The verdict: the attributed failures as the big number, what it is out of, and the points it gives. */
+export function AuditVerdictBlock({ verdict, points, view }: { verdict: AuditVerdict; points: string | null; view: AuditCzView }) {
   return (
-    <div className="audit-summary-strip audit-cz-tiles">
-      {view.tiles.map(t => {
-        // The icon stays glued to the last word, so a wrapped label never leaves it alone on a line.
-        const cut = t.label.lastIndexOf(' ') + 1
-        const lead = t.label.slice(0, cut), last = t.label.slice(cut)
-        return (
-        <div className="audit-summary-cell" key={t.key} data-tile={t.key}>
-          <div className={`audit-summary-value${t.noData ? ' audit-cz-tile-nodata' : ''}`} {...(t.noData ? {} : { style: { color: 'var(--accent)' } })}>{t.value}</div>
-          <div className="audit-summary-label audit-cz-tile-label">
-            {lead}
-            <span className="audit-cz-tile-tail">{last}{t.tooltip ? <InfoTooltip text={t.tooltip} width={240} iconSize={11} label={`About ${t.label}`} /> : null}</span>
-          </div>
-          {t.sub && <div className="audit-cz-tile-sub">{t.sub}</div>}
-        </div>
-        )
-      })}
+    <div className="au-verdict" data-testid="audit-verdict">
+      <span className={`au-verdict-num${verdict.blamed > 0 ? ' au-verdict-num-bad' : ''}`} data-testid="audit-verdict-num">{verdict.blamed.toLocaleString('en-US')}</span>
+      <div className="au-verdict-text">
+        <strong>{auditVerdictHeadline(verdict)}</strong>
+        <span>{auditVerdictDetail(verdict)}</span>
+        {view.long && <span className="au-verdict-more" data-testid="audit-long-line">{auditLongLine(view.long)}</span>}
+        {view.since && <span className="au-verdict-more" data-testid="audit-since-line">{auditSinceLine(view.since, formatDate(`${view.since.day}T00:00:00Z`))}</span>}
+      </div>
+      {points && <span className="au-pill" data-testid="audit-points-pill">Audit part {points}</span>}
     </div>
   )
 }
 
-function SwapTable({ title, firstHeader, rows, expanded, onToggle }: {
-  title: string
-  firstHeader: 'To' | 'From'
-  rows: AuditSwapRow[]
-  expanded: boolean
-  onToggle: () => void
-}) {
-  const shown = expanded ? rows : rows.slice(0, ROWS_DEFAULT)
+/** The 7 days as one bar: succeeded, failed elsewhere, caused by this mint. The legend carries the numbers. */
+export function AuditStack({ verdict }: { verdict: AuditVerdict }) {
+  const n = (v: number) => v.toLocaleString('en-US')
   return (
-    <div className="audit-cz-card" data-testid="audit-cz-table">
-      {rows.length === 0 ? (
-        <p className="audit-cz-muted">No swaps collected yet</p>
-      ) : (
-        <div className="audit-recent-swaps" style={{ marginTop: 0 }}>
-          <div className="audit-swaps-table-wrap" tabIndex={0} role="group" aria-label={`${title} (scrollable)`}>
-            <table className="audit-swaps-table">
-              <thead>
-                <tr><th>{firstHeader}</th><th>Amount</th><th>Fee</th><th>Duration</th><th>State</th></tr>
-              </thead>
-              <tbody>
-                {shown.map(s => (
-                  <tr key={s.swapId} className={s.state === 'OK' ? '' : s.neutral ? 'audit-swap-row-neutral' : 'audit-swap-row-fail'} {...(s.neutral === 'limits' || s.neutral === 'balance' ? { title: AUDIT_CZ_NEUTRAL_TITLE[s.neutral] } : {})}>
-                    <td>{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
-                    <td>{s.amount !== null ? `${s.amount} sat` : '—'}</td>
-                    <td>{s.fee !== null ? s.fee : '—'}</td>
-                    <td>{s.timeTakenMs !== null ? <DurationText text={formatSwapDuration(s.timeTakenMs)} /> : '—'}</td>
-                    {/* Rows that are not OK: the failure text as tooltip and as visually hidden text (a title is not available on touch or to screen readers). Plain text only. */}
-                    <td>
-                      <AuditStateText row={s} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {rows.length > ROWS_DEFAULT && (
-            <button type="button" className="audit-swaps-show-all-btn" onClick={onToggle}>
-              {expanded ? 'Show fewer' : `Show all (${rows.length})`}
-            </button>
-          )}
+    <div className="au-stack-wrap">
+      <div className="au-stack" role="img" aria-label={`${n(verdict.ok)} succeeded, ${n(verdict.failedElsewhere)} failed elsewhere, ${n(verdict.blamed)} caused by this mint`}>
+        {verdict.ok > 0 && <i className="au-seg-ok" style={{ flexGrow: verdict.ok }} />}
+        {verdict.failedElsewhere > 0 && <i className="au-seg-else" style={{ flexGrow: verdict.failedElsewhere }} />}
+        {verdict.blamed > 0 && <i className="au-seg-mint" style={{ flexGrow: verdict.blamed }} />}
+      </div>
+      <div className="au-legend" data-testid="audit-legend">
+        <span><i className="au-seg-ok" />{n(verdict.ok)} succeeded</span>
+        <span><i className="au-seg-else" />{n(verdict.failedElsewhere)} failed elsewhere</span>
+        <span><i className="au-seg-mint" />{n(verdict.blamed)} caused by this mint</span>
+      </div>
+    </div>
+  )
+}
+
+/** Deposits, withdrawals and the average swap time of the same 7 days. */
+export function AuditDirections({ directions, avgSwapTime }: { directions: AuditDirectionFigure[]; avgSwapTime: string | null }) {
+  return (
+    <div className="au-dirs">
+      {directions.map(d => (
+        <div className="au-dir" key={d.key} data-tile={d.key}>
+          <span className="au-dir-label">{d.label}<InfoTooltip text={d.tooltip} width={240} iconSize={11} label={`About ${d.label}`} /></span>
+          {d.ok === null || d.total === null ? (
+            <span className="au-dir-value au-dir-nodata">No data</span>
+          ) : (<>
+            <span className="au-dir-value">{d.ok.toLocaleString('en-US')} <small>of {d.total.toLocaleString('en-US')}</small></span>
+            {d.total > 0 && (
+              <div className="au-mini" aria-hidden="true">
+                {d.ok > 0 && <i className="au-seg-ok" style={{ flexGrow: d.ok }} />}
+                {d.failed > 0 && <i className="au-seg-fail" style={{ flexGrow: d.failed }} />}
+              </div>
+            )}
+            {d.failed > 0 && <span className="au-dir-sub">{d.failed.toLocaleString('en-US')} failed</span>}
+          </>)}
+        </div>
+      ))}
+      {avgSwapTime && (
+        <div className="au-dir" data-tile="avg">
+          <span className="au-dir-label">Average swap time</span>
+          <span className="au-dir-value">{avgSwapTime}</span>
         </div>
       )}
+    </div>
+  )
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
+
+/** MintRadar's own count of the stored swaps per UTC day. Nothing renders while no day has a swap. */
+export function AuditDays({ daily }: { daily: AuditDay[] }) {
+  const max = Math.max(0, ...daily.map(d => d.ok + d.failed))
+  if (max === 0) return null
+  const unit = 64 / max
+  return (
+    <div className="au-days-wrap" data-testid="audit-days">
+      <div className="au-days-title">Swaps per day <span>UTC, as stored by MintRadar</span></div>
+      <div className="au-days">
+        {daily.map(d => {
+          const t = new Date(`${d.day}T00:00:00Z`)
+          const label = `${WEEKDAYS[t.getUTCDay()]} ${t.getUTCDate()} ${DATE_MONTHS[t.getUTCMonth()]}`
+          const count = d.ok + d.failed
+          return (
+            <div className="au-day" key={d.day} role="img" aria-label={`${label}: ${d.ok} succeeded, ${d.failed} failed`}>
+              <span className="au-day-count">{count > 0 ? count : ''}</span>
+              <div className="au-day-col">
+                {d.failed > 0 && <i className="au-seg-fail" style={{ height: `${Math.max(2, d.failed * unit)}px` }} />}
+                {d.ok > 0 && <i className="au-seg-ok" style={{ height: `${Math.max(2, d.ok * unit)}px` }} />}
+              </div>
+              <span className="au-day-label">{WEEKDAYS[t.getUTCDay()]}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="au-legend au-legend-small">
+        <span><i className="au-seg-ok" />succeeded</span>
+        <span><i className="au-seg-fail" />failed, whoever caused it</span>
+      </div>
     </div>
   )
 }
@@ -108,67 +149,61 @@ export function AuditStateText({ row: s }: { row: AuditSwapRow }) {
   )
 }
 
-type SwapPanel = 'from' | 'to'
-const PANELS: readonly SwapPanel[] = ['from', 'to']
+const FILTERS: ReadonlyArray<{ key: AuditSwapFilter; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'deposits', label: 'Deposits' },
+  { key: 'withdrawals', label: 'Withdrawals' },
+  { key: 'failed', label: 'Failed' },
+]
 
-/**
- * The two swap tables behind one segmented control (a tablist): "From this mint (N) | To this mint (M)", one table at a time,
- * "From this mint" first. Arrow keys / Home / End move between the tabs (automatic activation); only the active panel is in the DOM.
- */
-export function AuditCzSwapTables({ view, expandedFrom, expandedTo, onToggleFrom, onToggleTo }: {
-  view: AuditCzView
-  expandedFrom: boolean
-  expandedTo: boolean
-  onToggleFrom: () => void
-  onToggleTo: () => void
-}) {
-  const [active, setActive] = useState<SwapPanel>('from')
-  const uid = useId()
-  const tabRefs = useRef<Record<SwapPanel, HTMLButtonElement | null>>({ from: null, to: null })
-  const tabId = (p: SwapPanel) => `${uid}-tab-${p}`
-  const panelId = (p: SwapPanel) => `${uid}-panel-${p}`
-  const labels: Record<SwapPanel, string> = {
-    from: `From this mint (${view.fromRows.length})`,
-    to: `To this mint (${view.toRows.length})`,
-  }
-  function onKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
-    const i = PANELS.indexOf(active)
-    let next: SwapPanel | null = null
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = PANELS[(i + 1) % PANELS.length] ?? null
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = PANELS[(i + PANELS.length - 1) % PANELS.length] ?? null
-    else if (e.key === 'Home') next = PANELS[0] ?? null
-    else if (e.key === 'End') next = PANELS[PANELS.length - 1] ?? null
-    if (!next) return
-    e.preventDefault()
-    setActive(next)
-    tabRefs.current[next]?.focus()
-  }
+/** One list of the stored swaps of the last 7 days with a filter (was two tables behind a From / To switch). */
+export function AuditSwapList({ rows, now }: { rows: AuditSwapRow[]; now: number }) {
+  const [filter, setFilter] = useState<AuditSwapFilter>('all')
+  const [expanded, setExpanded] = useState(false)
+  if (rows.length === 0) return <p className="audit-cz-muted" data-testid="audit-swaps-empty">No swaps collected in the last 7 days.</p>
+  const filtered = filterAuditSwaps(rows, filter)
+  const shown = expanded ? filtered : filtered.slice(0, ROWS_DEFAULT)
   return (
-    <div className="audit-cz-swaps">
-      <div className="audit-cz-seg" role="tablist" aria-label="Swap direction">
-        {PANELS.map(p => (
-          <button
-            key={p}
-            type="button"
-            role="tab"
-            id={tabId(p)}
-            ref={el => { tabRefs.current[p] = el }}
-            aria-selected={active === p}
-            aria-controls={panelId(p)}
-            tabIndex={active === p ? 0 : -1}
-            className={`audit-cz-seg-btn${active === p ? ' active' : ''}`}
-            onClick={() => setActive(p)}
-            onKeyDown={onKeyDown}
-          >
-            {labels[p]}
+    <div className="au-swaps" data-testid="audit-swap-list">
+      <div className="au-chips" role="group" aria-label="Filter swaps">
+        {FILTERS.map(f => (
+          <button key={f.key} type="button" className="au-chip" aria-pressed={filter === f.key} onClick={() => { setFilter(f.key); setExpanded(false) }}>
+            {f.label} <span className="au-chip-n">{filterAuditSwaps(rows, f.key).length}</span>
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={panelId(active)} aria-labelledby={tabId(active)}>
-        {active === 'from'
-          ? <SwapTable title="Swaps from this mint" firstHeader="To" rows={view.fromRows} expanded={expandedFrom} onToggle={onToggleFrom} />
-          : <SwapTable title="Swaps to this mint" firstHeader="From" rows={view.toRows} expanded={expandedTo} onToggle={onToggleTo} />}
-      </div>
+      {filtered.length === 0 ? (
+        <p className="audit-cz-muted" data-testid="audit-swaps-none">No swaps match this filter.</p>
+      ) : (
+        <div className="audit-swaps-table-wrap" tabIndex={0} role="group" aria-label="Swaps of the last 7 days (scrollable)">
+          <table className="audit-swaps-table au-table">
+            <thead>
+              <tr><th className="au-col-when">When</th><th>Direction</th><th>Other mint</th><th className="au-num">Amount</th><th className="au-num au-col-fee">Fee</th><th className="au-num au-col-dur">Duration</th><th>Result</th></tr>
+            </thead>
+            <tbody>
+              {shown.map(s => {
+                const at = s.createdAt ? new Date(s.createdAt) : null
+                return (
+                  <tr key={s.swapId} className={s.state === 'OK' ? '' : s.neutral ? 'audit-swap-row-neutral' : 'au-row-fail'} {...(s.neutral === 'limits' || s.neutral === 'balance' ? { title: AUDIT_CZ_NEUTRAL_TITLE[s.neutral] } : {})}>
+                    <td className="au-col-when">{at ? <time dateTime={at.toISOString()} title={formatDateTimeUtc(at)}>{formatTimeAgo(at, now)}</time> : '—'}</td>
+                    <td>{s.direction === 'to' ? 'Deposit' : 'Withdrawal'}</td>
+                    <td className="au-mono">{s.toUrl ? mintHostname(s.toUrl) : '—'}</td>
+                    <td className="au-num">{s.amount !== null ? `${s.amount} sat` : '—'}</td>
+                    <td className="au-num au-col-fee">{s.fee !== null ? s.fee : '—'}</td>
+                    <td className="au-num au-col-dur">{s.timeTakenMs !== null ? <DurationText text={formatSwapDuration(s.timeTakenMs)} /> : '—'}</td>
+                    <td><span className={`au-res ${s.state === 'OK' ? 'au-res-ok' : s.neutral ? 'au-res-neutral' : 'au-res-fail'}`}><AuditStateText row={s} /></span></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {filtered.length > ROWS_DEFAULT && (
+        <button type="button" className="audit-swaps-show-all-btn" onClick={() => setExpanded(v => !v)}>
+          {expanded ? 'Show fewer' : `Show all (${filtered.length})`}
+        </button>
+      )}
     </div>
   )
 }

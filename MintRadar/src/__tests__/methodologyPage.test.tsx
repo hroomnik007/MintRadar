@@ -15,7 +15,7 @@ import {
   uptimeComponent, nutComponent, versionComponent, contactComponent, applyNewMintCap, isEligibleForRecommendation,
   NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP, MIN_RECOMMENDATION_AGE_DAYS, MAX_RECOMMENDATION_PROBE_AGE_HOURS, hasFreshProbe, TRACKED_NUT_COUNT,
 } from '@/utils/reliabilityScore'
-import { auditComponent, AUDIT_MIN_SAMPLES, AUDIT_MAX_AGE_HOURS, AUDIT_NEUTRAL } from '@/utils/auditScore'
+import { auditComponent, AUDIT_MIN_SAMPLES, AUDIT_MAX_AGE_HOURS, AUDIT_NEUTRAL, AUDIT_LONG_WINDOW_DAYS } from '@/utils/auditScore'
 import {
   classifyVersion, canonicalSoftwareName, pointsForMinorsBehind, MIN_MINTS_FOR_FALLBACK_LATEST,
   UNKNOWN_SOFTWARE_POINTS, UNPARSABLE_VERSION_POINTS,
@@ -114,6 +114,14 @@ describe('audit', () => {
     expect(M.audit.maxAgeHours).toBe(M.audit.windowDays * 24)
     expect(M.audit.neutral).toBe(AUDIT_NEUTRAL)
     expect(M.audit.neutral).toBe(M.weights.audit / 2)
+    expect(M.audit.longWindowDays).toBe(AUDIT_LONG_WINDOW_DAYS)
+    // The worse of the two windows: a clean week does not hide failures of the long window, and the reverse.
+    const at = new Date(NOW)
+    expect(auditComponent(0, 50, at, NOW, { blamed: 30, total: 200, days: 28 })).toBe(M.audit.bands[4]!.points)
+    expect(auditComponent(10, 50, at, NOW, { blamed: 10, total: 2000, days: 28 })).toBe(M.audit.bands[4]!.points)
+    // Too few swaps in 7 days: the long window alone decides; a long window of 7 days adds nothing.
+    expect(auditComponent(0, M.audit.minSwaps - 1, at, NOW, { blamed: 0, total: 40, days: 21 })).toBe(M.audit.bands[0]!.points)
+    expect(auditComponent(0, M.audit.minSwaps - 1, at, NOW, { blamed: 0, total: 40, days: 7 })).toBe(M.audit.neutral)
   })
 
   it('neutral under the minimum, without data and when older than the freshness limit', () => {
