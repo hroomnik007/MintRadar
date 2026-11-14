@@ -71,7 +71,9 @@ test.describe('Mint Detail score without a stored score', () => {
     await expect(gaugeNum(page)).toBeVisible()
     await expect(gaugeNum(page)).toHaveText(PLACEHOLDER)
     await expect(gaugeNum(page)).toHaveAttribute('aria-label', 'Score not available yet')
-    await expect(page.getByRole('img', { name: 'Score not available yet' })).toHaveCount(1)
+    // Two placeholders: the gauge and the Reliability Score tile of the figure strip (above 640px since 2026-11-14).
+    await expect(page.getByRole('img', { name: 'Score not available yet' })).toHaveCount(2)
+    await expect(page.getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText(PLACEHOLDER)
     await expect(badge(page)).toHaveText('Not available yet')
     await expect(badge(page)).not.toContainText('Reliability')
     // the Uptime row is the part computed from the missing history: no "0%" and no "0/40" either
@@ -88,6 +90,7 @@ test.describe('Mint Detail score without a stored score', () => {
     await page.locator('.md-tab', { hasText: /^Overview/ }).click()
     await expect(gaugeNum(page)).toHaveText('71')
     await expect(gaugeNum(page)).not.toHaveAttribute('aria-label', /.+/)
+    await expect(page.getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText('71')
     await expect(badge(page)).toHaveText('High Reliability')
     await expect(uptimeScore(page)).toHaveText('40/40')
   })

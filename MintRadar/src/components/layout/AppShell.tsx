@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchStats, scheduleStatsWarmup } from '@/core/mint/prefetch'
@@ -91,6 +91,27 @@ const FOCUS_COPY = {
   },
 } as const
 
+
+type LoginMethodChoice = { id: 'nip07' | 'remote-signer'; title: string; desc: string; icon: ReactNode }
+const NIP07_CHOICE: LoginMethodChoice = { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer', icon: <IcPuzzle /> }
+const REMOTE_SIGNER_CHOICE: LoginMethodChoice = { id: 'remote-signer', title: 'Remote signer', desc: 'Sign in with Amber, Primal or any NIP-46 signer — your key stays on your phone', icon: <IcQrcode /> }
+
+/**
+ * The first two login methods, in picker order. A phone or tablet browser gets Remote signer first: NIP-07 extensions do
+ * not run in most mobile browsers (Chrome, Safari), a signer app does. A desktop keeps Nostr extension first. "Nostr key
+ * (nsec)" is always the third row, after these two.
+ */
+function loginMethodOrder(mobile: boolean): readonly LoginMethodChoice[] {
+  return mobile ? [REMOTE_SIGNER_CHOICE, NIP07_CHOICE] : [NIP07_CHOICE, REMOTE_SIGNER_CHOICE]
+}
+
+/** "New to Nostr?": apps where a person can create a Nostr account; MintRadar never generates a key itself. */
+const NEW_TO_NOSTR_APPS: readonly { name: string; href: string; desc: string }[] = [
+  { name: 'Primal', href: 'https://primal.net', desc: 'creates an account on iOS, Android or the web and can sign in here as a remote signer' },
+  { name: 'Amber', href: 'https://github.com/greenart7c3/Amber', desc: 'an Android app that keeps your key and signs for other apps' },
+  { name: 'Alby', href: 'https://getalby.com', desc: 'a browser extension for desktop that keeps your key' },
+]
+
 export function AppShell() {
   const queryClient = useQueryClient()
   const warmStats = useCallback(() => prefetchStats(queryClient), [queryClient])
@@ -146,6 +167,8 @@ export function AppShell() {
   // false → the three-method picker is shown; true → collapsed to the focused
   // view for `loginMethod`, with a "Back" link to return to the picker.
   const [methodPicked, setMethodPicked] = useState(false)
+  // "New to Nostr?" under the three methods: a short text with apps where an account can be made (no key is generated here).
+  const [showNewToNostr, setShowNewToNostr] = useState(false)
   const [nsecInput, setNsecInput] = useState('')
   const [nsecError, setNsecError] = useState('')
   const [bunkerInput, setBunkerInput] = useState('')
@@ -175,6 +198,7 @@ export function AppShell() {
     setNsecError('')
     setLoginMethod('nip07')
     setMethodPicked(false)
+    setShowNewToNostr(false)
     setBunkerInput('')
     setBunkerError('')
     setQrUri('')
@@ -409,10 +433,7 @@ export function AppShell() {
                 </div>
 
                 <div className="nostr-modal-methods">
-                  {([
-                    { id: 'nip07', title: 'Nostr extension', desc: 'Sign in with Alby, nos2x or any NIP-07 signer', icon: <IcPuzzle /> },
-                    { id: 'remote-signer', title: 'Remote signer', desc: 'Sign in with Amber, Primal or any NIP-46 signer — your key stays on your phone', icon: <IcQrcode /> },
-                  ] as const).map(m => (
+                  {loginMethodOrder(isMobileDevice()).map(m => (
                     <div
                       key={m.id}
                       className="nostr-method-card"
@@ -444,6 +465,31 @@ export function AppShell() {
                     </div>
                     <div className="nostr-method-chevron" aria-hidden="true">›</div>
                   </div>
+                </div>
+
+                <div className="nostr-new-to-nostr">
+                  <button
+                    type="button"
+                    className="nostr-new-to-nostr-toggle"
+                    aria-expanded={showNewToNostr}
+                    aria-controls="nostr-new-to-nostr-panel"
+                    onClick={() => setShowNewToNostr(v => !v)}
+                  >
+                    New to Nostr? Get started
+                  </button>
+                  {showNewToNostr && (
+                    <div className="nostr-new-to-nostr-panel" id="nostr-new-to-nostr-panel" data-testid="new-to-nostr">
+                      <p>A Nostr account is a key that you hold, not a login stored by MintRadar. Create one in one of these apps:</p>
+                      <ul>
+                        {NEW_TO_NOSTR_APPS.map(a => (
+                          <li key={a.name}>
+                            <a href={a.href} target="_blank" rel="noopener noreferrer">{a.name}</a> — {a.desc}
+                          </li>
+                        ))}
+                      </ul>
+                      <p>Then come back here and sign in with Remote signer or Nostr extension.</p>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

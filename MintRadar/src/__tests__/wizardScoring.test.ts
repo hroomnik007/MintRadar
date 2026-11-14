@@ -67,3 +67,33 @@ describe('latencyScore (2026-11-13: stable order without "Fast from here")', () 
     expect(score(98, 458)).toBeGreaterThan(score(97, 64))
   })
 })
+
+describe('latencyPart (2026-11-14: without "Fast from here" latency only breaks ties)', () => {
+  it('without Fast it is worth at most LATENCY_TIE_BREAK_POINTS Reliability points, also for a failed measurement', async () => {
+    const { latencyPart, weightsFor, LATENCY_TIE_BREAK_POINTS } = await import('@/utils/wizardScoring')
+    expect(LATENCY_TIE_BREAK_POINTS).toBe(2)
+    for (const size of ['small', 'medium', 'large'] as const) {
+      const w = weightsFor(new Set(['reliable']), size)
+      const point = w.reliability / 100
+      expect(latencyPart(w, 64, 1380, false)).toBeCloseTo(LATENCY_TIE_BREAK_POINTS * point, 12)
+      expect(latencyPart(w, null, 1380, false)).toBe(0)
+      expect(latencyPart(w, 64, 1380, false) - latencyPart(w, null, 1380, false)).toBeLessThanOrEqual(LATENCY_TIE_BREAK_POINTS * point + 1e-12)
+    }
+  })
+  it('"Reliable": a mint 3 points better stays #1 even when its measurement failed or it is slow; 1 point can be swapped by speed', async () => {
+    const { latencyPart, weightsFor } = await import('@/utils/wizardScoring')
+    const w = weightsFor(new Set(['reliable']), 'medium')
+    const score = (rel: number, ms: number | null) => latencyPart(w, ms, 1380, false) + w.reliability * (rel / 100)
+    expect(score(98, null)).toBeGreaterThan(score(95, 64))
+    expect(score(98, 4000)).toBeGreaterThan(score(95, 64))
+    expect(score(98, 2100)).toBeGreaterThan(score(96, 64) - 1e-12)
+    expect(score(97, 64)).toBeGreaterThan(score(98, null))
+    // Two mints of normal speed: speed never matters, the score does.
+    expect(score(98, 1900)).toBeGreaterThan(score(97, 40))
+  })
+  it('with Fast the full latency weight still applies (latency is the chosen priority)', async () => {
+    const { latencyPart, latencyScore, weightsFor } = await import('@/utils/wizardScoring')
+    const w = weightsFor(new Set(['fast']), 'small')
+    expect(latencyPart(w, 100, 1000, true)).toBeCloseTo(w.latency * latencyScore(100, 1000, true), 12)
+  })
+})

@@ -51,7 +51,7 @@ test.describe('Dashboard method filter', () => {
     await page.goto('/')
     await expect(cards(page)).toHaveCount(4)
     await page.locator('.filter-btn').click()
-    await expect(page.locator('.filter-method-chip')).toHaveText(['bolt11', 'bolt12', 'onchain'])
+    await expect(page.locator('.filter-method-chip')).toHaveText(['Lightning bolt11', 'bolt12', 'On-chain'])
     await chip(page, 'bolt11').click()
     await expect(chip(page, 'bolt11')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.filter-apply-btn')).toHaveText('Show 3 of 4')
