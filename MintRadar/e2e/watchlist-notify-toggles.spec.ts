@@ -268,7 +268,7 @@ test.describe('Watchlist notification toggles', () => {
     const explainer = page.locator('.wl-notify-explainer')
     await expect(explainer).toHaveCount(1)
     await expect(explainer).toHaveText("Optional Nostr DMs: one when a watched mint goes down, one when it's back (max once an hour each, 40 a day in total). With any alert on, you also get key and fee changes. Needs a Nostr client with private messages.")
-    expect(await explainer.evaluate(el => getComputedStyle(el).fontSize)).toBe('11.5px')
+    expect(await explainer.evaluate(el => getComputedStyle(el).fontSize)).toBe('12px')
     const e = (await explainer.boundingBox())!
     const g = (await page.locator('.wl-grid').boundingBox())!
     expect(e.y + e.height).toBeLessThanOrEqual(g.y + 1)
