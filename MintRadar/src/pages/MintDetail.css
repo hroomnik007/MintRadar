@@ -2804,13 +2804,14 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* ── Audit tab, new layout (2026-11-13): verdict, one bar, directions, swaps per day, one swap list ──────────────
    Red (--red) is only the failures cashu.info attributes to THIS mint. A single failed swap is amber: the source
    does not say per swap who caused it. "Failed elsewhere" is a hatched neutral. */
-.au-verdict { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 6px 0 18px; }
-.au-verdict-num { font-family: var(--font-mono); font-size: 44px; line-height: 1; font-weight: 500; color: var(--accent); font-variant-numeric: tabular-nums; }
-.au-verdict-num-bad { color: var(--red); }
-.au-verdict-text { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 1.45; color: var(--text2); }
+.au-verdict { display: flex; align-items: flex-start; margin: 6px 0 18px; }
+.au-verdict-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.45; color: var(--text2); }
 .au-verdict-text strong { font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.3; }
+.au-verdict-text strong.au-verdict-bad { color: var(--red); }
+.au-verdict-rate { font-family: var(--font-mono); font-size: 15px; line-height: 1.3; color: var(--text); font-variant-numeric: tabular-nums; }
+.au-verdict-rate-empty { color: var(--text3); }
+.au-verdict-hint { font-size: 13px; line-height: 1.4; color: var(--text3); }
 .au-verdict-more { color: var(--text3); font-size: 13px; }
-.au-pill { font-family: var(--font-mono); font-size: 12px; line-height: 1.4; padding: 5px 10px; border-radius: 99px; white-space: nowrap; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .au-seg-ok { background: var(--accent); }
 .au-seg-else { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text3) 70%, var(--bg)) 0 4px, color-mix(in srgb, var(--text3) 40%, var(--bg)) 4px 8px); }
 .au-seg-mint { background: var(--red); }
@@ -2841,12 +2842,79 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .au-day-col { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 72px; border-bottom: 1px solid var(--border); }
 .au-day-col i { display: block; border-radius: 2px; }
 .au-day-label { font-family: var(--font-mono); font-size: 12px; line-height: 1.3; color: var(--text3); text-align: center; }
-.au-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.au-chip { font-family: var(--font-body); font-size: 13px; line-height: 1.4; padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border2); background: none; color: var(--text2); cursor: pointer; transition: all var(--transition); }
-.au-chip:hover { color: var(--text); }
-.au-chip[aria-pressed="true"] { background: var(--surface-2); color: var(--text); border-color: var(--accent); }
-.au-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.au-chip-n { font-family: var(--font-mono); font-size: 12px; color: var(--text3); margin-left: 2px; }
+/* Swap-list filter: same look as the dashboard segmented filters (.filter-seg / .filter-seg-opt).
+   One row always; on a narrow screen the row scrolls sideways instead of wrapping. */
+.au-chips-wrap {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* 8px band so a 28px bar still has a 44px touch target, without clipping ::before (overflow-x would otherwise force overflow-y). */
+  padding-block: 8px;
+  margin-block: -8px 2px;
+  scrollbar-width: thin;
+}
+.au-chips {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: max-content;
+  height: 28px;
+  position: relative;
+  border-radius: 8px;
+}
+/* Overlay frame (not a real border) so the options stay a full 28 px, as .filter-seg does. */
+.au-chips::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.au-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  padding: 0 10px;
+  white-space: nowrap;
+  background-color: var(--surface-3);
+  background-image: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.au-chip + .au-chip { border-left: 1px solid var(--border2); }
+.au-chip:first-child { border-radius: 8px 0 0 8px; }
+.au-chip:last-child { border-radius: 0 8px 8px 0; }
+.au-chip[aria-pressed="true"] {
+  background-image: linear-gradient(var(--accent-dim), var(--accent-dim));
+  box-shadow: inset 0 0 0 1px var(--accent-brd);
+  color: var(--accent);
+}
+.au-chip:active:not([aria-pressed="true"]) { background-color: var(--surface-2); }
+.au-chip:focus-visible { z-index: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .au-chip:not([aria-pressed="true"]):hover {
+    background-image: linear-gradient(var(--border), var(--border));
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    color: var(--text);
+  }
+  .au-chip:not([aria-pressed="true"]):active { background-image: none; }
+}
+@media (pointer: coarse), (max-width: 600px) {
+  .au-chip::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
+}
+.au-chip-n { font-family: var(--font-mono); font-size: 12px; color: var(--text3); margin-left: 4px; }
+.au-chip[aria-pressed="true"] .au-chip-n { color: var(--accent); }
 .au-table .au-num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .au-table .au-mono { font-family: var(--font-mono); }
 .au-table td, .au-table th { white-space: nowrap; }
@@ -2855,13 +2923,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .au-res-fail { color: var(--amber); background: color-mix(in srgb, var(--amber) 13%, transparent); }
 .au-res-neutral { color: var(--text3); padding-left: 0; }
 @media (max-width: 767px) {
-  .au-verdict { gap: 12px; }
-  .au-verdict-num { font-size: 36px; }
   .au-dirs { grid-template-columns: 1fr; }
   .au-dir { padding: 12px 0; }
   .au-dir + .au-dir { border-left: 0; border-top: 1px solid var(--border); padding-left: 0; }
   .au-days { gap: 4px; }
-  .au-chip { min-height: 44px; }
   /* Phones: four columns that fit 320 px without a sideways scroll; the host is cut with an ellipsis. */
   .au-table .au-col-when, .au-table .au-col-fee, .au-table .au-col-dur { display: none; }
   .au-table { table-layout: fixed; font-size: 12px; }

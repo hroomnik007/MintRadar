@@ -2,7 +2,7 @@ import { Fragment, useState, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import {
   auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
-  auditVerdictHeadline, auditVerdictDetail, auditLongLine, auditSinceLine,
+  auditVerdictHeadline, auditSuccessRateText, AUDIT_SCORE_HINT, auditLongLine, auditSinceLine, isLongerAuditWindow,
   type AuditCzView, type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
 } from '@/utils/auditCz'
 import { mintHostname, formatTimeAgo } from '@/utils/mintFormatting'
@@ -17,24 +17,25 @@ import { formatDate, formatDateTimeUtc, DATE_MONTHS } from '@/utils/formatDate'
 
 const ROWS_DEFAULT = 8
 
-/** The verdict: the attributed failures as the big number, what it is out of, and the points it gives. */
-export function AuditVerdictBlock({ verdict, points, view }: { verdict: AuditVerdict; points: string | null; view: AuditCzView }) {
+/** The 7-day heading, the raw success rate, and (when it counts) the longer window. */
+export function AuditVerdictBlock({ verdict, view }: { verdict: AuditVerdict; view: AuditCzView }) {
+  const rate = auditSuccessRateText(verdict)
   return (
     <div className="au-verdict" data-testid="audit-verdict">
-      <span className={`au-verdict-num${verdict.blamed > 0 ? ' au-verdict-num-bad' : ''}`} data-testid="audit-verdict-num">{verdict.blamed.toLocaleString('en-US')}</span>
       <div className="au-verdict-text">
-        <strong>{auditVerdictHeadline(verdict)}</strong>
-        <span>{auditVerdictDetail(verdict)}</span>
-        {view.long && <span className="au-verdict-more" data-testid="audit-long-line">{auditLongLine(view.long)}</span>}
-        {view.since && <span className="au-verdict-more" data-testid="audit-since-line">{auditSinceLine(view.since, formatDate(`${view.since.day}T00:00:00Z`))}</span>}
+        <strong className={verdict.blamed > 0 ? 'au-verdict-bad' : undefined} data-testid="audit-verdict-headline">{auditVerdictHeadline(verdict)}</strong>
+        <span className={`au-verdict-rate${verdict.total === 0 ? ' au-verdict-rate-empty' : ''}`} data-testid="audit-success-rate">Success rate {rate}</span>
+        <span className="au-verdict-hint" data-testid="audit-score-hint">{AUDIT_SCORE_HINT}</span>
+        {isLongerAuditWindow(view.long) && view.long && <span className="au-verdict-more" data-testid="audit-long-line">{auditLongLine(view.long)}</span>}
+        {isLongerAuditWindow(view.long) && view.since && <span className="au-verdict-more" data-testid="audit-since-line">{auditSinceLine(view.since, formatDate(`${view.since.day}T00:00:00Z`))}</span>}
       </div>
-      {points && <span className="au-pill" data-testid="audit-points-pill">Audit part {points}</span>}
     </div>
   )
 }
 
 /** The 7 days as one bar: succeeded, failed elsewhere, caused by this mint. The legend carries the numbers. */
 export function AuditStack({ verdict }: { verdict: AuditVerdict }) {
+  if (verdict.total <= 0) return null
   const n = (v: number) => v.toLocaleString('en-US')
   return (
     <div className="au-stack-wrap">
@@ -165,12 +166,14 @@ export function AuditSwapList({ rows, now }: { rows: AuditSwapRow[]; now: number
   const shown = expanded ? filtered : filtered.slice(0, ROWS_DEFAULT)
   return (
     <div className="au-swaps" data-testid="audit-swap-list">
-      <div className="au-chips" role="group" aria-label="Filter swaps">
-        {FILTERS.map(f => (
-          <button key={f.key} type="button" className="au-chip" aria-pressed={filter === f.key} onClick={() => { setFilter(f.key); setExpanded(false) }}>
-            {f.label} <span className="au-chip-n">{filterAuditSwaps(rows, f.key).length}</span>
-          </button>
-        ))}
+      <div className="au-chips-wrap">
+        <div className="au-chips" role="group" aria-label="Filter swaps">
+          {FILTERS.map(f => (
+            <button key={f.key} type="button" className="au-chip" aria-pressed={filter === f.key} onClick={() => { setFilter(f.key); setExpanded(false) }}>
+              {f.label} <span className="au-chip-n">{filterAuditSwaps(rows, f.key).length}</span>
+            </button>
+          ))}
+        </div>
       </div>
       {filtered.length === 0 ? (
         <p className="audit-cz-muted" data-testid="audit-swaps-none">No swaps match this filter.</p>

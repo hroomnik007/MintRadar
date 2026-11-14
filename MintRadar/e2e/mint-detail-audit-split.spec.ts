@@ -186,11 +186,20 @@ test.describe('swap list filter', () => {
     expect(Math.abs((await top()) - before)).toBeLessThanOrEqual(0.5)
   })
 
-  test('phone: every filter button is at least 44 px high', async ({ page }) => {
+  test('phone: every filter button is 28 px tall with a 44 px touch target', async ({ page }) => {
     await resize(page, 390, 844)
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: swaps() })))
     await layoutReady(page)
-    for (const b of await chips(page).all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    for (const b of await chips(page).all()) {
+      const r = await b.evaluate(el => {
+        const box = el.getBoundingClientRect()
+        const pseudo = getComputedStyle(el, '::before')
+        return { h: box.height, pseudoH: parseFloat(pseudo.height), pseudoContent: pseudo.content }
+      })
+      expect(r.h).toBe(28)
+      expect(r.pseudoContent).toBe('""')
+      expect(r.pseudoH).toBeGreaterThanOrEqual(44)
+    }
   })
 
   test('a list with no failed swap shows no failed chip in any row', async ({ page }) => {
@@ -303,16 +312,26 @@ for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const
         const pr = root.getBoundingClientRect()
         const out: string[] = []
         const small: string[] = []
+        const chips = root.querySelector('.au-chips-wrap')
+        const chipsBox = chips?.getBoundingClientRect()
+        const chipBtns = chips ? [...chips.querySelectorAll<HTMLElement>('.au-chip')] : []
+        const chipTops = chipBtns.map(el => el.getBoundingClientRect().top)
+        const chipsInPanel = !chipsBox || (chipsBox.right <= pr.right + 1 && chipsBox.left >= pr.left - 1)
+        const chipsOneRow = chipTops.length < 2 || Math.max(...chipTops) - Math.min(...chipTops) < 2
         for (const el of root.querySelectorAll<HTMLElement>('*')) {
           if (el.closest('.audit-swaps-table-wrap')) continue // the table has its own box
+          if (el.closest('.au-chips-wrap') && el !== chips) continue // the filter row scrolls sideways on phones
           const r = el.getBoundingClientRect()
           if (r.width > 0 && (r.right > pr.right + 1 || r.left < pr.left - 1)) out.push(String(el.className || el.tagName))
           if (!el.closest('.sr-only') && [...el.childNodes].some(n => n.nodeType === 3 && (n.textContent ?? '').trim()) && parseFloat(getComputedStyle(el).fontSize) < 12) small.push(String(el.className || el.tagName))
         }
-        return { out, small, docOverflow: document.documentElement.scrollWidth - window.innerWidth }
+        return { out, small, docOverflow: document.documentElement.scrollWidth - window.innerWidth, chipsInPanel, chipsOneRow, chipCount: chipBtns.length }
       })
       expect(m.out, String(filter)).toEqual([])
       expect(m.docOverflow, String(filter)).toBeLessThanOrEqual(0)
+      expect(m.chipsInPanel, String(filter)).toBe(true)
+      expect(m.chipsOneRow, String(filter)).toBe(true)
+      expect(m.chipCount, String(filter)).toBe(4)
       if (w <= 480) expect(m.small, String(filter)).toEqual([])
     }
   })

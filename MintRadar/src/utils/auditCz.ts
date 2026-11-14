@@ -36,7 +36,7 @@ export interface AuditSwapRow {
   reason?: string
 }
 
-/** The 7-day verdict above everything else: how many swaps failed because of this mint, of how many. */
+/** The 7-day figures above everything else: how many swaps ran, how many failed because of this mint, and the raw success rate. */
 export interface AuditVerdict {
   total: number
   /** Failures cashu.info attributes to this mint (never more than total). */
@@ -206,33 +206,49 @@ export function auditDirections(d: AuditCzDetail): AuditDirectionFigure[] {
 export function auditVerdict(d: AuditCzDetail): AuditVerdict | null {
   const s = d.swaps7d
   const total = num(s?.all?.total), blamedRaw = num(s?.errorsBlamed)
-  if (total === undefined || total <= 0 || blamedRaw === undefined) return null
+  if (total === undefined || blamedRaw === undefined) return null
   const blamed = Math.min(blamedRaw, total)
   const failed = Math.min(Math.max(num(s?.all?.failed) ?? blamed, blamed), total)
   return { total, blamed, failedElsewhere: failed - blamed, ok: total - failed }
 }
 
 const swapsWord = (n: number) => (n === 1 ? '1 swap' : `${fmt(n)} swaps`)
+const failuresWord = (n: number) => (n === 1 ? '1 failure' : `${fmt(n)} failures`)
 
-/** "of 53 swaps failed because of this mint" (the number in front of it is `blamed`). */
+/** True when the long window is one Methodology 8 would use: more than the 7-day window. */
+export function isLongerAuditWindow<T extends { windowDays: number }>(l: T | null | undefined): l is T {
+  return !!l && l.windowDays > AUDIT_WINDOW_DAYS
+}
+
+/** "Last 7 days: 50 swaps, 0 failures caused by this mint"; with no swaps, only the count. */
 export function auditVerdictHeadline(v: AuditVerdict): string {
-  return `of ${swapsWord(v.total)} failed because of this mint`
+  if (v.total === 0) return `Last ${AUDIT_WINDOW_DAYS} days: 0 swaps`
+  return `Last ${AUDIT_WINDOW_DAYS} days: ${swapsWord(v.total)}, ${failuresWord(v.blamed)} caused by this mint`
 }
 
-/** The line under the headline: what happened to the other swaps. */
-export function auditVerdictDetail(v: AuditVerdict): string {
-  if (v.failedElsewhere === 0) return v.blamed === 0 ? `Every swap of the last ${AUDIT_WINDOW_DAYS} days succeeded.` : 'No other swap failed.'
-  return `${swapsWord(v.failedElsewhere)} failed for other reasons and ${v.failedElsewhere === 1 ? 'does' : 'do'} not count against it.`
+/** Successful swaps / all swaps in the last 7 days, as a whole percent; null when there were none. */
+export function auditSuccessRate(v: AuditVerdict): number | null {
+  if (v.total <= 0) return null
+  return Math.round((v.ok / v.total) * 100)
 }
+
+/** "92%" or "—" when there were no swaps. */
+export function auditSuccessRateText(v: AuditVerdict): string {
+  const rate = auditSuccessRate(v)
+  return rate === null ? '—' : `${rate}%`
+}
+
+/** Under the success rate: the score still ignores failures the source does not attribute to this mint. */
+export const AUDIT_SCORE_HINT = 'The score only counts failures caused by this mint.'
 
 /** "Last 28 days: 2 of 212 swaps failed because of this mint." */
 export function auditLongLine(l: { windowDays: number; swaps: number; attributedFailures: number }): string {
   return `Last ${l.windowDays} days: ${fmt(l.attributedFailures)} of ${swapsWord(l.swaps)} failed because of this mint.`
 }
 
-/** "Since 13 Nov 2026: 3 of 420 swaps." (`dayText` is the formatted first day.) */
+/** "Longer window (since 13 Nov 2026): 420 swaps, 3 failures caused by this mint" (`dayText` is the formatted first day.) */
 export function auditSinceLine(s: { swaps: number; attributedFailures: number }, dayText: string): string {
-  return `Since ${dayText}: ${fmt(s.attributedFailures)} of ${swapsWord(s.swaps)}.`
+  return `Longer window (since ${dayText}): ${swapsWord(s.swaps)}, ${failuresWord(s.attributedFailures)} caused by this mint`
 }
 
 /** The rows a filter chip shows. "Failed" leaves out the grey rows that are not counted against the mint. */
@@ -281,8 +297,9 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     directions: auditDirections(data.detail),
     avgSwapTime: avg !== undefined ? formatAvgSwapTime(avg) : null,
     daily: Array.isArray(data.daily7d) ? data.daily7d : [],
-    long: data.long ?? null,
-    since: data.since && (!data.long || data.since.swaps > data.long.swaps) && data.since.swaps > (num(data.detail.swaps7d?.all?.total) ?? 0) ? data.since : null,
+    long: isLongerAuditWindow(data.long) ? data.long : null,
+    // Hidden while the long window is 7 days or shorter (Methodology 8 ignores it then), or when it adds nothing beyond that window.
+    since: data.since && isLongerAuditWindow(data.long) && data.since.swaps > data.long.swaps ? data.since : null,
   }
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditVerdictDetail, auditLongLine, auditSinceLine, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, AUDIT_SCORE_HINT, auditLongLine, auditSinceLine, isLongerAuditWindow, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -37,8 +37,9 @@ describe('verdict, directions and average from the stored detail (LNpay values)'
   it('the verdict is the numbers the score reads; directions and the average come from the same detail', () => {
     const v = view([])
     expect(v.verdict).toEqual({ total: 126, blamed: 0, failedElsewhere: 19, ok: 107 })
-    expect(auditVerdictHeadline(v.verdict!)).toBe('of 126 swaps failed because of this mint')
-    expect(auditVerdictDetail(v.verdict!)).toBe('19 swaps failed for other reasons and do not count against it.')
+    expect(auditVerdictHeadline(v.verdict!)).toBe('Last 7 days: 126 swaps, 0 failures caused by this mint')
+    expect(auditSuccessRate(v.verdict!)).toBe(85) // 107/126, raw, not counting only blamed failures
+    expect(auditSuccessRateText(v.verdict!)).toBe('85%')
     expect(dirs(LNPAY)['mints']).toMatchObject({ label: 'Deposits (mint)', ok: 56, total: 62, failed: 6 })
     expect(dirs(LNPAY)['melts']).toMatchObject({ label: 'Withdrawals (melt)', ok: 51, total: 64, failed: 13 })
     expect(v.directions.map(x => x.key)).toEqual(['mints', 'melts'])
@@ -47,13 +48,18 @@ describe('verdict, directions and average from the stored detail (LNpay values)'
   it('verdict: lnw.cash-like, 202 blamed of 229 with 207 failed', () => {
     const v = verdict({ total: 229, success: 22, failed: 207 }, 202)!
     expect(v).toEqual({ total: 229, blamed: 202, failedElsewhere: 5, ok: 22 })
-    expect(auditVerdictDetail(v)).toBe('5 swaps failed for other reasons and do not count against it.')
+    expect(auditVerdictHeadline(v)).toBe('Last 7 days: 229 swaps, 202 failures caused by this mint')
+    expect(auditSuccessRate(v)).toBe(10) // 22/229
   })
-  it('verdict wording: singular, no other failure, a clean week', () => {
-    expect(auditVerdictDetail(verdict({ total: 50, success: 49, failed: 1 }, 0)!)).toBe('1 swap failed for other reasons and does not count against it.')
-    expect(auditVerdictDetail(verdict({ total: 50, success: 48, failed: 2 }, 2)!)).toBe('No other swap failed.')
-    expect(auditVerdictDetail(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe('Every swap of the last 7 days succeeded.')
-    expect(auditVerdictHeadline(verdict({ total: 1, success: 1, failed: 0 }, 0)!)).toBe('of 1 swap failed because of this mint')
+  it('verdict wording: singular, a clean week, and no swaps', () => {
+    expect(auditVerdictHeadline(verdict({ total: 1, success: 1, failed: 0 }, 0)!)).toBe('Last 7 days: 1 swap, 0 failures caused by this mint')
+    expect(auditVerdictHeadline(verdict({ total: 1, success: 0, failed: 1 }, 1)!)).toBe('Last 7 days: 1 swap, 1 failure caused by this mint')
+    expect(auditVerdictHeadline(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe('Last 7 days: 50 swaps, 0 failures caused by this mint')
+    expect(auditVerdictHeadline(verdict({ total: 0, success: 0, failed: 0 }, 0)!)).toBe('Last 7 days: 0 swaps')
+    expect(auditSuccessRate(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe(100)
+    expect(auditSuccessRate(verdict({ total: 50, success: 46, failed: 4 }, 1)!)).toBe(92) // raw 46/50, not 49/50
+    expect(auditSuccessRateText(verdict({ total: 0, success: 0, failed: 0 }, 0)!)).toBe('—')
+    expect(AUDIT_SCORE_HINT).toBe('The score only counts failures caused by this mint.')
   })
   it('verdict: fewer than 10 swaps still shows the numbers', () => {
     expect(verdict({ total: 4, success: 4, failed: 0 }, 0)).toEqual({ total: 4, blamed: 0, failedElsewhere: 0, ok: 4 })
@@ -61,7 +67,7 @@ describe('verdict, directions and average from the stored detail (LNpay values)'
   it('verdict: hostile numbers are clamped or hide it', () => {
     expect(verdict({ total: 20, failed: 20 }, 999)).toEqual({ total: 20, blamed: 20, failedElsewhere: 0, ok: 0 })
     expect(verdict({ total: 20, failed: 999 }, 1)).toEqual({ total: 20, blamed: 1, failedElsewhere: 19, ok: 0 })
-    expect(verdict({ total: 0, failed: 0 }, 0)).toBeNull()
+    expect(verdict({ total: 0, failed: 0 }, 0)).toEqual({ total: 0, blamed: 0, failedElsewhere: 0, ok: 0 })
     expect(verdict({ total: NaN }, 0)).toBeNull()
     expect(verdict({ total: -5 }, 0)).toBeNull()
     expect(verdict({ total: 20 }, NaN)).toBeNull()
@@ -84,16 +90,21 @@ describe('verdict, directions and average from the stored detail (LNpay values)'
     expect(t['mints']).toMatchObject({ ok: 0, total: 1, failed: 1 })
     expect(dirs({ fetchedAt: null, swaps7d: { asSource: { total: 3, success: 0, failed: 99 } } })['melts']).toMatchObject({ failed: 3 })
   })
-  it('long window and since: shown only when they hold more than the shorter window', () => {
+  it('long window and since: shown only when the long window is longer than 7 days and since adds more', () => {
     const long = { windowDays: 28, swaps: 410, attributedFailures: 2 }
     expect(view([], LNPAY, { long }).long).toEqual(long)
+    expect(isLongerAuditWindow(long)).toBe(true)
     expect(auditLongLine(long)).toBe('Last 28 days: 2 of 410 swaps failed because of this mint.')
     expect(view([]).long).toBeNull()
     const since = { day: '2026-08-01', swaps: 900, attributedFailures: 3 }
     expect(view([], LNPAY, { long, since }).since).toEqual(since)
     expect(view([], LNPAY, { long, since: { ...since, swaps: 410 } }).since).toBeNull()
-    expect(view([], LNPAY, { since: { ...since, swaps: 126 } }).since).toBeNull()
-    expect(auditSinceLine(since, '1 Aug 2026')).toBe('Since 1 Aug 2026: 3 of 900 swaps.')
+    expect(view([], LNPAY, { since }).since).toBeNull() // no long window yet
+    expect(view([], LNPAY, { long: { windowDays: 7, swaps: 126, attributedFailures: 0 }, since }).since).toBeNull()
+    expect(view([], LNPAY, { long: { windowDays: 7, swaps: 126, attributedFailures: 0 } }).long).toBeNull()
+    expect(isLongerAuditWindow({ windowDays: 7 })).toBe(false)
+    expect(auditSinceLine(since, '1 Aug 2026')).toBe('Longer window (since 1 Aug 2026): 900 swaps, 3 failures caused by this mint')
+    expect(auditSinceLine({ swaps: 1, attributedFailures: 1 }, '7 Nov 2026')).toBe('Longer window (since 7 Nov 2026): 1 swap, 1 failure caused by this mint')
   })
   it('swaps per day pass through; a missing list is empty', () => {
     const daily7d = [{ day: '2026-10-07', ok: 3, failed: 1, other: 0 }]

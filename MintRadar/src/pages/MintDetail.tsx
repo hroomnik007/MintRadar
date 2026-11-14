@@ -1529,7 +1529,6 @@ function MintDetailContent({ url }: { url: string }) {
               auditCzLoading={auditCzLoading}
               czView={czView}
               czSyncNote={czSyncNote}
-              auditPoints={auditState === 'scored' ? `${rowAScore} / ${AUDIT_POINTS}` : null}
               now={now}
             />
           )}
