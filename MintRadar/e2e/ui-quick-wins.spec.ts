@@ -145,6 +145,50 @@ test('"Refresh mint list" keeps the filters; the panel\'s Reset clears them', as
   await expect(page).not.toHaveURL(/[?&]reliability=/)
 })
 
+// The server sends Cache-Control: public, max-age=300 on /api/mints/known: a plain refetch came from the browser's cache and
+// the button looked dead. The refresh revalidates (cache: 'no-cache' = a conditional request) and spins while it runs.
+test('"Refresh mint list" revalidates past the browser cache, spins while it runs and is not clickable meanwhile', async ({ page }) => {
+  // Which cache mode each request for the list asked for (a request itself only carries a header when the browser holds a copy).
+  await page.addInitScript(() => {
+    const w = window as unknown as { __knownCache: Array<string | undefined> }
+    w.__knownCache = []
+    const orig = window.fetch.bind(window)
+    window.fetch = (input, init) => {
+      if (String(input).includes('/api/mints/known')) w.__knownCache.push(init?.cache)
+      return orig(input, init)
+    }
+  })
+  const modes = () => page.evaluate(() => (window as unknown as { __knownCache: Array<string | undefined> }).__knownCache)
+  let release: () => void = () => {}
+  let hold = false
+  let requests = 0
+  await page.route('**/api/mints/known', async route => {
+    requests++
+    if (hold) await new Promise<void>(r => { release = r })
+    await route.fallback()
+  })
+  await page.goto('/')
+  await expect(page.locator('.mint-card').first()).toBeVisible()
+  const before = requests
+  hold = true
+  const btn = page.getByRole('button', { name: 'Refresh mint list' })
+  await btn.click()
+  await expect(btn).toBeDisabled()
+  await expect(btn).toHaveAttribute('aria-busy', 'true')
+  await expect(btn.locator('svg.refresh-spin')).toHaveCount(1)
+  await expect.poll(() => requests).toBe(before + 1)
+  expect((await modes()).at(-1)).toBe('no-cache')
+  release()
+  await expect(btn).toBeEnabled()
+  await expect(btn.locator('svg.refresh-spin')).toHaveCount(0)
+  await expect(btn).not.toHaveAttribute('aria-busy', 'true')
+  // The next ordinary load does not force revalidation.
+  hold = false
+  await page.goto('/')
+  await expect(page.locator('.mint-card').first()).toBeVisible()
+  expect((await modes()).every(m => m === undefined)).toBe(true)
+})
+
 test('skip link: first Tab stop, moves focus to <main>', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('.mint-card').first()).toBeVisible()

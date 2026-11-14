@@ -429,6 +429,10 @@
 }
 
 .refresh-btn:hover { color: var(--text); border-color: var(--border2); }
+.refresh-btn:disabled { cursor: progress; }
+.refresh-spin { animation: refresh-spin 0.7s linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .refresh-spin { animation-duration: 2s; } }
 
 /* ── Mint List View ─────────────────────────────────────────── */
 .mint-list-table-wrap {

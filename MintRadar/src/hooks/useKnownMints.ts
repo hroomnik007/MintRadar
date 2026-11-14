@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type QueryClient } from '@tanstack/react-query'
 import type { StoredScoreBreakdown } from '@/utils/mintDetailFacts'
 
 export interface KnownMint {
@@ -102,8 +102,24 @@ export interface KnownMint {
   reviewRatedCount?: number | null
 }
 
+// The server answers with Cache-Control: public, max-age=300, so a plain refetch is served from the browser's HTTP
+// cache for five minutes and the "Refresh mint list" button looked dead. A refresh the user asks for sets this flag:
+// the next request revalidates (If-None-Match; an unchanged list is a cheap 304) instead of reusing the cached copy.
+let revalidateNext = false
+
+/** Refetches the list for the "Refresh mint list" button, bypassing the browser's five-minute cache. */
+export async function refreshKnownMints(queryClient: QueryClient): Promise<void> {
+  revalidateNext = true
+  try {
+    await queryClient.invalidateQueries({ queryKey: KNOWN_MINTS_QUERY_KEY })
+  } finally {
+    revalidateNext = false
+  }
+}
+
 async function fetchKnownMints(): Promise<KnownMint[]> {
-  const res = await fetch('/api/mints/known')
+  // The plain call stays exactly `fetch('/api/mints/known')`: the early preload (public/early-preload.js) must match it to be reused.
+  const res = revalidateNext ? await fetch('/api/mints/known', { cache: 'no-cache' }) : await fetch('/api/mints/known')
   if (!res.ok) throw new Error('Failed to fetch known mints')
   const data = await res.json() as KnownMint[]
   return data

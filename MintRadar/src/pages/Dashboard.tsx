@@ -8,7 +8,7 @@ import type { NostrEvent } from 'nostr-tools'
 import { loadSharedPool } from '@/core/nostr/lazy'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
 import { MintFavicon } from '@/components/mint/MintFavicon'
-import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
+import { useKnownMints, refreshKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
@@ -70,8 +70,8 @@ const IcPlus = () => (
     <line x1="1.5" y1="6" x2="10.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 )
-const IcRefresh = () => (
-  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+const IcRefresh = ({ spinning = false }: { spinning?: boolean }) => (
+  <svg className={spinning ? 'refresh-spin' : undefined} width="13" height="13" viewBox="0 0 14 14" fill="none">
     <path d="M2 7a5 5 0 1 1 1.4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
     <polyline points="2,4.5 2,7 4.5,7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
@@ -777,6 +777,7 @@ export default function Dashboard() {
   }, [bulkInput])
 
   const queryClient = useQueryClient()
+  const [refreshing, setRefreshing] = useState(false)
   // Client-side NIP-87 discovery POSTs newly-announced mint URLs to
   // /api/mints/discover, where the backend validates + probes them before they
   // enter the `mints` table. We deliberately do NOT merge raw, unvalidated Nostr
@@ -1446,14 +1447,22 @@ export default function Dashboard() {
           className="refresh-btn"
           title="Refresh mint list"
           aria-label="Refresh mint list"
+          aria-busy={refreshing}
+          disabled={refreshing}
           onClick={() => {
             // Refresh only: it used to also reset the search, sort and filters, which threw away a
             // filtered view just to get fresh numbers. Resetting lives in the Filters panel ("Reset") and in the
             // no-results state ("Clear search" / "Reset filters").
-            void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
+            // It revalidates past the browser's 5-minute cache and spins while the request runs (it used to give no sign at all).
+            setRefreshing(true)
+            const started = Date.now()
+            void refreshKnownMints(queryClient).finally(() => {
+              // A 304 comes back in a few ms: keep the spin long enough to be seen.
+              window.setTimeout(() => setRefreshing(false), Math.max(0, 600 - (Date.now() - started)))
+            })
           }}
         >
-          <IcRefresh />
+          <IcRefresh spinning={refreshing} />
         </button>
         <button type="button" className="submit-btn" ref={submitBtnRef} onClick={openSubmit}>
           <IcPlus /> Add mint
