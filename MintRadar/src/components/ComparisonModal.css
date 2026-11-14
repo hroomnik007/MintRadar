@@ -2,3 +2,28 @@
 .cmp-modal-close { width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); cursor: pointer; transition: color var(--transition), border-color var(--transition); }
 .cmp-modal-close:hover { color: var(--text); border-color: var(--border2); }
 .cmp-modal-close:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+/* "BEST" after the better value of a metric row (Reliability Score, Uptime, Uptime 30 days, Latency; utils/compareBest.ts).
+   The same small pill as the "New" badge (accent on --green-soft, --green-soft-strong hairline, mono); 12px on phones like
+   every other new small label there. The value itself is accent-coloured by the cell. */
+.cmp-best {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+  color: var(--accent);
+  background: var(--green-soft);
+  border: 0.5px solid var(--green-soft-strong);
+  border-radius: 3px;
+}
+.cmp-val .cmp-best { margin-left: 2px; }
+@media (max-width: 767px) {
+  .cmp-best { font-size: 12px; margin-left: 4px; }
+}
