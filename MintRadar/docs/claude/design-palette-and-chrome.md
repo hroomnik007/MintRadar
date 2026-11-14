@@ -321,7 +321,8 @@ Browser chrome and brand rasters use the settled palette: `--bg` `#0b1512`, `--a
 | `public/favicon.svg` | **The MintRadar mark since 2026-11-14: a radar screen** (dark disc, beam sweeping clockwise with a fading trail, copper blip). Same geometry on a 32 grid as `src/components/layout/NavLogo.tsx` (navbar, 28 px) and the `PageHead` motif (56 px, `opacity: .5`): ONE drawing, three copies to keep in step by hand. `#5cc9a3` / `#9ddfc5` / `#d98a5a` on a `#17251f` disc and a `#0b1512` rx=6 tile. NavLogo uses flat fills with opacity only (no gradient ids) so several copies can sit on one page. The OG images still carry the old target mark (their paths are cached by X; a new mark there means a new file name, see the OG rule) | hand-edited |
 | `public/favicon-16x16.png`, `favicon-32x32.png`, `favicon.ico` (one 32x32 PNG inside an ICO), `icons/icon-{72,96,128,144,152,192,384,512}x*.png` | rounded tile with transparent corners (192/512 are declared `maskable` in the manifest, unchanged) | rendered from `favicon.svg` |
 | `public/apple-touch-icon.png` | 180x180, opaque `--bg`, same artwork (iOS masks the corners itself) | rendered from `favicon.svg` |
-| `public/og-image-reliability.svg` / `og-image-reliability.png` | **the current OG image** (`og:image` + `twitter:image`, `index.html` and `backend/src/og.ts`). Copy of `og-image.svg` with a sixth pill "✓ Reviews"; row 2 is now Reviews / Watchlist / Nostr Login (3 × 260px, 20px gaps, x=90/370/650) | SVG hand-edited, PNG rendered from it by `generate-icons.mjs` |
+| `public/og-image-radar.svg` / `og-image-radar.png` | **the current OG image since 2026-11-14** (`og:image` + `twitter:image`, `index.html` and `backend/src/og.ts`). Copy of `og-image-reliability.svg` with the radar-screen mark (the `favicon.svg` drawing, 32 grid, `translate(90,145) scale(5.25)`, disc `--bg` so it stands out on the `--surface` panel) instead of the old concentric-ring logo, and the third pill "✓ Uptime" (was "✓ Uptime 24h") | SVG hand-edited, PNG rendered from it by `generate-icons.mjs` |
+| `public/og-image-reliability.svg` / `og-image-reliability.png` | **frozen since 2026-11-14, no longer referenced** — cards already shared point at this path; SHA-256 pinned in `brandAssetCacheBust.test.ts`. Copy of `og-image.svg` with a sixth pill "✓ Reviews"; row 2 is Reviews / Watchlist / Nostr Login (3 × 260px, 20px gaps, x=90/370/650) | SVG hand-edited, PNG rendered from it |
 | `public/og-image.svg` / `og-image.png` | **frozen, no longer referenced** — X still has this path cached with the old card, so the bytes must not change (SHA-256 pinned in `brandAssetCacheBust.test.ts`). 1200x630. bg `--bg`, panel `--surface`, pills `--surface-card`, dividers/pill borders = `--border-strong` composited over `--surface` (`#414c47`), text `--text` / `--text2` / footer `--text3`, accent `--accent` | SVG hand-edited, PNG rendered from it |
 | `public/mint-coin-placeholder.svg` | copper `#d98a5a` (already current) | hand-edited |
 
@@ -348,11 +349,11 @@ is deliberately not set, because the plugin appends it to the glob patterns and 
 `ico`/`png`) were listed twice (59 → 55 entries). Pinned by `src/__tests__/brandAssetCacheBust.test.ts`.
 - **When an asset changes:** replace the file (e.g. `node scripts/generate-icons.mjs`), commit, deploy — the hash, and with it the
   URL, changes by itself. Nothing to bump by hand.
-- **Not covered:** `backend/src/og.ts` (`OG_IMAGE_URL`, the per-mint bot HTML; now `/og-image-reliability.png`, see below) and
+- **Not covered:** `backend/src/og.ts` (`OG_IMAGE_URL`, the per-mint bot HTML; now `/og-image-radar.png`, see below) and
   `backend/src/nostrService.ts` (profile picture, plain `/icons/icon-512x512.png`) — separate package, no build hash available.
 - **OG image = new file name, not `?v=` (2026-10-03):** X (and similar platforms) cache the card image **by path** and ignore the query
   string, so `?v=` on `og-image.png` never refreshed the preview. **When the OG image changes, the file name must change** — current
-  name `og-image-reliability.png` (source `og-image-reliability.svg`, a second output of `scripts/generate-icons.mjs`; next time use
+  name `og-image-radar.png` (source `og-image-radar.svg`, an output of `scripts/generate-icons.mjs`; the previous one, `og-image-reliability.png`, is frozen; next time use
   e.g. `og-image-<topic>.png`). `og:image` / `twitter:image` use the absolute URL **without** a query; `/og-image.png` was removed from
   `HTML_ASSETS` in `vite-brand-assets.ts` so the build step leaves them alone (all other brand references keep `?v=`). Update
   `index.html`, `OG_IMAGE_URL` in `backend/src/og.ts` and the tests together. The new file is precached by the same `**/*.png` glob as

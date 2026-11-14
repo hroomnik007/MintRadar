@@ -202,6 +202,8 @@ The Uptime/NUTs/Latency 3-line mini-summary that used to sit in this panel (`.re
 CSS now removed as dead) is gone — those numbers were already duplicated in their own stat
 tiles higher on Overview (`.md-sc` Latency/Uptime 24h/NUTs tiles), so nothing was lost.
 
+**Reliability Score in the figure strip above 640px (2026-11-14):** `.md-sc.md-sc-score` (`data-testid="md-summary-score"`) is the FIRST tile of `.md-summary`: the score (`scoreText`, the same `scoreA11y` placeholder rules), "Reliability Score", then two sub rows that each take a full row (`flex: 0 0 100%`, nowrap): the badge label ("Not available yet" while pending) and "Details ›" (accent). Two fixed rows keep the tile height when the score replaces the placeholder (one shared row wrapped only for the longer placeholder text and moved the strip, CLS 0.037 at 1440px); a click / Enter / Space opens the breakdown dialog. Hidden at ≤640px, where the phone keeps its compact donut tile `.md-sc-reliability` at the end of the strip. The strip is 6 columns at ≥1200px, 3 × 2 at 769–1199px (six figures in one row broke "Nutshell/0.16.0" inside the word), 2 columns below. The Reliability panel in `.md-right` (gauge + breakdown) is unchanged. Spec: `e2e/mint-detail-summary-score.spec.ts`.
+
 **The modal itself still exists** — it's the only way to see the breakdown on **mobile** (<901px,
 where `.md-reliability-panel` stays `display: none` and the page shows a compact `.md-sc.md-sc-reliability`
 tile instead, which still opens the modal via tap, unchanged). Desktop no longer has any UI

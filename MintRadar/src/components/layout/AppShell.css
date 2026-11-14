@@ -1099,3 +1099,21 @@
 .skip-link:focus:not(:focus-visible) { outline: none; }
 /* main receives focus only from the skip link (tabindex -1): no ring around the whole page. */
 .app-content:focus { outline: none; }
+
+/* "New to Nostr? Get started" under the three login methods: a quiet link that opens a short text with app links. */
+.nostr-new-to-nostr { margin-top: 12px; text-align: center; }
+.nostr-new-to-nostr-toggle {
+  background: none; border: 0; padding: 4px 6px; font-family: var(--font-body); font-size: 13px;
+  color: var(--text2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; border-radius: 6px;
+}
+.nostr-new-to-nostr-toggle:hover { color: var(--text); }
+.nostr-new-to-nostr-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.nostr-new-to-nostr-panel {
+  margin-top: 8px; padding: 12px 14px; text-align: left; font-size: 13px; line-height: 1.5; color: var(--text2);
+  border: 1px solid var(--border); border-radius: 10px; background: rgba(0, 0, 0, 0.16);
+}
+.nostr-new-to-nostr-panel p { margin: 0 0 8px; }
+.nostr-new-to-nostr-panel p:last-child { margin-bottom: 0; }
+.nostr-new-to-nostr-panel ul { margin: 0 0 8px; padding-left: 18px; }
+.nostr-new-to-nostr-panel li { margin-bottom: 4px; }
+.nostr-new-to-nostr-panel a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }

@@ -37,13 +37,15 @@ async function open(page: Page, state: keyof typeof STATES, width: number, heigh
   }
   await resize(page, width, height)
   await page.goto(`/mint/${encodeURIComponent(GONE)}`)
-  await expect(page.locator('.md-summary .md-sc').first()).toBeVisible()
-  await expect(page.locator('.md-sc-value').first()).toHaveText(state === 'online' ? /ms$|—/ : '—')
+  // The Latency tile: the first tile after the Reliability Score tile (.md-sc-score, first above 640px since 2026-11-14).
+  await expect(page.locator('.md-summary .md-sc:not(.md-sc-score)').first()).toBeVisible()
+  await expect(page.locator('.md-summary .md-sc:not(.md-sc-score) .md-sc-value').first()).toHaveText(state === 'online' ? /ms$|—/ : '—')
   await layoutReady(page)
 }
 
-/** Offsets inside every tile of the strip (value, label, sub) from the tile's own top, and its height. */
-const tiles = (page: Page) => page.locator('.md-summary .md-sc').evaluateAll(els => els
+/** Offsets inside every tile of the strip (value, label, sub) from the tile's own top, and its height. The Reliability Score
+ *  tile is left out: its text depends on the score, this spec is about the Latency tile and the figures beside it. */
+const tiles = (page: Page) => page.locator('.md-summary .md-sc:not(.md-sc-score)').evaluateAll(els => els
   .filter(e => e.getBoundingClientRect().height > 0)
   .map(e => {
     const r = e.getBoundingClientRect()

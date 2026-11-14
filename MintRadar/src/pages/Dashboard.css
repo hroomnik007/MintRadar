@@ -2690,3 +2690,32 @@
   .dash-status-note { display: block; }
   .dash-status-note-sep { display: none; }
 }
+
+/* Method filter (2026-11-14): "Lightning" / "On-chain" with the protocol name (bolt11 / onchain) kept visible: beside the
+   plain name on wide screens, in one line under the group on phones. The method group sizes its options to their text
+   (the other groups keep equal widths), so the longer labels still fit row 1. */
+@media (min-width: 769px) {
+  .filter-seg[aria-labelledby="filter-method-label"] { grid-auto-columns: auto; }
+}
+.filter-method-proto { margin-left: 2px; font-size: 11px; color: var(--text3); }
+.filter-seg-opt.active .filter-method-proto { color: inherit; opacity: 0.8; }
+.filter-method-note { display: none; }
+@media (max-width: 768px) {
+  .filter-method-proto { display: none; }
+  .filter-method-note { display: block; font-family: var(--font-body); font-size: 12px; color: var(--text3); }
+  /* The note is a second line of the Method field, under the control (the label column stays free). */
+  .filter-field:has(> .filter-method-note) { flex-wrap: wrap; row-gap: 4px; }
+  .filter-field:has(> .filter-method-note) > .filter-seg { flex: 1 1 0; }
+  .filter-field > .filter-method-note { flex: 1 1 100%; padding-left: 80px; }
+}
+@media (max-width: 380px) {
+  .filter-field > .filter-method-note { padding-left: 0; }
+}
+
+/* Phone list view (2026-11-14): Rating is always a column, so the row is tighter: the review count and the long hostname give way. */
+@media (max-width: 768px) {
+  .rating-count-mobile-hide { display: none; }
+  .mint-list-url { max-width: 120px; }
+  .mint-list-td-name { min-width: 0; }
+  .mint-list-table th, .mint-list-row td { padding-inline: 6px; }
+}

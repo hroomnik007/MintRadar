@@ -33,7 +33,7 @@ import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutOffered } from '@/utils/nutSupport'
 import { hasRequiredNuts } from '@/utils/nutFilters'
-import { parseMethodParam, mintMatchesMethod, methodOptions } from '@/utils/methodFilter'
+import { parseMethodParam, mintMatchesMethod, methodOptions, methodPlainName, methodDisplayText } from '@/utils/methodFilter'
 import { parseSoftwareParam, buildSoftwareParam, mintMatchesSoftware, softwareGroups } from '@/utils/softwareFilter'
 import { OUTDATED_PARAM, parseOutdatedParam, buildOutdatedParam, mintMatchesOutdated, hasUnknownVersion, unknownKeptNote } from '@/utils/outdatedFilter'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
@@ -458,10 +458,11 @@ function MintListView({
   }
 
   const { shown, onlineTotal, collapsed } = collapseOnline(sortedFiltered, collapseOnlineTo)
-  // A phone has room for one more column next to Mint, status and Uptime 24h: the one the list is sorted by, so the
+  // A phone has room for two more columns next to Mint, status and Uptime 24h: Rating, and the one the list is sorted by, so the
   // order can be read off the rows (it used to hide Latency, Reliability and NUTs, the default sort key included).
   const mobileKey = listMobileColumn(sortBy)
-  const mobileCol = (col: ListMobileColumn): string => (col === mobileKey ? '' : 'col-hide-mobile')
+  // Rating (the review stars) is always shown on a phone too, like on the cards (2026-11-14).
+  const mobileCol = (col: ListMobileColumn): string => (col === mobileKey || col === 'rating' ? '' : 'col-hide-mobile')
 
   return (
     <>
@@ -512,7 +513,7 @@ function MintListView({
                   <td className={`rating-col ${mobileCol('rating')}`} style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
                     {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (
                       <span aria-label={`${mint.reviewAvgRating.toFixed(1)} out of 5, ${mint.reviewCount} ${mint.reviewCount === 1 ? 'review' : 'reviews'}`}>
-                        <span aria-hidden="true" style={{ color: 'var(--yellow)' }}>★</span> {mint.reviewAvgRating.toFixed(1)} <span style={{ color: 'var(--text3)' }}>({mint.reviewCount})</span>
+                        <span aria-hidden="true" style={{ color: 'var(--yellow)' }}>★</span> {mint.reviewAvgRating.toFixed(1)}<span className="rating-count-mobile-hide" style={{ color: 'var(--text3)' }}> ({mint.reviewCount})</span>
                       </span>
                     ) : '—'}
                   </td>
@@ -1334,7 +1335,7 @@ export default function Dashboard() {
       <PageHead
         title="Cashu mints"
         srTitle="Reliability Score & Uptime Monitor"
-        description={<>See how reliably each Cashu mint runs before you trust it with sats. New to Cashu? <Link to="/learn/cashu-basics">Start with the basics</Link>.</>}
+        description={<>See how reliably each Cashu mint runs before you keep sats on it. New to Cashu? <Link to="/learn/cashu-basics">Start with the basics</Link>.</>}
         titleRef={headingRef}
         titleTestId="dashboard-heading"
       />
@@ -1500,7 +1501,7 @@ export default function Dashboard() {
               )}
               {activeFilters.method !== null && (
                 <span className="filter-tag">
-                  Method: {activeFilters.method}
+                  Method: {methodDisplayText(activeFilters.method)}
                   <button type="button" aria-label="Clear method filter" onClick={() => { const f = { ...activeFilters, method: null }; commitFilters({ filters: f }); setPendingFilters(f) }}><IcClose /></button>
                 </span>
               )}
@@ -1569,6 +1570,9 @@ export default function Dashboard() {
                 <div className="filter-seg" role="group" aria-labelledby="filter-method-label">
                   {methodChoices.map(m => {
                     const on = pendingFilters.method === m
+                    // bolt11 / onchain get their plain name. Beside "Lightning" the protocol name bolt11 stays visible (wide screens;
+                    // phones say it in the note below); "On-chain" is the protocol name itself, spelled as a word.
+                    const plain = methodPlainName(m)
                     return (
                       <button
                         key={m}
@@ -1578,11 +1582,17 @@ export default function Dashboard() {
                         data-method={m}
                         onClick={() => setPendingFilters(p => ({ ...p, method: on ? null : m }))}
                       >
-                        {m}
+                        {plain === null ? m : <>{plain}{m === 'bolt11' && <> <span className="filter-method-proto">{m}</span></>}</>}
                       </button>
                     )
                   })}
                 </div>
+                {/* Phones: the chips are too narrow for the protocol name beside the plain one, so it is said once below. */}
+                {methodChoices.some(x => methodPlainName(x) !== null) && (
+                  <div className="filter-method-note" data-testid="filter-method-note">
+                    {methodChoices.filter(x => methodPlainName(x) !== null).map(x => `${methodPlainName(x)} = ${x}`).join(' · ')}
+                  </div>
+                )}
               </div>
             )}
 

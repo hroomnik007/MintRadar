@@ -1231,6 +1231,27 @@ function MintDetailContent({ url }: { url: string }) {
       </div>
 
       <div className="md-summary">
+        {/* Reliability Score as the first figure of the strip, above 640px (2026-11-14). The phone layout has its own compact
+            tile with the donut at the end of the strip (.md-sc-reliability below); the full breakdown card stays in .md-right.
+            Same target as the card's "Details ›": the breakdown dialog. */}
+        <div
+          className="md-sc md-sc-score"
+          data-testid="md-summary-score"
+          role="button"
+          tabIndex={0}
+          onClick={() => setShowReliabilityBreakdown(true)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowReliabilityBreakdown(true) } }}
+        >
+          <div className="md-sc-icon green"><Shield size={14} /></div>
+          <div style={{flex:1}}>
+            <div className="md-sc-label">Reliability Score</div>
+            <div className="md-sc-value" style={{color: scorePending ? 'var(--text-faint)' : tsInfo.color}} {...scoreA11y}>{scoreText}</div>
+            {/* Two fixed lines (label, link): the placeholder's "Not available yet" and a score's label take the same height,
+                so the strip does not move when the score arrives. */}
+            <div className="md-sc-sub">{tsInfo.label}</div>
+            <div className="md-sc-sub md-sc-score-link">Details ›</div>
+          </div>
+        </div>
         <div className="md-sc">
           <div className="md-sc-icon orange"><Clock size={14} /></div>
           <div style={{flex:1}}>

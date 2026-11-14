@@ -60,7 +60,7 @@ function hostnameOf(url: string): string {
 }
 
 const SITE_URL = 'https://mintradar.org'
-const OG_IMAGE_URL = `${SITE_URL}/og-image-reliability.png`
+const OG_IMAGE_URL = `${SITE_URL}/og-image-radar.png`
 
 // Renders the standalone OG HTML fragment for one mint. `mint` is null when
 // the URL isn't a known mint — crawlers still get a valid, generic MintRadar
