@@ -1,7 +1,7 @@
 // Dashboard payment-method filter (utils/methodFilter.ts): same meaning as the Wallet API method= filter
 // (NUT-04 or NUT-05, any unit), plus a switched-off side (#168) not counting.
 import { describe, it, expect } from 'vitest'
-import { methodOptions, mintMatchesMethod, offeredMethods, parseMethodParam, sortMethods } from '@/utils/methodFilter'
+import { methodDisplayText, methodOptions, methodPlainName, mintMatchesMethod, offeredMethods, parseMethodParam, sortMethods } from '@/utils/methodFilter'
 
 const e = (method: string, unit = 'sat') => ({ method, unit })
 
@@ -50,5 +50,20 @@ describe('methodOptions', () => {
   it('keeps a selected method nobody offers so it can be cleared', () => {
     expect(methodOptions([], 'bolt12')).toEqual(['bolt12'])
     expect(sortMethods(['onchain', 'bolt11', 'onchain'])).toEqual(['bolt11', 'onchain'])
+  })
+})
+
+describe('plain names (2026-11-14): Lightning = bolt11, On-chain = onchain, the protocol name stays', () => {
+  it('names exactly the two parameters and nothing else', () => {
+    expect(methodPlainName('bolt11')).toBe('Lightning')
+    expect(methodPlainName('onchain')).toBe('On-chain')
+    for (const m of ['bolt12', 'paypal', 'venmo', 'constructor', '__proto__', 'toString']) expect(methodPlainName(m)).toBeNull()
+    expect(methodDisplayText('bolt11')).toBe('Lightning (bolt11)')
+    expect(methodDisplayText('onchain')).toBe('On-chain (onchain)')
+    expect(methodDisplayText('bolt12')).toBe('bolt12')
+  })
+  it('the filter value is still the protocol name: ?method=bolt11 and ?method=onchain', () => {
+    expect(parseMethodParam('bolt11')).toBe('bolt11')
+    expect(parseMethodParam('onchain')).toBe('onchain')
   })
 })

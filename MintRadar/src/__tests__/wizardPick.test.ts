@@ -21,7 +21,7 @@ const reason = (checks: Set<WizardCheck>, m: KnownMint = mint(), o: { latencyMs?
 describe('wizardReasonText', () => {
   it('lists each fact the mint meets, in the fixed order, joined with " · "', () => {
     expect(reason(sel('fast', 'reliable', 'ln', 'seed', 'p2pk', 'ws'), mint(), { latencyMs: 142, preferred: 'nutshell' }))
-      .toBe('Lightning in and out · Restore (NUT-09) · Locked payments (NUT-11) · Live updates (NUT-17) · Reliability 88 · 142 ms from your browser · Nutshell')
+      .toBe('Lightning in and out · Restore (NUT-09) · Locked payments (NUT-11) · Live updates (NUT-17) · 142 ms from your browser · Nutshell')
   })
 
   it('each fact alone', () => {
@@ -29,7 +29,8 @@ describe('wizardReasonText', () => {
     expect(reason(sel('seed'))).toBe('Restore (NUT-09)')
     expect(reason(sel('p2pk'))).toBe('Locked payments (NUT-11)')
     expect(reason(sel('ws'))).toBe('Live updates (NUT-17)')
-    expect(reason(sel('reliable'))).toBe('Reliability 88')
+    // The Reliability Score is the card's badge; the reason line does not repeat it.
+    expect(reason(sel('reliable'))).toBeNull()
     expect(reason(sel('fast'), mint(), { latencyMs: 90 })).toBe('90 ms from your browser')
   })
 
@@ -53,13 +54,13 @@ describe('wizardReasonText', () => {
 
   it('latency: with the fast priority or a max latency, only when a measurement exists', () => {
     expect(reason(sel('fast'), mint(), { latencyMs: null })).toBeNull()
-    expect(reason(sel('reliable'), mint(), { latencyMs: 80 })).toBe('Reliability 88') // neither fast nor a limit: not mentioned
-    expect(reason(sel('reliable'), mint(), { latencyMs: 80, latencyLimit: 300 })).toBe('Reliability 88 · 80 ms from your browser')
+    expect(reason(sel('reliable'), mint(), { latencyMs: 80 })).toBeNull() // neither fast nor a limit: not mentioned
+    expect(reason(sel('reliable'), mint(), { latencyMs: 80, latencyLimit: 300 })).toBe('80 ms from your browser')
   })
 
   it('the software name only when a preference is selected and the mint matches it', () => {
-    expect(reason(sel('reliable'), mint(), { preferred: 'cdk' })).toBe('Reliability 88')
-    expect(reason(sel('reliable'), mint({ version: 'cdk-mintd/0.9.1' }), { preferred: 'cdk' })).toBe('Reliability 88 · CDK-Mintd')
+    expect(reason(sel('reliable'), mint(), { preferred: 'cdk' })).toBeNull()
+    expect(reason(sel('reliable'), mint({ version: 'cdk-mintd/0.9.1' }), { preferred: 'cdk' })).toBe('CDK-Mintd')
     expect(reason(sel(), mint(), { preferred: 'nutshell' })).toBe('Nutshell')
   })
 
@@ -107,6 +108,15 @@ describe('rankWizardRecs', () => {
   it('keeps the best three by default', () => {
     const recs = [rec('a', 0.1, 1), rec('b', 0.4, 1), rec('c', 0.3, 1), rec('d', 0.2, 1)]
     expect(rank(recs, null).top.map(r => r.name)).toEqual(['b', 'c', 'd'])
+  })
+  it('ties are deterministic: the higher Reliability Score, then the URL, whatever order the candidates came in', () => {
+    const r = (url: string, reliabilityScore: number, score = 0.7) => ({ url, mint: { version: 'Nutshell/1', reliabilityScore }, score, latencyMs: 100 })
+    const recs = [r('https://c.example', 95), r('https://a.example', 95), r('https://b.example', 97), r('https://d.example', 99, 0.6)]
+    const order = (list: typeof recs) => rankWizardRecs(list, { preferred: null, latencyLimit: null, bonus: 0, limit: 4 }).top.map(x => x.url)
+    const expected = ['https://b.example', 'https://a.example', 'https://c.example', 'https://d.example']
+    expect(order(recs)).toEqual(expected)
+    expect(order([...recs].reverse())).toEqual(expected)
+    expect(order([recs[2]!, recs[0]!, recs[3]!, recs[1]!])).toEqual(expected)
   })
   it('a bonus of zero changes nothing', () => {
     const recs = [rec('a', 0.7, 1), rec('b', 0.69, 1, 'cdk-mintd/0.9.1')]

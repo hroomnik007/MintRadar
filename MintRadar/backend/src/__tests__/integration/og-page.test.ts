@@ -41,7 +41,7 @@ describe('GET /api/og/page', () => {
     expect(res.text).toContain(`<link rel="canonical" href="${url}" />`)
     expect(res.text).toContain(`<meta property="og:url" content="${url}" />`)
     expect(res.text).toContain('<meta name="twitter:card" content="summary_large_image" />')
-    expect(res.text).toContain('<meta property="og:image" content="https://mintradar.org/og-image-reliability.png" />')
+    expect(res.text).toContain('<meta property="og:image" content="https://mintradar.org/og-image-radar.png" />')
     expect(res.text).toContain(`<a href="${url}">`)
     expect(query).not.toHaveBeenCalled()
   })

@@ -45,7 +45,7 @@ describe('renderMintOgHtml', () => {
     expect(html).toContain('content="Reliability Score: 87/100 · Online"')
     expect(html).toContain(`property="og:url" content="https://mintradar.org/mint/${encodeURIComponent(mintUrl)}"`)
     expect(html).toContain('name="twitter:card" content="summary_large_image"')
-    expect(html).toContain('property="og:image" content="https://mintradar.org/og-image-reliability.png"')
+    expect(html).toContain('property="og:image" content="https://mintradar.org/og-image-radar.png"')
   })
 
   it('adds 24h uptime, NUT count and the rating to the description when known, and leaves each out when not', () => {
@@ -142,7 +142,7 @@ describe('renderPageOgHtml (documentation pages)', () => {
       expect(html).toContain(`<meta name="twitter:title" content="${meta.title}" />`)
       expect(html).toContain(`<meta name="twitter:description" content="${meta.description}" />`)
       expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />')
-      expect(html).toContain('<meta property="og:image" content="https://mintradar.org/og-image-reliability.png" />')
+      expect(html).toContain('<meta property="og:image" content="https://mintradar.org/og-image-radar.png" />')
       expect(html).toContain(`<body>\n    <p><a href="${url}">${meta.title}</a></p>\n  </body>`)
     }
   })

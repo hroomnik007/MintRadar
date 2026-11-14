@@ -28,6 +28,7 @@ import { auditSuccessText, storedKeysetsAsLive } from '@/utils/mintDetailFacts'
 import { visibleCompareRows, type CompareKey, type CompareRowKeys } from '@/utils/compareDiff'
 import { compareMethods, limitsKey, type CompareMethods, type MethodsCell } from '@/utils/compareMethods'
 import { SCORE_PART_ROWS, COMPARE_CONTACT_LABEL, COMPARE_NIP87_LABEL, scorePointsText, contactMethodsText, nip87RowText } from '@/utils/compareScoreRows'
+import { bestFlags } from '@/utils/compareBest'
 import { COMPARE_UPTIME_LABEL, COMPARE_UPTIME_30D_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
 
 function reliabilityScoreInfo(score: number) {
@@ -59,6 +60,11 @@ function auditSuccessDisplay(mint: KnownMint, now: number): { text: string; colo
     text: auditSuccessText(blamed, total) ?? 'n/a',
     color: auditReliabilityColor(total, blamed, AUDIT_MIN_SAMPLES),
   }
+}
+
+// "BEST" pill after the better value of a metric row (utils/compareBest.ts); the value itself turns accent.
+function BestTag() {
+  return <span className="cmp-best" data-testid="cmp-best">Best</span>
 }
 
 // Deposit / Withdrawal methods cell: a switched-off side is greyed and says so (same words as Mint Detail, #168).
@@ -288,6 +294,16 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     return q.data ? contactMethodsText(q.data) : null
   }
   const contactKey = (i: number): CompareKey => { const t = contactText(i); return t === 'pending' ? null : (t ?? 'n/a') }
+  // BEST per metric row: only rows with a direction; a missing / pending value or a tie at the top gives no tag.
+  const best = {
+    reliability: bestFlags(mints.map((m, i) => (allData[i]!.isOnline && typeof m.reliabilityScore === 'number' ? m.reliabilityScore : null)), 'higher'),
+    uptime: bestFlags(mints.map((_, i) => {
+      const q = uptime24hQueries[i]
+      return !q || q.isLoading ? null : (q.data?.uptimePct ?? null)
+    }), 'higher'),
+    uptime30d: bestFlags(mints.map(m => (typeof m.uptimePct30d === 'number' ? m.uptimePct30d : null)), 'higher'),
+    latency: bestFlags(mints.map((m, i) => (allData[i]!.isOnline && m.latencyMs != null ? m.latencyMs : null)), 'lower'),
+  }
   const scoreRows = SCORE_PART_ROWS.map(r => ({
     id: r.id, label: r.label,
     keys: mints.map(m => scorePointsText(m, r.part, now)),
@@ -311,9 +327,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
         const d = allData[i]!
         return (
           <span className="cmp-m-stack">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: best.reliability[i] ? 'var(--accent)' : d.tsInfo.color }}>
               <IcShield size={12} />
               <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? d.reliabilityScore : '—'}</span>
+              {best.reliability[i] && <BestTag />}
             </span>
             {d.isOnline && (
               <span style={{ fontSize: 10, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 4px', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>{d.tsInfo.label}</span>
@@ -343,7 +360,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       keys: mints.map((_, i) => uptimeKey(i)),
       cell: i => {
         const uptimePct = uptime24hQueries[i]?.data?.uptimePct ?? null
-        return <span style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{uptimePct !== null ? `${uptimePct}%` : '—'}</span>
+        return <span style={{ color: best.uptime[i] ? 'var(--accent)' : uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{uptimePct !== null ? `${uptimePct}%` : '—'}{best.uptime[i] && <BestTag />}</span>
       },
     },
     {
@@ -351,15 +368,16 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       keys: mints.map(m => (typeof m.uptimePct30d === 'number' ? String(m.uptimePct30d) : '—')),
       cell: i => {
         const pct = mints[i]!.uptimePct30d ?? null
-        return <span style={{ color: uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{pct !== null ? `${pct}%` : '—'}</span>
+        return <span style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{pct !== null ? `${pct}%` : '—'}{best.uptime30d[i] && <BestTag />}</span>
       },
     },
     {
       id: 'latency', label: <>{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></>,
       keys: mints.map((m, i) => (allData[i]!.isOnline && m.latencyMs != null ? String(m.latencyMs) : '—')),
       cell: i => (
-        <span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+        <span style={{ color: best.latency[i] ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
           {allData[i]!.isOnline && mints[i]!.latencyMs != null ? `${mints[i]!.latencyMs}ms` : '—'}
+          {best.latency[i] && <BestTag />}
         </span>
       ),
     },
@@ -612,11 +630,12 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {mints.map((mint, i) => {
             const d = allData[i]!
             return (
-              <div key={mint.url} className="cmp-val">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: d.tsInfo.color }}>
+              <div key={mint.url} className="cmp-val" data-row="reliability">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: best.reliability[i] ? 'var(--accent)' : d.tsInfo.color }}>
                   <IcShield size={12} />
                   <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? d.reliabilityScore : '—'}</span>
                 </span>
+                {best.reliability[i] && <BestTag />}
                 {d.isOnline && (
                   <span style={{ marginLeft: 6, fontSize: 11, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-mono)' }}>{d.tsInfo.label}</span>
                 )}
@@ -653,8 +672,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {mints.map((mint, i) => {
             const uptimePct = uptime24hQueries[i]?.data?.uptimePct ?? null
             return (
-              <div key={mint.url} className="cmp-val" style={{ color: uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+              <div key={mint.url} className="cmp-val" data-row="uptime" style={{ color: best.uptime[i] ? 'var(--accent)' : uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                 {uptimePct !== null ? `${uptimePct}%` : '—'}
+                {best.uptime[i] && <BestTag />}
               </div>
             )
           })}
@@ -663,11 +683,12 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {showRow('uptime-30d') && (<>
           {/* ── Uptime (30 days, the figure stored with the score) ── */}
           <div className="cmp-lbl">{COMPARE_UPTIME_30D_LABEL}</div>
-          {mints.map(mint => {
+          {mints.map((mint, i) => {
             const pct = mint.uptimePct30d ?? null
             return (
-              <div key={mint.url} className="cmp-val" style={{ color: uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+              <div key={mint.url} className="cmp-val" data-row="uptime-30d" style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                 {pct !== null ? `${pct}%` : '—'}
+                {best.uptime30d[i] && <BestTag />}
               </div>
             )
           })}
@@ -679,8 +700,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {mints.map((mint, i) => {
             const d = allData[i]!
             return (
-              <div key={mint.url} className="cmp-val" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+              <div key={mint.url} className="cmp-val" data-row="latency" style={{ color: best.latency[i] ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                 {d.isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
+                {best.latency[i] && <BestTag />}
               </div>
             )
           })}

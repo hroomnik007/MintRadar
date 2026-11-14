@@ -28,7 +28,7 @@ test('a mint page has its own canonical and og:url; the homepage values return a
   expect(self).toBe(`https://mintradar.org/mint/${encodeURIComponent(ALPHA)}`)
   expect(await ogUrl(page)).toBe(self)
   // og:image stays the generic static one; og:title is the page title.
-  expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toBe('https://mintradar.org/og-image-reliability.png')
+  expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toBe('https://mintradar.org/og-image-radar.png')
   expect(await page.locator('meta[property="og:title"]').getAttribute('content')).toBe(await page.title())
 
   await page.goBack()

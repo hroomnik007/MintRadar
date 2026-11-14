@@ -95,7 +95,9 @@ describe('Compare', () => {
     const row = baseElement.querySelector('table.cmp-m-table tbody tr[data-row="uptime-30d"]')!
     expect(row).toBeTruthy()
     expect(row.querySelector('th')?.textContent).toBe(COMPARE_UPTIME_30D_LABEL)
-    expect(Array.from(row.querySelectorAll('td')).map(td => td.textContent)).toEqual(['100%', '77%'])
+    // Two known figures: the higher one carries the "BEST" tag (compareBest.ts); the desktop case above has an unknown one, so no tag.
+    expect(Array.from(row.querySelectorAll('td')).map(td => td.textContent)).toEqual(['100%Best', '77%'])
+    expect(row.querySelectorAll('td')[0]!.querySelector('.cmp-best')?.textContent).toBe('Best')
   })
 })
 

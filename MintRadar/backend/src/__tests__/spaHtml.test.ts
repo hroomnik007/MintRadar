@@ -109,7 +109,7 @@ describe('renderSpaHtml', () => {
       ogTitle: ROUTE_META_BY_PATH['/stats'].title, robots: null,
     })
     expect(html).toContain(`<meta name="twitter:description" content="${ROUTE_META_BY_PATH['/stats'].description}"`)
-    expect(html).toContain('<meta property="og:image" content="https://mintradar.org/og-image-reliability.png"')
+    expect(html).toContain('<meta property="og:image" content="https://mintradar.org/og-image-radar.png"')
     expect(html).toContain('application/ld+json')
     expect(html).toContain('<div id="root"></div>')
   })

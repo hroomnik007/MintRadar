@@ -70,6 +70,24 @@ export function latencyScore(latencyMs: number | null, maxLatencyMs: number, fas
   return 0
 }
 
+/**
+ * Without "Fast from here", latency is only a tie-break: it is worth at most this many points of the 0..100 Reliability
+ * Score (same scale as SOFTWARE_PREFERENCE_BONUS), so it can only reorder mints whose other parts are this close. With the
+ * full latency weight a failed or slow browser measurement (CORS, a timeout, the 2000 ms band edge) was worth up to about
+ * 28 Reliability points under "Reliable", and two identical searches could still name a different #1 (2026-11-14).
+ */
+export const LATENCY_TIE_BREAK_POINTS = 2
+
+/**
+ * The latency part of a wizard score (same 0..1 scale as the other parts of `weightsFor`).
+ * "Fast from here" selected: the full latency weight, relative to the slowest measured candidate.
+ * Not selected: the latency band (latencyScore) times a credit of LATENCY_TIE_BREAK_POINTS Reliability points.
+ */
+export function latencyPart(w: Pick<Weights, 'latency' | 'reliability'>, latencyMs: number | null, maxLatencyMs: number, fastSelected: boolean): number {
+  const s = latencyScore(latencyMs, maxLatencyMs, fastSelected)
+  return fastSelected ? w.latency * s : (LATENCY_TIE_BREAK_POINTS / 100) * w.reliability * s
+}
+
 // Larger stored balances carry more risk if the mint turns out unreliable, so
 // shift weight toward reliability — proportionally reducing latency/nuts so the
 // three weights still sum to 1.

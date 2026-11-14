@@ -38,7 +38,10 @@ export function matchesPreferredSoftware(mint: Pick<KnownMint, 'version'>, prefe
   return preferred !== null && softwareFamily(mint.version)?.key === preferred
 }
 
-export interface WizardRankable { mint: Pick<KnownMint, 'version'>; score: number; latencyMs: number | null }
+export interface WizardRankable { url?: string; mint: Pick<KnownMint, 'version'> & { reliabilityScore?: number | null }; score: number; latencyMs: number | null }
+
+/** Two wizard scores closer than this are a tie (floating-point sums of the same parts in a different order). */
+const SCORE_EPSILON = 1e-9
 export interface WizardRanking<T> {
   /** The best `limit` results after the latency limit and the software preference. */
   top: T[]
@@ -50,13 +53,23 @@ export interface WizardRanking<T> {
 /**
  * The preference adds `opts.bonus` (softwarePreferenceCredit of this search's weights, about 3 Reliability points) to a matching mint's score before sorting; nobody is removed by it. A latency
  * limit keeps only the candidates whose measurement exists and is under the limit (an unmeasured or failed one is not shown);
- * it changes no score. Ties keep their order.
+ * it changes no score. Ties are deterministic: the higher Reliability Score first, then the mint URL (A to Z), so the same data
+ * always gives the same order whatever order the candidates came in.
  */
 export function rankWizardRecs<T extends WizardRankable>(recs: readonly T[], opts: { preferred: string | null; latencyLimit: number | null; bonus: number; limit?: number }): WizardRanking<T> {
   const measured = recs.filter(r => r.latencyMs !== null).length
   const kept = opts.latencyLimit === null ? [...recs] : recs.filter(r => r.latencyMs !== null && r.latencyMs < opts.latencyLimit!)
   const bonus = (r: T) => (matchesPreferredSoftware(r.mint, opts.preferred) ? opts.bonus : 0)
-  const top = kept.map((r, i) => ({ r, i, s: r.score + bonus(r) })).sort((a, b) => b.s - a.s || a.i - b.i).map(x => x.r).slice(0, opts.limit ?? 3)
+  const top = kept.map(r => ({ r, s: r.score + bonus(r) }))
+    .sort((a, b) => {
+      if (Math.abs(b.s - a.s) > SCORE_EPSILON) return b.s - a.s
+      const rel = (b.r.mint.reliabilityScore ?? -1) - (a.r.mint.reliabilityScore ?? -1)
+      if (rel !== 0) return rel
+      const ua = a.r.url ?? ''
+      const ub = b.r.url ?? ''
+      return ua < ub ? -1 : ua > ub ? 1 : 0
+    })
+    .map(x => x.r).slice(0, opts.limit ?? 3)
   return { top, measured, total: recs.length }
 }
 
@@ -78,7 +91,8 @@ export interface ReasonInput {
 
 /**
  * Facts the mint meets from what the person selected, joined with " · ", in a fixed order: Lightning, restore, locked payments,
- * live updates, Reliability, latency from the browser, the preferred software. A selected priority the mint does not meet is left
+ * live updates, latency from the browser, the preferred software. The Reliability Score is not repeated here: the card's badge
+ * already shows it (it appeared twice in one card until 2026-11-14). A selected priority the mint does not meet is left
  * out (no negative words). null when there is nothing to say.
  */
 export function wizardReasonText(i: ReasonInput): string | null {
@@ -93,7 +107,6 @@ export function wizardReasonText(i: ReasonInput): string | null {
   for (const [check, text] of nut) {
     if (i.checks.has(check) && passesWizardNutChecks(i.mint.nutsLimits ?? null, new Set([check]))) parts.push(text)
   }
-  if (i.checks.has('reliable') && i.mint.reliabilityScore != null) parts.push(`Reliability ${i.mint.reliabilityScore}`)
   if ((i.checks.has('fast') || i.latencyLimit !== null) && i.latencyMs !== null) parts.push(`${i.latencyMs} ms from your browser`)
   if (i.preferred !== null && matchesPreferredSoftware(i.mint, i.preferred)) {
     const f = softwareFamily(i.mint.version)

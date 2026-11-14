@@ -7,7 +7,8 @@
 //                            icons/icon-{72,96,128,144,152,192,384,512}x*.png (rounded tile, transparent corners),
 //                            apple-touch-icon.png (180x180, opaque --bg, no corner rounding: iOS masks it itself)
 //   public/og-image.svg   -> public/og-image.png (1200x630; frozen, X keeps the old card cached under this path)
-//   public/og-image-reliability.svg -> public/og-image-reliability.png (1200x630; the file og:image/twitter:image point at)
+//   public/og-image-reliability.svg -> public/og-image-reliability.png (1200x630; frozen since 2026-11-14, shared cards point at it)
+//   public/og-image-radar.svg -> public/og-image-radar.png (1200x630; the file og:image/twitter:image point at)
 // The OG text uses `font-family: monospace`; the committed PNG was rasterised with DejaVu Sans Mono. Point
 // FONTCONFIG_FILE at a fontconfig that aliases monospace -> DejaVu Sans Mono (see
 // docs/claude/design-palette-and-chrome.md, "Brand assets"), otherwise the machine's default monospace is used.
@@ -52,4 +53,5 @@ await renderFavicon(180).flatten({ background: BG }).png().toFile('public/apple-
 
 await sharp(readFileSync('public/og-image.svg')).resize(1200, 630).png().toFile('public/og-image.png')
 await sharp(readFileSync('public/og-image-reliability.svg')).resize(1200, 630).png().toFile('public/og-image-reliability.png')
+await sharp(readFileSync('public/og-image-radar.svg')).resize(1200, 630).png().toFile('public/og-image-radar.png')
 console.log('Done.')

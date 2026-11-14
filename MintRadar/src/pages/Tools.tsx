@@ -18,7 +18,7 @@ import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDow
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
-import { weightsFor, reviewsScore, latencyScore, softwarePreferenceCredit, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
+import { weightsFor, reviewsScore, latencyPart, softwarePreferenceCredit, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
 import { softwareChoices, rankWizardRecs, wizardReasonText, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
@@ -760,7 +760,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       // Lightning in + out means both mint (deposit) and melt (withdraw) support
       // bolt11/bolt12 — cardLightningLabel() only returns 'LN' when both sides do.
       .filter(m => !checks.has('ln') || cardLightningLabel(m) === 'LN')
-      .sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0))
+      // Equal scores in URL order, so the same data always measures the same 20 candidates.
+      .sort((a, b) => (b.reliabilityScore ?? 0) - (a.reliabilityScore ?? 0) || (a.url < b.url ? -1 : a.url > b.url ? 1 : 0))
       .slice(0, 20)
 
     const w = weightsFor(checks, size)
@@ -786,13 +787,13 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
     const scoredAll: WizardRec[] = candidates.map(m => {
       const latMs = latencyMap.get(m.url) ?? null
-      const latScore = latencyScore(latMs, maxLatency, checks.has('fast'))
       const reliabilityScore = (m.reliabilityScore ?? 0) / 100
       const nutsScore = (m.nutCount ?? 0) / maxNuts
       return {
         url: m.url,
         mint: m,
-        score: w.latency * latScore + w.reliability * reliabilityScore + w.nuts * nutsScore + w.reviews * reviewsScore(m),
+        // Without "Fast from here" latency only breaks ties between close mints (latencyPart, LATENCY_TIE_BREAK_POINTS).
+        score: latencyPart(w, latMs, maxLatency, checks.has('fast')) + w.reliability * reliabilityScore + w.nuts * nutsScore + w.reviews * reviewsScore(m),
         latencyMs: latMs,
         mintLimits: limitsForUnit(m.mintMethods ?? null, selectedUnit),
         meltLimits: limitsForUnit(m.meltMethods ?? null, selectedUnit),

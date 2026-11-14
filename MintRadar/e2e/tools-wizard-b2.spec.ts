@@ -70,10 +70,10 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     await find(page)
     await expect(rows(page)).toHaveCount(3, { timeout: 15_000 })
     const alpha = rows(page).filter({ hasText: 'Alpha Mint' }).locator('.wizard-rec-facts')
-    await expect(alpha).toHaveText(/^Lightning in and out · Restore \(NUT-09\) · Locked payments \(NUT-11\) · Live updates \(NUT-17\) · Reliability 92 · \d+ ms from your browser · Nutshell$/)
+    await expect(alpha).toHaveText(/^Lightning in and out · Restore \(NUT-09\) · Locked payments \(NUT-11\) · Live updates \(NUT-17\) · \d+ ms from your browser · Nutshell$/)
     // The CDK mint does not match the preference: the same line without the software name.
     const delta = rows(page).filter({ hasText: 'Delta Mint' }).locator('.wizard-rec-facts')
-    await expect(delta).toHaveText(/^Lightning in and out · Restore \(NUT-09\) · Locked payments \(NUT-11\) · Live updates \(NUT-17\) · Reliability 90 · \d+ ms from your browser$/)
+    await expect(delta).toHaveText(/^Lightning in and out · Restore \(NUT-09\) · Locked payments \(NUT-11\) · Live updates \(NUT-17\) · \d+ ms from your browser$/)
     expect(await alpha.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12)
   })
 
@@ -83,9 +83,13 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     await check(page, 'Reliable')
     await find(page)
     await expect(rows(page).first()).toBeVisible({ timeout: 15_000 })
-    const lines = await page.locator('.wizard-rec-facts').allInnerTexts()
-    expect(lines.length).toBe(3)
-    for (const l of lines) expect(l.trim()).toMatch(/^Reliability \d+$/)
+    // "Reliable" adds no text to the line: the score is shown once per card, in the badge (2026-11-14).
+    await expect(rows(page)).toHaveCount(3)
+    await expect(page.locator('.wizard-rec-facts')).toHaveCount(0)
+    for (const row of await rows(page).all()) {
+      await expect(row.locator('.wizard-rec-reliability')).toHaveCount(1)
+      await expect(row.locator('.wizard-rec-reliability')).toHaveText(/\d+/)
+    }
   })
 
   test(`${size[0]}px: a preferred software is a small credit: it moves a mint 2 points behind up, and not one 10 points behind`, async ({ page }) => {
