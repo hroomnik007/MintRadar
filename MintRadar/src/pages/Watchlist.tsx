@@ -303,11 +303,10 @@ export default function Watchlist() {
           >
             <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Login via Nostr
           </button>
-          <div className="wl-login-hint">Stored on Nostr. Optional DMs when a watched mint goes down or comes back up, plus key and fee changes.</div>
           {/* Someone without Nostr used to meet a dead end here: one button and no word on what it is or what it gives. */}
           <ul className="wl-login-points">
             <li>Keep a short list of the mints you use, the same on every device.</li>
-            <li>Get an optional private message when one of them goes down or comes back.</li>
+            <li>Get an optional private message when one of them goes down or comes back, or when its key or fee changes.</li>
             <li>No email and no password: you sign in with a key that stays in your signer.</li>
           </ul>
           <details className="wl-login-what">

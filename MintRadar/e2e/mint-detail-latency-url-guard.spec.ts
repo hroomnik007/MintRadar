@@ -41,6 +41,6 @@ test('"Show my latency" still works for a normal https mint URL', async ({ page 
 
   await page.locator('.latency-test-btn').click()
 
-  await expect(page.getByText(/Your latency: \d+ms|Unreachable/)).toBeVisible({ timeout: 6000 })
+  await expect(page.getByText(/Your latency: \d+ ms|Unreachable/)).toBeVisible({ timeout: 6000 })
   await expect(page.getByText('Invalid mint URL')).toHaveCount(0)
 })

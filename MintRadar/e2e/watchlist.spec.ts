@@ -15,7 +15,9 @@ test.describe('Watchlist', () => {
     await expect(gate.getByRole('heading', { name: 'My Watchlist' })).toBeVisible()
     await expect(gate.getByText(/sync your watchlist across devices/)).toBeVisible()
     await expect(gate.getByRole('button', { name: /Login via Nostr/ })).toBeVisible()
-    await expect(gate.getByText(/Stored on Nostr\. Optional DMs when a watched mint goes down or comes back up, plus key and fee changes\./)).toBeVisible()
+    // One list of what it gives (it used to repeat the DM sentence in a line above it).
+    await expect(gate.getByText(/optional private message when one of them goes down or comes back, or when its key or fee changes/)).toBeVisible()
+    await expect(gate.locator('.wl-login-hint')).toHaveCount(0)
     // No watchlist grid is rendered.
     await expect(page.locator('.wl-grid')).toHaveCount(0)
   })
@@ -30,10 +32,10 @@ test.describe('Watchlist', () => {
         return Math.round(el.getBoundingClientRect().height / lh)
       })
       await page.goto('/watchlist')
-      const hint = page.locator('.wl-login-hint')
+      const hint = page.locator('.wl-login-points')
       await expect(hint).toBeVisible()
       expect(await noOverflow()).toBe(true)
-      expect(await lines(hint)).toBeLessThanOrEqual(4)
+      expect(await hint.evaluate(el => el.getBoundingClientRect().width <= document.documentElement.clientWidth)).toBe(true)
       await loginAs(page)
       await page.goto('/watchlist')
       const sub = page.locator('.wl-empty-sub')
