@@ -28,7 +28,7 @@
   margin: 4px 0 0;
   max-width: 62ch;
 }
-.page-head-radar { width: 120px; height: 56px; flex-shrink: 0; }
+.page-head-radar { width: 56px; height: 56px; flex-shrink: 0; opacity: 0.5; }
 @media (max-width: 640px) {
   .page-head { padding-top: 18px; }
   .page-head-title { font-size: 22px; }
