@@ -2950,6 +2950,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 @media (max-width: 767px) {
   .au-verdict { flex-direction: column; align-items: stretch; gap: 12px; }
   .au-rate-tile { width: 100%; min-width: 0; box-sizing: border-box; }
+  /* flex: 1 1 240px is a row min-width; as a column basis it left a tall empty gap under the text. */
+  .au-verdict-text { flex: 0 0 auto; }
   .au-dirs { grid-template-columns: 1fr; }
   .au-dir { padding: 12px 0; }
   .au-dir + .au-dir { border-left: 0; border-top: 1px solid var(--border); padding-left: 0; }

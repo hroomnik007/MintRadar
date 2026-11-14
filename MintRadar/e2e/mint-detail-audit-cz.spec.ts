@@ -676,6 +676,83 @@ test.describe('390px viewport', () => {
   }
 })
 
+// ── verdict-to-bar spacing: the text column must not keep a row flex-basis as height ──
+test.describe('verdict-to-bar spacing', () => {
+  const cleanCase = (total: number, failed: number, blamed: number) => czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, errorsBlamed: blamed, all: { ...LNPAY_DETAIL.swaps7d.all, total, failed, success: total - failed } } })
+  const failures = onlyCz([], {
+    detail: cleanCase(229, 207, 202),
+    long: { windowDays: 28, swaps: 410, attributedFailures: 2 },
+    since: { day: '2026-08-01', swaps: 900, attributedFailures: 15 },
+  })
+  const clean = onlyCz([], { detail: cleanCase(50, 0, 0) })
+  const empty = onlyCz([], { detail: cleanCase(0, 0, 0) })
+
+  /** Leftover inside the text block, and the gap from the verdict to the bar (or the direction tiles when there is no bar). */
+  const spacing = async (page: Page) => {
+    await expect(page.getByTestId('audit-verdict')).toBeVisible()
+    const [text, last, verdict] = await measureSettled(page, ['.au-verdict-text', '.au-verdict-text > :last-child', '.au-verdict'])
+    const nextSel = (await page.locator('.au-stack-wrap').count()) ? '.au-stack-wrap' : '.au-dirs'
+    const [next] = await measureSettled(page, [nextSel])
+    return {
+      leftover: text!.y + text!.height - (last!.y + last!.height),
+      gapToNext: next!.y - (verdict!.y + verdict!.height),
+      next: nextSel,
+    }
+  }
+
+  for (const width of [360, 390, 430] as const) {
+    test.describe(`${width}px`, () => {
+      test.use({ viewport: { width, height: 844 } })
+
+      test('failures: the bar follows the longer-window line with normal spacing', async ({ page }) => {
+        await gotoAuditTab(page, failures)
+        await expect(page.getByTestId('audit-longer-line')).toBeVisible()
+        const s = await spacing(page)
+        expect(s.next).toBe('.au-stack-wrap')
+        expect(s.leftover).toBeLessThan(4)
+        // .au-verdict margin-bottom is 18px; a 240px column flex-basis left ~130px here.
+        expect(s.gapToNext).toBeGreaterThanOrEqual(0)
+        expect(s.gapToNext).toBeLessThan(28)
+      })
+
+      test('clean (0 failures): the bar follows the heading with normal spacing', async ({ page }) => {
+        await gotoAuditTab(page, clean)
+        const s = await spacing(page)
+        expect(s.next).toBe('.au-stack-wrap')
+        expect(s.leftover).toBeLessThan(4)
+        expect(s.gapToNext).toBeGreaterThanOrEqual(0)
+        expect(s.gapToNext).toBeLessThan(28)
+      })
+
+      test('0 swaps: no leftover under the heading before the direction tiles', async ({ page }) => {
+        await gotoAuditTab(page, empty)
+        await expect(page.locator('.au-stack')).toHaveCount(0)
+        const s = await spacing(page)
+        expect(s.next).toBe('.au-dirs')
+        expect(s.leftover).toBeLessThan(4)
+        // verdict margin-bottom 18px + .au-dirs margin-top 20px
+        expect(s.gapToNext).toBeGreaterThanOrEqual(0)
+        expect(s.gapToNext).toBeLessThan(48)
+      })
+    })
+  }
+
+  test.describe('1440px', () => {
+    test.use({ viewport: { width: 1440, height: 900 } })
+
+    test('failures: tile sits beside the heading; the bar still follows the verdict', async ({ page }) => {
+      await gotoAuditTab(page, failures)
+      const [tile, text, last, verdict, bar] = await measureSettled(page, ['.au-rate-tile', '.au-verdict-text', '.au-verdict-text > :last-child', '.au-verdict', '.au-stack-wrap'])
+      expect(text!.y + text!.height - (last!.y + last!.height)).toBeLessThan(4)
+      expect(bar!.y - (verdict!.y + verdict!.height)).toBeGreaterThanOrEqual(0)
+      expect(bar!.y - (verdict!.y + verdict!.height)).toBeLessThan(28)
+      // Row: the tile is to the left of the text, not stacked above it.
+      expect(tile!.x + tile!.width).toBeLessThanOrEqual(text!.x + 1)
+      expect(Math.abs(tile!.y - text!.y)).toBeLessThan(40)
+    })
+  })
+})
+
 // ── score breakdown row: identical whether or not the Audit tab was opened ──
 test.describe('Reliability breakdown: audit row', () => {
   const auditRow = (page: Page) => page.locator('.md-reliability-panel .rb-row', { hasText: 'Audit reliability (25%)' })
