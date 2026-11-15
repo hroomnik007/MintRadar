@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, auditSuccessRateTone, auditSuccessRateCaption, AUDIT_SCORE_HINT, auditLongerWindow, auditSinceLine, isLongerAuditWindow, type AuditCzView } from '@/utils/auditCz'
+import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT, auditLongerWindow, auditSinceLine, isLongerAuditWindow, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -40,7 +40,6 @@ describe('verdict, directions and average from the stored detail (LNpay values)'
     expect(auditVerdictHeadline(v.verdict!)).toBe('Last 7 days: 126 swaps, 0 failures caused by this mint')
     expect(auditSuccessRate(v.verdict!)).toBe(84.9) // 107/126, raw, one decimal, not counting only blamed failures
     expect(auditSuccessRateText(v.verdict!)).toBe('84.9%')
-    expect(auditSuccessRateTone(v.verdict!)).toBe('ok')
     expect(dirs(LNPAY)['mints']).toMatchObject({ label: 'Deposits (mint)', ok: 56, total: 62, failed: 6 })
     expect(dirs(LNPAY)['melts']).toMatchObject({ label: 'Withdrawals (melt)', ok: 51, total: 64, failed: 13 })
     expect(v.directions.map(x => x.key)).toEqual(['mints', 'melts'])
@@ -52,7 +51,6 @@ describe('verdict, directions and average from the stored detail (LNpay values)'
     expect(auditVerdictHeadline(v)).toBe('Last 7 days: 229 swaps, 202 failures caused by this mint')
     expect(auditSuccessRate(v)).toBe(9.6) // 22/229
     expect(auditSuccessRateText(v)).toBe('9.6%')
-    expect(auditSuccessRateTone(v)).toBe('bad')
   })
   it('verdict wording: singular, a clean week, and no swaps', () => {
     expect(auditVerdictHeadline(verdict({ total: 1, success: 1, failed: 0 }, 0)!)).toBe('Last 7 days: 1 swap, 0 failures caused by this mint')
@@ -61,13 +59,9 @@ describe('verdict, directions and average from the stored detail (LNpay values)'
     expect(auditVerdictHeadline(verdict({ total: 0, success: 0, failed: 0 }, 0)!)).toBe('Last 7 days: 0 swaps')
     expect(auditSuccessRate(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe(100)
     expect(auditSuccessRateText(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe('100%') // no trailing .0
-    expect(auditSuccessRateTone(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe('good')
     expect(auditSuccessRate(verdict({ total: 50, success: 46, failed: 4 }, 1)!)).toBe(92) // raw 46/50, not 49/50
     expect(auditSuccessRateText(verdict({ total: 50, success: 46, failed: 4 }, 1)!)).toBe('92%')
-    expect(auditSuccessRateTone(verdict({ total: 20, success: 19, failed: 1 }, 0)!)).toBe('good') // 95%
-    expect(auditSuccessRateTone(verdict({ total: 200, success: 189, failed: 11 }, 0)!)).toBe('ok') // 94.5%
     expect(auditSuccessRateText(verdict({ total: 0, success: 0, failed: 0 }, 0)!)).toBe('—')
-    expect(auditSuccessRateTone(verdict({ total: 0, success: 0, failed: 0 }, 0)!)).toBe('empty')
     expect(auditSuccessRateCaption()).toBe('Success rate · 7 days')
     expect(AUDIT_SCORE_HINT).toBe('The score only counts failures caused by this mint.')
   })

@@ -241,17 +241,6 @@ export function auditSuccessRateText(v: AuditVerdict): string {
   return `${rate.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(rate) ? 0 : 1, maximumFractionDigits: 1 })}%`
 }
 
-export type AuditSuccessRateTone = 'good' | 'ok' | 'bad' | 'empty'
-
-/** Colour band for the success-rate tile: green ≥ 95, amber ≥ 80, red below, neutral when there were no swaps. */
-export function auditSuccessRateTone(v: AuditVerdict): AuditSuccessRateTone {
-  const rate = auditSuccessRate(v)
-  if (rate === null) return 'empty'
-  if (rate >= 95) return 'good'
-  if (rate >= 80) return 'ok'
-  return 'bad'
-}
-
 export function auditSuccessRateCaption(): string {
   return `Success rate · ${AUDIT_WINDOW_DAYS} days`
 }
