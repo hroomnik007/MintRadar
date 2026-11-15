@@ -80,7 +80,7 @@ describe('numbers in the built texts equal their sources', () => {
   it('contact row: the full points are reached at CONTACT_FULL_AT contacts, not before', () => {
     expect(contactComponent(T.CONTACT_FULL_AT)).toBe(T.CONTACT_POINTS)
     expect(contactComponent(T.CONTACT_FULL_AT - 1)).toBeLessThan(T.CONTACT_POINTS)
-    expect(T.contactRowText()).toBe(`Email, Twitter and Nostr contacts the mint lists. Three or more give the full ${T.CONTACT_POINTS} points.`)
+    expect(T.contactRowText()).toBe(`Email, Twitter and Nostr contacts the mint lists in a recognised format. Three or more give the full ${T.CONTACT_POINTS} points.`)
     expect(T.CONTACT_FULL_AT).toBe(3)
   })
   it('review surge text', () => {

@@ -66,6 +66,7 @@ import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLo
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, uptimeTileText, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { readContactChecks, scoreContactKindCounts } from '@/utils/contactChecks'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -722,6 +723,12 @@ function MintDetailContent({ url }: { url: string }) {
   const email = contactSource?.find(c => c.method === 'email')?.info
   const twitter = contactSource?.find(c => c.method === 'twitter')?.info
   const nostr = contactSource?.find(c => c.method === 'nostr')?.info
+  // The listed contacts the score counts (methodology 9: recognised format only; see scoreContactKindCounts). Only the
+  // fallback score and the breakdown row's live text use these; the stored score and breakdown win.
+  const liveChecks = readContactChecks(data?.contactChecks)
+  const scoreEmail = email && scoreContactKindCounts('email', liveChecks) ? email : undefined
+  const scoreTwitter = twitter && scoreContactKindCounts('twitter', liveChecks) ? twitter : undefined
+  const scoreNostr = nostr && scoreContactKindCounts('nostr', liveChecks) ? nostr : undefined
   const contactsAreLastSeen = !liveContact && !!lastContacts?.length
   const urls = data?.info?.urls
   const hasOnionAlias = listHasOnion(urls)
@@ -785,7 +792,7 @@ function MintDetailContent({ url }: { url: string }) {
   // The stored (server-side) score wins. Without one, the score is computed here from the 24 h uptime: until that history
   // has arrived (or when its request failed) there is no score to show, and computing it with uptime 0 showed a wrong
   // number for a moment (Task F3). Every place below shows SCORE_PENDING_* while `reliabilityScore` is null.
-  const fallbackScore = () => computeReliabilityScore(uptimePct, offeredNuts.length, version, email, twitter, nostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null, long: auditLongOf(knownMint) }, versionLatestMap)
+  const fallbackScore = () => computeReliabilityScore(uptimePct, offeredNuts.length, version, scoreEmail, scoreTwitter, scoreNostr, { blamed: knownMint?.auditCzBlamed ?? null, total: knownMint?.auditCzTotal ?? null, fetchedAt: knownMint?.auditCzFetchedAt ?? null, long: auditLongOf(knownMint) }, versionLatestMap)
   const reliabilityScore: number | null = knownMint?.reliabilityScore ?? (uptime24hData ? fallbackScore() : null)
   const scorePending = reliabilityScore === null
   const scoreText = scorePending ? SCORE_PENDING_TEXT : String(reliabilityScore)
@@ -804,14 +811,14 @@ function MintDetailContent({ url }: { url: string }) {
   const uptimeRowPending = scorePending || uptime24hData === undefined || uptime24hData.uptimePct === null
   const breakdownNScore = nutComponent(offeredNuts.length)
   const breakdownVScore = versionComponent(version, versionLatestMap)
-  const breakdownContactFields = [email, twitter, nostr].filter(Boolean)
+  const breakdownContactFields = [scoreEmail, scoreTwitter, scoreNostr].filter(Boolean)
   const breakdownCScore = contactComponent(breakdownContactFields.length)
   // The stored record of the shown score (/api/mints/known scoreBreakdown): its points per row win, so the rows add up to
   // the score; the live values below are display text only. null (not written yet): the live computation, as before.
   const storedBreakdown = knownMint?.reliabilityScore != null ? (knownMint.scoreBreakdown ?? null) : null
   const breakdownContactDisplay = breakdownContactFields.length === 0
     ? (storedBreakdown && storedBreakdown.contact.points > 0 ? (contactKindsText(data?.contactChecks) ?? 'Listed at last check') : 'None')
-    : (email ? 'Email' : '') + (twitter ? (email ? ' + Twitter' : 'Twitter') : '') + (nostr ? ((email || twitter) ? ' + Nostr' : 'Nostr') : '')
+    : (scoreEmail ? 'Email' : '') + (scoreTwitter ? (scoreEmail ? ' + Twitter' : 'Twitter') : '') + (scoreNostr ? ((scoreEmail || scoreTwitter) ? ' + Nostr' : 'Nostr') : '')
   // Audit part of the score: cashu.info's 7-day attributed failures (mints.audit_cz_*), the same
   // functions the server scores with (shared/auditScore.ts).
   const auditCzBlamed = knownMint?.auditCzBlamed ?? null

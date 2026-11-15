@@ -40,6 +40,7 @@ const NOW = new Date(Date.UTC(2026, 9, 20, 12, 0, 0))
 
 type Mode = 'on' | 'off' | 'dns-rejects' | 'dns-throws' | 'store-rejects'
 let calls: Array<[string, unknown[]]>
+let info: Record<string, unknown> = INFO
 let safeFetch: ReturnType<typeof vi.fn>
 
 async function setup(mode: Mode, stored: unknown = null) {
@@ -69,7 +70,7 @@ async function setup(mode: Mode, stored: unknown = null) {
     return { rows: [], rowCount: 1 }
   })
   safeFetch = (await import('../ssrf.js')).safeFetch as unknown as ReturnType<typeof vi.fn>
-  safeFetch.mockReset().mockResolvedValue({ ok: true, status: 200, json: async () => INFO })
+  safeFetch.mockReset().mockResolvedValue({ ok: true, status: 200, json: async () => info })
   const { probeMintToDb } = await import('../prober.js')
   return probeMintToDb
 }
@@ -88,7 +89,7 @@ async function runProbe(probeMintToDb: (u: string) => Promise<void>): Promise<un
 const isCheckWrite = (sql: string): boolean => /UPDATE mints SET contact_checks/.test(sql)
 const withoutChecks = (): Array<[string, unknown[]]> => calls.filter(([sql]) => !isCheckWrite(sql))
 
-beforeEach(() => { vi.spyOn(console, 'error').mockImplementation(() => undefined); vi.spyOn(console, 'log').mockImplementation(() => undefined) })
+beforeEach(() => { info = INFO; vi.spyOn(console, 'error').mockImplementation(() => undefined); vi.spyOn(console, 'log').mockImplementation(() => undefined) })
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.doUnmock('../contactChecks.js') })
 
 describe('probe -> contact checks', () => {
@@ -187,5 +188,28 @@ describe('probe result, score and notifications do not depend on the checks', ()
       expect(logs, mode).not.toContain('canary')
       expect(logs, mode).not.toContain('ab'.repeat(32))
     }
+  })
+})
+
+describe('probe -> contact count of the score (methodology 9)', () => {
+  const contactCountWritten = (): unknown => {
+    const w = calls.find(([sql]) => /contact_count\s+= \$12/.test(sql))
+    return w ? w[1][11] : undefined
+  }
+  it('three recognised entries: contact_count 3', async () => {
+    const probe = await setup('off')
+    await runProbe(probe)
+    expect(contactCountWritten()).toBe(3)
+  })
+  it('a placeholder nostr value and a malformed e-mail are not counted; telegram never was', async () => {
+    info = { ...INFO, contact: [
+      { method: 'nostr', info: 'npub…' },
+      { method: 'email', info: '~not-an-address' },
+      { method: 'twitter', info: '@canaryhandle7f3a9c' },
+      { method: 'telegram', info: 'canary' },
+    ] }
+    const probe = await setup('off')
+    await runProbe(probe)
+    expect(contactCountWritten()).toBe(1)
   })
 })

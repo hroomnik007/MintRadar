@@ -109,10 +109,10 @@ const KIND_LABEL: Record<string, string> = { email: 'Email', twitter: 'Twitter',
 
 /**
  * Contact row text when no contact value is known in this view: the kinds of the last contact checks ("Email + Nostr"),
- * never a value. null when there are none.
+ * never a value. Only kinds with a recognised format, the ones the score counts (methodology 9). null when there are none.
  */
 export function contactKindsText(checks: readonly ContactCheckFact[] | null | undefined): string | null {
-  const kinds = ['email', 'twitter', 'nostr'].filter(k => (checks ?? []).some(c => c.kind === k))
+  const kinds = ['email', 'twitter', 'nostr'].filter(k => (checks ?? []).some(c => c.kind === k && c.formatValid))
   return kinds.length > 0 ? kinds.map(k => KIND_LABEL[k]).join(' + ') : null
 }
 

@@ -11,7 +11,7 @@ import { mintMeltCondition, versionCondition, nutLossTransition, type Condition 
 import { getLatestVersionsMap } from './versionCatalog.js'
 import { normalizeMintPubkey } from './mintPubkey.js'
 import { recordInfoObservation } from './mintChanges.js'
-import { queueContactChecks } from './contactChecks.js'
+import { queueContactChecks, scoreContactCount } from './contactChecks.js'
 import { extractLastContacts } from './lastContacts.js'
 import { computeScoreBreakdown } from './scoreBreakdown.js'
 import { summarizeOutages, type OutageRow } from './outages.js'
@@ -533,7 +533,8 @@ export async function probeMintToDb(url: string, onDeferFailure?: (f: DeferredPr
           const name = nameRaw && nameRaw.length > 0 ? nameRaw : null
 
           const contactArr = Array.isArray(raw['contact']) ? raw['contact'] as Array<{ method: string; info?: unknown }> : []
-          contactCount = contactArr.filter(c => c.method === 'email' || c.method === 'twitter' || c.method === 'nostr').length
+          // Methodology 9: only entries whose value is recognised count (contactChecks.ts scoreContactCount, format rules only).
+          contactCount = scoreContactCount(contactArr)
           // Raw "nostr" contact strings (bounded) — read back only to tell the operator's reviews apart.
           const contactNostr = contactArr
             .filter(c => c.method === 'nostr' && typeof c.info === 'string')

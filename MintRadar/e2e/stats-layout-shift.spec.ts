@@ -24,15 +24,16 @@ const LOADED: Record<number, { head: number; board: number; nhi: number; stack: 
 }
 
 // The REAL height of the movers note (px) by the number of changes it lists, as [from width, to width, height] ranges,
-// measured at every width 320 to 1600 (1 px steps) on 2026-10-28 with methodology v6. The change log can only produce one
-// text per count (a window holds the NEWEST changes): n1 `28 Oct (v6)` ... n5 `8 Oct (v2)` to `28 Oct (v6)`. A new
+// measured at every width 320 to 1600 (1 px steps), re-measured on 2026-11-15 with methodology v9 (n4 and n5 phone edges
+// moved). The change log can only produce one text per count (a window holds the NEWEST changes): n1 `15 Nov (v9)` ... n5
+// `27 Oct (v5)` to `15 Nov (v9)`. A new
 // METHODOLOGY_CHANGES entry changes the texts: re-measure (docs/claude/stats-dashboard-watchlist-ui.md).
 const NOTE_HEIGHTS: Record<number, ReadonlyArray<readonly [number, number, number]>> = {
   1: [[320, 372, 50], [373, 767, 32], [768, 1600, 31.25]],
   2: [[320, 456, 50], [457, 767, 32], [768, 933, 48.5], [934, 1279, 31.25], [1280, 1600, 48.5]],
   3: [[320, 547, 50], [548, 767, 32], [768, 1115, 48.5], [1116, 1279, 31.25], [1280, 1600, 48.5]],
-  4: [[320, 358, 68], [359, 639, 50], [640, 767, 32], [768, 1600, 48.5]],
-  5: [[320, 393, 68], [394, 723, 50], [724, 767, 32], [768, 807, 65.75], [808, 1600, 48.5]],
+  4: [[320, 365, 68], [366, 646, 50], [647, 767, 32], [768, 1600, 48.5]],
+  5: [[320, 393, 68], [394, 737, 50], [738, 767, 32], [768, 807, 65.75], [808, 1600, 48.5]],
 }
 const noteHeightAt = (width: number, count: number): number =>
   count === 0 ? 0 : NOTE_HEIGHTS[Math.min(count, 5)]!.find(([from, to]) => width >= from && width <= to)![2]
@@ -185,7 +186,7 @@ for (const width of WIDTHS) {
 // condition, so it is there at the first paint exactly when the note is shown, and it equals the note's real height (margin
 // + lines, within 1 px) at every width, for 1 to 5 changes. These tests pin the date on purpose: with the real date the
 // note disappears from the 7d window a week after a change. METHODOLOGY_CHANGES: v2 on 2026-10-08, v3 on 2026-10-09, v4 on
-// 2026-10-21, v5 on 2026-10-27, v6 on 2026-10-28, v7 on 2026-11-10. A window always holds the NEWEST changes, so each date below gives the
+// 2026-10-21, v5 on 2026-10-27, v6 on 2026-10-28, v7 on 2026-11-10, v8 on 2026-11-13, v9 on 2026-11-15. A window always holds the NEWEST changes, so each date below gives the
 // text that the live page can show for that count (the dates are day-granular, both ends included).
 const NOTE_CASES = [
   // `note7` = the note of the default 7d view (what the waiting block and the first paint show), `note` = the note of `period`.
@@ -196,13 +197,14 @@ const NOTE_CASES = [
   { name: '30d window holds five changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '30d window holds four changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '30d window holds three changes, 7d none', date: '2026-11-09T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds four changes, 7d none (v5, v6, v7, v8)', date: '2026-11-21T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds three changes, 7d none (v6, v7, v8)', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds two changes, 7d none (v7, v8)', date: '2026-12-05T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds five changes, 7d none (v5 to v9)', date: '2026-11-23T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds four changes, 7d none (v6, v7, v8, v9)', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds three changes, 7d none (v7, v8, v9)', date: '2026-11-28T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds two changes, 7d none (v8, v9)', date: '2026-12-11T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '7d window holds no change', date: '2026-11-05T12:00:00Z', period: '7d', note7: false, note: false },
-  { name: '30d window holds one change, 7d none (v8)', date: '2026-12-11T12:00:00Z', period: '30d', note7: false, note: true },
-  // Methodology 8 went live on 2026-11-13: its 30 days end on 2026-12-13.
-  { name: '30d window holds no change', date: '2026-12-15T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds one change, 7d none (v9)', date: '2026-12-14T12:00:00Z', period: '30d', note7: false, note: true },
+  // Methodology 9 went live on 2026-11-15: its 30 days end on 2026-12-15.
+  { name: '30d window holds no change', date: '2026-12-17T12:00:00Z', period: '30d', note7: false, note: false },
 ] as const
 
 for (const width of [1440, 1024, 768, 390, 320]) {
