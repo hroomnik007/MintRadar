@@ -1,7 +1,7 @@
 import { DISCOVERY_RELAYS } from '@/core/nostr/relays'
 import { njumpEventUrl, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { nip87AnnouncementOf } from '@/utils/nip87Announcement'
-import { NIP87_ANNOUNCEMENT_LABEL, NIP87_NOT_SEEN_TEXT, nip87KeyText, nip87StoredSuffix, nip87CheckedLabel } from '@/utils/nip87Texts'
+import { NIP87_ANNOUNCEMENT_LABEL, NIP87_NOT_SEEN_TEXT, nip87KeyText, nip87StoredSuffix } from '@/utils/nip87Texts'
 import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-router-dom'
 import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -910,7 +910,6 @@ function MintDetailContent({ url }: { url: string }) {
   // NIP-87 announcement line (header): only the stored discovery data, nothing is fetched here.
   const nip87 = knownMint ? nip87AnnouncementOf({ announcedAt: knownMint.nostrAnnouncedAt, announceD: knownMint.nostrAnnounceD, infoPubkey: knownMint.pubkey, checkedAt: knownMint.nostrCheckedAt }) : null
   const nip87Key = nip87 ? nip87KeyText(nip87) : null
-  const nip87Checked = nip87 ? nip87CheckedLabel(nip87.checkedAt, now) : null
   // With relay hints (the discovery relays MintRadar found it on), the author and the NIP-87 kind, so njump can find it.
   const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId, { relays: DISCOVERY_RELAYS, author: knownMint?.nostrAnnouncePubkey, kind: 38172 })
   // Shown as a row of the Overview tab's "Mint info" panel (it was a line of the header until 2026-11-13: protocol detail
@@ -923,7 +922,6 @@ function MintDetailContent({ url }: { url: string }) {
         ) : NIP87_ANNOUNCEMENT_LABEL}
         {nip87StoredSuffix(nip87.eventCreatedAt)}
       </>) : NIP87_NOT_SEEN_TEXT}
-      {nip87Checked && <>{nip87Checked.text}<span title={nip87Checked.title} data-testid="md-nip87-checked">{nip87Checked.label}</span></>}
       {nip87Key && <span className="md-announce-key" data-testid="md-nip87-key">{nip87Key}</span>}
     </span>
   ) : null
@@ -1297,17 +1295,17 @@ function MintDetailContent({ url }: { url: string }) {
                   className="latency-test-btn"
                 >
                   {testingLatency && <span className="latency-spinner" />}
-                  {CLIENT_LATENCY_BUTTON_LABEL}
+                  {/* The result replaces the label in the same button (same spot, same height, the strip does not grow);
+                      a click measures again. */}
+                  {clientLatency === null ? CLIENT_LATENCY_BUTTON_LABEL
+                    : typeof clientLatency === 'number' ? `Your latency: ${clientLatency} ms`
+                    : clientLatency.startsWith('Unreachable') ? <>Unreachable<span className="sr-only">{clientLatency.slice('Unreachable'.length)}</span></>
+                    : clientLatency}
                 </button>
               </span>
             </div>
             {/* Desktop strip: ends the first row (value + button) whatever the width of the value, so the label never climbs into it when the value is the short "—" of a mint without latency. */}
             <span className="md-sc-latency-break" aria-hidden="true" />
-            {clientLatency !== null && (
-              <div style={{fontSize:12,marginTop:4,fontFamily:'var(--font-mono)',color: typeof clientLatency === 'number' ? 'var(--text)' : 'var(--text3)'}}>
-                {typeof clientLatency === 'number' ? `Your latency: ${clientLatency} ms` : clientLatency}
-              </div>
-            )}
           </div>
         </div>
         <div className="md-sc">

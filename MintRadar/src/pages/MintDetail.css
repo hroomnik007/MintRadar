@@ -378,6 +378,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .latency-test-btn:disabled { cursor: wait; }
+/* The measured result ("Your latency: 312 ms") replaces the label in the same button: one line, so the button keeps its height. */
+.latency-test-btn { white-space: nowrap; }
 
 /* ── Summary Strip ──────────────────────────────────────────── */
 .md-summary {
@@ -2392,7 +2394,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
    so it no longer makes this tile (and the whole strip) taller than the others. */
 @media (min-width: 1200px) {
   /* Latency gets the widest column so the value (up to "1387 ms") and the button fit side by side. */
-  .md-summary { grid-template-columns: 0.95fr 1.25fr 1fr 1.15fr 0.85fr 1.1fr; }
+  /* 2026-11-15: wider again (1.25fr before) so "Your latency: 1387 ms", which replaces the button, stays on the button's line. */
+  .md-summary { grid-template-columns: 0.9fr 1.55fr 0.95fr 1.1fr 0.8fr 1.05fr; }
 }
 
 @media (max-width: 768px) {
@@ -2977,11 +2980,25 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
    one give the tile the same height (no layout shift when the score arrives). */
 .md-sc-score .md-sc-sub { display: block; flex: 0 0 100%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .md-sc-sub.md-sc-score-link { color: var(--accent); }
+/* Desktop strip (769px and up): the whole tile opens the breakdown, so "Details ›" is not shown; it stays in the mobile panel
+   layout. Hidden with visibility, not display: its row still holds the strip's height, so the strip does not shrink and grow
+   back while other tiles load (the Uptime 24h sub line wraps while "loading checks…"; mint-detail-score-pending.spec.ts (4)). */
+@media (min-width: 769px) {
+  .md-sc-sub.md-sc-score-link { visibility: hidden; }
+}
 @media (max-width: 640px) {
   .md-sc.md-sc-score { display: none; }
 }
 /* 769-1199px: six figures do not fit one row ("Nutshell/0.16.0" broke inside the word), so the strip is 3 x 2. */
 @media (min-width: 769px) and (max-width: 1199px) {
-  .md-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 16px; }
+  /* The middle column (Latency, then Version) a little wider: room for "Your latency: 1387 ms" in the button's place. */
+  .md-summary { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr); row-gap: 16px; }
   .md-sc:nth-child(3n+1) { border-left: 0; }
+}
+
+/* Narrow phones (below 375px): "Your latency: 1387 ms" in the latency button fits its half of the strip on one line
+   (the 12px phone text floor stays: tighter button and tile padding instead of a smaller font). */
+@media (max-width: 374px) {
+  .md-sc:has(.latency-test-btn) { padding-left: 10px; padding-right: 8px; }
+  .latency-test-btn { font-size: 12px !important; padding: 3px !important; letter-spacing: -0.01em; }
 }
