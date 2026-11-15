@@ -14,13 +14,27 @@ export function njumpProfileUrl(raw: string | null | undefined): string | null {
   return null
 }
 
-export function njumpEventUrl(eventId: string | null | undefined): string | null {
+/** Where njump.me should look for an event: relay hints, the author and the kind go into the nevent (2026-11-15 audit:
+ *  a bare id left njump searching its own relays only, and the mint announcement was "not found"). */
+export interface EventHints {
+  relays?: readonly string[]
+  author?: string | null | undefined
+  kind?: number
+}
+/** At most this many relay hints, so the link stays short. Only wss:// URLs are kept. */
+export const NEVENT_MAX_RELAYS = 3
+
+export function njumpEventUrl(eventId: string | null | undefined, hints: EventHints = {}): string | null {
   if (!eventId) return null
   const raw = eventId.trim()
   if (raw.startsWith('nevent1') || raw.startsWith('note1')) return NJUMP + raw
   const s = raw.toLowerCase()
   if (!/^[0-9a-f]{64}$/.test(s)) return null
-  try { return NJUMP + nip19.neventEncode({ id: s }) } catch { return NJUMP + s }
+  const relays = (hints.relays ?? []).filter(r => /^wss:\/\/[^\s]+$/.test(r)).slice(0, NEVENT_MAX_RELAYS)
+  const author = hints.author && /^[0-9a-f]{64}$/i.test(hints.author.trim()) ? hints.author.trim().toLowerCase() : undefined
+  try {
+    return NJUMP + nip19.neventEncode({ id: s, ...(relays.length ? { relays } : {}), ...(author ? { author } : {}), ...(hints.kind !== undefined ? { kind: hints.kind } : {}) })
+  } catch { return NJUMP + s }
 }
 
 /** njump.me page of an addressable event, or null when `naddr` is not a valid naddr (the caller then renders no link). */

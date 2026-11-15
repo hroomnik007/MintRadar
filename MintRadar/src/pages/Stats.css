@@ -339,7 +339,17 @@
   font-family: var(--font-mono);
   padding: 3px 0;
 }
-.stats-movers-note { margin-top: 8px; }
+/* The methodology note sits under the panel head, above the Risers label (2026-11-15; it was the footer). It must add to
+   the card exactly what it added as the footer, its box + 8px, because --stats-reserve-note reserves that (and the note
+   tables in e2e/stats-layout-shift.spec.ts measure box + margin-top). Its 8px top margin collapses into the head's bottom
+   margin (16px; 10px up to 768px); the bottom margin makes up the rest against the Risers label's 16px top margin, which
+   collapses through the rows wrapper below 1280px and stays inside it (grid wrapper) from 1280px:
+     <= 768     10 + box + (16 - 2) = box + 24 = old 16 (head to Risers) + box + 8
+     769-1279   16 + box + (16 - 8) = box + 24
+     >= 1280    16 + box + 8 (+16 inside the grid wrapper, as before) */
+.stats-movers-note { margin-top: 8px; margin-bottom: -8px; }
+@media (max-width: 768px) { .stats-movers-note { margin-bottom: -2px; } }
+@media (min-width: 1280px) { .stats-movers-note { margin-bottom: 8px; } }
 
 /* Loading skeleton — mirrors the .stats-top5-row layout (favicon, two text
    lines, right-hand badge) so the panel doesn't reflow when real rows arrive.

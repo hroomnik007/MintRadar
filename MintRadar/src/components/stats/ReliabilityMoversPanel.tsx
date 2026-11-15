@@ -28,8 +28,12 @@ interface ReliabilityMoversPanelProps {
   onMintClick: (url: string) => void
   getDisplayName: (mover: ReliabilityMover) => string
   getIconUrl: (mover: ReliabilityMover) => string | null
-  // Optional muted line under the rows (the one-time audit-source note, supplied by Stats.tsx).
+  // Optional muted line under the rows.
   footer?: ReactNode
+  // Optional note ABOVE the rows, under the panel head: the methodology note (supplied by Stats.tsx). It explains why the
+  // deltas below moved, so it is read before them (2026-11-15 audit; it was the footer). Same box as before, so the
+  // reserved panel height (Stats.css --stats-reserve-note) is unchanged.
+  note?: ReactNode
 }
 
 function SkeletonRows() {
@@ -60,7 +64,7 @@ function getHostname(url: string): string {
 // no path-alias resolution (unlike vite.config.ts), so this component takes
 // all data via props instead of reaching into hooks/utils itself, and imports
 // MintFavicon by relative path.
-export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, refreshing = false, onMintClick, getDisplayName, getIconUrl, footer }: ReliabilityMoversPanelProps) {
+export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, refreshing = false, onMintClick, getDisplayName, getIconUrl, footer, note }: ReliabilityMoversPanelProps) {
   // Row markup mirrors .stats-top5-row (Most Reliable, in Stats.tsx) — favicon,
   // name on top with its hostname underneath, value flush right — so the two
   // panels in the same grid row read as one visual family. Only the right-hand
@@ -105,6 +109,7 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
           <button type="button" className={`stats-tab-btn${period === '30d' ? ' active' : ''}`} onClick={() => onPeriodChange('30d')}>30d</button>
         </div>
       </div>
+      {note}
       <div
         style={{ opacity: refreshing ? 0.5 : 1, transition: 'opacity 0.15s ease' }}
         aria-busy={refreshing || loading}
