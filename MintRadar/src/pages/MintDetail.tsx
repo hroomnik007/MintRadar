@@ -882,6 +882,12 @@ function MintDetailContent({ url }: { url: string }) {
   // Mint that is not online: an honest block at the top of the Overview (since when, last error, what to do).
   const unavailable = !isOnline && knownMint !== null
   const isArchived = !isOnline && knownMint?.archived === true
+  // A mint that is not online keeps its last score, but in grey: a green "High Reliability" next to "Offline" read as a
+  // current verdict (2026-11-15 audit). The text stays; the breakdown says it is the last measured score.
+  const badgeInfo = unavailable && !scorePending ? { ...tsInfo, color: 'var(--text3)', bg: 'var(--bg3)', border: 'var(--border)' } : tsInfo
+  // Said to screen readers too (no title attribute: tooltipPatterns.test.ts allows none for explanations).
+  const badgeLastNote = unavailable && !scorePending ? <span className="sr-only"> (last measured score)</span> : null
+  const scoreTone = (c: string) => (unavailable ? 'var(--text3)' : c)
   // Status word: the shared rule of the wallet API `status` (utils/mintStatus.ts), so a mint the API calls
   // `degraded` reads "Degraded" here as on its card (lnpay was degraded in the API but "Offline" here). The one
   // input that can differ from the API is `online`: a live probe from this page is newer than the snapshot, and when
@@ -1261,7 +1267,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-sc-icon green"><Shield size={14} /></div>
           <div style={{flex:1}}>
             <div className="md-sc-label">Reliability Score</div>
-            <div className="md-sc-value" style={{color: scorePending ? 'var(--text-faint)' : tsInfo.color}} {...scoreA11y}>{scoreText}</div>
+            <div className="md-sc-value" style={{color: scorePending ? 'var(--text-faint)' : badgeInfo.color}} {...scoreA11y}>{scoreText}</div>
             {/* Two fixed lines (label, link): the placeholder's "Not available yet" and a score's label take the same height,
                 so the strip does not move when the score arrives. */}
             <div className="md-sc-sub">{tsInfo.label}</div>
@@ -1397,7 +1403,7 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-sc-reliability-donut">
             <svg viewBox="0 0 72 72" aria-hidden="true">
               <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="8" />
-              <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="8"
+              <circle cx="36" cy="36" r="27" fill="none" stroke={scoreTone('var(--green-bright)')} strokeWidth="8"
                 strokeDasharray={reliabilityDonut.dashArray}
                 strokeOpacity={scorePending ? 0 : 1}
                 strokeDashoffset={reliabilityDonut.dashOffset}
@@ -1410,9 +1416,11 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-label">Reliability</div>
             <span
               className="md-sc-reliability-badge"
-              style={{ color: tsInfo.color, background: tsInfo.bg, border: `0.5px solid ${tsInfo.border}` }}
+              data-testid="md-sc-reliability-badge"
+             
+              style={{ color: badgeInfo.color, background: badgeInfo.bg, border: `0.5px solid ${badgeInfo.border}` }}
             >
-              {tsInfo.label}
+              {tsInfo.label}{badgeLastNote}
             </span>
             <span className="md-sc-reliability-link">Details ›</span>
           </div>
@@ -1593,17 +1601,17 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="gauge-wrap">
                 <svg viewBox="0 0 72 72">
                   <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
-                  <circle cx="36" cy="36" r="27" fill="none" stroke="var(--green-bright)" strokeWidth="7"
+                  <circle cx="36" cy="36" r="27" fill="none" stroke={scoreTone('var(--green-bright)')} strokeWidth="7"
                     strokeDasharray={reliabilityDonut.dashArray}
                 strokeOpacity={scorePending ? 0 : 1}
                     strokeDashoffset={reliabilityDonut.dashOffset}
                     strokeLinecap="round"
                     transform="rotate(-90 36 36)" />
                 </svg>
-                <div className="gauge-num" style={{ color: scorePending ? 'var(--text3)' : 'var(--green-bright)', fontFamily: 'var(--font-mono-data)' }} {...scoreA11y}>{scoreText}</div>
+                <div className="gauge-num" style={{ color: scorePending ? 'var(--text3)' : scoreTone('var(--green-bright)'), fontFamily: 'var(--font-mono-data)' }} {...scoreA11y}>{scoreText}</div>
               </div>
               <div className="reliability-badges">
-                <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:tsInfo.color,background:tsInfo.bg,border:`0.5px solid ${tsInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}</span>
+                <span data-testid="md-reliability-card-badge" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:badgeInfo.color,background:badgeInfo.bg,border:`0.5px solid ${badgeInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}{badgeLastNote}</span>
                 {limitedDataLabel}
               </div>
             </div>
@@ -1791,8 +1799,8 @@ function MintDetailContent({ url }: { url: string }) {
               <button type="button" className="rb-close" onClick={() => setShowReliabilityBreakdown(false)} aria-label="Close"><IcClose /></button>
             </div>
             <div className="rb-hero">
-              <div className="rb-hero-score" style={{color:reliabilityScore === null ? 'var(--text3)' : reliabilityScoreColor(reliabilityScore)}} {...scoreA11y}>{scoreText}</div>
-              <span className="rb-hero-badge" style={{color:tsInfo.color,background:tsInfo.bg,borderColor:tsInfo.border}}>{tsInfo.label}</span>
+              <div className="rb-hero-score" style={{color:reliabilityScore === null ? 'var(--text3)' : scoreTone(reliabilityScoreColor(reliabilityScore))}} {...scoreA11y}>{scoreText}</div>
+              <span className="rb-hero-badge" data-testid="rb-hero-badge" style={{color:badgeInfo.color,background:badgeInfo.bg,borderColor:badgeInfo.border}}>{tsInfo.label}{badgeLastNote}</span>
               {limitedDataLabel}
             </div>
             {unavailable && <div className="rb-scope-note md-ua-caption">{LAST_SCORE_CAPTION}</div>}

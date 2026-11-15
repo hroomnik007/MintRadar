@@ -12,7 +12,7 @@ import './About.css'
 const REPO_URL = 'https://github.com/hroomnik007/MintRadar'
 const NPUB = 'npub1zatej55x47xzhnw06yarqr5ugz7y5el8vygcckek24e5qmrtx77qnmd6rg'
 const NIP05 = 'wildcitizen7@mintradar.org'
-const PRIVACY_UPDATED = '12 October 2026'
+const PRIVACY_UPDATED = '15 November 2026'
 const RULES_UPDATED = '17 October 2026'
 
 const SECTIONS = [
@@ -170,7 +170,8 @@ export default function About() {
             </li>
             <li>
               <strong>Your browser contacts some services directly,</strong> and they see your IP address: Nostr
-              relays, a mint when you test latency or inspect a token, the host of your own profile picture, cashu.me
+              relays, a mint when you test latency or inspect a token, the online mints you compare (Compare measures
+              their latency from your browser when it opens), the host of your own profile picture, cashu.me
               when you click &ldquo;Open in cashu.me&rdquo;, and a remote signer&rsquo;s pairing relays. Mint icons
               and NIP-05 checks go through our server. A review loads the author&rsquo;s https profile picture from their Nostr profile; if it fails, the initial stays. That host sees your IP address.
             </li>

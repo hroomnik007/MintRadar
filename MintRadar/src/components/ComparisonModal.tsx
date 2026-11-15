@@ -29,7 +29,8 @@ import { visibleCompareRows, type CompareKey, type CompareRowKeys } from '@/util
 import { compareMethods, limitsKey, type CompareMethods, type MethodsCell } from '@/utils/compareMethods'
 import { SCORE_PART_ROWS, COMPARE_CONTACT_LABEL, COMPARE_NIP87_LABEL, scorePointsText, contactMethodsText, nip87RowText } from '@/utils/compareScoreRows'
 import { bestFlags } from '@/utils/compareBest'
-import { COMPARE_UPTIME_LABEL, COMPARE_UPTIME_30D_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL } from '@/utils/compareLabels'
+import { COMPARE_UPTIME_LABEL, COMPARE_UPTIME_30D_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL, COMPARE_BROWSER_LATENCY_LABEL, COMPARE_BROWSER_LATENCY_TITLE } from '@/utils/compareLabels'
+import { measureMintLatency } from '@/utils/browserLatency'
 
 function reliabilityScoreInfo(score: number) {
   if (score >= 70) return { label: 'High Reliability', color: 'var(--accent)', bg: 'var(--green-soft)', border: 'var(--green-soft-strong)' }
@@ -294,7 +295,49 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     return q.data ? contactMethodsText(q.data) : null
   }
   const contactKey = (i: number): CompareKey => { const t = contactText(i); return t === 'pending' ? null : (t ?? 'n/a') }
+  // Latency from the visitor's browser: measured for every online compared mint when the modal opens (and again on
+  // "Measure again"). Offline / archived mints are not contacted. Never cached across opens (gcTime 0, run id in the key).
+  const [latencyRun, setLatencyRun] = useState(0)
+  const browserLatencyQueries = useQueries({
+    queries: mints.map((m, i) => ({
+      queryKey: ['mint', 'browser-latency', m.url, latencyRun],
+      queryFn: () => measureMintLatency(m.url),
+      enabled: allData[i]!.isOnline,
+      staleTime: Infinity, gcTime: 0, retry: false, refetchOnWindowFocus: false,
+    })),
+  })
+  /** number = measured ms; null = no answer in time; 'pending' = measuring; 'offline' = not contacted. */
+  const browserLatency = (i: number): number | null | 'pending' | 'offline' => {
+    if (!allData[i]!.isOnline) return 'offline'
+    const q = browserLatencyQueries[i]
+    if (!q || q.isPending) return 'pending'
+    return q.data ?? null
+  }
+  const latencyMeasuring = mints.some((_, i) => browserLatency(i) === 'pending')
+  const browserLatencyKey = (i: number): CompareKey => {
+    const v = browserLatency(i)
+    return v === 'pending' ? null : v === 'offline' ? '—' : v === null ? 'no answer' : String(v)
+  }
+  const browserLatencyLabel = (
+    <>
+      <span>{COMPARE_BROWSER_LATENCY_LABEL}</span>
+      <InfoTooltip iconSize={11} width={220} about={COMPARE_BROWSER_LATENCY_LABEL} text={COMPARE_BROWSER_LATENCY_TITLE} />
+      <button type="button" className="cmp-remeasure" data-testid="cmp-remeasure" disabled={latencyMeasuring}
+        onClick={() => setLatencyRun(n => n + 1)}>
+        {latencyMeasuring ? 'Measuring…' : 'Measure again'}
+      </button>
+    </>
+  )
+  const browserLatencyCell = (i: number, isBest: boolean): ReactNode => {
+    const v = browserLatency(i)
+    if (v === 'pending') return <span className="cmp-muted">measuring…</span>
+    if (v === 'offline') return <span className="cmp-muted">—</span>
+    if (v === null) return <span className="cmp-muted">no answer</span>
+    return <>{`${v}ms`}{isBest && <BestTag />}</>
+  }
+
   // BEST per metric row: only rows with a direction; a missing / pending value or a tie at the top gives no tag.
+  // Latency: the browser measurement (the visitor's own network path), never the probe server's single last check.
   const best = {
     reliability: bestFlags(mints.map((m, i) => (allData[i]!.isOnline && typeof m.reliabilityScore === 'number' ? m.reliabilityScore : null)), 'higher'),
     uptime: bestFlags(mints.map((_, i) => {
@@ -302,7 +345,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       return !q || q.isLoading ? null : (q.data?.uptimePct ?? null)
     }), 'higher'),
     uptime30d: bestFlags(mints.map(m => (typeof m.uptimePct30d === 'number' ? m.uptimePct30d : null)), 'higher'),
-    latency: bestFlags(mints.map((m, i) => (allData[i]!.isOnline && m.latencyMs != null ? m.latencyMs : null)), 'lower'),
+    latency: bestFlags(mints.map((_, i) => { const v = browserLatency(i); return typeof v === 'number' ? v : null }), 'lower'),
   }
   const scoreRows = SCORE_PART_ROWS.map(r => ({
     id: r.id, label: r.label,
@@ -372,12 +415,20 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       },
     },
     {
+      id: 'browser-latency', label: browserLatencyLabel,
+      keys: mints.map((_, i) => browserLatencyKey(i)),
+      cell: i => (
+        <span style={{ color: best.latency[i] ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+          {browserLatencyCell(i, best.latency[i]!)}
+        </span>
+      ),
+    },
+    {
       id: 'latency', label: <>{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></>,
       keys: mints.map((m, i) => (allData[i]!.isOnline && m.latencyMs != null ? String(m.latencyMs) : '—')),
       cell: i => (
-        <span style={{ color: best.latency[i] ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+        <span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
           {allData[i]!.isOnline && mints[i]!.latencyMs != null ? `${mints[i]!.latencyMs}ms` : '—'}
-          {best.latency[i] && <BestTag />}
         </span>
       ),
     },
@@ -694,15 +745,24 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           })}
           </>)}
 
+          {showRow('browser-latency') && (<>
+          {/* ── Latency from the visitor's browser (carries the BEST latency tag) ── */}
+          <div className="cmp-lbl cmp-lbl-browser-latency">{browserLatencyLabel}</div>
+          {mints.map((mint, i) => (
+            <div key={mint.url} className="cmp-val" data-row="browser-latency" style={{ color: best.latency[i] ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+              {browserLatencyCell(i, best.latency[i]!)}
+            </div>
+          ))}
+          </>)}
+
           {showRow('latency') && (<>
-          {/* ── Latency ── */}
+          {/* ── Latency of the probe server's last check ── */}
           <div className="cmp-lbl">{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></div>
           {mints.map((mint, i) => {
             const d = allData[i]!
             return (
-              <div key={mint.url} className="cmp-val" data-row="latency" style={{ color: best.latency[i] ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
+              <div key={mint.url} className="cmp-val" data-row="latency" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                 {d.isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
-                {best.latency[i] && <BestTag />}
               </div>
             )
           })}

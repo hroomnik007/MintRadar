@@ -494,9 +494,14 @@
 }
 
 .mint-list-name {
+  /* Two lines at most, like the card name. */
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-weight: 500;
   color: var(--text);
 }
@@ -614,9 +619,14 @@
   font-weight: 600;
   color: var(--t1);
   line-height: 1.2;
-  white-space: nowrap;
+  /* Up to two lines, then an ellipsis (2026-11-15 audit: one line cut most longer names at phone widths). */
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* Stretched link (the card is a real link): the <a> wraps only the name; its ::after covers the whole

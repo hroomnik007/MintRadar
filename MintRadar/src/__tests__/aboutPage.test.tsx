@@ -58,7 +58,7 @@ describe('About: dates', () => {
   it('"Your data" and "Rules" each carry their own last-updated date', () => {
     renderAbout()
     const date = (id: string) => squash(sectionOf(id).querySelector('.about-updated')?.textContent)
-    expect(date('privacy')).toBe('Last updated 12 October 2026')
+    expect(date('privacy')).toBe('Last updated 15 November 2026')
     expect(date('terms')).toBe('Last updated 17 October 2026')
   })
 })

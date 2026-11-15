@@ -4,19 +4,36 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 // Compare modal: per metric row the better value is accent-coloured with a small "BEST" pill (utils/compareBest.ts).
 // Rows with a direction only (Reliability Score, Uptime 24h / 30 days higher, Latency lower); no tag on equal values,
 // on a tie at the top, or while any value is missing / pending. No overall winner.
+// Latency (2026-11-15): the tag is on the "Latency (your browser)" row, measured from the browser when Compare opens;
+// the server's "Latency (last check)" row never gets one. The dev CSP blocks real mint fetches, so /v1/info is answered
+// in the page after a per-mint delay (null = HTTP 500, "no answer").
 
 const ALPHA = 'https://alpha.mint.example', BRAVO = 'https://bravo.mint.example', DELTA = 'https://delta.mint.example'
 const UPTIME_30D: Record<string, number> = { [ALPHA]: 99.5, [BRAVO]: 99.5, [DELTA]: 97 }
 const KNOWN = MOCK_KNOWN_MINTS.map(m => ({ ...m, uptimePct30d: UPTIME_30D[m.url] ?? null }))
-const ROWS = ['reliability', 'uptime', 'uptime-30d', 'latency'] as const
+const ROWS = ['reliability', 'uptime', 'uptime-30d', 'browser-latency'] as const
+// Browser latency delays (ms): Alpha fastest, then Delta, then Bravo; DELTA_DOWN: Delta does not answer.
+const BROWSER_MS: Record<string, number | null> = { alpha: 30, bravo: 400, delta: 160 }
+const DELTA_DOWN: Record<string, number | null> = { ...BROWSER_MS, delta: null }
 // Delta online but without a stored score, a latency or a 30-day figure (not available: no tag in those rows).
 const KNOWN_MISSING = KNOWN.map(m => (m.url === DELTA ? { ...m, reliabilityScore: null, latencyMs: null, uptimePct30d: null } : m))
 
-interface Opts { uptime24h: Record<string, number>; hold?: Promise<void>; known?: typeof KNOWN }
+interface Opts { uptime24h: Record<string, number>; hold?: Promise<void>; known?: typeof KNOWN; browser?: Record<string, number | null> }
 async function openCompare(page: Page, size: [number, number], others: string[], o: Opts) {
   await mockRelays(page)
   await installApiMocks(page)
   await page.route('**/api/mints/known', r => r.fulfill({ json: o.known ?? KNOWN }))
+  await page.addInitScript((d: Record<string, number | null>) => {
+    const real = window.fetch.bind(window)
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      const m = /^https:\/\/([a-z]+)\.mint\.example\/v1\/info$/.exec(url)
+      if (!m) return real(input, init)
+      const delay = d[m[1]!] ?? null
+      if (delay === null) return Promise.resolve(new Response('{}', { status: 500 }))
+      return new Promise<Response>(resolve => setTimeout(() => resolve(new Response('{}', { status: 200 })), delay))
+    }
+  }, o.browser ?? BROWSER_MS)
   await page.route('**/api/mints/history**', async route => {
     const u = new URL(route.request().url())
     const url = u.searchParams.get('url')!
@@ -55,14 +72,15 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     // Alpha 92 / 50ms, Bravo 55 / 300ms, Delta 78 / 120ms; 24h: 100 / 100 / 98; 30 days: 99.5 / 99.5 / 97.
     await openCompare(page, size, ['Bravo Mint', 'Delta Mint'], { uptime24h: { [ALPHA]: 100, [BRAVO]: 100, [DELTA]: 98 } })
     await expect(cells(page, phone, 'uptime').first()).toContainText('100%')
+    await expect(cells(page, phone, 'browser-latency').filter({ hasText: 'measuring' })).toHaveCount(0)
     expect(await bestOf(page, phone, 'reliability')).toBe('Alpha Mint')
-    expect(await bestOf(page, phone, 'latency')).toBe('Alpha Mint')
+    expect(await bestOf(page, phone, 'browser-latency')).toBe('Alpha Mint')
     expect(await bestOf(page, phone, 'uptime')).toBeNull()
     expect(await bestOf(page, phone, 'uptime-30d')).toBeNull()
     // No tag on rows without a direction.
     expect(await page.locator('.cmp-best').count()).toBe(2)
     // The pill: "BEST" in the accent colour on the soft green fill; the value beside it is accent too.
-    const tag = cells(page, phone, 'latency').filter({ has: page.locator('.cmp-best') }).locator('.cmp-best')
+    const tag = cells(page, phone, 'browser-latency').filter({ has: page.locator('.cmp-best') }).locator('.cmp-best')
     await expect(tag).toHaveText(/best/i)
     const s = await tag.evaluate(el => {
       const c = getComputedStyle(el), probe = document.createElement('span')
@@ -79,6 +97,8 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     expect(s.value).toBe(s.accent)
     if (phone) expect(s.size).toBeGreaterThanOrEqual(12)
     // A losing value keeps its own colour (not accent).
+    // The server's last-check row has no tag at all.
+    expect(await bestOf(page, phone, 'latency')).toBeNull()
     const loser = cells(page, phone, 'latency').filter({ hasText: '300ms' })
     const lose = await (phone ? loser.locator('span').first() : loser).evaluate(el => getComputedStyle(el).color)
     expect(lose).not.toBe(s.accent)
@@ -95,14 +115,15 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     await expect(cells(page, phone, 'uptime').filter({ hasText: '99.9%' })).toHaveCount(1)
     await expect.poll(() => bestOf(page, phone, 'uptime')).toBe('Delta Mint')
     expect(await bestOf(page, phone, 'reliability')).toBe('Alpha Mint')
-    expect(await bestOf(page, phone, 'latency')).toBe('Alpha Mint')
+    await expect.poll(() => bestOf(page, phone, 'browser-latency')).toBe('Alpha Mint')
   })
 
   test(`${size[0]}px: a missing value (score, latency, 30 days shown as —) means no tag in those rows`, async ({ page }) => {
-    await openCompare(page, size, ['Delta Mint'], { uptime24h: { [ALPHA]: 99, [DELTA]: 12 }, known: KNOWN_MISSING })
+    await openCompare(page, size, ['Delta Mint'], { uptime24h: { [ALPHA]: 99, [DELTA]: 12 }, known: KNOWN_MISSING, browser: DELTA_DOWN })
     await expect(cells(page, phone, 'uptime').filter({ hasText: '12%' })).toHaveCount(1)
+    await expect(cells(page, phone, 'browser-latency').filter({ hasText: 'no answer' })).toHaveCount(1)
     expect(await bestOf(page, phone, 'reliability')).toBeNull()
-    expect(await bestOf(page, phone, 'latency')).toBeNull()
+    expect(await bestOf(page, phone, 'browser-latency')).toBeNull()
     expect(await bestOf(page, phone, 'uptime-30d')).toBeNull()
     expect(await bestOf(page, phone, 'uptime')).toBe('Alpha Mint')
   })
@@ -111,7 +132,7 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
 for (const width of [390, 320]) {
   test(`${width}px: the tags do not widen the page or leave their cell`, async ({ page }) => {
     await openCompare(page, [width, 844], ['Bravo Mint', 'Delta Mint'], { uptime24h: { [ALPHA]: 100, [BRAVO]: 97, [DELTA]: 98 } })
-    // Reliability, Latency, 24h uptime: Alpha; 30 days: Alpha and Bravo tie at the top (no tag).
+    // Reliability, browser latency, 24h uptime: Alpha; 30 days: Alpha and Bravo tie at the top (no tag).
     await expect(page.locator('.cmp-best')).toHaveCount(3)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
     const out = await page.locator('.cmp-best').evaluateAll(els => els.filter(e => {
@@ -123,13 +144,14 @@ for (const width of [390, 320]) {
 }
 
 test('1440px: three mints with one missing value: every row with a tag has exactly one, and no overall winner is marked', async ({ page }) => {
-  await openCompare(page, [1440, 900], ['Bravo Mint', 'Delta Mint'], { uptime24h: { [ALPHA]: 99, [BRAVO]: 80, [DELTA]: 95 }, known: KNOWN_MISSING })
+  await openCompare(page, [1440, 900], ['Bravo Mint', 'Delta Mint'], { uptime24h: { [ALPHA]: 99, [BRAVO]: 80, [DELTA]: 95 }, known: KNOWN_MISSING, browser: DELTA_DOWN })
   await expect(cells(page, false, 'uptime').filter({ hasText: '80%' })).toHaveCount(1)
+  await expect(cells(page, false, 'browser-latency').filter({ hasText: 'no answer' })).toHaveCount(1)
   for (const id of ROWS) await bestOf(page, false, id)
   expect(await bestOf(page, false, 'uptime')).toBe('Alpha Mint')
-  // Delta has no score, latency or 30-day figure: those rows have no tag.
+  // Delta has no score or 30-day figure and does not answer the browser: those rows have no tag.
   expect(await bestOf(page, false, 'reliability')).toBeNull()
-  expect(await bestOf(page, false, 'latency')).toBeNull()
+  expect(await bestOf(page, false, 'browser-latency')).toBeNull()
   expect(await bestOf(page, false, 'uptime-30d')).toBeNull()
   // Nothing on the mint header row.
   expect(await page.locator('.cmp-row-mint .cmp-best').count()).toBe(0)
