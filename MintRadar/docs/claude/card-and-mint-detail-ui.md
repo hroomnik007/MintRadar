@@ -545,3 +545,7 @@ Source: an external review of the live site dated 2026-11-11. Tests: `e2e/ux-rev
 - **Uptime 24h tile before its query answers:** `uptimeTileText()` (`src/utils/mintDetailFacts.ts`) shows the 24 h uptime of the known-mints list and "loading checks…" while `/api/mints/history?period=24h` is pending, "checks not loaded" (list value kept) when it failed, "no checks yet" for an answer without checks, else "N / M checks" (or "1 check"). It never shows "0 / 0 checks". Sub-line `data-testid="md-uptime-24h-checks"`.
 - **Mint QR dialog title** wraps to a second line instead of an ellipsis; **NUT tile descriptions** wrap to at most two lines (line clamp) instead of a one-line ellipsis.
 - Tests: `e2e/ux-audit-1115-mint-detail.spec.ts`, `src/__tests__/mintDetailFacts.test.ts` (`uptimeTileText`).
+
+## Grey score for unavailable mints (UX audit, 2026-11-15)
+
+An unavailable mint (offline or archived, score not pending) keeps its last measured Reliability Score, but every place that showed it in the band colour now shows it grey: the summary score tile (`.md-sc-value`), the overview and breakdown donuts (stroke via `scoreTone()`), the band badges (`badgeInfo`: `--text3` text, `--bg3` fill, `--border` outline; `data-testid="md-sc-reliability-badge"` on the mobile badge) and the breakdown hero. The badge text stays the band label; screen readers get " (last measured score)" (`badgeLastNote`, sr-only; no `title` attribute, `tooltipPatterns.test.ts`). Online mints are unchanged. Test: `e2e/ux-audit-1115-dashboard-compare.spec.ts`.

@@ -23,8 +23,8 @@ import { listMobileColumn, type ListMobileColumn } from '@/utils/listColumns'
 import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
-import { listReliabilityScore, compareReliabilityThenRating } from '@/utils/reliabilitySort'
-import { ratingSortKey } from '@/utils/bayesianRating'
+import { listReliabilityScore } from '@/utils/reliabilitySort'
+import { compareMintsForSort, DEFAULT_SORT_DIRS } from '@/utils/mintSort'
 import { isNotRecommendedMint, partitionNotRecommended } from '@/utils/notRecommended'
 import { cleanMintName } from '@/utils/cleanMintName'
 import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolForStatus } from '@/utils/mintCounts'
@@ -145,7 +145,6 @@ const NOSTR_LOOKUP_RELAYS = [
 ]
 // nostr-tools gives up waiting for EOSE after 4.4 s; an EOSE that arrives sooner came from the relay.
 const LOOKUP_REAL_EOSE_MS = 4000
-const DEFAULT_SORT_DIRS: Record<'name' | 'latency' | 'rating' | 'reliability' | 'reviewCount', 'asc' | 'desc'> = { rating: 'desc', latency: 'asc', reliability: 'desc', name: 'asc', reviewCount: 'desc' }
 
 // Wallet-only/auth/method NUTs are deliberately not filterable here — a mint
 // never advertises the wallet-only ones, and this should stay in step with
@@ -430,28 +429,7 @@ function MintListView({
       return getHostname(mint.url).toLowerCase().includes(q) || name.includes(q)
     })
     // Test mints always follow every other mint, whatever the sort mode or direction.
-    return partitionNotRecommended([...filtered].sort((a, b) => {
-      let result: number
-      if (sortBy === 'rating') {
-        // Confidence-adjusted average (few reviews rank lower), NOT the displayed average —
-        // see utils/bayesianRating.ts. Mints without a rated review sort last.
-        result = ratingSortKey(b) - ratingSortKey(a)
-      } else if (sortBy === 'latency') {
-        const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity
-        const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
-        result = la - lb
-      } else if (sortBy === 'reliability') {
-        result = compareReliabilityThenRating(a, b)
-      } else if (sortBy === 'reviewCount') {
-        // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
-        const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
-        const cb = b.reviewCount && b.reviewCount > 0 ? b.reviewCount : -1
-        result = cb - ca
-      } else {
-        result = mintDisplayName(a, duplicateDisplayNames).localeCompare(mintDisplayName(b, duplicateDisplayNames))
-      }
-      return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
-    }))
+    return partitionNotRecommended([...filtered].sort((a, b) => compareMintsForSort(a, b, sortBy, sortDir, m => mintDisplayName(m, duplicateDisplayNames))))
   }, [mints, search, sortBy, sortDir, duplicateDisplayNames])
 
   if (sortedFiltered.length === 0 && (search.trim() !== '' || filtersActive)) {
@@ -581,28 +559,7 @@ function MintGrid({
     })
 
     // Test mints always follow every other mint, whatever the sort mode or direction.
-    return partitionNotRecommended([...filtered].sort((a, b) => {
-      let result: number
-      if (sortBy === 'rating') {
-        // Confidence-adjusted average (few reviews rank lower), NOT the displayed average —
-        // see utils/bayesianRating.ts. Mints without a rated review sort last.
-        result = ratingSortKey(b) - ratingSortKey(a)
-      } else if (sortBy === 'latency') {
-        const la = a.online === true && a.latencyMs != null ? a.latencyMs : Infinity
-        const lb = b.online === true && b.latencyMs != null ? b.latencyMs : Infinity
-        result = la - lb
-      } else if (sortBy === 'reliability') {
-        result = compareReliabilityThenRating(a, b)
-      } else if (sortBy === 'reviewCount') {
-        // Mints with reviewCount === 0 or null sort to the end, regardless of direction toggle.
-        const ca = a.reviewCount && a.reviewCount > 0 ? a.reviewCount : -1
-        const cb = b.reviewCount && b.reviewCount > 0 ? b.reviewCount : -1
-        result = cb - ca
-      } else {
-        result = mintDisplayName(a, duplicateDisplayNames).localeCompare(mintDisplayName(b, duplicateDisplayNames))
-      }
-      return sortDir === DEFAULT_SORT_DIRS[sortBy] ? result : -result
-    }))
+    return partitionNotRecommended([...filtered].sort((a, b) => compareMintsForSort(a, b, sortBy, sortDir, m => mintDisplayName(m, duplicateDisplayNames))))
   }, [mints, search, sortBy, sortDir, duplicateDisplayNames])
 
   if (sortedFiltered.length === 0 && (search.trim() !== '' || filtersActive)) {

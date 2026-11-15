@@ -27,3 +27,15 @@
 @media (max-width: 767px) {
   .cmp-best { font-size: 12px; margin-left: 4px; }
 }
+
+/* "Latency (your browser)" row (2026-11-15): the label wraps so the "Measure again" button gets its own line inside the
+   160px label column; values that are not a measurement ("measuring…", "no answer", "—") are muted. */
+.cmp-lbl.cmp-lbl-browser-latency { flex-wrap: wrap; white-space: normal; gap: 2px 4px; }
+.cmp-remeasure {
+  flex-basis: 100%; justify-self: start; text-align: left; padding: 2px 0; margin-top: 2px;
+  font-family: var(--font-body); font-size: 12px; color: var(--accent); background: none; border: 0; cursor: pointer;
+}
+.cmp-remeasure:disabled { color: var(--text3); cursor: default; opacity: 1; }
+.cmp-remeasure:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 3px; }
+@media (hover: hover) { .cmp-remeasure:not(:disabled):hover { text-decoration: underline; } }
+.cmp-muted { color: var(--text3); font-weight: 400; font-size: 13px; }
