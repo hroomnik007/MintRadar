@@ -76,6 +76,7 @@ import { AuditTab } from './mintDetail/AuditTab'
 import { ReviewsTab } from './mintDetail/ReviewsTab'
 import { OverviewTab } from './mintDetail/OverviewTab'
 import { shortNpub, starString, type MergedReviewCandidate } from './mintDetail/reviewFormat'
+import { avatarInitial } from '@/utils/npub'
 import { NUT_DESCRIPTIONS, type NutConfig } from './mintDetail/nutCatalog'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import './MintDetail.css'
@@ -88,7 +89,7 @@ import {
   Shield,
   Clock, GitBranch, Layers, Zap, QrCode,
   Star,
-  ArrowUpRight,
+  ArrowUpRight, User,
 } from 'lucide-react'
 
 // Short label for the "Signing with" row — mirrors AppShell's navbar profile
@@ -1829,7 +1830,9 @@ function MintDetailContent({ url }: { url: string }) {
                     aria-label={`${star} star${star > 1 ? 's' : ''}${RATING_LABELS[star as 1 | 2 | 3 | 4 | 5] ? ` — ${RATING_LABELS[star as 1 | 2 | 3 | 4 | 5]}` : ''}`}
                     aria-pressed={reviewRating === star}
                     onMouseEnter={() => setReviewHoverRating(star)}
-                    onFocus={() => setReviewHoverRating(star)}
+                    // Keyboard focus previews like hover; the focus the dialog moves here on open does not
+                    // (it lit stars the user had not chosen). :focus-visible tells the two apart.
+                    onFocus={e => { if (e.currentTarget.matches(':focus-visible')) setReviewHoverRating(star) }}
                     onBlur={() => setReviewHoverRating(0)}
                     onClick={() => setReviewRating(star)}
                   >
@@ -1850,7 +1853,7 @@ function MintDetailContent({ url }: { url: string }) {
                   {profile?.picture?.startsWith('https://')
                     ? <img src={profile.picture} alt="" className="rv-signer-avatar" onError={e => { e.currentTarget.style.display = 'none' }} />
                     : <div className="rv-signer-avatar rv-signer-avatar-fallback" style={{ background: reviewAvatarColor(profile?.pubkey ?? '0'), color: avatarTextColor(reviewAvatarColor(profile?.pubkey ?? '0')) }}>
-                        {(profile?.name ?? profile?.npub ?? '?').slice(0, 1).toUpperCase()}
+                        {avatarInitial(profile?.name) ?? <User size={15} strokeWidth={2.4} aria-hidden="true" />}
                       </div>}
                   <div className="rv-signer-text">
                     <span className="rv-signer-label">Signing with</span>
@@ -1862,7 +1865,10 @@ function MintDetailContent({ url }: { url: string }) {
                 </div>
 
                 <div className="rv-field">
+                  <label className="rv-field-label" htmlFor="rv-comment">Your review (optional)</label>
                   <textarea
+                    id="rv-comment"
+                    aria-describedby="rv-charcount"
                     className="rv-textarea"
                     value={reviewComment}
                     onChange={e => setReviewComment(e.target.value)}
@@ -1870,7 +1876,7 @@ function MintDetailContent({ url }: { url: string }) {
                     maxLength={500}
                     rows={3}
                   />
-                  <div className="rv-charcount">{reviewComment.length} / 500 characters</div>
+                  <div className="rv-charcount" id="rv-charcount">{reviewComment.length} / 500 characters</div>
                 </div>
 
                 {reviewError !== null && <div className="rv-msg rv-msg-error">{reviewError}</div>}

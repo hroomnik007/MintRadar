@@ -6,12 +6,13 @@
 // subscriptions and the lazy nostr-tools loading are unchanged. This component holds no state or hooks.
 import type { Dispatch, SetStateAction } from 'react'
 import { nip19 } from 'nostr-tools'
-import { Copy, Check, ExternalLink, Link2 } from 'lucide-react'
+import { Copy, Check, ExternalLink, Link2, User } from 'lucide-react'
 import { njumpEventUrl, npubFromPubkey } from '@/utils/nostrLinks'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { REVIEWS_NIP87_TEXT, OPERATOR_REVIEW_NOTE } from '@/utils/tooltipTexts'
 import { showContactLabel, CONTACT_LISTED_LABEL } from '@/utils/reviewUtils'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
+import { avatarInitial } from '@/utils/npub'
 import { shortNpub, formatReviewDate, starString, reviewPageList, type MergedReviewCandidate } from './reviewFormat'
 
 export type ReviewFilter = 'all' | '5star' | 'critical'
@@ -125,12 +126,13 @@ export function ReviewsTab({
                     const npub = nip19.npubEncode(r.pubkey)
                     const profile = r.profile
                     const displayName = profile?.name ?? shortNpub(npub)
-                    const initial = (profile?.name ?? npub).slice(0, 1).toUpperCase()
+                    // No usable name: a User icon, not the "N" of "npub" on every anonymous reviewer.
+                    const initial = avatarInitial(profile?.name)
                     return (
                       <div key={r.id} id={`review-${r.id}`} className={`review-card${highlightedReview === r.id ? ' review-card-hl' : ''}`}>
                         <div className="review-card-header">
                           <div className="review-avatar">
-                            <div className="review-avatar-fallback" style={{ background: reviewAvatarColor(r.pubkey), color: avatarTextColor(reviewAvatarColor(r.pubkey)) }}>{initial}</div>
+                            <div className="review-avatar-fallback" style={{ background: reviewAvatarColor(r.pubkey), color: avatarTextColor(reviewAvatarColor(r.pubkey)) }}>{initial ?? <User size={16} strokeWidth={2.4} aria-hidden="true" />}</div>
                             {profile?.picture?.startsWith('https://') && (
                               <img src={profile.picture} alt="" className="review-avatar-img" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = 'none' }} />
                             )}
