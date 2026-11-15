@@ -1,3 +1,4 @@
+import { MintFavicon } from '@/components/mint/MintFavicon'
 import { archivedUrlSet, withoutArchivedMovers } from '@/utils/reliabilityMovers'
 import { outdatedSoftwareText, TRACKING_HISTORY_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect } from 'react'
@@ -1094,6 +1095,8 @@ export default function Stats() {
                 return (
                   <div key={mint.url} {...clickableProps(() => navigate(`/mint/${encodeURIComponent(mint.url)}`))} className="stats-top5-row">
                     <span className="stats-top5-rank">{idx+1}</span>
+                    {/* The mint's icon, as in the movers rows (logo, else initials). */}
+                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
                       <div className="stats-top5-name">{displayName(mint, duplicateDisplayNames)}</div>
                     </div>
@@ -1110,6 +1113,8 @@ export default function Stats() {
                 return (
                   <div key={mint.url} {...clickableProps(() => navigate(`/mint/${encodeURIComponent(mint.url)}`))} className="stats-top5-row">
                     <span className="stats-top5-rank">{idx+1}</span>
+                    {/* The mint's icon, as in the movers rows (logo, else initials). */}
+                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
                       <div className="stats-top5-name">{displayName(mint, duplicateDisplayNames)}</div>
                     </div>

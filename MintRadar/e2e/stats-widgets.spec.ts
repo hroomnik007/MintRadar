@@ -280,3 +280,46 @@ test('Geographic distribution at 320 px: no city name breaks inside a word', asy
   const oneLine = await height(/^Tokyo$/)
   for (const name of [/^Germany$/, /^Netherlands$/, /^Singapore$/]) expect(await height(name), `${name} on one line`).toBe(oneLine)
 })
+
+// 2026-11-16: the Top by Reliability Score / Top uptime rows carry the mint's icon like the movers rows (MintFavicon: the
+// proxied logo when the mint has one, else the initials badge), between the rank and the name.
+for (const width of [1280, 390]) {
+  test(`${width}px: Top lists show the mint icon (logo or initials) between rank and name, on both tabs`, async ({ page }) => {
+    const base = MOCK_KNOWN_MINTS[0]!
+    await knownMints(page, [
+      { ...base, url: 'https://alpha.example', name: 'Alpha Mint', online: true, uptimePct7d: 99, reliabilityScore: 90, iconUrl: 'https://alpha.example/logo.png' },
+      { ...base, url: 'https://romeo.example', name: 'Romeo Mint', online: true, uptimePct7d: 98, reliabilityScore: 85, iconUrl: null },
+    ])
+    let iconRequests = 0
+    await page.route('**/api/mint/icon**', r => { iconRequests++; return r.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><rect width="22" height="22" fill="#4a4"/></svg>' }) })
+    await resize(page, width, width < 769 ? 844 : 1600)
+    await page.goto('/stats')
+    const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
+    for (const tab of ['Reliability', 'Uptime']) {
+      await widget.getByRole('button', { name: tab, exact: true }).click()
+      const rows = widget.locator('.stats-top5-row')
+      await expect(rows).toHaveCount(2)
+      // Logo through the icon proxy for the mint that has one.
+      const logo = rows.nth(0).locator('img[src*="/api/mint/icon"]')
+      await expect(logo).toBeVisible()
+      await expect.poll(() => logo.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+      // Initials badge for the mint without one.
+      const badge = rows.nth(1).getByRole('img', { name: 'romeo.example mint icon placeholder' })
+      await expect(badge).toHaveText('RO')
+      // Order and alignment in the row: rank, icon, name; the icon is centred on the name's line.
+      for (const i of [0, 1]) {
+        const row = rows.nth(i)
+        const [rank, icon, name] = await Promise.all([
+          row.locator('.stats-top5-rank').boundingBox(),
+          row.locator('img, [role="img"]').first().boundingBox(),
+          row.locator('.stats-top5-name').boundingBox(),
+        ])
+        expect(rank!.x + rank!.width).toBeLessThanOrEqual(icon!.x)
+        expect(icon!.x + icon!.width).toBeLessThanOrEqual(name!.x)
+        expect(icon!.width).toBe(22)
+        expect(Math.abs((icon!.y + icon!.height / 2) - (name!.y + name!.height / 2))).toBeLessThanOrEqual(2)
+      }
+    }
+    expect(iconRequests).toBeGreaterThan(0)
+  })
+}
