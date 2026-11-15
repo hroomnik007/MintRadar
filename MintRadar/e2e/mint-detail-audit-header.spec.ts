@@ -56,7 +56,7 @@ test.describe('Audit stats heading — with data', () => {
       await expect(page.getByText(TOOLTIP_RE)).toBeVisible()
 
       // The figures are always visible; there is no collapsible body.
-      await expect(page.locator('.au-dirs')).toBeVisible()
+      await expect(page.locator('.au-figures')).toBeVisible()
 
       await page.locator('.md-audit-collapsible').screenshot({ path: 'test-results/audit-header-mobile.png' })
     })

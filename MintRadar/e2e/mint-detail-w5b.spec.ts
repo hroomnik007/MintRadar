@@ -69,7 +69,7 @@ test.describe('W5b A: source line under every score row', () => {
 
   test('Audit tab, cashu.info view: no sentence under the heading, the window is in the ⓘ', async ({ page }) => {
     await gotoAuditTab(page, { alpha: NO_8333, cz: auditCzResponse() })
-    await expect(page.locator('.au-dirs')).toBeVisible()
+    await expect(page.locator('.au-figures')).toBeVisible()
     await expect(page.getByText(/uses this same cashu\.info window/)).toHaveCount(0)
     await expect(page.getByText(/These rows are the same data split by direction/)).toHaveCount(0)
     await page.locator('.md-audit-header-main .md-audit-info').hover()

@@ -20,7 +20,9 @@ test.describe('direction figures', () => {
   test('Deposits (mint) first, then Withdrawals (melt): successful of attempts and "N failed"', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
     // asDest (62 attempts, 56 ok, 6 failed) is the deposit side, asSource (64, 51, 13) the withdrawal side
-    await expect(page.locator('.au-dirs .au-dir-label')).toHaveText(['Deposits (mint)', 'Withdrawals (melt)', 'Average swap time'])
+    await expect(page.locator('.au-dirs .au-dir-label')).toHaveText(['Deposits (mint)', 'Withdrawals (melt)', 'Success rate · 7 days', 'Average swap time'])
+    await expect(page.getByTestId('audit-avg-swap').locator('.au-dir-value')).toHaveText('8.3 s')
+    await expect(page.getByTestId('audit-success-rate').locator('.au-dir-value')).toBeVisible()
     await expect(tile(page, 'mints').locator('.au-dir-value')).toHaveText('56 of 62')
     await expect(tile(page, 'mints').locator('.au-dir-sub')).toHaveText('6 failed')
     await expect(tile(page, 'melts').locator('.au-dir-value')).toHaveText('51 of 64')
@@ -61,7 +63,7 @@ test.describe('direction figures', () => {
 test.describe('no source line; header tooltip', () => {
   test('no cashu.info source line under the figures (uptime and DLEQ are shown elsewhere)', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
-    await expect(page.locator('.au-dirs')).toBeVisible()
+    await expect(page.locator('.au-figures')).toBeVisible()
     await expect(page.locator('.audit-cz-source')).toHaveCount(0)
     await expect(page.locator('body')).not.toContainText('DLEQ valid')
     await expect(page.locator('body')).not.toContainText('uptime 30d')
@@ -186,11 +188,20 @@ test.describe('swap list filter', () => {
     expect(Math.abs((await top()) - before)).toBeLessThanOrEqual(0.5)
   })
 
-  test('phone: every filter button is at least 44 px high', async ({ page }) => {
+  test('phone: every filter button is 28 px tall with a 44 px touch target', async ({ page }) => {
     await resize(page, 390, 844)
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: swaps() })))
     await layoutReady(page)
-    for (const b of await chips(page).all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    for (const b of await chips(page).all()) {
+      const r = await b.evaluate(el => {
+        const box = el.getBoundingClientRect()
+        const pseudo = getComputedStyle(el, '::before')
+        return { h: box.height, pseudoH: parseFloat(pseudo.height), pseudoContent: pseudo.content }
+      })
+      expect(r.h).toBe(28)
+      expect(r.pseudoContent).toBe('""')
+      expect(r.pseudoH).toBeGreaterThanOrEqual(44)
+    }
   })
 
   test('a list with no failed swap shows no failed chip in any row', async ({ page }) => {
@@ -303,16 +314,26 @@ for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const
         const pr = root.getBoundingClientRect()
         const out: string[] = []
         const small: string[] = []
+        const chips = root.querySelector('.au-chips-wrap')
+        const chipsBox = chips?.getBoundingClientRect()
+        const chipBtns = chips ? [...chips.querySelectorAll<HTMLElement>('.au-chip')] : []
+        const chipTops = chipBtns.map(el => el.getBoundingClientRect().top)
+        const chipsInPanel = !chipsBox || (chipsBox.right <= pr.right + 1 && chipsBox.left >= pr.left - 1)
+        const chipsOneRow = chipTops.length < 2 || Math.max(...chipTops) - Math.min(...chipTops) < 2
         for (const el of root.querySelectorAll<HTMLElement>('*')) {
           if (el.closest('.audit-swaps-table-wrap')) continue // the table has its own box
+          if (el.closest('.au-chips-wrap') && el !== chips) continue // the filter row scrolls sideways on phones
           const r = el.getBoundingClientRect()
           if (r.width > 0 && (r.right > pr.right + 1 || r.left < pr.left - 1)) out.push(String(el.className || el.tagName))
           if (!el.closest('.sr-only') && [...el.childNodes].some(n => n.nodeType === 3 && (n.textContent ?? '').trim()) && parseFloat(getComputedStyle(el).fontSize) < 12) small.push(String(el.className || el.tagName))
         }
-        return { out, small, docOverflow: document.documentElement.scrollWidth - window.innerWidth }
+        return { out, small, docOverflow: document.documentElement.scrollWidth - window.innerWidth, chipsInPanel, chipsOneRow, chipCount: chipBtns.length }
       })
       expect(m.out, String(filter)).toEqual([])
       expect(m.docOverflow, String(filter)).toBeLessThanOrEqual(0)
+      expect(m.chipsInPanel, String(filter)).toBe(true)
+      expect(m.chipsOneRow, String(filter)).toBe(true)
+      expect(m.chipCount, String(filter)).toBe(4)
       if (w <= 480) expect(m.small, String(filter)).toEqual([])
     }
   })

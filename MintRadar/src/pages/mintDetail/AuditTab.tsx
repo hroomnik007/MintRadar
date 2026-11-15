@@ -60,12 +60,10 @@ export interface AuditTabProps {
   /** The cashu.info view of this mint; null when cashu.info has no stored detail for it. */
   czView: AuditCzView | null
   czSyncNote: { text: string; stale: boolean; tip: string | null } | null
-  /** "25 / 25": the points of the audit part as the score breakdown shows them; null while the part is not scored. */
-  auditPoints: string | null
   now: number
 }
 
-export function AuditTab({ auditCzLoading, czView, czSyncNote, auditPoints, now }: AuditTabProps) {
+export function AuditTab({ auditCzLoading, czView, czSyncNote, now }: AuditTabProps) {
   if (auditCzLoading) {
     return <div className="md-audit-loading" style={{fontSize:12.5,color:'var(--text3)',fontFamily:'var(--font-mono)'}} role="status">Loading audit data…</div>
   }
@@ -98,9 +96,9 @@ export function AuditTab({ auditCzLoading, czView, czSyncNote, auditPoints, now 
         {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync-mobile" />}
       </div>
 
-      {czView.verdict && <AuditVerdictBlock verdict={czView.verdict} points={auditPoints} view={czView} />}
+      {czView.verdict && <AuditVerdictBlock verdict={czView.verdict} view={czView} />}
       {czView.verdict && <AuditStack verdict={czView.verdict} />}
-      <AuditDirections directions={czView.directions} avgSwapTime={czView.avgSwapTime} />
+      <AuditDirections directions={czView.directions} avgSwapTime={czView.avgSwapTime} verdict={czView.verdict} />
       <AuditDays daily={czView.daily} />
       <AuditSwapList rows={czView.swaps} now={now} />
 
