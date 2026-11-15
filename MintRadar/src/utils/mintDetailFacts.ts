@@ -213,3 +213,28 @@ export function nutzapNote(fetchedAt: string | null | undefined, now: number): {
   const src = limitsSource(fetchedAt, now)
   return { lead: `${NUTZAP_NUTS_NOTE} · from the mint's /v1/info`, time: src.time }
 }
+
+// ── Uptime 24h tile (Mint Detail header) ─────────────────────────────────────────────────────────────────────────────
+
+export interface UptimeTileInput {
+  /** The dedicated 24 h history query: 'pending' before its first answer, 'error' when it failed. */
+  state: 'pending' | 'error' | 'ready'
+  /** uptimePct of that answer (null when it had no checks). */
+  pct: number | null
+  onlineChecks: number
+  totalChecks: number
+  /** The 24 h uptime already in the known-mints list, shown while the history loads (no "0 / 0 checks" flash). */
+  listPct: number | null | undefined
+}
+
+/** Value and sub-line of the Uptime 24h tile. Never "0 / 0 checks" for a query that has not answered yet. */
+export function uptimeTileText(i: UptimeTileInput): { pct: number | null; value: string; sub: string } {
+  if (i.state !== 'ready') {
+    const pct = typeof i.listPct === 'number' ? i.listPct : null
+    return { pct, value: pct !== null ? `${pct}%` : '—', sub: i.state === 'pending' ? 'loading checks…' : 'checks not loaded' }
+  }
+  const value = i.pct !== null ? `${i.pct}%` : '—'
+  if (i.totalChecks === 0) return { pct: i.pct, value, sub: 'no checks yet' }
+  if (i.totalChecks === 1) return { pct: i.pct, value, sub: `${i.onlineChecks} check` }
+  return { pct: i.pct, value, sub: `${i.onlineChecks} / ${i.totalChecks} checks` }
+}
