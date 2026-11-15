@@ -653,3 +653,43 @@ describe('canary: no contact value or domain is persisted, logged or put in an e
     expect(stored.every(e => Object.keys(e).sort().join() === 'checkedAt,domainResolves,formatValid,kind,rules')).toBe(true)
   })
 })
+
+describe('scoreContactCount (Contact part of the score, methodology 9)', () => {
+  it('counts email, twitter and nostr entries whose value is recognised, nothing else', () => {
+    const raw = [
+      { method: 'email', info: 'ops@mint-operator.com' },
+      { method: 'twitter', info: '@mintop' },
+      { method: 'nostr', info: NPUB },
+      { method: 'telegram', info: 'mintop' },
+    ]
+    expect(m.scoreContactCount(raw)).toBe(3)
+  })
+  it('a placeholder or malformed value earns nothing', () => {
+    expect(m.scoreContactCount([{ method: 'nostr', info: 'npub…' }, { method: 'email', info: 'support@mint-operator.com' }])).toBe(1)
+    expect(m.scoreContactCount([{ method: 'nostr', info: 'npub...' }])).toBe(0)
+    expect(m.scoreContactCount([{ method: 'nostr', info: 'npub1337' }])).toBe(0)
+    expect(m.scoreContactCount([{ method: 'email', info: '~polwex' }])).toBe(0)
+    expect(m.scoreContactCount([{ method: 'email', info: '' }, { method: 'twitter', info: '   ' }, { method: 'nostr' }])).toBe(0)
+  })
+  it('accepts every recognised nostr form (hex, npub, nprofile, nostr: prefix, NIP-05)', () => {
+    const raw = [HEX, NPUB, NPROFILE, `nostr:${NPUB}`, 'op@mint-operator.com'].map(info => ({ method: 'nostr', info }))
+    expect(m.scoreContactCount(raw)).toBe(5)
+  })
+  it('keeps the exact methods of methodology 1-8 (no new kinds count) and survives junk', () => {
+    expect(m.scoreContactCount([{ method: 'Email', info: 'ops@mint-operator.com' }, { method: 'x', info: '@mintop' }])).toBe(0)
+    expect(m.scoreContactCount([null, 7, 'email', { method: 'email', info: 42 }])).toBe(0)
+    expect(m.scoreContactCount(null)).toBe(0)
+    expect(m.scoreContactCount({ method: 'email', info: 'ops@mint-operator.com' })).toBe(0)
+  })
+  it('the score clamp still caps it: many valid entries never earn more than 3 channels', async () => {
+    const { contactComponent } = await import('../shared/reliabilityScore.js')
+    const raw = Array.from({ length: 60 }, (_, i) => ({ method: 'email', info: `ops${i}@mint-operator.com` }))
+    expect(m.scoreContactCount(raw)).toBe(60)
+    expect(contactComponent(m.scoreContactCount(raw))).toBe(5)
+  })
+  it('makes no DNS query and no database call', () => {
+    m.scoreContactCount([{ method: 'email', info: 'ops@mint-operator.com' }, { method: 'nostr', info: 'op@mint-operator.com' }])
+    expect(dnsMock.resolveMx).not.toHaveBeenCalled()
+    expect(query).not.toHaveBeenCalled()
+  })
+})

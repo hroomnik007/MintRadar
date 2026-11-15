@@ -1,6 +1,7 @@
 // Facts about the contact entries a mint lists in its /v1/info: is the value well formed, and for an e-mail address does its
-// domain have mail records in DNS. A measurement, not a verdict: nothing here feeds the Reliability Score, the status or a
-// notification, and the Contact row of the score still means "the mint lists a contact".
+// domain have mail records in DNS. A measurement, not a verdict: the stored checks feed nothing (not the Reliability Score,
+// the status or a notification). Since methodology 9 the Contact part of the score uses the same FORMAT rules, through
+// scoreContactCount() below: only entries whose value is well formed count. The DNS result never feeds the score.
 //
 // Privacy rules (tests/contactChecks.test.ts has a canary for each):
 //  - the contact VALUE and its domain are used in memory only; what is stored is { kind, formatValid, domainResolves,
@@ -177,6 +178,37 @@ export function isValidContactUrl(value: string): boolean {
 export function isValidHandle(value: string): boolean {
   const v = value.trim()
   return v.length > 0 && v.length <= 200 && !CONTROL_RE.test(v)
+}
+
+// ── Contact part of the Reliability Score (methodology 9) ────────────────────────────────────────────────────────
+
+/** The `method` values the Contact part counts (exact, as before methodology 9). */
+export const SCORE_CONTACT_METHODS = ['email', 'twitter', 'nostr'] as const
+
+/**
+ * Whether one /v1/info contact entry counts for the Contact part: its method is one of SCORE_CONTACT_METHODS and its
+ * value is recognised by the same format rules as the contact checks (parseEmail, parseNostrContact, isValidHandle).
+ * Format only: no DNS answer, nothing fetched, so the result depends on the entry alone.
+ */
+export function isScoreContact(entry: unknown): boolean {
+  if (entry === null || typeof entry !== 'object') return false
+  const rec = entry as Record<string, unknown>
+  const method = rec['method']
+  const info = rec['info']
+  if (typeof info !== 'string' || info.length > CONTACT_CHECK_VALUE_MAX) return false
+  if (method === 'email') return parseEmail(info).valid
+  if (method === 'nostr') return parseNostrContact(info).valid
+  if (method === 'twitter') return isValidHandle(info)
+  return false
+}
+
+/**
+ * The contact count the score uses (contactComponent clamps it to 3): the entries of the mint's /v1/info `contact` array
+ * that pass isScoreContact. Methodology 1-8 counted every entry with one of the three methods, whatever its value (an
+ * empty or malformed value earned points too).
+ */
+export function scoreContactCount(raw: unknown): number {
+  return Array.isArray(raw) ? raw.filter(isScoreContact).length : 0
 }
 
 // ── Domain lookups (DNS only) ────────────────────────────────────────────────────────────────────────────────────

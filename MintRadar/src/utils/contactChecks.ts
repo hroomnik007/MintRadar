@@ -87,6 +87,17 @@ export function contactChecksLine(checks: readonly ContactCheckFact[] | null | u
   return { segments, checked: newest ? { label: formatTimeAgo(newest, now), title: formatDateTimeUtc(newest) } : null }
 }
 
+/**
+ * Methodology 9: the Contact part of the score counts only entries whose format is recognised (backend contactChecks.ts
+ * scoreContactCount). This is the page's fallback view of the same rule, for the kinds it shows (email, Twitter, Nostr):
+ * a kind counts when the checks hold at least one entry of that kind with a recognised format. Without checks (not run
+ * yet, or an older probe answer) every listed kind counts, as before. The stored score and breakdown always win.
+ */
+export function scoreContactKindCounts(kind: 'email' | 'twitter' | 'nostr', checks: readonly ContactCheckFact[] | null | undefined): boolean {
+  if (!checks || checks.length === 0) return true
+  return checks.some(c => c.kind === kind && c.formatValid)
+}
+
 /** Plain text of the line (tests, aria). */
 export function contactChecksText(line: ContactChecksLine): string {
   return `Contact checks: ${line.segments.join(' · ')}${line.checked ? ` · checked ${line.checked.label}` : ''}`

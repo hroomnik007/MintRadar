@@ -145,7 +145,7 @@ export function versionRowText(): string {
   return `Compared with the newest stable release of the same software. 0-1 minor versions behind = ${p(0)} points; ${middle}, ${OUTDATED_AFTER_MINORS + 3} or more = ${p(OUTDATED_AFTER_MINORS + 3)}. Other software = ${UNKNOWN_SOFTWARE_POINTS}.`
 }
 export function contactRowText(): string {
-  return `Email, Twitter and Nostr contacts the mint lists. ${numberWord(CONTACT_FULL_AT, true)} or more give the full ${CONTACT_POINTS} points.`
+  return `Email, Twitter and Nostr contacts the mint lists in a recognised format. ${numberWord(CONTACT_FULL_AT, true)} or more give the full ${CONTACT_POINTS} points.`
 }
 
 /** NUTs tab: the backup chips. */

@@ -1199,14 +1199,15 @@
 @media (max-width: 329px)  { .stats-page { --stats-reserve-stack: 618px; } }
 /* The note's height depends on how many lines its text takes, and the text depends on the changes the window holds.
    The change log can only produce one text per count (the window always holds the NEWEST changes), so there are five:
-   n1 `28 Oct (v6)`, n2 `27 Oct (v5), 28 Oct (v6)`, n3 `21 Oct (v4)` ... `(v6)`, n4 `9 Oct (v3)` ... `(v6)`, n5 `8 Oct (v2)` ...
-   `(v6)`. Edges below = the widths where the line count flips, measured at every width 320 to 1600 px (1 px steps) on
-   2026-10-28 with v6 (e2e/stats-layout-shift.spec.ts pins the same table):
+   n1 `15 Nov (v9)`, n2 `13 Nov (v8), 15 Nov (v9)`, n3 `10 Nov (v7)` ... `(v9)`, n4 `28 Oct (v6)` ... `(v9)`, n5 `27 Oct (v5)`
+   ... `(v9)`. Edges below = the widths where the line count flips, measured at every width 320 to 1600 px (1 px steps),
+   re-measured 2026-11-15 with v9 (n1-n3 unchanged; n4 and n5 are one and two characters longer than with v6, so their
+   phone edges moved; e2e/stats-layout-shift.spec.ts pins the same table):
      n1  50 up to 372, 32 up to 767, 31.25 from 768
      n2  50 up to 456, 32 up to 767, 48.5 at 768-933, 31.25 at 934-1279, 48.5 from 1280
      n3  50 up to 547, 32 up to 767, 48.5 at 768-1115, 31.25 at 1116-1279, 48.5 from 1280
-     n4  68 up to 358, 50 up to 639, 32 up to 767, 48.5 from 768
-     n5  68 up to 393, 50 up to 723, 32 up to 767, 65.75 at 768-807, 48.5 from 808
+     n4  68 up to 365, 50 up to 646, 32 up to 767, 48.5 from 768
+     n5  68 up to 393, 50 up to 737, 32 up to 767, 65.75 at 768-807, 48.5 from 808
    A sixth change inside one window needs a sixth measurement (Stats.tsx caps the class at n5). */
 .stats-page.has-movers-note { --stats-reserve-note: 31.25px; }
 @media (min-width: 768px) {
@@ -1221,9 +1222,9 @@
 @media (max-width: 372px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
 @media (max-width: 456px) { .stats-page.movers-note-n2 { --stats-reserve-note: 50px; } }
 @media (max-width: 547px) { .stats-page.movers-note-n3 { --stats-reserve-note: 50px; } }
-@media (max-width: 639px) { .stats-page.movers-note-n4 { --stats-reserve-note: 50px; } }
-@media (max-width: 723px) { .stats-page.movers-note-n5 { --stats-reserve-note: 50px; } }
-@media (max-width: 358px) { .stats-page.movers-note-n4 { --stats-reserve-note: 68px; } }
+@media (max-width: 646px) { .stats-page.movers-note-n4 { --stats-reserve-note: 50px; } }
+@media (max-width: 737px) { .stats-page.movers-note-n5 { --stats-reserve-note: 50px; } }
+@media (max-width: 365px) { .stats-page.movers-note-n4 { --stats-reserve-note: 68px; } }
 @media (max-width: 393px) { .stats-page.movers-note-n5 { --stats-reserve-note: 68px; } }
 /* The loading block becomes the board in place, so it has the board's width and centring as well (above 1340 px the board is
    narrower than the viewport and a full-width block moved sideways). */

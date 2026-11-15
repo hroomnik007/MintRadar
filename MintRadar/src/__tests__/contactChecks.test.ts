@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { contactChecksLine, contactChecksText, readContactChecks, type ContactCheckFact } from '@/utils/contactChecks'
+import { contactChecksLine, contactChecksText, readContactChecks, scoreContactKindCounts, type ContactCheckFact } from '@/utils/contactChecks'
 
 // The "Contact checks" line of Mint Detail: neutral facts only, built from the stored results (never a value).
 const NOW = Date.UTC(2026, 9, 20, 12, 0, 0)
@@ -66,5 +66,18 @@ describe('readContactChecks', () => {
   it('a value-like extra field is not carried over', () => {
     const [e] = readContactChecks([{ ...c('email', true, true), value: 'a@b.com', domain: 'b.com' }])
     expect(Object.keys(e!).sort()).toEqual(['checkedAt', 'domainResolves', 'formatValid', 'kind'])
+  })
+})
+
+describe('scoreContactKindCounts (fallback view of the methodology 9 contact rule)', () => {
+  it('without checks every listed kind counts, as before', () => {
+    expect(scoreContactKindCounts('email', undefined)).toBe(true)
+    expect(scoreContactKindCounts('nostr', [])).toBe(true)
+  })
+  it('with checks a kind counts only when one of its entries has a recognised format', () => {
+    const checks = [c('email', true, true), c('nostr', false), c('twitter', false), c('twitter', true)]
+    expect(scoreContactKindCounts('email', checks)).toBe(true)
+    expect(scoreContactKindCounts('nostr', checks)).toBe(false)
+    expect(scoreContactKindCounts('twitter', checks)).toBe(true)
   })
 })

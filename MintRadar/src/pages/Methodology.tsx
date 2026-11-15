@@ -237,7 +237,10 @@ export default function Methodology() {
           <h3 className="doc-h3">Contact ({w.contact} points)</h3>
           <p>
             The number of contact entries the mint publishes in <code>/v1/info</code> with the method email, Twitter or
-            Nostr, limited to {M.contact.maxChannels}, divided by {M.contact.maxChannels}, times {w.contact}, rounded.
+            Nostr, limited to {M.contact.maxChannels}, divided by {M.contact.maxChannels}, times {w.contact}, rounded. Only
+            entries whose value is in a recognised format count: an e-mail address; a Nostr npub, nprofile, 64-character
+            hex key or NIP-05 identifier; a Twitter handle that is not empty. A placeholder such as <code>npub…</code> or
+            an empty value earns nothing. The format is all that is checked.
             This is what the operator says about itself; MintRadar does not verify it, which is why it carries the
             smallest weight. When a probe cannot read <code>/v1/info</code>, the last known count is used.
           </p>

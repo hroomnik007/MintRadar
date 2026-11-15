@@ -82,7 +82,7 @@ export const METHODOLOGY_PAGE = {
   },
 
   contact: {
-    /** Channels counted (email, Twitter, Nostr); more than this earns nothing extra. */
+    /** Channels counted (email, Twitter, Nostr; since methodology 9 only entries in a recognised format); more than this earns nothing extra. */
     maxChannels: 3,
   },
 

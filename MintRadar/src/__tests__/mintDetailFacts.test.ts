@@ -77,6 +77,11 @@ describe('score breakdown from the stored record', () => {
     expect(contactKindsText([{ kind: 'email', formatValid: true, domainResolves: true, checkedAt: at }, { kind: 'nostr', formatValid: true, domainResolves: null, checkedAt: at }])).toBe('Email + Nostr')
     expect(contactKindsText([])).toBeNull()
   })
+  it('contact row text lists only kinds in a recognised format, the ones the score counts (methodology 9)', () => {
+    const at = '2026-10-23T04:50:02.785Z'
+    expect(contactKindsText([{ kind: 'email', formatValid: true, domainResolves: true, checkedAt: at }, { kind: 'nostr', formatValid: false, domainResolves: null, checkedAt: at }])).toBe('Email')
+    expect(contactKindsText([{ kind: 'nostr', formatValid: false, domainResolves: null, checkedAt: at }])).toBeNull()
+  })
 })
 
 describe('last known MOTD / description', () => {
