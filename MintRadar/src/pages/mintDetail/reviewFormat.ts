@@ -1,9 +1,8 @@
 // Review-list formatting shared by the Mint Detail page (Overview tile, review modal) and its Reviews tab
 // (src/pages/mintDetail/ReviewsTab.tsx). Moved verbatim from MintDetail.tsx; only `export` was added.
 
-export function shortNpub(npub: string): string {
-  return npub.slice(0, 10) + '...' + npub.slice(-4)
-}
+// The one short npub form lives in src/utils/npub.ts; re-exported for the Mint Detail imports.
+export { shortNpub } from '@/utils/npub'
 export function formatReviewDate(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }

@@ -1200,6 +1200,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .rv-field { margin-top: 14px; }
+.rv-field-label { display: block; margin-bottom: 6px; font-family: var(--font-body); font-size: 12px; color: var(--text2); }
 .rv-textarea {
   width: 100%;
   background: var(--bg3);

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { ChevronDown, ChevronUp, User } from 'lucide-react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import type { NostrProfile } from '@/core/nostr/client'
+import { shortNpub, avatarInitial } from '@/utils/npub'
 
 type LoginMethod = 'nip07' | 'nsec' | 'remote-signer'
 
@@ -13,28 +14,12 @@ const METHOD_BADGE: Record<LoginMethod, string> = {
   'remote-signer': 'Remote signer',
 }
 
-// npub1abc…xyz789 — same head/tail truncation idiom used for keys elsewhere.
-function shortNpub(npub: string): string {
-  if (npub.length <= 20) return npub
-  return `${npub.slice(0, 12)}…${npub.slice(-6)}`
-}
-
 // Logout glyph (same one the old Disconnect button used).
 const IcLogout = () => (
   <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
     <path d="M5.5 1.5H2.5v11h3M8.5 4l3.5 3-3.5 3M12 7H5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
-
-// First character by grapheme (not by UTF-16 unit / byte), uppercased. null → no usable name
-// (empty, or an npub), the placeholder then shows a User icon instead of a letter.
-const graphemes = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null
-function avatarInitial(name: string | null | undefined): string | null {
-  const t = name?.trim() ?? ''
-  if (t === '' || /^npub1[0-9a-z]{20,}$/i.test(t)) return null
-  const first = graphemes ? graphemes.segment(t)[Symbol.iterator]().next().value?.segment : Array.from(t)[0]
-  return first ? first.toLocaleUpperCase() : null
-}
 
 type CopyState = 'idle' | 'copied' | 'failed'
 const COPY_FEEDBACK_MS = 1500
@@ -112,7 +97,8 @@ export function AccountMenu({ profile, method, onLogout }: Props) {
     timerRef.current = setTimeout(() => { timerRef.current = null; setCopyState('idle') }, COPY_FEEDBACK_MS)
   }
 
-  const displayName = profile.name?.trim() ? profile.name : `${profile.pubkey.slice(0, 8)}...`
+  // Without a profile name: the short npub (the form the panel's copy row and review cards use), never raw hex.
+  const displayName = profile.name?.trim() ? profile.name : shortNpub(profile.npub)
   const copyLabel = copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : shortNpub(profile.npub)
   const showImg = !!profile.picture?.startsWith('https://') && failedSrc !== profile.picture
   const initial = avatarInitial(profile.name)

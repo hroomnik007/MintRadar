@@ -81,8 +81,9 @@
 - **Logged-out and empty-state copy (rewritten 2026-09-05, made notification-honest 2026-10-03).** Logged-out gate (`profile === null`):
   "Log in with Nostr to sync your watchlist across devices." (body font, 13px/1.5 like `.wallets-subtitle` /
   `.learn-page-subtitle`; the old mono font is gone) + hint "Stored on Nostr. Optional DMs when a watched
-  mint goes down or comes back up, plus key and fee changes." (shortened 2026-10-04, key/fee added Task G3). Empty watchlist (logged in, zero mints): "No mints watched yet" / "Add mints
-  from the Dashboard with + Watch. Your list syncs over Nostr. Turn on Nostr DMs per mint if you want to
+  mint goes down or comes back up, plus key and fee changes." (shortened 2026-10-04, key/fee added Task G3). Empty watchlist (logged in, zero mints): "No mints watched yet" / "Tap the ☆
+  on any mint card or mint page to add it. Your list syncs over Nostr. (was "Add mints from the Mints page with + Watch" until
+  the 2026-11-15 audit: the control on cards and the detail page is the star; "+ Watch" exists only on recommendation rows) Turn on Nostr DMs per mint if you want to
   hear when its status, key or fee changes." with a "Go to Dashboard" CTA (navigates to `/`; `/dashboard` is not a route).
 - **`+Watch` without being logged in (`MintDetail.tsx`)** now shows a confirm modal
   (`showWatchLoginModal` state, `rv-modal-overlay`) — "Login via Nostr" / "Cancel", closable
