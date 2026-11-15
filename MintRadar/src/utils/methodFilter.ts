@@ -48,18 +48,9 @@ export function methodOptions(mints: readonly MethodMint[], selected: string | n
 }
 
 /**
- * A plain-language name for the two methods most people know, shown next to the protocol name (never instead of it):
- * bolt11 = Lightning, onchain = On-chain. The filter value and the ?method= parameter stay the protocol name. Any other
- * method (bolt12, paypal, ...) has no plain name and is shown as it is.
+ * Label shown in the Method filter and its tag. "onchain" is written "On-chain"; everything else is the protocol
+ * name (bolt11, bolt12, …). The filter value and the ?method= parameter stay the protocol name.
  */
-const METHOD_PLAIN_NAMES: Readonly<Record<string, string>> = { bolt11: 'Lightning', onchain: 'On-chain' }
-
-export function methodPlainName(method: string): string | null {
-  return Object.prototype.hasOwnProperty.call(METHOD_PLAIN_NAMES, method) ? METHOD_PLAIN_NAMES[method]! : null
-}
-
-/** One line for a filter tag or a tooltip: "Lightning (bolt11)", "On-chain (onchain)", or the method itself. */
 export function methodDisplayText(method: string): string {
-  const plain = methodPlainName(method)
-  return plain === null ? method : `${plain} (${method})`
+  return method === 'onchain' ? 'On-chain' : method
 }
