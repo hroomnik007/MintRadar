@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
 import { layoutReady, resize } from './fixtures/settle'
+import { CLIENT_LATENCY_RESULT_MS } from '../src/constants/probeLocation'
 
 // Mint Detail tweaks (2026-11-15): "Details ›" under the strip's Reliability Score only in the mobile panel layout,
 // "Show my latency" turns into "Your latency: N ms" in place (the strip keeps its height), and the NIP-87 row drops
@@ -95,4 +96,27 @@ test('NIP-87 not found: only "No NIP-87 announcement seen on our relays", no "ch
   const row = page.getByTestId('md-nip87')
   await expect(row).toHaveText('No NIP-87 announcement seen on our relays')
   await expect(page.getByTestId('md-nip87-checked')).toHaveCount(0)
+})
+
+test('the result turns back into "Show my latency" after 5 minutes; a new measurement restarts the 5 minutes', async ({ page }) => {
+  await page.clock.install()
+  await open(page, 1440)
+  await page.route('**/v1/info', r => r.fulfill({ headers: CORS, json: { name: 'Mint', nuts: {} } }))
+  const btn = page.locator('.latency-test-btn')
+  await btn.click()
+  await expect(btn).toHaveText(/^Your latency: \d+ ms$/)
+  await page.clock.runFor(CLIENT_LATENCY_RESULT_MS - 1_000)
+  await expect(btn).toHaveText(/^Your latency: \d+ ms$/)
+  await page.clock.runFor(2_000)
+  await expect(btn).toHaveText('Show my latency')
+  // Measured again 4 minutes into a result: it stays until 5 minutes after the NEW result.
+  await btn.click()
+  await expect(btn).toHaveText(/^Your latency: \d+ ms$/)
+  await page.clock.runFor(4 * 60_000)
+  await btn.click()
+  await expect(btn).toHaveText(/^Your latency: \d+ ms$/)
+  await page.clock.runFor(4 * 60_000)
+  await expect(btn).toHaveText(/^Your latency: \d+ ms$/)
+  await page.clock.runFor(61_000 + 1_000)
+  await expect(btn).toHaveText('Show my latency')
 })

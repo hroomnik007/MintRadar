@@ -62,7 +62,7 @@ import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/
 import { useNow } from '@/hooks/useNow'
 import { mintDetailMeta, MINT_NOT_FOUND_TITLE } from '@/utils/pageMeta'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
+import { CLIENT_LATENCY_BUTTON_LABEL, CLIENT_LATENCY_RESULT_MS, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, uptimeTileText, type OutagesResponse } from '@/utils/mintDetailFacts'
@@ -446,6 +446,13 @@ function MintDetailContent({ url }: { url: string }) {
   const [reviewSuccess, setReviewSuccess] = useState(false)
   const [clientLatency, setClientLatency] = useState<number | string | null>(null)
   const [testingLatency, setTestingLatency] = useState(false)
+  // The result goes back to "Show my latency" after 5 minutes (it is a one-off reading). A new measurement first clears the
+  // result, so its own result starts a fresh timer; the cleanup also clears it on unmount.
+  useEffect(() => {
+    if (clientLatency === null) return
+    const t = setTimeout(() => setClientLatency(null), CLIENT_LATENCY_RESULT_MS)
+    return () => clearTimeout(t)
+  }, [clientLatency])
   const [activeTab, setActiveTab] = useState<MintTab>('overview')
   const selectTab = (tab: MintTab) => {
     setActiveTab(tab)

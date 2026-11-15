@@ -6,6 +6,9 @@ export const PROBE_LOCATION = 'Nuremberg'
 // Label of the Mint Detail button that measures latency from the visitor's browser.
 export const CLIENT_LATENCY_BUTTON_LABEL = 'Show my latency'
 
+/** How long the measured result ("Your latency: N ms") stays in the button before it turns back into the button label. */
+export const CLIENT_LATENCY_RESULT_MS = 5 * 60_000
+
 /** Caption under the Latency value on Mint Detail: where the number was measured. */
 export function latencyCaption(location: string = PROBE_LOCATION): string {
   return `server · ${location}`
