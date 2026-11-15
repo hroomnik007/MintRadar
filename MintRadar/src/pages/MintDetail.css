@@ -2828,11 +2828,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .au-dir-label { font-size: 13px; line-height: 1.4; color: var(--text3); }
 .au-dir-label .info-tooltip { vertical-align: middle; --tt-ml: 3px; }
 .au-dir-value { font-family: var(--font-mono); font-size: 20px; line-height: 1.2; color: var(--text); font-variant-numeric: tabular-nums; }
-/* Success rate in the old average-swap-time slot: same block, colour by threshold. */
-.au-dir-rate.au-rate-good .au-dir-value { color: var(--green-bright); }
-.au-dir-rate.au-rate-ok .au-dir-value { color: var(--amber); }
-.au-dir-rate.au-rate-bad .au-dir-value { color: color-mix(in srgb, var(--red) 75%, var(--text)); }
-.au-dir-rate.au-rate-empty .au-dir-value { color: var(--text3); }
 .au-dir-value small { font-size: 13px; color: var(--text3); }
 .au-dir-nodata { font-size: 15px; color: var(--text3); }
 .au-dir-sub { font-size: 12px; line-height: 1.4; color: var(--text3); }

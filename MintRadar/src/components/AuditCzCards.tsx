@@ -2,7 +2,7 @@ import { Fragment, useState, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import {
   auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
-  auditVerdictHeadline, auditSuccessRateText, auditSuccessRateTone, auditSuccessRateCaption, AUDIT_SCORE_HINT,
+  auditVerdictHeadline, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT,
   auditSinceLine,
   type AuditCzView, type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
 } from '@/utils/auditCz'
@@ -58,7 +58,6 @@ export function AuditDirections({ directions, avgSwapTime, verdict }: {
   verdict?: AuditVerdict | null
 }) {
   const rate = verdict ? auditSuccessRateText(verdict) : null
-  const tone = verdict ? auditSuccessRateTone(verdict) : null
   const caption = auditSuccessRateCaption()
   return (
     <div className="au-figures">
@@ -85,9 +84,8 @@ export function AuditDirections({ directions, avgSwapTime, verdict }: {
         <div className="au-dirs au-dirs-metrics">
           {verdict && (
             <div
-              className={`au-dir au-dir-rate au-rate-${tone}`}
+              className="au-dir au-dir-rate"
               data-testid="audit-success-rate"
-              data-tone={tone ?? undefined}
               role="group"
               aria-label={`${caption}: ${rate}`}
             >

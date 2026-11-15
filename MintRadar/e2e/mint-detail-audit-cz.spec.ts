@@ -16,6 +16,26 @@ const czLink = (page: Page) => page.getByRole('link', { name: 'Open on cashu.inf
 const tile = (page: Page, key: string) => page.locator(`.au-dirs [data-tile="${key}"]`)
 const tileValue = (page: Page, key: string) => tile(page, key).locator('.au-dir-value')
 const verdict = (page: Page) => page.getByTestId('audit-verdict')
+/** Success rate uses the same neutral colour as Average swap time; no tone class or data-tone. */
+const expectNeutralRate = async (page: Page) => {
+  const rate = page.getByTestId('audit-success-rate')
+  await expect(rate).toBeVisible()
+  await expect(rate).not.toHaveAttribute('data-tone')
+  await expect(rate).not.toHaveClass(/au-rate-(good|ok|bad|empty)/)
+  const colors = await page.evaluate(() => {
+    const value = (sel: string) => {
+      const el = document.querySelector(sel)
+      return el ? getComputedStyle(el).color : null
+    }
+    return {
+      rate: value('[data-testid="audit-success-rate"] .au-dir-value'),
+      avg: value('[data-testid="audit-avg-swap"] .au-dir-value'),
+    }
+  })
+  expect(colors.rate).toBeTruthy()
+  if (colors.avg) expect(colors.rate).toBe(colors.avg)
+}
+
 const checksCard = (page: Page) => page.getByTestId('audit-cz-checks')
 const swapList = (page: Page) => page.getByTestId('audit-swap-list')
 const chip = (page: Page, name: string) => swapList(page).getByRole('button', { name: new RegExp(`^${name} \\d+$`) })
@@ -63,7 +83,7 @@ test('only cz has data: header, verdict, bar, directions, one swap list with a f
   const rateTile = page.getByTestId('audit-success-rate')
   await expect(rateTile.locator('.au-dir-value')).toHaveText('84.9%') // 107/126
   await expect(rateTile.locator('.au-dir-label')).toHaveText('Success rate · 7 days')
-  await expect(rateTile).toHaveAttribute('data-tone', 'ok')
+  await expectNeutralRate(page)
   await expect(rateTile).toHaveAttribute('aria-label', 'Success rate · 7 days: 84.9%')
   await expect(page.getByTestId('audit-score-hint')).toHaveText('The score only counts failures caused by this mint.')
   await expect(page.getByTestId('audit-legend').locator('span')).toHaveText(['107 succeeded', '19 failed elsewhere', '0 caused by this mint'])
@@ -203,7 +223,7 @@ test.describe('verdict and directions from the stored detail', () => {
     await expect(headline(page)).toHaveText('Last 7 days: 105 swaps, 0 failures caused by this mint')
     await expect(headline(page)).not.toHaveClass(/au-verdict-bad/)
     await expect(rate(page).locator('.au-dir-value')).toHaveText('84.8%') // 89/105
-    await expect(rate(page)).toHaveAttribute('data-tone', 'ok')
+    await expectNeutralRate(page)
     await expect(legend(page)).toHaveText(['89 succeeded', '16 failed elsewhere', '0 caused by this mint'])
     await expect(page.locator('.au-stack .au-seg-mint')).toHaveCount(0) // red only when the mint caused a failure
   })
@@ -213,7 +233,7 @@ test.describe('verdict and directions from the stored detail', () => {
     await expect(headline(page)).toHaveText('Last 7 days: 229 swaps, 202 failures caused by this mint')
     await expect(headline(page)).toHaveClass(/au-verdict-bad/)
     await expect(rate(page).locator('.au-dir-value')).toHaveText('9.6%') // 22/229
-    await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
+    await expectNeutralRate(page)
     await expect(legend(page)).toHaveText(['22 succeeded', '5 failed elsewhere', '202 caused by this mint'])
     await expect(page.locator('.au-stack .au-seg-mint')).toHaveCount(1)
   })
@@ -222,7 +242,7 @@ test.describe('verdict and directions from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 0, 0) }))
     await expect(headline(page)).toHaveText('Last 7 days: 50 swaps, 0 failures caused by this mint')
     await expect(rate(page).locator('.au-dir-value')).toHaveText('100%')
-    await expect(rate(page)).toHaveAttribute('data-tone', 'good')
+    await expectNeutralRate(page)
     await expect(page.locator('.au-stack i')).toHaveCount(1)
     await expect(page.locator('.au-stack .au-seg-ok')).toHaveCount(1)
   })
@@ -231,14 +251,14 @@ test.describe('verdict and directions from the stored detail', () => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(4, 0, 0) }))
     await expect(headline(page)).toHaveText('Last 7 days: 4 swaps, 0 failures caused by this mint')
     await expect(rate(page).locator('.au-dir-value')).toHaveText('100%')
-    await expect(rate(page)).toHaveAttribute('data-tone', 'good')
+    await expectNeutralRate(page)
   })
 
   test('one swap and one blamed failure use the singular', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(1, 1, 1) }))
     await expect(headline(page)).toHaveText('Last 7 days: 1 swap, 1 failure caused by this mint')
     await expect(rate(page).locator('.au-dir-value')).toHaveText('0%')
-    await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
+    await expectNeutralRate(page)
   })
 
   test('blamed above total is clamped', async ({ page }) => {
@@ -246,7 +266,7 @@ test.describe('verdict and directions from the stored detail', () => {
     await expect(headline(page)).toHaveText('Last 7 days: 20 swaps, 20 failures caused by this mint')
     await expect(legend(page)).toHaveText(['0 succeeded', '0 failed elsewhere', '20 caused by this mint'])
     await expect(rate(page).locator('.au-dir-value')).toHaveText('0%')
-    await expect(rate(page)).toHaveAttribute('data-tone', 'bad')
+    await expectNeutralRate(page)
   })
 
   test('total 0: heading and a dash for the rate, no bar, the directions stay', async ({ page }) => {
@@ -255,7 +275,7 @@ test.describe('verdict and directions from the stored detail', () => {
     await expect(headline(page)).toHaveText('Last 7 days: 0 swaps')
     await expect(rate(page).locator('.au-dir-value')).toHaveText('—')
     await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 7 days')
-    await expect(rate(page)).toHaveAttribute('data-tone', 'empty')
+    await expectNeutralRate(page)
     await expect(rate(page)).toHaveAttribute('aria-label', 'Success rate · 7 days: —')
     await expect(page.locator('.au-stack')).toHaveCount(0)
   })
