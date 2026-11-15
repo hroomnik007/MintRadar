@@ -17,4 +17,4 @@ export const CARD_LATENCY_LABEL = 'Latency (last check)'
 export const COMPARE_AUDIT_LABEL = 'No mint fault (7d)'
 /** Compare's latency row measured from the visitor's browser when the modal opens; the BEST latency tag uses this row. */
 export const COMPARE_BROWSER_LATENCY_LABEL = 'Latency (your browser)'
-export const COMPARE_BROWSER_LATENCY_TITLE = "Measured from your browser when Compare opens: one request to each compared mint's /v1/info. Those mints see your IP address. The BEST tag uses this row."
+export const COMPARE_BROWSER_LATENCY_TITLE = "Measured from your browser when Compare opens: one request to each compared mint's /v1/info. Those mints see your IP address. The Best tag for latency comes from this row."
