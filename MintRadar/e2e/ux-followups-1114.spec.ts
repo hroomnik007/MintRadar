@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
-// UI/UX follow-ups of 2026-11-14: the phone list view shows the rating like the cards do, and the method filter names
-// Lightning and On-chain without hiding the protocol (the value stays bolt11 / onchain).
+// UI/UX follow-ups of 2026-11-14: the phone list view shows the rating like the cards do.
+// Method filter labels are bolt11, bolt12 and On-chain; ?method= stays the protocol name.
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -23,7 +23,7 @@ test('390px list view: Rating is a column next to Reliability (default sort)', a
   expect(await page.locator('.mint-list-table-wrap').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
 })
 
-test('method filter: "Lightning" = bolt11 and "On-chain" = onchain, the protocol name stays visible', async ({ page }) => {
+test('method filter: bolt11, bolt12 and On-chain; ?method= stays the protocol name', async ({ page }) => {
   const m = (method: string) => ({ method, unit: 'sat', min_amount: 1, max_amount: 1000 })
   const rows = MOCK_KNOWN_MINTS.map((x, i) => (i === 0
     ? { ...x, mintMethods: [m('bolt11'), m('bolt12')], meltMethods: [m('onchain')], nutsLimits: { '4': {}, '5': {} } }
@@ -32,20 +32,20 @@ test('method filter: "Lightning" = bolt11 and "On-chain" = onchain, the protocol
   await page.goto('/')
   await page.locator('.filter-btn').click()
   const chip = (v: string) => page.locator(`.filter-method-chip[data-method="${v}"]`)
-  await expect(chip('bolt11')).toHaveText('Lightning bolt11')
+  await expect(page.locator('.filter-method-chip')).toHaveText(['bolt11', 'bolt12', 'On-chain'])
+  await expect(chip('bolt11')).toHaveText('bolt11')
   await expect(chip('onchain')).toHaveText('On-chain')
   await expect(chip('bolt12')).toHaveText('bolt12')
-  await expect(chip('bolt11').locator('.filter-method-proto')).toBeVisible()
-  // Wide screens name the protocol in the chip, so the note under the group (for phones) is not shown.
-  await expect(page.getByTestId('filter-method-note')).toBeHidden()
+  await expect(page.locator('.filter-method-proto')).toHaveCount(0)
+  await expect(page.getByTestId('filter-method-note')).toHaveCount(0)
   await chip('onchain').click()
   await page.locator('.filter-apply-btn').click()
   await expect(page).toHaveURL(/[?&]method=onchain(&|$)/)
   await page.locator('.filter-btn').click()
-  await expect(page.locator('.filter-tag', { hasText: 'Method:' })).toContainText('Method: On-chain (onchain)')
+  await expect(page.locator('.filter-tag', { hasText: 'Method:' })).toHaveText(/Method:\s*On-chain$/)
 })
 
-test('390px: the method chips keep the plain names and the note below names the protocols', async ({ page }) => {
+test('390px: method chips are bolt11, bolt12 and On-chain, with no protocol note', async ({ page }) => {
   const m = (method: string) => ({ method, unit: 'sat', min_amount: 1, max_amount: 1000 })
   const rows = MOCK_KNOWN_MINTS.map((x, i) => (i === 0
     ? { ...x, mintMethods: [m('bolt11'), m('bolt12')], meltMethods: [m('onchain')], nutsLimits: { '4': {}, '5': {} } }
@@ -55,9 +55,9 @@ test('390px: the method chips keep the plain names and the note below names the 
   await page.goto('/')
   await page.locator('.filter-btn').click()
   const chip = (v: string) => page.locator(`.filter-method-chip[data-method="${v}"]`)
-  await expect(chip('bolt11').locator('.filter-method-proto')).toBeHidden()
-  await expect(page.getByTestId('filter-method-note')).toBeVisible()
-  await expect(page.getByTestId('filter-method-note')).toHaveText('Lightning = bolt11 · On-chain = onchain')
-  const px = await page.getByTestId('filter-method-note').evaluate(el => parseFloat(getComputedStyle(el).fontSize))
-  expect(px).toBeGreaterThanOrEqual(12)
+  await expect(page.locator('.filter-method-chip')).toHaveText(['bolt11', 'bolt12', 'On-chain'])
+  await expect(chip('bolt11')).toHaveText('bolt11')
+  await expect(chip('onchain')).toHaveText('On-chain')
+  await expect(page.locator('.filter-method-proto')).toHaveCount(0)
+  await expect(page.getByTestId('filter-method-note')).toHaveCount(0)
 })

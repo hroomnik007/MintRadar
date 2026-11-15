@@ -8,7 +8,7 @@ import type { NostrEvent } from 'nostr-tools'
 import { loadSharedPool } from '@/core/nostr/lazy'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
 import { MintFavicon } from '@/components/mint/MintFavicon'
-import { useKnownMints, refreshKnownMints, type KnownMint } from '@/hooks/useKnownMints'
+import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
@@ -33,7 +33,7 @@ import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutOffered } from '@/utils/nutSupport'
 import { hasRequiredNuts } from '@/utils/nutFilters'
-import { parseMethodParam, mintMatchesMethod, methodOptions, methodPlainName, methodDisplayText } from '@/utils/methodFilter'
+import { parseMethodParam, mintMatchesMethod, methodOptions, methodDisplayText } from '@/utils/methodFilter'
 import { parseSoftwareParam, buildSoftwareParam, mintMatchesSoftware, softwareGroups } from '@/utils/softwareFilter'
 import { OUTDATED_PARAM, parseOutdatedParam, buildOutdatedParam, mintMatchesOutdated, hasUnknownVersion, unknownKeptNote } from '@/utils/outdatedFilter'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
@@ -70,10 +70,11 @@ const IcPlus = () => (
     <line x1="1.5" y1="6" x2="10.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 )
-const IcRefresh = ({ spinning = false }: { spinning?: boolean }) => (
-  <svg className={spinning ? 'refresh-spin' : undefined} width="13" height="13" viewBox="0 0 14 14" fill="none">
-    <path d="M2 7a5 5 0 1 1 1.4 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-    <polyline points="2,4.5 2,7 4.5,7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+const IcClearFilters = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+    <path d="M1.2 2.3h7.2L6.05 6.2v3.4L4.4 11V6.2L1.2 2.3Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+    <line x1="8.15" y1="2.15" x2="11.75" y2="5.75" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
+    <line x1="11.75" y1="2.15" x2="8.15" y2="5.75" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
   </svg>
 )
 const IcFilter = () => (
@@ -778,7 +779,6 @@ export default function Dashboard() {
   }, [bulkInput])
 
   const queryClient = useQueryClient()
-  const [refreshing, setRefreshing] = useState(false)
   // Client-side NIP-87 discovery POSTs newly-announced mint URLs to
   // /api/mints/discover, where the backend validates + probes them before they
   // enter the `mints` table. We deliberately do NOT merge raw, unvalidated Nostr
@@ -889,6 +889,11 @@ export default function Dashboard() {
     setPendingFilters(DEFAULT_FILTERS)
     commitFilters({ filters: DEFAULT_FILTERS })
   }
+  function resetToDefaults(): void {
+    setPendingFilters(DEFAULT_FILTERS)
+    setSearchParams(new URLSearchParams())
+  }
+  const atDefaultView = searchParams.toString() === ''
 
   // Live count for the filter panel's "Show N of M" button: the same pure
   // applyFilters/pool chain as filteredMints above, but over the *draft*
@@ -1445,25 +1450,13 @@ export default function Dashboard() {
         </div>
         <button
           type="button"
-          className="refresh-btn"
-          title="Refresh mint list"
-          aria-label="Refresh mint list"
-          aria-busy={refreshing}
-          disabled={refreshing}
-          onClick={() => {
-            // Refresh only: it used to also reset the search, sort and filters, which threw away a
-            // filtered view just to get fresh numbers. Resetting lives in the Filters panel ("Reset") and in the
-            // no-results state ("Clear search" / "Reset filters").
-            // It revalidates past the browser's 5-minute cache and spins while the request runs (it used to give no sign at all).
-            setRefreshing(true)
-            const started = Date.now()
-            void refreshKnownMints(queryClient).finally(() => {
-              // A 304 comes back in a few ms: keep the spin long enough to be seen.
-              window.setTimeout(() => setRefreshing(false), Math.max(0, 600 - (Date.now() - started)))
-            })
-          }}
+          className="reset-filters-btn"
+          aria-label="Reset to defaults"
+          data-testid="reset-to-defaults"
+          disabled={atDefaultView}
+          onClick={resetToDefaults}
         >
-          <IcRefresh spinning={refreshing} />
+          <IcClearFilters />
         </button>
         <button type="button" className="submit-btn" ref={submitBtnRef} onClick={openSubmit}>
           <IcPlus /> Add mint
@@ -1570,9 +1563,6 @@ export default function Dashboard() {
                 <div className="filter-seg" role="group" aria-labelledby="filter-method-label">
                   {methodChoices.map(m => {
                     const on = pendingFilters.method === m
-                    // bolt11 / onchain get their plain name. Beside "Lightning" the protocol name bolt11 stays visible (wide screens;
-                    // phones say it in the note below); "On-chain" is the protocol name itself, spelled as a word.
-                    const plain = methodPlainName(m)
                     return (
                       <button
                         key={m}
@@ -1582,17 +1572,11 @@ export default function Dashboard() {
                         data-method={m}
                         onClick={() => setPendingFilters(p => ({ ...p, method: on ? null : m }))}
                       >
-                        {plain === null ? m : <>{plain}{m === 'bolt11' && <> <span className="filter-method-proto">{m}</span></>}</>}
+                        {methodDisplayText(m)}
                       </button>
                     )
                   })}
                 </div>
-                {/* Phones: the chips are too narrow for the protocol name beside the plain one, so it is said once below. */}
-                {methodChoices.some(x => methodPlainName(x) !== null) && (
-                  <div className="filter-method-note" data-testid="filter-method-note">
-                    {methodChoices.filter(x => methodPlainName(x) !== null).map(x => `${methodPlainName(x)} = ${x}`).join(' · ')}
-                  </div>
-                )}
               </div>
             )}
 

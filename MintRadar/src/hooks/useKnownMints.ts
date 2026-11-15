@@ -103,11 +103,11 @@ export interface KnownMint {
 }
 
 // The server answers with Cache-Control: public, max-age=300, so a plain refetch is served from the browser's HTTP
-// cache for five minutes and the "Refresh mint list" button looked dead. A refresh the user asks for sets this flag:
+// cache for five minutes. A caller that wants a fresh list sets this flag:
 // the next request revalidates (If-None-Match; an unchanged list is a cheap 304) instead of reusing the cached copy.
 let revalidateNext = false
 
-/** Refetches the list for the "Refresh mint list" button, bypassing the browser's five-minute cache. */
+/** Refetches the list, bypassing the browser's five-minute cache. */
 export async function refreshKnownMints(queryClient: QueryClient): Promise<void> {
   revalidateNext = true
   try {
