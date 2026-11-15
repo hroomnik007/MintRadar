@@ -32,7 +32,7 @@
    160px label column; values that are not a measurement ("measuring…", "no answer", "—") are muted. */
 .cmp-lbl.cmp-lbl-browser-latency { flex-wrap: wrap; white-space: normal; gap: 2px 4px; }
 .cmp-remeasure {
-  flex-basis: 100%; justify-self: start; text-align: left; padding: 2px 0; margin-top: 2px;
+  flex-basis: 100%; justify-self: start; text-align: left; padding: 2px 0; margin-top: 8px;
   font-family: var(--font-body); font-size: 12px; color: var(--accent); background: none; border: 0; cursor: pointer;
 }
 .cmp-remeasure:disabled { color: var(--text3); cursor: default; opacity: 1; }
