@@ -1325,7 +1325,9 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="md-sc-sub" data-testid="md-uptime-30d">
                 30 days <span style={{ color: uptime30dColor(knownMint.uptimePct30d), fontFamily: 'var(--font-mono-data)' }}>{knownMint.uptimePct30d}%</span>
                 {/* The percentage is a whole number: a short outage rounds to 100 %, so the count is said next to it. */}
-                {uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount)}
+                {uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount) && (
+                  <span className="md-uptime-30d-note">{uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount)}</span>
+                )}
               </div>
             )}
           </div>

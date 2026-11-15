@@ -2394,8 +2394,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
    so it no longer makes this tile (and the whole strip) taller than the others. */
 @media (min-width: 1200px) {
   /* Latency gets the widest column so the value (up to "1387 ms") and the button fit side by side. */
-  /* 2026-11-15: wider again (1.25fr before) so "Your latency: 1387 ms", which replaces the button, stays on the button's line. */
-  .md-summary { grid-template-columns: 0.9fr 1.55fr 0.95fr 1.1fr 0.8fr 1.05fr; }
+  /* 2026-11-15: wider again (1.25fr before) so "Your latency: 1387 ms", which replaces the button, stays on the button's line.
+     2026-11-16: Uptime 24h 1.1fr (was 0.95fr) so "30 days 100% · 12 outages" stays on one line; Score, NUTs and rating give
+     the room (measured 1200-1600px: no wrap, no clipped text, Version on one line; e2e/mint-detail-uptime-30d-line.spec.ts). */
+  .md-summary { grid-template-columns: 0.85fr 1.55fr 1.1fr 1.1fr 0.75fr 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -3002,3 +3004,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-sc:has(.latency-test-btn) { padding-left: 10px; padding-right: 8px; }
   .latency-test-btn { font-size: 12px !important; padding: 3px !important; letter-spacing: -0.01em; }
 }
+
+/* Uptime 24h tile, 30-day line: the outage note (" · 2 outages") is one unit, so on the narrowest phones (below ~390px, where
+   the line cannot fit half the strip at the 12px text floor) it moves to the next line whole instead of breaking inside. */
+.md-uptime-30d-note { white-space: nowrap; }
