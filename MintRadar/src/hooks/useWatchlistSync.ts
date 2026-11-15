@@ -37,7 +37,7 @@ export function useWatchlistSync() {
   // Reset ALL sync state on logout so the next login triggers a fresh sync
   useEffect(() => {
     if (!profile?.pubkey) {
-      console.log('sync: logout detected — resetting all sync state')
+      if (import.meta.env.DEV) { console.log('sync: logout detected — resetting all sync state') }
       syncedForPubkey.current = null
       isSyncing.current = false
       setSyncStatus('pending')
@@ -53,7 +53,6 @@ export function useWatchlistSync() {
     // so Phase 2 is blocked from the moment this effect fires
     isSyncing.current = true
     setSyncStatus('pending')
-    console.log('sync: starting for pubkey', pubkey.slice(0, 8))
 
     const doSync = async () => {
       // M4 (2026-09-07 security audit): `pubkey` is captured when this effect
@@ -84,11 +83,11 @@ export function useWatchlistSync() {
         if (isStale()) { console.warn('sync: pubkey changed mid-sync — aborting before any Dexie write'); return }
 
         if (dexieOwner !== pubkey) {
-          console.log('sync: different owner in Dexie — clearing before load')
+          if (import.meta.env.DEV) { console.log('sync: different owner in Dexie — clearing before load') }
           await db.watchlist.clear()
         }
 
-        console.log('sync: fetching kind:10003 from relays')
+        if (import.meta.env.DEV) { console.log('sync: fetching kind:10003 from relays') }
         const { urls: remote, failed: remoteFetchFailed } = await fetchRemoteWatchlist(pubkey, userWriteRelaysRef.current)
 
         if (isStale()) {
@@ -121,9 +120,9 @@ export function useWatchlistSync() {
               })
             })
           )
-          console.log('sync: written to Dexie')
+          if (import.meta.env.DEV) { console.log('sync: written to Dexie') }
         } else {
-          console.log('sync: no remote data — using existing Dexie state for this pubkey')
+          if (import.meta.env.DEV) { console.log('sync: no remote data — using existing Dexie state for this pubkey') }
         }
 
         // Record ownership so a different pubkey on next login clears Dexie
@@ -135,7 +134,7 @@ export function useWatchlistSync() {
 
         syncedForPubkey.current = pubkey
         setSyncStatus(remoteFetchFailed ? 'error' : 'done')
-        console.log('sync: complete —', useWatchlistStore.getState().mints.length, 'mints in store')
+        if (import.meta.env.DEV) { console.log('sync: complete —', useWatchlistStore.getState().mints.length, 'mints in store') }
 
         // Best-effort: refresh server-side notification_subscriptions rows
         // (resets their 30-day retention clock) for every entry whose

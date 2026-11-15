@@ -24,9 +24,10 @@ import { useLocation } from 'react-router-dom'
 //
 // `notFound: true` (unknown Learn module, unknown or untracked mint, the 404 route): such a page has no address of
 // its own, so the canonical link is REMOVED instead of set (it comes back on unmount), og:url names the address
-// that was opened (not the home page) and the other sharing tags keep what the head already had. `useRemoveCanonical()` does just that for states that set no title.
+// that was opened (not the home page) and the other sharing tags keep what the head already had. `useRemoveCanonical()` does just that for a state that sets no title (no caller since 2026-11-15:
+// the Mint Detail not-tracked / invalid states now set MINT_NOT_FOUND_TITLE through this hook too).
 // Every not-found state is also `noindex, follow`: pass `noindex` next to `notFound` (the Learn module, the 404
-// route) or call `useNoindex()` next to `useRemoveCanonical()` (the Mint Detail states that set no title). The
+// route) or call `useNoindex()` next to `useRemoveCanonical()` (a state that sets no title). The
 // robots tag is put back on unmount. A crawler that does not run JavaScript gets the same head from the server
 // (backend/src/spaHtml.ts: route-specific tags, and HTTP 404 for a page that does not exist).
 const SITE_ORIGIN = 'https://mintradar.org'

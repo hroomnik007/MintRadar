@@ -1,3 +1,4 @@
+import { DISCOVERY_RELAYS } from '@/core/nostr/relays'
 import { njumpEventUrl, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { nip87AnnouncementOf } from '@/utils/nip87Announcement'
 import { NIP87_ANNOUNCEMENT_LABEL, NIP87_NOT_SEEN_TEXT, nip87KeyText, nip87StoredSuffix, nip87CheckedLabel } from '@/utils/nip87Texts'
@@ -59,8 +60,8 @@ import {
 } from '@/utils/reliabilityScore'
 import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/versionRule'
 import { useNow } from '@/hooks/useNow'
-import { mintDetailMeta } from '@/utils/pageMeta'
-import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocumentMeta'
+import { mintDetailMeta, MINT_NOT_FOUND_TITLE } from '@/utils/pageMeta'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
@@ -897,7 +898,8 @@ function MintDetailContent({ url }: { url: string }) {
   const nip87 = knownMint ? nip87AnnouncementOf({ announcedAt: knownMint.nostrAnnouncedAt, announceD: knownMint.nostrAnnounceD, infoPubkey: knownMint.pubkey, checkedAt: knownMint.nostrCheckedAt }) : null
   const nip87Key = nip87 ? nip87KeyText(nip87) : null
   const nip87Checked = nip87 ? nip87CheckedLabel(nip87.checkedAt, now) : null
-  const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId)
+  // With relay hints (the discovery relays MintRadar found it on), the author and the NIP-87 kind, so njump can find it.
+  const nostrAnnounceHref = njumpEventUrl(knownMint?.nostrAnnounceId, { relays: DISCOVERY_RELAYS, author: knownMint?.nostrAnnouncePubkey, kind: 38172 })
   // Shown as a row of the Overview tab's "Mint info" panel (it was a line of the header until 2026-11-13: protocol detail
   // above the fold of every mint page, and a link told apart from its sentence by colour alone).
   const nip87Line = nip87 ? (
@@ -2030,8 +2032,8 @@ function safeDecode(raw: string): string | null {
 
 function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string | null }) {
   const navigate = useNavigate()
-  useRemoveCanonical()
-  useNoindex()
+  // Own title (it kept the previous page's title), no canonical link, noindex: the same tags as the 404 page.
+  useDocumentMeta(MINT_NOT_FOUND_TITLE, undefined, { noindex: true, notFound: true })
   return (
     <div className="mint-detail">
       {/* Only Back: no card around it (an empty bordered box read as a header that failed to load). */}
@@ -2072,8 +2074,8 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
 // A slug that does not decode has no mint page to point a canonical at.
 function MintInvalidUrl() {
   const navigate = useNavigate()
-  useRemoveCanonical()
-  useNoindex()
+  // Own title (it kept the previous page's title), no canonical link, noindex: the same tags as the 404 page.
+  useDocumentMeta(MINT_NOT_FOUND_TITLE, undefined, { noindex: true, notFound: true })
   return (
     <div className="mint-detail">
       <div className="md-header md-header-bare">

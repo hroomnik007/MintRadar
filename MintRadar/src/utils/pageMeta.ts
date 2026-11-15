@@ -103,8 +103,9 @@ export function mintDetailMeta(
   }
 }
 
-// Server-side only (backend/src/spaHtml.ts): the head of a /mint/ address that is not a tracked mint, or not a
-// valid mint address at all. The page itself renders its own "not tracked" / "invalid" state in the browser.
+// The head of a /mint/ address that is not a tracked mint, or not a valid mint address at all: set by the server
+// (backend/src/spaHtml.ts) and, since 2026-11-15, also by the page's own "not tracked" / "invalid" state in the browser,
+// so the tab does not keep the title of the previous page after in-app navigation.
 export const MINT_NOT_FOUND_TITLE = 'Mint not found | MintRadar'
 
 // The strict allowlist of GET /api/og/page?p=<slug>: slug -> path. Anything else is a 404; nothing the caller

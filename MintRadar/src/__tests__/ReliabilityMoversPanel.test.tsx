@@ -128,4 +128,15 @@ describe('ReliabilityMoversPanel', () => {
       expect(screen.queryByTestId('note')).toBeNull()
     })
   })
+
+  describe('note (methodology note above the rows)', () => {
+    it('renders right after the panel head, before the Risers label', () => {
+      const { container } = renderPanel({ note: <p data-testid="mnote">methodology note</p> })
+      const panel = container.querySelector('.stats-movers-panel')!
+      const head = panel.querySelector('.stats-panel-head')!
+      expect(head.nextElementSibling).toBe(screen.getByTestId('mnote'))
+      const risers = panel.querySelector('.stats-movers-section-label.up')!
+      expect(screen.getByTestId('mnote').compareDocumentPosition(risers) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+  })
 })

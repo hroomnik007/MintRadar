@@ -8,6 +8,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import { nip19 } from 'nostr-tools'
 import { Copy, Check, ExternalLink, Link2, User } from 'lucide-react'
 import { njumpEventUrl, npubFromPubkey } from '@/utils/nostrLinks'
+import { REVIEW_READ_RELAYS } from '@/core/nostr/relays'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { REVIEWS_NIP87_TEXT, OPERATOR_REVIEW_NOTE } from '@/utils/tooltipTexts'
 import { showContactLabel, CONTACT_LISTED_LABEL } from '@/utils/reviewUtils'
@@ -179,9 +180,9 @@ export function ReviewsTab({
                                   })
                                 }}
                               >{copiedReviewAction === r.id + '-npub' ? <Check size={13} /> : <Copy size={13} />}</button>
-                              {njumpEventUrl(r.id) && (
+                              {njumpEventUrl(r.id, { relays: REVIEW_READ_RELAYS, author: r.pubkey }) && (
                                 <a
-                                  href={njumpEventUrl(r.id)!}
+                                  href={njumpEventUrl(r.id, { relays: REVIEW_READ_RELAYS, author: r.pubkey })!}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="review-action-btn"

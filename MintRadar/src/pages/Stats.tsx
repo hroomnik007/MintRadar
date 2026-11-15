@@ -1271,7 +1271,7 @@ export default function Stats() {
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
           getDisplayName={m => displayName(m, duplicateDisplayNames)}
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
-          footer={moversNote !== '' ? <div className="stats-movers-note">{moversNote}</div> : undefined}
+          note={moversNote !== '' ? <div className="stats-movers-note" role="note">{moversNote}</div> : undefined}
         />
 
         {/* Row 3, full width: Reliability Score Trend. Chart height is unchanged
