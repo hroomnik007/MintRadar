@@ -250,7 +250,8 @@ describe('Latency caption (Mint Detail)', () => {
 
   it('MintDetail renders the caption and the button label from the constants, and has no Latency tooltip', () => {
     const md = src('../pages/MintDetail.tsx')
-    expect(md).toContain('{CLIENT_LATENCY_BUTTON_LABEL}')
+    // The button shows the constant until a measurement, then the result in its place (2026-11-15).
+    expect(md).toContain('{clientLatency === null ? CLIENT_LATENCY_BUTTON_LABEL')
     expect(md).toContain('{latencyCaption()}')
     expect(md).not.toContain('latencyTooltipText')
     expect(md).not.toContain('latency-info')
