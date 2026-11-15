@@ -8,7 +8,7 @@ import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
-import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, tokenFeeFacts, localProofKeysetIds, type SignatureCheck, type TokenInfo, type TokenSpentCheck, type TokenFeeFacts } from '@/utils/cashuToken'
+import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, tokenFeeFacts, localProofKeysetIds, unspentConfidence, unknownKeysetIds, type SignatureCheck, type TokenInfo, type TokenSpentCheck, type TokenFeeFacts } from '@/utils/cashuToken'
 import { feeUnitLabel, formatFeeRate } from '@/utils/feesLimits'
 import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '@/utils/tokenRun'
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
@@ -19,7 +19,7 @@ import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
 import { weightsFor, reviewsScore, latencyPart, softwarePreferenceCredit, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
-import { softwareChoices, rankWizardRecs, wizardReasonText, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
+import { softwareChoices, rankWizardRecs, wizardReasonText, reasonMentionsLatency, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -195,6 +195,12 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
       return k ? { active: k.active, inputFeePpk: k.inputFeePpk } : null
     })
   }, [verify, mintInfo, cleanToken])
+
+  // Keysets the mint does not list (live answer first, else its last stored list). A token from such a
+  // keyset may not come from this mint at all, so the Verify part warns before the fee and spent lines.
+  const unknownIds = unknownKeysetIds(feeFacts ?? storedFeeFacts)
+  const unknownFromStored = !feeFacts && unknownIds.length > 0
+  const unspentSure = unspentConfidence(verify?.status ?? null, unknownIds.length > 0) === 'confirmed'
 
   const handleInspectAndVerify = async () => {
     const token = cleanToken
@@ -495,6 +501,17 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
             )}
           </div>
 
+          {verify && verify.status !== 'bad-mint-url' && unknownIds.length > 0 && (
+            <div className="token-unknown-keyset" role="alert" data-testid="token-unknown-keyset">
+              <TriangleAlert size={15} aria-hidden="true" className="tv-icon" />
+              <span>
+                {unknownFromStored ? "The mint's last listed keysets do not include" : 'This mint does not list'}{' '}
+                {unknownIds.length === 1 ? 'keyset' : 'keysets'} <span className="token-keyset-id">{unknownIds.join(', ')}</span>.
+                {' '}The token may not come from this mint, or may be invalid.
+              </span>
+            </div>
+          )}
+
           {verify && verify.status !== 'bad-mint-url' && (
             feeFacts
               ? <ClaimFee facts={feeFacts} unit={result.unit} source="mint" />
@@ -529,7 +546,11 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
                 case 'all-spent':
                   return <ResultNote tone="bad" Icon={CircleX}>All {total} proof{plural} already spent — this token has already been redeemed elsewhere.</ResultNote>
                 case 'all-unspent':
-                  return <ResultNote tone="ok" Icon={CircleCheck}>All {total} proof{plural} unspent — this token has not been redeemed yet.</ResultNote>
+                  // Made-up proofs also come back unspent (the mint only looks up their hash), so the
+                  // reassuring line needs verified signatures from keysets the mint lists.
+                  return unspentSure
+                    ? <ResultNote tone="ok" Icon={CircleCheck}>All {total} proof{plural} unspent — this token has not been redeemed yet.</ResultNote>
+                    : <ResultNote tone="neutral" Icon={CircleMinus}>All {total} proof{plural} unspent: the mint has not marked {total === 1 ? 'it' : 'them'} as spent. Its signatures could not be confirmed, so this does not show the token is genuine.</ResultNote>
                 case 'all-pending':
                   return <ResultNote tone="neutral" Icon={Hourglass}>All {total} proof{plural} pending — the mint is still processing {total === 1 ? 'it' : 'them'}. Check again shortly.</ResultNote>
                 default:
@@ -703,6 +724,25 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   const [latencyLimit, setLatencyLimit] = useState<LatencyLimit | null>(null)
   const [recsCtx, setRecsCtx] = useState<{ checks: Set<WizardCheck>; preferred: string | null; limit: LatencyLimit | null; measured: number; total: number } | null>(null)
   const softwareOptions = useMemo(() => softwareChoices(knownMints), [knownMints])
+  // After "Find my mint" the results start below the tall form (off screen on a phone), so each finished Find
+  // scrolls them into view and moves focus to their heading for screen readers. Only a Find does this.
+  const [findSeq, setFindSeq] = useState(0)
+  const resultsRef = useRef<HTMLDivElement>(null)
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (findSeq === 0) return
+    const id = requestAnimationFrame(() => {
+      const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const el = resultsRef.current
+      if (el) {
+        // Just below the sticky navbar, whose height differs between phone (two rows) and desktop.
+        const navBottom = document.querySelector('.navbar')?.getBoundingClientRect().bottom ?? 0
+        window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - Math.max(navBottom, 0) - 12, behavior: reduce ? 'auto' : 'smooth' })
+      }
+      resultsHeadingRef.current?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [findSeq])
   const effectivePreferred = softwareOptions.some(o => o.key === preferredSoftware) ? preferredSoftware : null
 
   // Built from the distinct units the online mints actually advertise, never a
@@ -808,6 +848,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     setRecsCtx({ checks: new Set(checks), preferred: effectivePreferred, limit: latencyLimit, measured: ranking.measured, total: ranking.total })
     setRecsUnit(selectedUnit)
     setFinding(false)
+    setFindSeq(n => n + 1)
   }
 
   const renderCheck = ({ id, label, sub, Icon }: typeof BASIC_CHECKS[number]) => {
@@ -947,7 +988,10 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       )}
 
       {recs !== null && (
-        <div className="wizard-results">
+        <div className="wizard-results" ref={resultsRef} data-testid="wizard-results">
+          <h3 className="sr-only" tabIndex={-1} ref={resultsHeadingRef} data-testid="wizard-results-heading">
+            {recs.length === 0 ? 'No matching mints' : `${recs.length} recommended ${recs.length === 1 ? 'mint' : 'mints'}`}
+          </h3>
           {recs.length === 0 ? (
             recsCtx?.limit != null && recsCtx.total > 0
               ? <div className="wizard-no-results">{latencyLimitEmptyText(recsCtx.limit)}</div>
@@ -967,6 +1011,8 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
               const mintRange = formatLimits(rec.mintLimits, unitLabel)
               const meltRange = formatLimits(rec.meltLimits, unitLabel)
               const reason = recsCtx ? wizardReasonText({ checks: recsCtx.checks, mint: rec.mint, latencyMs: rec.latencyMs, latencyLimit: recsCtx.limit, preferred: recsCtx.preferred }) : null
+              // The latency is said once per row: the reason line already gives it when speed was asked for.
+              const metaLatency = recsCtx && reasonMentionsLatency({ checks: recsCtx.checks, latencyLimit: recsCtx.limit }) ? null : rec.latencyMs
               return (
                 <div key={rec.url} className="wizard-rec-row" {...clickableProps(() => navigate(`/mint/${encodeURIComponent(rec.url)}`))}>
                   <span className="wizard-rank">#{idx + 1}</span>
@@ -974,9 +1020,9 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                   <div className="wizard-rec-info">
                     <div className="wizard-rec-name">{mintDisplayName(rec.mint, duplicateDisplayNames)}</div>
                     <div className="wizard-rec-meta">
-                      {rec.latencyMs != null && <span>{rec.latencyMs}ms latency</span>}
+                      {metaLatency != null && <span>{metaLatency} ms from your browser</span>}
                       {/* The separator only between two facts: without a latency sample the line began with "· ". */}
-                      {rec.mint.uptimePct24h != null && <span>{rec.latencyMs != null ? ' · ' : ''}{rec.mint.uptimePct24h}% uptime (24h)</span>}
+                      {rec.mint.uptimePct24h != null && <span>{metaLatency != null ? ' · ' : ''}{rec.mint.uptimePct24h}% uptime (24h)</span>}
                     </div>
                     <div className="wizard-rec-limits">
                       {(mintRange ?? meltRange) !== null ? (

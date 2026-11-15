@@ -437,6 +437,21 @@ export function classifySpentCheck({ total, unspent, spent, pending }: TokenSpen
   return 'partial'
 }
 
+/**
+ * How sure an "all unspent" answer may sound. A NUT-07 check only looks up Y = hash(secret), so made-up
+ * proofs also come back unspent: the green "not redeemed yet" line is kept for a token whose signatures all
+ * verified against keysets the mint lists. Anything less (no or partial signature proofs, a check that could
+ * not run, a keyset the mint does not list) gets the neutral line that only says what the mint answered.
+ */
+export function unspentConfidence(signature: SignatureCheck['status'] | 'unreachable' | 'bad-mint-url' | null, hasUnknownKeyset: boolean): 'confirmed' | 'unconfirmed' {
+  return signature === 'valid' && !hasUnknownKeyset ? 'confirmed' : 'unconfirmed'
+}
+
+/** The keyset ids of a token's proofs that the mint's listed keysets do not include (from the Verify fee facts). */
+export function unknownKeysetIds(facts: TokenFeeFacts | null): string[] {
+  return facts ? facts.keysets.filter(k => k.status === 'unknown').map(k => k.id) : []
+}
+
 /** Which action the Token Inspector highlights, and what the actions may do, as a function of
  *  the spent check. `null` = no usable result yet (before a check, or after an error /
  *  unreachable / bad-mint-url result): the user's next step is the check itself. */

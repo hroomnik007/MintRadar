@@ -3,7 +3,7 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import type { WizardCheck } from '@/utils/wizardScoring'
 import {
   softwareChoices, matchesPreferredSoftware, rankWizardRecs, wizardReasonText, latencyLimitNote, latencyLimitEmptyText,
-  cleanSoftwareName, LATENCY_LIMITS,
+  cleanSoftwareName, LATENCY_LIMITS, reasonMentionsLatency,
 } from '@/utils/wizardPick'
 import { REVIEWS_WEIGHT, SOFTWARE_PREFERENCE_BONUS, softwarePreferenceCredit, weightsFor } from '@/utils/wizardScoring'
 import { softwareFamily } from '@/utils/softwareFilter'
@@ -185,5 +185,13 @@ describe('latency limit', () => {
     expect(rankWizardRecs(r, { preferred: 'cdk', latencyLimit: 300, bonus: 0.02 }).top.map(x => x.name)).toEqual(['a'])
     expect(matchesPreferredSoftware({ version: 'cdk-mintd/1' }, 'cdk')).toBe(true)
     expect(matchesPreferredSoftware({ version: 'cdk-mintd/1' }, null)).toBe(false)
+  })
+})
+
+describe('reasonMentionsLatency (latency shown once per row)', () => {
+  it('is true when "Fast from here" or a latency limit was chosen', () => {
+    expect(reasonMentionsLatency({ checks: new Set<WizardCheck>(['fast']), latencyLimit: null })).toBe(true)
+    expect(reasonMentionsLatency({ checks: new Set<WizardCheck>(['reliable']), latencyLimit: 300 })).toBe(true)
+    expect(reasonMentionsLatency({ checks: new Set<WizardCheck>(['reliable']), latencyLimit: null })).toBe(false)
   })
 })

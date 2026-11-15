@@ -89,6 +89,12 @@ export interface ReasonInput {
   preferred: string | null
 }
 
+/** Whether the reason line carries the browser latency ("Fast from here" or a latency limit was chosen); the row's
+ *  meta line then leaves it out, so a latency is never shown twice in one result. */
+export function reasonMentionsLatency(i: Pick<ReasonInput, 'checks' | 'latencyLimit'>): boolean {
+  return i.checks.has('fast') || i.latencyLimit !== null
+}
+
 /**
  * Facts the mint meets from what the person selected, joined with " · ", in a fixed order: Lightning, restore, locked payments,
  * live updates, latency from the browser, the preferred software. The Reliability Score is not repeated here: the card's badge
@@ -107,7 +113,7 @@ export function wizardReasonText(i: ReasonInput): string | null {
   for (const [check, text] of nut) {
     if (i.checks.has(check) && passesWizardNutChecks(i.mint.nutsLimits ?? null, new Set([check]))) parts.push(text)
   }
-  if ((i.checks.has('fast') || i.latencyLimit !== null) && i.latencyMs !== null) parts.push(`${i.latencyMs} ms from your browser`)
+  if (reasonMentionsLatency(i) && i.latencyMs !== null) parts.push(`${i.latencyMs} ms from your browser`)
   if (i.preferred !== null && matchesPreferredSoftware(i.mint, i.preferred)) {
     const f = softwareFamily(i.mint.version)
     const name = f ? cleanSoftwareName(f.name) : ''

@@ -106,8 +106,10 @@ options are unchanged.
   `data-testid="wizard-adv-badge"`, `aria-hidden`; the button's name gets a screen-reader text "N selected") with the number of active
   choices inside: the cards Restore / Locked / Live plus a chosen Preferred software or Max latency ("Any" does not count); no badge at
   zero; it shows while the section is collapsed, so a selection is never hidden without a sign (this replaced the old "· N selected"
-  text). On phones (<= 700 px) the segmented controls of the two cards wrap into rows (`.wizard-seg-multi`: grid of right/bottom
-  borders, 44 px options, no mid-word breaks, nothing overflows at 320 px). Line icons come from
+  text). On phones (<= 700 px), and whenever the option card itself is at most 520 px wide (container query
+  `wizard-seg` on `.wizard-opt-group`, which also covers the 901-1020 px two-column Tools grid), the segmented controls of the two
+  cards wrap into rows (`.wizard-seg-multi`: grid of right/bottom borders, 44 px options, nothing overflows at 320 px). Labels use
+  `word-break: keep-all` / `overflow-wrap: normal` at every width, so a name is never broken mid-word (2026-11-15 audit). Line icons come from
   `lucide-react` (`Zap`, `ShieldCheck`, `PlugZap`, `KeyRound`, `Lock`, `Satellite`); NUT numbers no
   longer appear in visible text. "Pick at least one priority" hint (`.wizard-hint`) shows while no priority is selected (the Find button needs one; Preferred software and Max latency alone do not enable it). Tests: `e2e/tools.spec.ts` (badge count, options inside Advanced, hint), `e2e/tools-wizard-b2.spec.ts`.
   Restore from seed / Locked payments / Live updates filter on NUT-9 / 11 / 17 through
@@ -217,7 +219,8 @@ blocks only non-public hosts).
   The `invalid` text is "The DLEQ proof does not match this mint's published keys. The token may have been altered, or the mint may be using different keys." (it used to read "Invalid signature — do not trust this token", which was wrong: the mint's own signature C can be valid while the DLEQ proof does not match). No red or "do not trust" wording anywhere in this flow; the spent/unspent line is independent. **Fixed on purpose:** partial DLEQ and unresolved keysets used to fall into the red "At least one
   proof failed its DLEQ check". "Valid" says nothing about spent-ness (a spent token still verifies).
 - **Test mint tokens (W5a):** when the token's mint is a test mint (`isTestMint`, same helper as the "Test mint" chip), the Reliability Score cell shows the neutral line "Test mint. Ecash from it has no value." instead of the score and its band label; the rest of the result stays.
-- **Spent check** — `classifySpentCheck()`: all-spent (red), all-unspent (green), **all-pending
+- **Spent check** — `classifySpentCheck()`: all-spent (red), all-unspent (green only when `unspentConfidence()` is
+  "confirmed", see below), **all-pending
   (neutral, "the mint is still processing")**, else partial (copper).
 - **Input** — `stripTokenWhitespace()` removes ALL whitespace (not just the ends) before parsing
   and before the "Open in cashu.me" `#token=` link is built.
@@ -382,3 +385,22 @@ Deterministic order: `rankWizardRecs` (`wizardPick.ts`) breaks a tie of the fina
 ### Best Mint Wizard: latency without "Fast from here" (2026-11-13)
 
 `latencyScore()` in `wizardScoring.ts`. With "Fast from here" selected the latency component is relative to the slowest measured candidate, as before. Without it, latency only penalises a slow mint: 1 under `LATENCY_SLOW_MS` (2000), 0.5 under `LATENCY_VERY_SLOW_MS` (5000), 0 otherwise or without a measurement (the card colour bands). Before, the relative value was used in both modes: at the "Reliable" weight (0.18 of the score, one Reliability point is 0.0063) a few percent of one noisy browser measurement outweighed a Reliability point, so two identical searches named a different #1 (external review 2026-11-11: Minibits 98 vs Kinda Reckless 97). The weights are unchanged; NUT count and reviews still move the order by design. The result line says "% uptime (24h)" (it is `uptimePct24h`).
+
+### UI/UX audit fixes, Tools (2026-11-15)
+
+- **Unknown keyset:** when the keysets the mint lists (live Verify answer, else its last stored keysets) do not include a
+  token keyset, the Verify part shows an amber `role="alert"` block (`.token-unknown-keyset`, `data-testid="token-unknown-keyset"`)
+  above the Mint fee block: "This mint does not list keyset <id>. The token may not come from this mint, or may be invalid."
+  (`unknownKeysetIds()` in `cashuToken.ts`). The fee note stays separate.
+- **Unspent wording:** NUT-07 checkstate only looks up Y = hash(secret), so made-up proofs come back unspent too. The green
+  "All N proofs unspent — this token has not been redeemed yet." is kept only when `unspentConfidence()` says "confirmed"
+  (signature check `valid` and no unknown keyset). Otherwise the line is neutral (grey): "All N proofs unspent: the mint has not
+  marked them as spent. Its signatures could not be confirmed, so this does not show the token is genuine."
+- **Wizard results:** each finished "Find my mint" scrolls `.wizard-results` to just below the sticky `.navbar` (its measured
+  height: two rows on phones; smooth unless reduced motion) and focuses a visually hidden heading (`data-testid="wizard-results-heading"`, "N recommended mints").
+- **One latency per row:** the meta line shows "N ms from your browser" only when the reason line does not already carry it
+  (`reasonMentionsLatency()`, `wizardPick.ts`: "Fast from here" or a latency limit chosen).
+- **Disabled primary button:** `.tool-btn-primary:disabled` is neutral grey (`--bg3` fill, `--text3` text, inset 1 px border
+  shadow, opacity 1) instead of faded green; the height does not change when it becomes enabled.
+- Tests: `e2e/ux-audit-1115-tools.spec.ts`, `cashuToken.test.ts` (unspentConfidence / unknownKeysetIds),
+  `wizardPick.test.ts` (reasonMentionsLatency).
