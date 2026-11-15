@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Amount, getEncodedToken, CheckStateEnum, Wallet } from '@cashu/cashu-ts'
 import {
   parseCashuToken, formatTokenAmount, checkTokenSpentState, decodeTokenWithMint,
-  classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace,
+  classifySignatureCheck, classifySpentCheck, unspentConfidence, unknownKeysetIds, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace,
   assertProbeableMintUrl, InvalidMintUrlError, INVALID_TOKEN_MESSAGE, tokenFeeFacts, localProofKeysetIds,
 } from '../utils/cashuToken'
 
@@ -448,5 +448,23 @@ describe('decodeTokenWithMint: keysets come from what the mint listed', () => {
     expect(d.keysets.fee).toBeNull()
     expect(d.keysets.keysets[0]!.status).toBe('unknown')
     expect(mockKeyChain.getKeyset).not.toHaveBeenCalled()
+  })
+})
+
+describe('unspentConfidence / unknownKeysetIds (2026-11-15 audit)', () => {
+  it('only verified signatures from listed keysets make an all-unspent answer "confirmed"', () => {
+    expect(unspentConfidence('valid', false)).toBe('confirmed')
+    expect(unspentConfidence('valid', true)).toBe('unconfirmed')
+    for (const s of ['partial', 'no-dleq', 'unresolved', 'invalid', 'unreachable', 'bad-mint-url', null] as const) {
+      expect(unspentConfidence(s, false)).toBe('unconfirmed')
+    }
+  })
+  it('lists the keysets the mint does not list, none without facts', () => {
+    expect(unknownKeysetIds(null)).toEqual([])
+    expect(unknownKeysetIds({ fee: null, keysets: [
+      { id: 'a', proofs: 1, status: 'active', inputFeePpk: 0 },
+      { id: 'b', proofs: 2, status: 'unknown', inputFeePpk: null },
+      { id: 'c', proofs: 1, status: 'inactive', inputFeePpk: 0 },
+    ] })).toEqual(['b'])
   })
 })

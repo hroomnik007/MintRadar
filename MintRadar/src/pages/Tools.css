@@ -79,7 +79,9 @@
   font-family: var(--font-body);
 }
 .inspect-token-btn { display: flex; align-items: center; justify-content: center; gap: 6px; }
-.tool-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Disabled: a neutral grey control instead of a faded green one, which read as almost active.
+   The outline is an inset shadow, so the button keeps its height when it becomes enabled. */
+.tool-btn-primary:disabled { opacity: 1; background: var(--bg3); color: var(--text3); box-shadow: inset 0 0 0 1px var(--border); cursor: not-allowed; }
 .tool-btn-primary:not(:disabled):hover { opacity: 0.85; }
 
 .token-input, .pr-input {
@@ -387,6 +389,13 @@ a.token-action-btn:focus {
 }
 /* Reason line under a result (Task B2): facts the mint meets from what was selected. Muted, never below 12px. */
 .wizard-rec-facts { font-size: 12px; line-height: 1.4; color: var(--text3); font-family: var(--font-body); overflow-wrap: anywhere; }
+.token-unknown-keyset {
+  display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+  font-size: 13px; line-height: 1.5; color: var(--amber); background: var(--amber-soft); border: 1px solid var(--amber-soft-strong);
+}
+.token-unknown-keyset .tv-icon { flex: none; margin-top: 3px; }
+.token-unknown-keyset .token-keyset-id { font-size: inherit; }
+
 .wizard-rec-exclusion-note {
   margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3);
 }
@@ -455,18 +464,28 @@ a.token-action-btn:focus {
 }
 /* "Preferred software" / "Max latency": an option card like the others (same label and description), holding the segmented control.
    It is not a button, so no pointer cursor and no hover border. */
-.wizard-opt-group { cursor: default; gap: 2px; }
+.wizard-opt-group { cursor: default; gap: 2px; container: wizard-seg / inline-size; }
 .wizard-opt-group .wizard-opt-sub { font-family: var(--font-body); font-size: 12px; line-height: 1.4; }
 .wizard-opt-group .wizard-unit-seg { margin-top: 8px; }
 /* "Preferred software" / "Max latency": the same segmented control with more, longer labels; they shrink and wrap inside their segment. */
 .wizard-seg-multi { max-width: 100%; }
-.wizard-seg-multi .wizard-unit-opt { overflow-wrap: anywhere; line-height: 1.25; }
+.wizard-seg-multi .wizard-unit-opt { overflow-wrap: normal; word-break: keep-all; line-height: 1.25; }
 @media (min-width: 701px) {
   .wizard-seg-multi .wizard-unit-opt { flex: 1 1 auto; min-width: 0; }
 }
-/* Phones: with several families the options wrap into rows (a name is never broken mid-word); the dividers are a grid of
-   right/bottom borders (top/left on the control), the rounded corners are clipped, each option is 44px tall. */
+/* Narrow: with several families the options wrap into rows (a name is never broken mid-word); the dividers are a grid of
+   right/bottom borders (top/left on the control), the rounded corners are clipped, each option is 44px tall.
+   Phones by viewport, and any narrow option card by its own width (the 901-1020px two-column Tools grid). */
 @media (max-width: 700px) {
+  .wizard-seg-multi { flex-wrap: wrap; overflow: hidden; border-width: 1px 0 0 1px; }
+  .wizard-seg-multi .wizard-unit-opt {
+    flex: 1 1 auto; min-width: 64px; min-height: 44px; border-radius: 0;
+    border-left: 0; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); overflow-wrap: normal;
+  }
+  .wizard-seg-multi .wizard-unit-opt + .wizard-unit-opt { border-left: 0; }
+  .wizard-seg-multi .wizard-unit-opt::before { content: none; }
+}
+@container wizard-seg (max-width: 520px) {
   .wizard-seg-multi { flex-wrap: wrap; overflow: hidden; border-width: 1px 0 0 1px; }
   .wizard-seg-multi .wizard-unit-opt {
     flex: 1 1 auto; min-width: 64px; min-height: 44px; border-radius: 0;
