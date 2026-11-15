@@ -557,8 +557,12 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border-top: 0.5px solid var(--border);
   vertical-align: middle;
 }
-.md-vh-col-date { width: 190px; }
-.md-vh-col-from { width: 260px; }
+/* Date column = "29 Sep 2026" at 12px monospace plus its right padding; From and To share the rest equally and wrap
+   (after the "/", else anywhere) instead of truncating. Fixed 190/260 px columns left the To column at 0 px when the
+   Mint Detail left column was narrow (two-column layout at about 780-1100 px). */
+.md-vh-col-date { width: 112px; }
+.md-vh-col-from { width: auto; }
+.md-vh-table .md-vh-from, .md-vh-table .md-vh-to { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 @media (max-width: 640px) {
   /* Date column = "29 Sep 2026" at 12px monospace (11 characters) plus its right padding;
      From and To share the rest equally and wrap (after the "/", else anywhere) instead of truncating. */
@@ -2313,7 +2317,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .nut-name { font-size: 12.5px; font-weight: 700; color: var(--accent); }
 .nut-card.unsupported .nut-name,
 .nut-card.unsupported .nut-desc { color: var(--text3); }
-.nut-desc { font-family: var(--font-body); font-size: 13px; color: var(--text2); }
+/* Up to two lines ("Cached responses", "Batched minting" were cut with an ellipsis in narrow tiles). */
+.nut-desc { font-family: var(--font-body); font-size: 13px; color: var(--text2); white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: break-word; }
 
 /* Audit: figure strip instead of five boxed tiles; nested cards become hairline sections. */
 .audit-summary-strip { gap: 0; padding: 4px 0; margin-bottom: 14px; }
@@ -2559,7 +2564,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .qr-modal { max-width: 340px; padding: 20px; }
 .qr-modal-header { gap: 12px; align-items: flex-start; margin-bottom: 0; }
 .qr-modal-heading { flex: 1; min-width: 0; }
-.qr-modal-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Wraps to a second line instead of cutting "Add <mint name> to wallet" on a phone. */
+.qr-modal-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); line-height: 1.3; overflow-wrap: anywhere; }
 .qr-modal-sub { font-size: 14px; color: var(--text3); margin-top: 2px; line-height: 1.4; }
 .qr-modal-close, .rb-close { width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); cursor: pointer; transition: color var(--transition), border-color var(--transition); }
 .qr-modal-close:hover, .rb-close:hover { color: var(--text); border-color: var(--border2); }
@@ -2929,7 +2935,23 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .au-dir + .au-dir { border-left: 1px solid var(--border); border-top: 0; padding-left: 12px; }
   .au-dir-label { font-size: 12px; white-space: nowrap; }
   .au-days { gap: 4px; }
-  /* Phones: four columns that fit 320 px without a sideways scroll; the host is cut with an ellipsis. */
+}
+/* A narrow table box (phones, and the left column of the two-column Mint Detail layout at about 780-1060 px): four
+   columns that fit without a sideways scroll; the host is cut with an ellipsis. Keyed on the box width, not the
+   viewport, because the left column is narrower than a phone screen in part of the desktop range. Phones and small
+   tablets (up to 767 px) keep the same four columns by viewport, as before, so long hosts never scroll sideways there. */
+.audit-swaps-table-wrap { container-type: inline-size; }
+@container (max-width: 559px) {
+  .au-table .au-col-when, .au-table .au-col-fee, .au-table .au-col-dur { display: none; }
+  .au-table { table-layout: fixed; font-size: 12px; }
+  .au-table td, .au-table th { white-space: normal; padding-right: 6px; }
+  .au-table th:nth-child(2), .au-table td:nth-child(2) { width: 82px; }
+  .au-table th:nth-child(3), .au-table td:nth-child(3) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .au-table th:nth-child(4), .au-table td:nth-child(4) { width: 58px; }
+  .au-table th:nth-child(7), .au-table td:nth-child(7) { width: 78px; padding-right: 0; }
+  .au-res { padding: 2px 6px; border-radius: 8px; }
+}
+@media (max-width: 767px) {
   .au-table .au-col-when, .au-table .au-col-fee, .au-table .au-col-dur { display: none; }
   .au-table { table-layout: fixed; font-size: 12px; }
   .au-table td, .au-table th { white-space: normal; padding-right: 6px; }

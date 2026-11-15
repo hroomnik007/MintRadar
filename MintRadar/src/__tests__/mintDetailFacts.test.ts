@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor, formatDuration,
+  outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor, formatDuration, uptimeTileText,
   readLastInfo, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT, auditSuccessText,
   type OutagesResponse, type StoredScoreBreakdown, type BreakdownPart,
 } from '@/utils/mintDetailFacts'
@@ -194,5 +194,21 @@ describe('longest outage', () => {
   })
   it('formatDuration: seconds, minutes, hours and days', () => {
     expect([30_000, 45 * 60_000, 3 * H + 20 * 60_000, 6 * H, 162 * H, 48 * H].map(formatDuration)).toEqual(['30s', '45 min', '3h 20m', '6h', '6d 18h', '2d'])
+  })
+})
+
+describe('uptimeTileText (Uptime 24h tile)', () => {
+  const base = { pct: null, onlineChecks: 0, totalChecks: 0, listPct: 97 }
+  it('pending: the list value and "loading checks…", never "0 / 0 checks"', () => {
+    expect(uptimeTileText({ ...base, state: 'pending' })).toEqual({ pct: 97, value: '97%', sub: 'loading checks…' })
+    expect(uptimeTileText({ ...base, state: 'pending', listPct: null })).toEqual({ pct: null, value: '—', sub: 'loading checks…' })
+  })
+  it('error: the list value and a note, not a check count', () => {
+    expect(uptimeTileText({ ...base, state: 'error' })).toEqual({ pct: 97, value: '97%', sub: 'checks not loaded' })
+  })
+  it('ready: the counts of the answer', () => {
+    expect(uptimeTileText({ ...base, state: 'ready', pct: 100, onlineChecks: 288, totalChecks: 288 })).toEqual({ pct: 100, value: '100%', sub: '288 / 288 checks' })
+    expect(uptimeTileText({ ...base, state: 'ready', pct: 100, onlineChecks: 1, totalChecks: 1 }).sub).toBe('1 check')
+    expect(uptimeTileText({ ...base, state: 'ready' })).toEqual({ pct: null, value: '—', sub: 'no checks yet' })
   })
 })

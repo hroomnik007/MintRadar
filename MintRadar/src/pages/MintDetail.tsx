@@ -64,7 +64,7 @@ import { useDocumentMeta, useNoindex, useRemoveCanonical } from '@/hooks/useDocu
 import { CLIENT_LATENCY_BUTTON_LABEL, latencyCaption } from '@/constants/probeLocation'
 import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
-import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, type OutagesResponse } from '@/utils/mintDetailFacts'
+import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, uptimeTileText, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -263,7 +263,7 @@ function MintDetailContent({ url }: { url: string }) {
     staleTime: 5 * 60 * 1000,
   })
   // Dedicated 24h query for the header — shares TanStack cache with historyData when historyPeriod='24h'
-  const { data: uptime24hData } = useQuery({
+  const { data: uptime24hData, isError: uptime24hError } = useQuery({
     queryKey: ['mint', 'history-api', url, '24h'],
     queryFn: async () => {
       const res = await fetch(`/api/mints/history?url=${encodeURIComponent(url)}&period=24h`)
@@ -611,13 +611,19 @@ function MintDetailContent({ url }: { url: string }) {
   // (singular + id), this one is "reviews" (plural, no id), so the two never
   // collide and #review-<id> already wins for opening the Reviews tab.
   // Unrecognized/missing hash falls through to the default 'overview' tab.
+  // Also follows a hash-only change on the same mint page: an in-app link (router location hash) and a typed or
+  // pasted URL that only changes the fragment (hashchange). Tabs themselves use replaceState, which fires neither.
+  const { hash: locationHash } = useLocation()
   useEffect(() => {
-    const raw = window.location.hash
-    const m = raw.match(/^#(overview|history|nuts|audit|reviews)$/)
-    if (!m?.[1]) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setActiveTab(m[1] as 'overview' | 'history' | 'nuts' | 'audit' | 'reviews')
-  }, [url])
+    const apply = () => {
+      const m = window.location.hash.match(/^#(overview|history|nuts|audit|reviews)$/)
+      if (!m?.[1]) return
+      setActiveTab(m[1] as 'overview' | 'history' | 'nuts' | 'audit' | 'reviews')
+    }
+    apply()
+    window.addEventListener('hashchange', apply)
+    return () => window.removeEventListener('hashchange', apply)
+  }, [url, locationHash])
 
   // The slot grid only changes when the current hour/day bucket does, so key the memo on the bucket, not on every 30 s
   // useNow tick: a new data array on each tick made the chart re-run its line animation.
@@ -726,6 +732,13 @@ function MintDetailContent({ url }: { url: string }) {
   const headerUptimePct = uptime24hData?.uptimePct ?? null
   const headerOnlineChecks = (uptime24hData?.segments ?? []).reduce((s, r) => s + r.onlineCount, 0)
   const headerTotalChecks = (uptime24hData?.segments ?? []).reduce((s, r) => s + r.total, 0)
+  const uptimeTile = uptimeTileText({
+    state: uptime24hData !== undefined ? 'ready' : uptime24hError ? 'error' : 'pending',
+    pct: headerUptimePct,
+    onlineChecks: headerOnlineChecks,
+    totalChecks: headerTotalChecks,
+    listPct: knownMint?.uptimePct24h,
+  })
 
   // NUT-04 (minting) and NUT-05 (melting) disabled detection
   const nut4Disabled = (() => {
@@ -1285,8 +1298,8 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-sc-icon orange"><Shield size={14} /></div>
           <div style={{flex:1}}>
             <div className="md-sc-label">Uptime 24h</div>
-            <div className="md-sc-value" style={{color: uptimeColor(headerUptimePct)}}>{headerUptimePct !== null ? `${headerUptimePct}%` : '—'}</div>
-            <div className="md-sc-sub">{headerTotalChecks === 1 ? `${headerOnlineChecks} check` : `${headerOnlineChecks} / ${headerTotalChecks} checks`}</div>
+            <div className="md-sc-value" style={{color: uptimeColor(uptimeTile.pct)}}>{uptimeTile.value}</div>
+            <div className="md-sc-sub" data-testid="md-uptime-24h-checks">{uptimeTile.sub}</div>
             {typeof knownMint?.uptimePct30d === 'number' && (
               <div className="md-sc-sub" data-testid="md-uptime-30d">
                 30 days <span style={{ color: uptime30dColor(knownMint.uptimePct30d), fontFamily: 'var(--font-mono-data)' }}>{knownMint.uptimePct30d}%</span>
