@@ -20,7 +20,10 @@ export async function submitMintReview(
     created_at: Math.floor(Date.now() / 1000),
     tags: [
       ['d', mintUrl],
-      ['u', mintUrl],
+      // NIP-87: `k` = kind of the reviewed object (38172 mint announcement); clients such as
+      // cashu.me filter reviews by #k. The `u` tag carries the "cashu" marker; `d` stays the mint URL.
+      ['k', '38172'],
+      ['u', mintUrl, 'cashu'],
       ['rating', rating.toString()],
       ...(comment.trim() ? [['comment', comment.trim()]] : []),
     ],
