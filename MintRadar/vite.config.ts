@@ -42,6 +42,8 @@ export default defineConfig(({ command }) => ({
         // Single source of the precache list: includeAssets is deliberately unused — the plugin adds it to
         // globPatterns, so the favicons (already matched by ico/png here) were precached twice.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // public/profile/ holds the Nostr profile pictures: only Nostr clients fetch them, so visitors do not precache them.
+        globIgnores: ['profile/**'],
         // Workbox's default ignores only utm_*/fbclid; "v" is the brand-asset content hash (?v=…).
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/],
         navigateFallbackDenylist: [/^\/api\//, /^\/\.well-known\//, /^\/docs\//, /^\/llms\.txt$/],

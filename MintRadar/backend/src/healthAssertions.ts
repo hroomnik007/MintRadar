@@ -54,9 +54,9 @@ export const METHODOLOGY_URL = 'https://mintradar.org/methodology'
 export const HEALTH_CONTENT =
   "Operational health signal, not solvency, not a recommendation to deposit funds. Based on MintRadar's probes and third-party audit data; it can be wrong or out of date."
 
-/** The site's own app icon (public/icons/icon-512x512.png, the 512 px icon of the web manifest): a static PNG served
- *  from mintradar.org, no third-party host. */
-export const ATTESTATION_PROFILE_PICTURE_URL = 'https://mintradar.org/icons/icon-512x512.png'
+/** The brand mark as a 512 px PNG (public/profile/radar-512.png): a static file served from mintradar.org, no third-party
+ *  host. The file name is frozen: Nostr clients cache avatars by path, so a changed picture gets a NEW file name. */
+export const ATTESTATION_PROFILE_PICTURE_URL = 'https://mintradar.org/profile/radar-512.png'
 
 export const ATTESTATION_PROFILE = {
   name: 'MintRadar Health',
