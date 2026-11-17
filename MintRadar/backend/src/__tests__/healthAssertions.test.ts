@@ -525,7 +525,7 @@ describe('profile (kind 0)', () => {
       nip05: 'health@mintradar.org',
       picture: ATTESTATION_PROFILE_PICTURE_URL,
     })
-    expect(profile['picture']).toBe('https://mintradar.org/icons/icon-512x512.png')
+    expect(profile['picture']).toBe('https://mintradar.org/profile/radar-512.png')
     expect(profile).not.toHaveProperty('banner')
     expect(ATTESTATION_PROFILE.nip05).toBe('health@mintradar.org')
   })

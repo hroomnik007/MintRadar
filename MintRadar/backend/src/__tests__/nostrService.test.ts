@@ -138,7 +138,7 @@ describe('publishServiceProfile', () => {
       name: 'MintRadar Alerts',
       about: expect.stringContaining('mintradar.org') as unknown,
       website: 'https://mintradar.org',
-      picture: 'https://mintradar.org/icons/icon-512x512.png',
+      picture: 'https://mintradar.org/profile/radar-512.png',
     })
   })
 })

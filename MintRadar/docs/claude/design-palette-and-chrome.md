@@ -350,7 +350,7 @@ is deliberately not set, because the plugin appends it to the glob patterns and 
 - **When an asset changes:** replace the file (e.g. `node scripts/generate-icons.mjs`), commit, deploy — the hash, and with it the
   URL, changes by itself. Nothing to bump by hand.
 - **Not covered:** `backend/src/og.ts` (`OG_IMAGE_URL`, the per-mint bot HTML; now `/og-image-radar.png`, see below) and
-  `backend/src/nostrService.ts` (profile picture, plain `/icons/icon-512x512.png`) — separate package, no build hash available.
+  `backend/src/nostrService.ts` (profile picture, `/profile/radar-512.png`) — separate package, no build hash available. The profile picture of the Alerts and Health accounts is the frozen file `public/profile/radar-512.png` and gets a NEW file name whenever the picture changes, because clients cache avatars by path (excluded from the service worker precache via `workbox.globIgnores`).
 - **OG image = new file name, not `?v=` (2026-10-03):** X (and similar platforms) cache the card image **by path** and ignore the query
   string, so `?v=` on `og-image.png` never refreshed the preview. **When the OG image changes, the file name must change** — current
   name `og-image-radar.png` (source `og-image-radar.svg`, an output of `scripts/generate-icons.mjs`; the previous one, `og-image-reliability.png`, is frozen; next time use
