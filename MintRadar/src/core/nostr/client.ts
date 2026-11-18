@@ -90,6 +90,12 @@ function parseNip65Tags(tags: string[][]): { read: string[]; write: string[] } {
   return { read: pick('read'), write: pick('write') }
 }
 
+// NIP-17: a kind 10050 event lists the user's DM inbox relays as ["relay", url] tags. Same filter and cap as the
+// user's NIP-65 relays (wss only, public host, no credentials, de-duplicated, MAX_USER_RELAYS).
+export function parseDmRelayTags(tags: string[][]): string[] {
+  return sanitizeUserRelays(tags.filter(t => t[0] === 'relay').map(t => t[1]).filter((r): r is string => typeof r === 'string'))
+}
+
 export async function fetchNostrProfile(pubkey: string, extraRelays?: string[]): Promise<{ name?: string; picture?: string }> {
   const own = sanitizeUserRelays(extraRelays)
   const relays = own.length > 0
@@ -112,27 +118,33 @@ export function bootstrapUserData(pubkey: string): () => void {
   const noop = () => {}
   if (bootstrapInFlight === pubkey) return noop
   const auth = useAuthStore.getState()
-  if (auth.nip65Relays !== null && auth.profile?.pubkey === pubkey) return noop
+  if (auth.nip65Relays !== null && auth.dmRelays !== null && auth.profile?.pubkey === pubkey) return noop
   bootstrapInFlight = pubkey
 
   const held: { sub?: SubHandle } = {}
   let gotProfile = false
   let gotRelays = false
+  let gotDm = false
+  let dmRelays: string[] = []
   let closed = false
 
-  const finish = () => {
+  // `settle` is true when the subscription ran its course (all found, all-EOSE, timeout, close) and false for the
+  // disposer. The kind 10050 result (the list, or [] when there is none) is written to the store only here, so
+  // `dmRelays !== null` means "this bootstrap is done" — the once-per-login notification refresh waits for that.
+  const finish = (settle: boolean) => {
     if (closed) return
     closed = true
     clearTimeout(timer)
     try { held.sub?.close() } catch { /* already closed */ }
     if (bootstrapInFlight === pubkey) bootstrapInFlight = null
+    if (settle && stillCurrent()) useAuthStore.getState().setDmRelays(dmRelays)
   }
-  const timer = setTimeout(finish, USER_BOOTSTRAP_TIMEOUT_MS)
+  const timer = setTimeout(() => finish(true), USER_BOOTSTRAP_TIMEOUT_MS)
   const stillCurrent = () => useAuthStore.getState().profile?.pubkey === pubkey
 
-  held.sub = sharedPool.subscribeMany(META_RELAYS, { kinds: [0, 10002], authors: [pubkey] }, {
+  held.sub = sharedPool.subscribeMany(META_RELAYS, { kinds: [0, 10002, 10050], authors: [pubkey] }, {
     onevent: (ev: NostrEvent) => {
-      if (ev.kind !== 0 && ev.kind !== 10002) return
+      if (ev.kind !== 0 && ev.kind !== 10002 && ev.kind !== 10050) return
       // M6 (2026-09-07 security audit): a hostile relay in META_RELAYS can ignore
       // the `authors` filter and return a validly-signed kind:0 / kind:10002 for a
       // DIFFERENT pubkey. verifyEvent() does not bind the event to `pubkey`. Acting
@@ -140,7 +152,7 @@ export function bootstrapUserData(pubkey: string): () => void {
       // and — the real damage — swap in an attacker-controlled NIP-65 relay list,
       // redirecting the victim's outbound watchlist/DM traffic. Drop it.
       if (!isAcceptedEvent(ev, ev.kind, pubkey)) return
-      if (!stillCurrent()) { finish(); return }
+      if (!stillCurrent()) { finish(false); return }
       if (ev.kind === 0 && !gotProfile) {
         gotProfile = true
         const meta = parseProfileMeta(ev.content)
@@ -162,14 +174,19 @@ export function bootstrapUserData(pubkey: string): () => void {
             })
           }
         }
+      } else if (ev.kind === 10050 && !gotDm) {
+        // Same author binding as above (isAcceptedEvent ran for every kind): a relay cannot hand us a DM relay list
+        // of another pubkey. The first accepted event wins.
+        gotDm = true
+        dmRelays = parseDmRelayTags(ev.tags)
       }
-      if (gotProfile && gotRelays) finish()
+      if (gotProfile && gotRelays && gotDm) finish(true)
     },
-    oneose: () => finish(),
-    onclose: () => finish(),
+    oneose: () => finish(true),
+    onclose: () => finish(true),
   })
 
-  return finish
+  return () => finish(false)
 }
 
 export function isNip07Available(): boolean {

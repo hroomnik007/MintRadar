@@ -18,6 +18,8 @@ interface AuthState {
   profile: NostrProfile | null
   method: LoginMethod
   nip65Relays: Nip65Relays | null
+  // NIP-17 DM inbox relays (kind 10050). null = not loaded yet, [] = loaded and the user has none.
+  dmRelays: string[] | null
   isLoading: boolean
   error: string | null
   // One-off notice shown by the app shell. In-memory only (not in partialize).
@@ -29,6 +31,7 @@ interface AuthState {
   logout: () => void
   isLoggedIn: () => boolean
   setNip65Relays: (relays: Nip65Relays) => void
+  setDmRelays: (relays: string[]) => void
   updateProfileMeta: (pubkey: string, meta: { name?: string; picture?: string }) => void
 }
 
@@ -38,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
       profile: null,
       method: null,
       nip65Relays: null,
+      dmRelays: null,
       isLoading: false,
       error: null,
       sessionNotice: null,
@@ -90,13 +94,17 @@ export const useAuthStore = create<AuthState>()(
           c.removeBunkerShim()
           c.removeNsecShim()
         })
-        set({ profile: null, method: null, nip65Relays: null, error: null })
+        set({ profile: null, method: null, nip65Relays: null, dmRelays: null, error: null })
       },
 
       isLoggedIn: () => get().profile !== null,
 
       setNip65Relays: (relays: Nip65Relays) => {
         set({ nip65Relays: relays })
+      },
+
+      setDmRelays: (relays: string[]) => {
+        set({ dmRelays: relays })
       },
 
       updateProfileMeta: (pubkey: string, meta: { name?: string; picture?: string }) => {
@@ -109,8 +117,9 @@ export const useAuthStore = create<AuthState>()(
       name: 'mintradar_session',
       storage: createJSONStorage(() => sessionStorage),
       // nip65Relays is persisted alongside profile/method so a page reload
-      // doesn't re-run the kind:10002 bootstrap fetch from scratch.
-      partialize: (state) => ({ profile: state.profile, method: state.method, nip65Relays: state.nip65Relays }),
+      // doesn't re-run the kind:10002 bootstrap fetch from scratch; dmRelays (kind:10050) likewise. A session persisted
+      // before dmRelays existed has no such key, so it hydrates with the initial null and fetches 10050 once.
+      partialize: (state) => ({ profile: state.profile, method: state.method, nip65Relays: state.nip65Relays, dmRelays: state.dmRelays }),
     }
   )
 )

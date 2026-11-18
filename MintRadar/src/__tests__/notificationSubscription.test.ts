@@ -239,6 +239,31 @@ describe('relay port rule on the client', () => {
     expect(resolveNotificationRelays(['wss://b.example.com:8443'])).toEqual(fixed)
     expect(resolveNotificationRelays([])).toEqual(fixed)
   })
+  describe('DM relays (kind 10050)', () => {
+    it('come first, then the NIP-65 read relays, de-duplicated', () => {
+      expect(resolveNotificationRelays(['wss://r1.example.com', 'wss://dm1.example.com'], ['wss://dm1.example.com', 'wss://dm2.example.com']))
+        .toEqual(['wss://dm1.example.com', 'wss://dm2.example.com', 'wss://r1.example.com'])
+    })
+    it('apply the port rule too', () => {
+      expect(resolveNotificationRelays(null, ['wss://dm.example.com:8443', 'wss://ok.example.com'])).toEqual(['wss://ok.example.com'])
+    })
+    it('are kept when the cap of 10 cuts the read relays', () => {
+      const read = Array.from({ length: 12 }, (_, i) => `wss://r${i}.example.com`)
+      const dm = ['wss://dm1.example.com', 'wss://dm2.example.com']
+      const out = resolveNotificationRelays(read, dm)
+      expect(out).toHaveLength(10)
+      expect(out.slice(0, 2)).toEqual(dm)
+    })
+    it('alone are enough (no NIP-65 list)', () => {
+      expect(resolveNotificationRelays(null, ['wss://dm.example.com'])).toEqual(['wss://dm.example.com'])
+    })
+    it('fall back to the fixed list when nothing usable is left, and no DM list behaves as before', () => {
+      const fixed = resolveNotificationRelays(null)
+      expect(resolveNotificationRelays([], ['wss://dm.example.com:8443'])).toEqual(fixed)
+      expect(resolveNotificationRelays(['wss://a.example.com'], null)).toEqual(['wss://a.example.com'])
+      expect(resolveNotificationRelays(['wss://a.example.com'], [])).toEqual(['wss://a.example.com'])
+    })
+  })
   it('still caps the list at 10', () => {
     const many = Array.from({ length: 15 }, (_, i) => `wss://r${i}.example.com`)
     expect(resolveNotificationRelays(many)).toHaveLength(10)

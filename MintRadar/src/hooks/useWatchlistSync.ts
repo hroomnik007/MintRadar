@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useUserRelays } from '@/hooks/useUserRelays'
+import { deriveUserRelays, waitForRelayLists } from '@/core/nostr/userRelayLists'
 import { loadDb, whenBunkerRestored } from '@/core/nostr/lazy'
 
 // Runs on every page (AppShell), so the relay/signer/Dexie modules are loaded only once someone is logged in
@@ -16,7 +17,7 @@ export function useWatchlistSync() {
   const mints = useWatchlistStore(s => s.mints)
   const loadFromDb = useWatchlistStore(s => s.loadFromDb)
   const setSyncStatus = useWatchlistStore(s => s.setSyncStatus)
-  const { read: userReadRelays, write: userWriteRelays } = useUserRelays()
+  const { write: userWriteRelays } = useUserRelays()
   // Ref so Phase 1/2 always use the current relay list without re-triggering on relay changes.
   // Written in an effect (not during render) — this effect is declared first, so it runs
   // before Phase 1/2 effects within the same commit.
@@ -24,12 +25,6 @@ export function useWatchlistSync() {
   useEffect(() => {
     userWriteRelaysRef.current = userWriteRelays
   }, [userWriteRelays])
-  // Same pattern, for the notification-subscription refresh below (needs
-  // read relays — where the user's client actually listens for DMs).
-  const userReadRelaysRef = useRef<string[] | null>(null)
-  useEffect(() => {
-    userReadRelaysRef.current = userReadRelays
-  }, [userReadRelays])
 
   const syncedForPubkey = useRef<string | null>(null)
   const isSyncing = useRef(false)
@@ -145,7 +140,13 @@ export function useWatchlistSync() {
         void loadNotificationSubscription().then(async m => {
           await m.restoreServerSettings(isStale)
           if (isStale()) return
-          await m.refreshAllSubscriptions(userReadRelaysRef.current)
+          // Wait (at most RELAY_LISTS_WAIT_MS) until the relay lists are loaded or known to be absent, so the
+          // refresh does not go out first with the fixed fallback list; then read them fresh from the store.
+          await waitForRelayLists()
+          if (isStale()) return
+          const { nip65Relays, dmRelays } = useAuthStore.getState()
+          const { read, dm } = deriveUserRelays(nip65Relays, dmRelays)
+          await m.refreshAllSubscriptions(read, dm)
         })
       } catch (err) {
         if (isStale()) { console.warn('sync: error after pubkey change — ignoring', err); return }

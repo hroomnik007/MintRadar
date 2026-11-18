@@ -9,7 +9,12 @@ const stores = vi.hoisted(async () => {
   const { vi } = await import('vitest')
   const setSyncStatus = vi.fn()
   const loadFromDb = vi.fn(async () => {})
-  const useAuthStore = create(() => ({ profile: null as { pubkey: string } | null }))
+  const useAuthStore = create(() => ({
+    profile: null as { pubkey: string } | null,
+    // undefined = the fake store has no relay-list state: the refresh does not wait (see the relay-list test below)
+    nip65Relays: undefined as { read: string[]; write: string[] } | null | undefined,
+    dmRelays: undefined as string[] | null | undefined,
+  }))
   const useWatchlistStore = create(() => ({ mints: [] as string[], loadFromDb, setSyncStatus }))
   return { useAuthStore, useWatchlistStore, setSyncStatus, loadFromDb }
 })
@@ -56,7 +61,7 @@ const PK_B = 'b'.repeat(64)
 beforeEach(() => {
   vi.clearAllMocks()
   fetchRemoteWatchlist.mockReset()
-  useAuthStore.setState({ profile: null })
+  useAuthStore.setState({ profile: null, nip65Relays: undefined, dmRelays: undefined })
   useWatchlistStore.setState({ mints: [] })
 })
 
@@ -141,3 +146,23 @@ describe('useWatchlistSync — notification flags', () => {
   })
 })
 
+
+describe('useWatchlistSync — notification refresh waits for the relay lists', () => {
+  it('sends the refresh only once dmRelays is known, with the DM relays from the store', async () => {
+    io.fetchRemoteWatchlist.mockResolvedValue({ urls: [], failed: false })
+    useAuthStore.setState({ profile: { pubkey: PK_A }, nip65Relays: null, dmRelays: null })
+    renderHook(() => useWatchlistSync())
+    await waitFor(() => expect(setSyncStatus).toHaveBeenCalledWith('done'))
+    await new Promise(r => setTimeout(r, 50))
+    expect(io.refreshAllSubscriptions).not.toHaveBeenCalled() // still waiting for the lists, no fixed-list refresh
+    act(() => { useAuthStore.setState({ nip65Relays: { read: ['wss://r.example.com'], write: [] }, dmRelays: ['wss://dm.example.com'] }) })
+    await waitFor(() => expect(io.refreshAllSubscriptions).toHaveBeenCalledWith(['wss://r.example.com'], ['wss://dm.example.com']))
+  })
+
+  it('a user with no lists at all (dmRelays [] after the bootstrap) refreshes with nulls, i.e. the fixed fallback', async () => {
+    io.fetchRemoteWatchlist.mockResolvedValue({ urls: [], failed: false })
+    useAuthStore.setState({ profile: { pubkey: PK_A }, nip65Relays: null, dmRelays: [] })
+    renderHook(() => useWatchlistSync())
+    await waitFor(() => expect(io.refreshAllSubscriptions).toHaveBeenCalledWith(null, null))
+  })
+})

@@ -57,8 +57,13 @@ export function isAllowedRelayPort(relay: string): boolean {
 // Server rejects >10 relays (Phase 1 SSRF/abuse guard). NIP-65 read relay
 // lists and NOTIFICATION_RELAYS can both exceed that, so cap here rather
 // than at every call site. If no usable relay is left, the fixed list is used.
-export function resolveNotificationRelays(userReadRelays: string[] | null | undefined): string[] {
-  const usable = (userReadRelays ?? []).filter(isAllowedRelayPort)
+// Order: the user's DM inbox relays (kind 10050, NIP-17 — where a gift wrap belongs) first, then their NIP-65
+// read relays, de-duplicated; so the DM relays survive the cap. Users without a 10050 list behave as before.
+export function resolveNotificationRelays(
+  userReadRelays: string[] | null | undefined,
+  dmRelays?: string[] | null,
+): string[] {
+  const usable = [...new Set([...(dmRelays ?? []), ...(userReadRelays ?? [])])].filter(isAllowedRelayPort)
   const relays = usable.length > 0 ? usable : NOTIFICATION_RELAYS
   return relays.slice(0, MAX_SERVER_RELAYS)
 }
@@ -222,6 +227,7 @@ export function setNotifyFlag(
   field: NotifyField,
   next: boolean,
   userReadRelays: string[] | null | undefined,
+  dmRelays?: string[] | null,
 ): Promise<NotifyResult> {
   bumpMutation(mintUrl)
   return runExclusive(mintUrl, async (): Promise<NotifyResult> => {
@@ -229,7 +235,7 @@ export function setNotifyFlag(
     if (!entry) return { ok: false, reason: 'rejected' } // removed meanwhile
     const target: NotifyFlags = { ...confirmedFlags(entry), [field]: next }
     const result = anyOn(target)
-      ? await subscribeToServer({ mintUrl, ...target, relays: resolveNotificationRelays(userReadRelays) })
+      ? await subscribeToServer({ mintUrl, ...target, relays: resolveNotificationRelays(userReadRelays, dmRelays) })
       : await unsubscribeFromServer(mintUrl)
     if (result.ok) {
       await db.watchlist.update(mintUrl, { ...target, notifyConfirmedAt: new Date() })
@@ -344,13 +350,13 @@ let refreshRunning: Promise<void> | null = null
 
 // A second call while one is running (React StrictMode re-runs the sync effect in dev) joins it
 // instead of sending every subscription again.
-export function refreshAllSubscriptions(userReadRelays: string[] | null | undefined): Promise<void> {
+export function refreshAllSubscriptions(userReadRelays: string[] | null | undefined, dmRelays?: string[] | null): Promise<void> {
   if (refreshRunning) return refreshRunning
-  refreshRunning = refreshConfirmedSubscriptions(userReadRelays).finally(() => { refreshRunning = null })
+  refreshRunning = refreshConfirmedSubscriptions(userReadRelays, dmRelays).finally(() => { refreshRunning = null })
   return refreshRunning
 }
 
-async function refreshConfirmedSubscriptions(userReadRelays: string[] | null | undefined): Promise<void> {
+async function refreshConfirmedSubscriptions(userReadRelays: string[] | null | undefined, dmRelays?: string[] | null): Promise<void> {
   if (!window.nostr) return
 
   const entries = await db.watchlist.toArray()
@@ -359,7 +365,7 @@ async function refreshConfirmedSubscriptions(userReadRelays: string[] | null | u
   })
   if (toRefresh.length === 0) return
 
-  const relays = resolveNotificationRelays(userReadRelays)
+  const relays = resolveNotificationRelays(userReadRelays, dmRelays)
 
   for (let i = 0; i < toRefresh.length; i += REFRESH_CONCURRENCY) {
     const chunk = toRefresh.slice(i, i + REFRESH_CONCURRENCY)

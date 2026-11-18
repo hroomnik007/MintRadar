@@ -57,7 +57,7 @@ beforeEach(() => {
   updateProfileMeta.mockClear()
   setNip65Relays.mockClear()
   ;(useAuthStore.getState as Mock).mockReturnValue({
-    profile: { pubkey: PK }, nip65Relays: null, updateProfileMeta, setNip65Relays,
+    profile: { pubkey: PK }, nip65Relays: null, dmRelays: null, updateProfileMeta, setNip65Relays, setDmRelays: vi.fn(),
   })
 })
 afterEach(() => { vi.useRealTimers() })
@@ -164,7 +164,7 @@ describe('bootstrapUserData — first VALID event', () => {
     dispose()
   })
 
-  it('rejected events do not end the subscription; it closes only once both valid events arrived', () => {
+  it('rejected events do not end the subscription; it closes only once all three valid events arrived', () => {
     const dispose = bootstrapUserData(PK)
     handlers.onevent(forged(profile('Real'), JSON.stringify({ name: 'Evil' })))
     handlers.onevent(profile('Evil', skOther))
@@ -172,6 +172,8 @@ describe('bootstrapUserData — first VALID event', () => {
     handlers.onevent(profile('Real'))
     expect(close).not.toHaveBeenCalled() // still waiting for the relay list
     handlers.onevent(relayList('wss://relay.user.example'))
+    expect(close).not.toHaveBeenCalled() // and for the DM relay list (kind 10050)
+    handlers.onevent(wire(finalizeEvent({ kind: 10050, created_at: 1_700_000_000, tags: [['relay', 'wss://dm.user.example.com']], content: '' }, sk)))
     expect(close).toHaveBeenCalledTimes(1)
     dispose()
   })

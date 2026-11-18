@@ -33,7 +33,7 @@ const IcCheck = () => (
 // Watchlist-card footer: "NOTIFY" + two toggle pills, plus three "More alerts" pills of the same kind. A pill is on only when the server confirmed
 // it (confirmedNotify); a press is pending until the server answers and never shows "on" early.
 export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }) {
-  const { read: userReadRelays } = useUserRelays()
+  const { read: userReadRelays, dm: dmRelays } = useUserRelays()
   const entry = useLiveQuery(() => db.watchlist.get(mintUrl), [mintUrl])
   const [pending, setPending] = useState<Field | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -57,7 +57,7 @@ export function NotifyStrip({ mintUrl, name }: { mintUrl: string; name: string }
     busy.current = true
     setPending(field)
     const turningOn = !isOn[field]
-    void setNotifyFlag(mintUrl, field, turningOn, userReadRelays).then(result => {
+    void setNotifyFlag(mintUrl, field, turningOn, userReadRelays, dmRelays).then(result => {
       if (result.ok) setError(null)
       else setError(FAILURE_TEXT[result.reason] ?? `Couldn't turn ${turningOn ? 'on' : 'off'} notifications. Try again.`)
     }).finally(() => {
