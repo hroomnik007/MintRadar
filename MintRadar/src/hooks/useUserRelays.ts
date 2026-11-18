@@ -15,9 +15,14 @@ export function useUserRelays(): UserRelays {
   const nip65Relays = useAuthStore(s => s.nip65Relays)
   const dmRelays = useAuthStore(s => s.dmRelays)
 
+  // The effect must depend on this boolean, not on the list values: bootstrapUserData() writes the NIP-65 list as a
+  // NEW object while the kind:10050 event is still on its way, and a re-run on that change would run the cleanup,
+  // which closes the subscription (finish(false) never writes dmRelays) and restarts it, so dmRelays never lands.
+  const needsBootstrap = nip65Relays === null || dmRelays === null
+
   useEffect(() => {
     if (!pubkey) return
-    if (nip65Relays !== null && dmRelays !== null) return  // already cached (shared across all instances / persisted)
+    if (!needsBootstrap) return  // already cached (shared across all instances / persisted)
     // The client module is loaded lazily (lazy.ts); a cleanup before it lands cancels the bootstrap.
     let cancelled = false
     let stop: (() => void) | undefined
@@ -28,7 +33,7 @@ export function useUserRelays(): UserRelays {
       cancelled = true
       stop?.()
     }
-  }, [pubkey, nip65Relays, dmRelays])
+  }, [pubkey, needsBootstrap])
 
   // Memoised so callers keep a stable array between renders, as they had with the raw store value.
   return useMemo(() => deriveUserRelays(nip65Relays, dmRelays), [nip65Relays, dmRelays])
