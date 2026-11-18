@@ -98,7 +98,7 @@
 .md-picker-item:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
 .md-picker-item:hover:not(.disabled) { background: rgba(255, 255, 255, 0.04); }
 .md-picker-item.checked { background: var(--green-soft); }
-.md-picker-check { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--border2); border-radius: 5px; font-size: 11px; line-height: 1; color: var(--bg); transition: background var(--transition), border-color var(--transition); }
+.md-picker-check { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--border2); border-radius: 5px; font-size: 12px; line-height: 1; color: var(--bg); transition: background var(--transition), border-color var(--transition); }
 .md-picker-item.checked .md-picker-check { background: var(--green); border-color: var(--green); }
 .md-picker-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--accent); }
 .md-picker-dot.off { background: var(--red); }

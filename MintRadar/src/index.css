@@ -10,43 +10,65 @@
   border: 0;
 }
 
-/* Self-hosted fonts — no external requests */
+/* Self-hosted fonts — no external requests. MintRadar Sans / Sans Mono are subsets of Mona Sans 2.0.27 (SIL OFL 1.1,
+   renamed because "Mona" is a Reserved Font Name); the wordmark face holds only the letters of "MintRadar".
+   Licence and provenance: public/fonts/OFL.txt. */
 @font-face {
-  font-family: 'DM Sans';
-  src: url('/fonts/DM-Sans-variable-latin-ext.woff2') format('woff2');
-  font-weight: 100 900;
+  font-family: 'MintRadar Sans';
+  src: url('/fonts/MintRadarSans-2.0.27-latin-ext.woff2') format('woff2');
+  font-weight: 400 700;
+  font-stretch: 75% 100%;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'DM Sans';
-  src: url('/fonts/DM-Sans-variable-latin.woff2') format('woff2');
-  font-weight: 100 900;
+  font-family: 'MintRadar Sans';
+  src: url('/fonts/MintRadarSans-2.0.27-latin.woff2') format('woff2');
+  font-weight: 400 700;
+  font-stretch: 75% 100%;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'JetBrains Mono';
-  src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
-  font-weight: 400;
+  font-family: 'MintRadar Sans Mono';
+  src: url('/fonts/MintRadarSansMono-2.0.27-400-latin-ext.woff2') format('woff2');
+  font-weight: 100 499;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'JetBrains Mono';
-  src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2');
-  font-weight: 500;
+  font-family: 'MintRadar Sans Mono';
+  src: url('/fonts/MintRadarSansMono-2.0.27-600-latin-ext.woff2') format('woff2');
+  font-weight: 500 900;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'JetBrains Mono';
-  src: url('/fonts/JetBrainsMono-Bold.woff2') format('woff2');
-  font-weight: 700;
+  font-family: 'MintRadar Sans Mono';
+  src: url('/fonts/MintRadarSansMono-2.0.27-400-latin.woff2') format('woff2');
+  font-weight: 100 499;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'MintRadar Sans Mono';
+  src: url('/fonts/MintRadarSansMono-2.0.27-600-latin.woff2') format('woff2');
+  font-weight: 500 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'MintRadar Wordmark';
+  src: url('/fonts/DMSans-wordmark-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
 }
 
 /* ── Design tokens ────────────────────────────────────── */
@@ -121,16 +143,31 @@
   --red-soft-strong: rgba(219,106,93,.3);
   --yellow:       var(--amber);
 
-  /* Typography — new names */
-  --sans:         'DM Sans', system-ui, sans-serif;
-  --mono:         'JetBrains Mono', monospace;
-  --mono-data:    ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  /* Typography — new names. Numbers use the sans face with tabular figures (body), not a monospace face;
+     monospace is only for code-like text: URLs, keys, versions, tokens. */
+  --sans:         'MintRadar Sans', system-ui, sans-serif;
+  --mono:         'MintRadar Sans Mono', ui-monospace, monospace;
+  --mono-data:    var(--sans);
+  --font-logo:    'MintRadar Wordmark', 'MintRadar Sans', system-ui, sans-serif;
 
   /* Typography — legacy aliases */
-  --font-display: 'DM Sans', system-ui, sans-serif;
-  --font-mono:    'JetBrains Mono', monospace;
-  --font-body:    'DM Sans', system-ui, sans-serif;
-  --font-mono-data: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --font-display: var(--sans);
+  --font-mono:    var(--mono);
+  --font-body:    var(--sans);
+  --font-mono-data: var(--sans);
+
+  /* Type scale: six sizes, nothing below 12px */
+  --fs-xs:      12px;
+  --fs-sm:      14px;
+  --fs-md:      16px;
+  --fs-lg:      20px;
+  --fs-xl:      28px;
+  --fs-readout: 44px;
+
+  /* Something you can act on: links, focus, the active tab. Copper, the blip in the logo.
+     Green, amber and red mean the health of a mint only. */
+  --action:      var(--copper);
+  --action-soft: var(--copper-soft);
 
   /* Spacing */
   --r:            10px;
@@ -181,6 +218,7 @@ body {
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;
   min-height: 100dvh;
   overflow-x: hidden;
 }
@@ -281,12 +319,12 @@ input, textarea {
 }
 
 input:focus, textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--action);
 }
 
 /* ── Focus ring ───────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--action);
   outline-offset: 2px;
 }
 
@@ -302,7 +340,7 @@ input:focus, textarea:focus {
 }
 
 .recharts-surface:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--action);
   outline-offset: 2px;
 }
 
@@ -325,7 +363,7 @@ input:focus, textarea:focus {
 
 /* ── Link ───────────────────────────────────────── */
 a {
-  color: var(--accent);
+  color: var(--action);
   text-decoration: none;
 }
 

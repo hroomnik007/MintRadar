@@ -26,12 +26,12 @@ function MintDetailHistoryChart({ data, metric, interval, height }: {
         <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
         <XAxis
           dataKey="label"
-          tick={{ fontSize: 9, fill: 'var(--text3)' }}
+          tick={{ fontSize: 12, fill: 'var(--text3)' }}
           axisLine={false} tickLine={false}
           interval={interval === '24h' ? 3 : data.length <= 7 ? 0 : Math.ceil(data.length / 7) - 1}
         />
         <YAxis
-          tick={{ fontSize: 9, fill: 'var(--text3)' }}
+          tick={{ fontSize: 12, fill: 'var(--text3)' }}
           axisLine={false} tickLine={false}
           width={60}
           domain={latency ? latency.domain : [0, 100]}
@@ -39,7 +39,7 @@ function MintDetailHistoryChart({ data, metric, interval, height }: {
           tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v)}ms` : metric === 'uptime' ? `${Math.round(v)}%` : `${Math.round(v)}`}
         />
         <Tooltip
-          contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}
+          contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 12 }}
           formatter={(value) => [metric === 'latency' ? `${String(value)}ms` : metric === 'uptime' ? `${String(value)}%` : String(value), metric === 'latency' ? 'Latency' : metric === 'uptime' ? 'Uptime' : 'Reliability Score']}
         />
         <Line

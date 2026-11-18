@@ -130,7 +130,7 @@
   gap: 2px;
 }
 .trc-label {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text3);
   text-transform: uppercase;
@@ -171,10 +171,10 @@
 @media (max-width: 700px) {
   .trc-mint-icon { width: 32px !important; height: 32px !important; min-width: 32px !important; }
 }
-.trc-sub { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
+.trc-sub { font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
 
 .token-memo-row {
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text2);
   line-height: 1.5;
@@ -185,13 +185,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text2);
   flex-wrap: wrap;
 }
 .tdr-item { display: flex; align-items: center; gap: 4px; }
-.tdr-label { color: var(--text3); font-size: 10px; }
+.tdr-label { color: var(--text3); font-size: 12px; }
 .tdr-sep { color: var(--border); }
 .token-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 /* Quiet by default (neutral hairline, secondary text); .token-action-accent marks the one
@@ -242,7 +242,7 @@ a.token-action-btn:focus {
 @media (prefers-reduced-motion: reduce) { .tv-spin { animation: none; } }
 .token-section-label {
   display: flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 600; color: var(--text3);
+  font-size: 12px; font-weight: 600; color: var(--text3);
   text-transform: uppercase; letter-spacing: 0.02em;
 }
 .token-spent { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
@@ -266,7 +266,7 @@ a.token-action-btn:focus {
   width: 26px; height: 26px; border-radius: 50%;
   background: var(--bg3); border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-family: var(--font-mono); font-weight: 600;
+  font-size: 12px; font-family: var(--font-mono); font-weight: 600;
   color: var(--text3); z-index: 1; position: relative; flex-shrink: 0;
 }
 .wizard-step-dot.active { background: var(--bg2); border-color: var(--accent); color: var(--accent); }
@@ -287,10 +287,10 @@ a.token-action-btn:focus {
 .wizard-options-row .wizard-opt { flex: 1; min-width: 80px; }
 .wizard-opt.active { border-color: var(--accent); background: var(--green-soft); }
 .wizard-opt-label { font-size: 13px; color: var(--text); }
-.wizard-opt-sub { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+.wizard-opt-sub { font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
 
 .wizard-back-btn {
-  background: none; border: none; font-size: 11px; color: var(--text3);
+  background: none; border: none; font-size: 12px; color: var(--text3);
   font-family: var(--font-mono); cursor: pointer; padding: 0; text-align: left;
 }
 .wizard-back-btn:hover { color: var(--text2); }
@@ -582,7 +582,7 @@ a.token-action-btn:focus {
 /* Token Inspector, Verify part: status and fee of each keyset the token's coins come from. */
 .token-keysets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .token-keyset { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 12px; line-height: 1.45; font-family: var(--font-body); color: var(--text2); }
-.token-keyset-id { font-family: var(--font-mono); font-size: 11px; overflow-wrap: anywhere; }
+.token-keyset-id { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
 .token-keyset-meta { color: var(--text3); }
 .tks-active { color: var(--green-bright); }
 .tks-inactive, .tks-unknown { color: var(--copper); }

@@ -228,7 +228,7 @@ test.describe('Mint Detail — outage table', () => {
         return { family: c.fontFamily, size: c.fontSize, lineHeight: c.lineHeight, letterSpacing: c.letterSpacing, weight: c.fontWeight, color: c.color }
       })
       const versionTo = await typography(versionTable.locator('tbody tr').first().locator('td').nth(2))
-      expect(versionTo.family).toContain('JetBrains Mono')
+      expect(versionTo.family).toContain('MintRadar Sans Mono')
       for (const col of [0, 1, 2]) {
         await expect.poll(() => typography(outageTable.locator('tbody tr').first().locator('td').nth(col)), `outage column ${col}`).toEqual(versionTo)
       }

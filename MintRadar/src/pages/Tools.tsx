@@ -382,7 +382,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
                   <InfoTooltip text={TEST_MINT_TEXT}>
                     <span
                       className="token-test-mint-badge"
-                      style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
+                      style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
                     >
                       Test mint
                     </span>

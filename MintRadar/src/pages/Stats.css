@@ -18,7 +18,7 @@
 }
 
 .stats-subtitle {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text3);
   font-family: var(--font-mono);
   margin-top: 2px;
@@ -277,7 +277,7 @@
 }
 
 .sw-badge {
-  font-size: 9px;
+  font-size: 12px;
   font-family: var(--font-mono);
   border: 1px solid;
   border-radius: 4px;
@@ -314,7 +314,7 @@
    delta badge) and the section labels above stay Movers-specific. */
 .stats-movers-delta {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 5px;
@@ -334,7 +334,7 @@
 
 .stats-movers-empty,
 .stats-movers-note {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text3);
   font-family: var(--font-mono);
   padding: 3px 0;
@@ -427,18 +427,18 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
 }
 
 .trend-summary-label {
   color: var(--text3);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .trend-summary-sep {
   color: var(--text3);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* ── Panel ───────────────────────────────────────────────────── */
@@ -489,7 +489,7 @@
   background: none;
   border: none;
   border-radius: 5px;
-  font-size: 10px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text3);
   padding: 5px 10px;
@@ -536,7 +536,7 @@
 }
 
 .stats-top5-rank {
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text3);
   width: 20px;
@@ -624,7 +624,8 @@
   flex: 1 1 0;
   min-width: 0;
   font-size: 13px;
-  font-family: var(--font-mono);
+  /* Names, not code: the body face since the 2026-11-18 type change (it was mono). */
+  font-family: var(--font-body);
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -676,7 +677,7 @@
 }
 
 .dist-count {
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono-data);
   color: var(--text3);
   width: 28px;
@@ -686,7 +687,7 @@
 
 /* ── NUT Coverage section ────────────────────────────────────── */
 .stats-section-sublabel {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text3);
   font-family: var(--font-mono);
   margin-bottom: 12px;
@@ -748,7 +749,7 @@
    pill used elsewhere, e.g. in NutMintsModal) and 11px to match
    .dist-label/.dist-count (Geographic Distribution's row text) below. */
 .snr-nut-tag {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--accent);
@@ -770,7 +771,7 @@
 }
 
 .snr-nut-count {
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
   font-weight: 600;
   text-align: right;
@@ -855,7 +856,7 @@
   flex-shrink: 0;
   margin-top: 1px;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text3);
   background: var(--bg3);
@@ -962,7 +963,7 @@
 }
 
 .nut-modal-row-url {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text3);
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -1041,7 +1042,7 @@
 
 /* ── snc-nut-tag used in modal ───────────────────────────────── */
 .snc-nut-tag {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--accent);
@@ -1109,6 +1110,8 @@
    inside: give the label the room (smaller flag, count, gaps and type) so the longest realistic single word fits;
    a break stays possible at a space (overflow-wrap: break-word only splits a word that cannot fit a line at all). */
 @media (max-width: 359px) {
+  /* 2026-11-18: with the 12px floor and the wider face even 12px "Netherlands" did not fit ~54px, so phones this narrow get one column. */
+  .stats-board-grid .stats-geo-cols { grid-template-columns: minmax(0, 1fr); grid-template-rows: none !important; grid-auto-flow: row; }
   .stats-geo-cols { column-gap: 10px; }
   .stats-geo-panel .dist-row { gap: 6px; }
   .stats-geo-flag { flex-basis: 16px; width: 16px; font-size: 14px; }
@@ -1179,53 +1182,57 @@
    stack = Top by Reliability Score + Software in use + the gap
    note  = the muted methodology line under the movers (Stats.tsx adds .has-movers-note and .movers-note-n<changes> from the
            same condition that shows it): its REAL height (margin 8 + padding 6 + the lines), measured at every width 320
-           to 1600 for 1 to 5 changes (docs, "Movers note reservation"). One line is 31.25 px at 11.5px type (768 px
-           and up) and 32 px at 12px (phones), two lines 48.5 px and 50 px, three lines 65.75 px (5 changes at 768-807 px) and 68 px (phones).
-           It is added to the board and to the movers card. */
+           to 1600 for 1 to 5 changes (docs, "Movers note reservation"). Since the 12px text floor (2026-11-18) the note is
+           12px at every width: one line is 32 px, two lines 50 px, three lines 68 px.
+           It is added to the board and to the movers card.
+   All values re-measured 2026-11-18 for MintRadar Sans and the 12px floor (each value = the smallest loaded height of its
+   band, so a reservation never exceeds the loaded height). */
 .stats-page {
   --stats-reserve-note: 0px;
-  --stats-reserve-board: 1326px;
-  --stats-reserve-nhi: 346px;
-  --stats-reserve-stack: 618px;
+  --stats-reserve-board: 1385px;
+  --stats-reserve-nhi: 368px;
+  --stats-reserve-stack: 645px;
 }
-@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 1822px; --stats-reserve-nhi: 310px; } }
-@media (max-width: 1269px) { .stats-page { --stats-reserve-nhi: 333px; } }
-@media (max-width: 1007px) { .stats-page { --stats-reserve-nhi: 355px; } }
-@media (max-width: 799px)  { .stats-page { --stats-reserve-stack: 659px; } }
-@media (max-width: 768px)  { .stats-page { --stats-reserve-board: 1616px; --stats-reserve-nhi: 275px; --stats-reserve-stack: 538px; } }
-@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 2730px; --stats-reserve-nhi: 181px; --stats-reserve-stack: 521px; } }
-@media (max-width: 409px)  { .stats-page { --stats-reserve-stack: 561px; } }
-@media (max-width: 359px)  { .stats-page { --stats-reserve-stack: 583px; } }
-@media (max-width: 329px)  { .stats-page { --stats-reserve-stack: 618px; } }
+@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 1869px; --stats-reserve-nhi: 309px; } }
+@media (max-width: 1263px) { .stats-page { --stats-reserve-nhi: 332px; } }
+@media (max-width: 999px)  { .stats-page { --stats-reserve-nhi: 355px; } }
+@media (max-width: 919px)  { .stats-page { --stats-reserve-stack: 663px; } }
+@media (max-width: 768px)  { .stats-page { --stats-reserve-board: 1658px; --stats-reserve-nhi: 274px; --stats-reserve-stack: 562px; } }
+@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 2731px; --stats-reserve-nhi: 181px; --stats-reserve-stack: 522px; } }
+@media (max-width: 449px)  { .stats-page { --stats-reserve-stack: 539px; } }
+@media (max-width: 407px)  { .stats-page { --stats-reserve-stack: 562px; } }
+@media (max-width: 357px)  { .stats-page { --stats-reserve-stack: 584px; } }
+@media (max-width: 349px)  { .stats-page { --stats-reserve-stack: 602px; } }
+@media (max-width: 327px)  { .stats-page { --stats-reserve-stack: 619px; } }
 /* The note's height depends on how many lines its text takes, and the text depends on the changes the window holds.
    The change log can only produce one text per count (the window always holds the NEWEST changes), so there are five:
    n1 `15 Nov (v9)`, n2 `13 Nov (v8), 15 Nov (v9)`, n3 `10 Nov (v7)` ... `(v9)`, n4 `28 Oct (v6)` ... `(v9)`, n5 `27 Oct (v5)`
    ... `(v9)`. Edges below = the widths where the line count flips, measured at every width 320 to 1600 px (1 px steps),
-   re-measured 2026-11-15 with v9 (n1-n3 unchanged; n4 and n5 are one and two characters longer than with v6, so their
-   phone edges moved; e2e/stats-layout-shift.spec.ts pins the same table):
-     n1  50 up to 372, 32 up to 767, 31.25 from 768
-     n2  50 up to 456, 32 up to 767, 48.5 at 768-933, 31.25 at 934-1279, 48.5 from 1280
-     n3  50 up to 547, 32 up to 767, 48.5 at 768-1115, 31.25 at 1116-1279, 48.5 from 1280
-     n4  68 up to 365, 50 up to 646, 32 up to 767, 48.5 from 768
-     n5  68 up to 393, 50 up to 737, 32 up to 767, 65.75 at 768-807, 48.5 from 808
+   re-measured 2026-11-18 for MintRadar Sans at 12px (e2e/stats-layout-shift.spec.ts pins the same table):
+     n1  50 up to 388, 32 up to 768, 50 at 769-797, 32 from 798
+     n2  50 up to 473, 32 up to 767, 50 at 768-967, 32 at 968-1279, 50 from 1280
+     n3  50 up to 566, 32 up to 767, 50 at 768-1153, 32 at 1154-1279, 50 from 1280
+     n4  68 up to 372, 50 up to 666, 32 up to 767, 50 from 768
+     n5  68 up to 400, 50 up to 758, 32 up to 767, 68 at 768-821, 50 from 822
    A sixth change inside one window needs a sixth measurement (Stats.tsx caps the class at n5). */
-.stats-page.has-movers-note { --stats-reserve-note: 31.25px; }
+.stats-page.has-movers-note { --stats-reserve-note: 32px; }
 @media (min-width: 768px) {
-  .stats-page.movers-note-n2, .stats-page.movers-note-n3, .stats-page.movers-note-n4, .stats-page.movers-note-n5 { --stats-reserve-note: 48.5px; }
+  .stats-page.movers-note-n2, .stats-page.movers-note-n3, .stats-page.movers-note-n4, .stats-page.movers-note-n5 { --stats-reserve-note: 50px; }
 }
-@media (min-width: 934px) and (max-width: 1279px) { .stats-page.movers-note-n2 { --stats-reserve-note: 31.25px; } }
-@media (min-width: 1116px) and (max-width: 1279px) { .stats-page.movers-note-n3 { --stats-reserve-note: 31.25px; } }
-@media (min-width: 768px) and (max-width: 807px) { .stats-page.movers-note-n5 { --stats-reserve-note: 65.75px; } }
+@media (min-width: 769px) and (max-width: 797px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
+@media (min-width: 968px) and (max-width: 1279px) { .stats-page.movers-note-n2 { --stats-reserve-note: 32px; } }
+@media (min-width: 1154px) and (max-width: 1279px) { .stats-page.movers-note-n3 { --stats-reserve-note: 32px; } }
+@media (min-width: 768px) and (max-width: 821px) { .stats-page.movers-note-n5 { --stats-reserve-note: 68px; } }
 @media (max-width: 767px) {
   .stats-page.has-movers-note { --stats-reserve-note: 32px; }
 }
-@media (max-width: 372px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
-@media (max-width: 456px) { .stats-page.movers-note-n2 { --stats-reserve-note: 50px; } }
-@media (max-width: 547px) { .stats-page.movers-note-n3 { --stats-reserve-note: 50px; } }
-@media (max-width: 646px) { .stats-page.movers-note-n4 { --stats-reserve-note: 50px; } }
-@media (max-width: 737px) { .stats-page.movers-note-n5 { --stats-reserve-note: 50px; } }
-@media (max-width: 365px) { .stats-page.movers-note-n4 { --stats-reserve-note: 68px; } }
-@media (max-width: 393px) { .stats-page.movers-note-n5 { --stats-reserve-note: 68px; } }
+@media (max-width: 388px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
+@media (max-width: 473px) { .stats-page.movers-note-n2 { --stats-reserve-note: 50px; } }
+@media (max-width: 566px) { .stats-page.movers-note-n3 { --stats-reserve-note: 50px; } }
+@media (max-width: 666px) { .stats-page.movers-note-n4 { --stats-reserve-note: 50px; } }
+@media (max-width: 758px) { .stats-page.movers-note-n5 { --stats-reserve-note: 50px; } }
+@media (max-width: 372px) { .stats-page.movers-note-n4 { --stats-reserve-note: 68px; } }
+@media (max-width: 400px) { .stats-page.movers-note-n5 { --stats-reserve-note: 68px; } }
 /* The loading block becomes the board in place, so it has the board's width and centring as well (above 1340 px the board is
    narrower than the viewport and a full-width block moved sideways). */
 .stats-loading { min-height: calc(var(--stats-reserve-board) + var(--stats-reserve-note)); max-width: var(--dash-chrome-max); margin-inline: auto; width: 100%; }
@@ -1340,6 +1347,16 @@
   overflow-wrap: break-word;
   min-width: 0;
 }
+/* 769-1023px: four tiles left ~46px per note at 12px ("excludes" broke inside the word), so the figures are 2 x 2
+   as on phones (2026-11-18 text floor). */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .stats-now-panel .stats-metrics { grid-template-columns: 1fr 1fr; gap: 16px 0; align-items: start; }
+  .stats-now-panel .stat-card { padding: 0 0 0 14px; }
+  .stats-now-panel .stat-card:nth-child(odd) { padding-left: 0; border-left: 0; }
+}
+/* In the narrow tiles (701-900px) a word longer than the tile ("Nuremberg" at 12px, since the 2026-11-18 text floor) breaks
+   inside the tile instead of leaving it: the note is never wider than its tile. */
+.stats-now-panel .stat-note { max-width: 100%; }
 .stats-now-behind { font-size: 13px; }
 /* The outdated-software bar is a boxed amber row at every width. */
 .stats-now-behind > div {
@@ -1488,3 +1505,8 @@
   .stats-movers-empty,
   .stats-movers-note { font-size: 12px; }
 }
+
+/* Trend chart axis and marker labels (2026-11-18): 12px with the face's width axis at 85 %, so the right-aligned newest
+   date keeps 8px to its neighbour at the 56px desktop tick spacing (the labels were 9px before the 12px text floor). */
+.stats-trend-panel .recharts-text,
+.stats-trend-panel .stats-trend-marker text { font-stretch: 85%; }

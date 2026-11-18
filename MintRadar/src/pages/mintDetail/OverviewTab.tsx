@@ -159,7 +159,7 @@ export function OverviewTab({
         <div className="md-panel">
           <div className="md-panel-title">Mint info</div>
         {probeLoading && (
-          <div style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',marginBottom:12}}>
+          <div style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)',marginBottom:12}}>
             Loading live mint data (MOTD, description, contact)…
           </div>
         )}
@@ -216,7 +216,7 @@ export function OverviewTab({
               <span className="md-info-label">Server time</span>
               <span className="md-info-value" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 {formatTime(new Date(mintTime * 1000))}
-                {(() => { const d = clockDriftLabel(mintTime); return <span className="md-clock-drift" style={{fontSize:11,fontFamily:'var(--font-mono)',color:d.color}} title="Mint clock vs this browser">{d.label}</span> })()}
+                {(() => { const d = clockDriftLabel(mintTime); return <span className="md-clock-drift" style={{fontSize:12,fontFamily:'var(--font-mono)',color:d.color}} title="Mint clock vs this browser">{d.label}</span> })()}
               </span>
             </div>
           )}

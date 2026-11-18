@@ -338,7 +338,7 @@ test.describe('verdict and directions from the stored detail', () => {
       await expect(page.getByRole('tooltip')).toHaveText(text)
       // A standard tooltip: sentence case and normal spacing.
       const pop = await page.getByRole('tooltip').evaluate(e => { const c = getComputedStyle(e); return { t: c.textTransform, l: c.letterSpacing, f: c.fontSize } })
-      expect(pop).toEqual({ t: 'none', l: 'normal', f: '10px' })
+      expect(pop).toEqual({ t: 'none', l: 'normal', f: '12px' }) // 12px text floor since 2026-11-18
       await page.mouse.move(0, 0)
     }
     // Average swap time has no ⓘ: its label says it, and the window and source are in the sibling tooltips.

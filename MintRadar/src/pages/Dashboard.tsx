@@ -476,7 +476,7 @@ function MintListView({
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontSize: 10, color: isOnline ? 'var(--accent)' : isArchived ? 'var(--text3)' : 'var(--red)' }}>
+                    <span style={{ fontSize: 12, color: isOnline ? 'var(--accent)' : isArchived ? 'var(--text3)' : 'var(--red)' }}>
                       ●<span className="status-text-mobile-hide"> {statusLabel}</span>
                     </span>
                   </td>
@@ -1393,7 +1393,7 @@ export default function Dashboard() {
                   <span className="sort-lbl-short">{s === 'reliability' ? 'Reliability' : 'Reviews'}</span>
                 </>
               ) : s.charAt(0).toUpperCase() + s.slice(1)}
-              {sortBy === s && <span className="sort-arrow" style={{marginLeft: 3, fontSize: 10, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              {sortBy === s && <span className="sort-arrow" style={{marginLeft: 3, fontSize: 12, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
             </button>
           ))}
         </div>

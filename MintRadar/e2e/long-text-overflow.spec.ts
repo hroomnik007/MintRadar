@@ -410,7 +410,7 @@ for (const width of [340, 360, 375, 412, 414, 428]) {
   }
 }
 
-// The ↗ (Cashu.me) and ⇆ (Compare) icons are text glyphs outside the bundled DM Sans subsets, so they render in
+// The ↗ (Cashu.me) and ⇆ (Compare) icons are text glyphs outside the bundled MintRadar Sans subsets, so they render in
 // the OS fallback font (DejaVu Sans on Linux, another font on macOS) and their advance differs by 1–2px between
 // machines. The boxes below were recorded with the glyph widths in HERO_GLYPHS_RECORDED; the test measures the
 // glyphs on the machine it runs on and shifts the expected boxes by exactly that difference, using the row's own
@@ -420,11 +420,14 @@ const HERO_GLYPHS_RECORDED: Record<number, [cashu: number, compare: number]> = {
   1440: [10, 13],
 }
 // Natural (unshrunk) advance of each decorative glyph icon at its own computed font, measured in a hidden probe.
+// Font longhands, not `font: cs.font`: with body's font-variant-numeric: tabular-nums (2026-11-18) the computed `font`
+// shorthand is "" (it cannot express that), so a probe given it measured in the default font.
 const heroGlyphWidths = (page: Page) => page.evaluate(() =>
   [...document.querySelectorAll('.md-quick-btn > span[aria-hidden="true"], .md-compare-btn > span[aria-hidden="true"]')].map(icon => {
     const cs = getComputedStyle(icon)
     const probe = document.createElement('span')
-    Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', font: cs.font, letterSpacing: cs.letterSpacing })
+    Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', fontFamily: cs.fontFamily, fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight, fontStyle: cs.fontStyle, fontStretch: cs.fontStretch, fontVariantNumeric: cs.fontVariantNumeric, letterSpacing: cs.letterSpacing })
     probe.textContent = icon.textContent
     document.body.appendChild(probe)
     const w = probe.getBoundingClientRect().width
@@ -434,8 +437,9 @@ const heroGlyphWidths = (page: Page) => page.evaluate(() =>
 // Boxes recorded from the code BEFORE the text-only change (x, width, height; the fixture's plain mint).
 const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
   // 420: re-recorded 2026-10-20 after the 12px phone text floor (the buttons were 11px: 79.66 wide).
-  420: [{ left: 79, width: 84.66, height: 28 }, { left: 169.66, width: 84.67, height: 28 }, { left: 260.33, width: 84.67, height: 28 }],
-  1440: [{ left: 905, width: 93, height: 31 }, { left: 1006, width: 156, height: 31 }, { left: 1170, width: 103, height: 31 }],
+  // Both re-recorded 2026-11-18 for MintRadar Sans (DM Sans before): 420 84.66 → 85.33 wide, 1440 93/156/103 → 95/157/104.
+  420: [{ left: 79, width: 85.33, height: 28 }, { left: 170.33, width: 85.34, height: 28 }, { left: 261.67, width: 85.33, height: 28 }],
+  1440: [{ left: 901, width: 95, height: 31 }, { left: 1004, width: 157, height: 31 }, { left: 1169, width: 104, height: 31 }],
 }
 // Expected boxes for this machine's glyph widths. 420 (≤640px): the row is three equal flex thirds whose total
 // follows its content, so a glyph difference is shared equally. 1440: buttons are content-sized and right-aligned,
@@ -484,7 +488,8 @@ for (const width of [700, 740, 768, 800, 900]) {
       const box = note.getBoundingClientRect().width
       // natural (unwrapped) width of a word at the note's own font
       const probe = document.createElement('span')
-      Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', font: cs.font, letterSpacing: cs.letterSpacing })
+      Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', fontFamily: cs.fontFamily, fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight, fontStyle: cs.fontStyle, fontStretch: cs.fontStretch, fontVariantNumeric: cs.fontVariantNumeric, letterSpacing: cs.letterSpacing })
       note.appendChild(probe)
       const out: string[] = []
       for (const m of (node.data).matchAll(/\S+/g)) {

@@ -78,14 +78,14 @@ export function NutsTab({ feesLimits, keysetsPanel, supportsBackupRestore, suppo
           <div className="md-panel-title" style={{marginBottom:0}}>NUT compatibility</div>
         {supportsBackupRestore ? (
           <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-            <span className="md-backup-pill" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
+            <span className="md-backup-pill" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--accent)',background:'var(--green-soft)',border:'0.5px solid var(--green-soft-strong)',borderRadius:5,padding:'2px 7px'}}>
               <ShieldCheck size={11} /> Backup supported
             </span>
             <InfoTooltip iconSize={11} width={220} about="backup support" text={BACKUP_SUPPORTED_TEXT} />
           </span>
         ) : (
           <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-            <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
+            <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--text3)',background:'var(--bg3)',border:'0.5px solid var(--border)',borderRadius:5,padding:'2px 7px'}}>
               <ShieldOff size={11} /> No backup
             </span>
             <InfoTooltip iconSize={11} width={220} about="backup support" text={NO_BACKUP_TEXT} />

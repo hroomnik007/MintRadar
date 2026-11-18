@@ -67,7 +67,7 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
         color: 'color-mix(in srgb, var(--copper) 60%, var(--text))',
         fontFamily: 'var(--font-mono)',
         fontWeight: 700,
-        fontSize: Math.round(size * 0.42),
+        fontSize: Math.max(12, Math.round(size * 0.42)), // 12px text floor (2026-11-18)
         lineHeight: 1,
         letterSpacing: '0.02em',
         userSelect: 'none',

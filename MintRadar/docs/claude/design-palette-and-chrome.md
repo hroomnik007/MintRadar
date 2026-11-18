@@ -161,10 +161,8 @@ Four passes, same day, landing in this order:
 
 ## Typography & Design System Notes
 
-Self-hosted font weights (unchanged by the 2026-07-24 color redesign — see "Visual Redesign" section below):
-- **DM Sans** — variable, weights 100–900; `--font-body`, `--font-display`, `--sans`
-- **JetBrains Mono** — 400 Regular, 500 Medium, 700 Bold; `--font-mono` (non-numeric mono text: pubkeys, URLs, version strings). Bold was added in `public/fonts/JetBrainsMono-Bold.woff2` + `@font-face` because weight 700 previously triggered faux bold.
-- **`--font-mono-data`** (new, 2026-07-24) — system `ui-monospace` stack (no webfont), used exclusively for numeric/data values (latency, %, NUT counts). See "Visual Redesign" section.
+**Current faces: see "Type change, phase 1 of the redesign (2026-11-18)" below.** DM Sans, JetBrains Mono and the
+`ui-monospace` data stack described in older sections of this file were retired on that day.
 
 **Stat box padding** — Desktop: Dashboard `.stat-card` and Stats `.stats-metric-card` both use `14px 20px`. MintDetail `.md-sc` uses `12px 16px` intentionally (tighter layout, product decision — do not "unify" without confirmation). Mobile: Dashboard reduces to `10px 14px` at `≤600px`; Stats reduces to `10px 14px` at `≤700px`.
 
@@ -452,5 +450,53 @@ The compact Reliability tile on Mint Detail (<= 640px, `.md-sc-reliability`) put
 
 ## Stack summary: fonts and palette (moved from CLAUDE.md, C3-9)
 
-- Fonts: DM Sans (self-hosted variable, weights 100–900), JetBrains Mono (self-hosted; Regular 400, Medium 500, Bold 700)
+- Fonts (since 2026-11-18): MintRadar Sans (variable, weight 400–700, width 75–100 %, optical size 12–48) and MintRadar Sans Mono (static 400 and 600), both subsets of Mona Sans 2.0.27; the wordmark face is a DM Sans 600 subset of the letters of "MintRadar".
 - CSS: CSS variables — "patina/copper" palette as of 2026-07-24 (var(--bg) #0b1512, var(--surface)/var(--surface-2)/var(--surface-3), var(--green)/var(--green-bright) #45ad8c/#5cc9a3, var(--copper) #d98a5a, var(--amber), var(--red), var(--text)/var(--text-dim)/var(--text-faint)); see "Visual Redesign" section below for details
+
+## Type change, phase 1 of the redesign (2026-11-18)
+
+The owner approved the redesign of 2026-11-18 (mockups outside the repo, `~/Claude/refs/mintradar-redesign-1118/`) and chose to ship it
+phase by phase. Phase 1 is fonts and tokens only; layouts are later phases.
+
+**Faces** (`public/fonts/`, declared at the top of `src/index.css`, licence and provenance in `public/fonts/OFL.txt`):
+- `'MintRadar Sans'` = `--sans` / `--font-body` / `--font-display`, and also `--mono-data` / `--font-mono-data`: a subset of
+  **Mona Sans 2.0.27** (GitHub, SIL OFL 1.1). Variable: weight 400–700, width 75–100 % (`font-stretch`), optical size 12–48
+  (applied automatically from the font size). Two files with `unicode-range`: `MintRadarSans-2.0.27-latin.woff2` (138 KB)
+  and `-latin-ext` (47 KB, loaded only when a page has such characters).
+- `'MintRadar Sans Mono'` = `--mono` / `--font-mono`: Mona Sans Mono 2.0.27, static 400 (declared for weights 100–499) and
+  600 (declared for 500–900), latin and latin-ext, about 12 KB per file.
+- `'MintRadar Wordmark'` = `--font-logo`: DM Sans 600 subset to the letters of "MintRadar" (1.3 KB), used only by
+  `.navbar-wordmark`. The logo did not change.
+- **Why renamed:** "Mona" is a Reserved Font Name and the OFL treats a subset as a Modified Version, so the subsets carry
+  "MintRadar Sans" inside the file and in CSS. Do not rename them back to "Mona Sans". Copyright and licence strings are kept.
+- **Rebuilding:** fontTools `varLib.instancer` (axis limits above) + `subset` (same `unicode-range` split as before,
+  `layout_features=*`), then the name records except 0/13/14 get "Mona" → "MintRadar". The Mono variable source fails
+  to subset (gvar KeyError), so its weights are instantiated as static fonts. File names carry the source version
+  because nginx serves `/fonts/*` as `immutable` for a year: a new build gets a new name.
+
+**Rules:**
+- **Numbers are not monospace.** `body` sets `font-variant-numeric: tabular-nums`, so figures line up in the sans face;
+  `--font-mono-data` now points at the sans face. Monospace is for code-like text only: URLs, keys, versions, tokens.
+- **Nothing below 12px.** Every `font-size` / inline `fontSize` under 12px was raised to 12px (211 places in 22 files).
+  Scale tokens for new code: `--fs-xs` 12, `--fs-sm` 14, `--fs-md` 16, `--fs-lg` 20, `--fs-xl` 28, `--fs-readout` 44.
+- **Copper means "you can act on it".** `--action` (= `--copper`) and `--action-soft`: global links, the focus ring
+  (also the chart's), the input focus border. Green, amber and red stay for the health of a mint. Component-level
+  buttons, tabs and links that still use `--accent` move to `--action` in phase 2.
+
+**Layout fixes the type change needed** (each found by an e2e spec; the spec names are in brackets):
+- Compare modal, phone table: status badges (High Reliability, Supported, No backup, Outdated, New) use the body face; mono
+  made the 2-mint table 15px wider than its region at 375px (`compare-mobile-layout`).
+- Mint Detail: strip cells 10px side padding below 414px ("30 days 100% · 12 outages" one line, `mint-detail-uptime-30d-line`);
+  the phone score badge `font-stretch: 90%` ("Not available yet" one line, so no shift when the score lands,
+  `mint-detail-score-pending`); the fee examples line in the body face, 90 % width below 360px (`mint-detail-fees-limits`);
+  hero button icons `flex-shrink: 0`.
+- Stats: `.dist-label` (cities, software) in the body face; one geography column below 360px (`stats-widgets`); the
+  now-panel figures 2 x 2 at 769-1023px and the note never wider than its tile (`long-text-overflow`); trend axis and marker
+  labels in the body face at 85 % width, marker label rows 18px apart and 20px wide (`stats-trend-axis`,
+  `stats-methodology-marker`); every `--stats-reserve-*` value and the movers note table re-measured (`stats-layout-shift`).
+- Dashboard: list headers may wrap on phones ("Uptime 24h", `ux-followups-1114`); "Show N of M" min-width 134px
+  (`dashboard-filters-panel`).
+- `.stat-note` in the body face. `MintFavicon` initials are at least 12px.
+- **Test gotcha:** with `font-variant-numeric: tabular-nums` on `body`, `getComputedStyle(el).font` is `""` (the shorthand
+  cannot express it). A probe that copies `font: cs.font` measures in the default font; copy the longhands
+  (`long-text-overflow.spec.ts` does).

@@ -17,7 +17,7 @@
 /* One summary line (watched, online, offline ...) directly above the explainer. Facts only, muted like the explainer. */
 .wl-summary {
   margin: 14px 0 0;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.4;
   color: var(--text3);
 }
@@ -129,7 +129,7 @@
 }
 
 .wl-card-host {
-  font-size: 10.5px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text2);
   margin-top: 2px;
@@ -150,7 +150,7 @@
 
 .wl-badge {
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--text2);
   background: var(--bg3);
   border: 1px solid var(--border);
@@ -187,7 +187,7 @@
 }
 
 .wl-card-lat-label {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -214,7 +214,7 @@
   border-radius: 5px;
   padding: 3px 8px;
   color: var(--red);
-  font-size: 10px;
+  font-size: 12px;
   cursor: pointer;
   font-family: var(--font-body);
   transition: all var(--transition);
@@ -235,7 +235,7 @@
   color: var(--accent);
   border-radius: 6px;
   padding: 6px 10px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   pointer-events: none;
 }
@@ -287,7 +287,7 @@
 
 .wl-footer {
   text-align: center;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text3);
   padding: 12px 0 20px;
   margin-inline: var(--page-pad);
@@ -317,7 +317,7 @@
 }
 
 .wl-login-hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text3);
   margin-top: 12px;
 }
@@ -337,14 +337,14 @@
 
 /* card checkbox */
 .card-select-box { position: absolute; top: 8px; left: 8px; z-index: 2; }
-.card-checkbox { width: 16px; height: 16px; border: 1.5px solid var(--border2); border-radius: 4px; background: var(--bg3); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; color: var(--bg); transition: all var(--transition); }
+.card-checkbox { width: 16px; height: 16px; border: 1.5px solid var(--border2); border-radius: 4px; background: var(--bg3); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: var(--bg); transition: all var(--transition); }
 .card-checkbox:hover { border-color: var(--accent); }
 .card-checkbox.checked { background: var(--accent); border-color: var(--accent); }
 
 /* comparison bar */
 .cmp-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 90; background: var(--bg2); border: 1px solid var(--border2); border-radius: 12px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.6); backdrop-filter: blur(8px); white-space: nowrap; }
 .cmp-bar-text { font-size: 12.5px; font-weight: 600; color: var(--text); }
-.cmp-bar-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 5px 12px; font-size: 11.5px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all var(--transition); }
+.cmp-bar-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 5px 12px; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all var(--transition); }
 .cmp-bar-btn:hover { border-color: var(--border2); color: var(--text); }
 .cmp-bar-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
 .cmp-bar-btn.primary:hover { opacity: 0.9; }
@@ -359,10 +359,10 @@
 .cmp-col { display: flex; flex-direction: column; flex: 1; min-width: 160px; border-right: 1px solid var(--border); padding-right: 12px; margin-right: 12px; }
 .cmp-col:last-child { border-right: none; padding-right: 0; margin-right: 0; }
 .cmp-col.cmp-labels { flex: 0 0 110px; min-width: 110px; }
-.cmp-cell { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text); min-height: 38px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.cmp-cell { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text); min-height: 38px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .cmp-cell:last-child { border-bottom: none; }
 .cmp-name { align-items: flex-start; flex-direction: column; gap: 3px; padding-right: 8px; }
-.cmp-label-cell { font-size: 9.5px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; font-family: var(--font-mono); align-items: center; }
+.cmp-label-cell { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; font-family: var(--font-mono); align-items: center; }
 
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 600px) {
@@ -423,7 +423,7 @@
   gap: 10px;
 }
 .wl-rec-slim-text {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text3);
   font-family: var(--font-mono);
 }
@@ -446,7 +446,7 @@
 }
 
 .wl-rec-panel-badge {
-  font-size: 9px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--copper);
   background: var(--copper-soft);
@@ -456,7 +456,7 @@
 }
 
 .wl-rec-panel-subheader {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text3);
   font-family: var(--font-mono);
   text-align: right;
@@ -506,7 +506,7 @@
 }
 
 .wl-rec-url {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text3);
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -548,7 +548,7 @@
 .wl-rec-avatar-overlap:first-child { margin-left: 0; }
 
 .wl-rec-follower-names {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text3);
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -565,7 +565,7 @@
 }
 
 .wl-rec-reliability {
-  font-size: 10px;
+  font-size: 12px;
   font-family: var(--font-mono);
   font-weight: 700;
   border: 1px solid;
@@ -583,7 +583,7 @@
   border: 1px solid var(--accent-brd);
   border-radius: 5px;
   padding: 3px 8px;
-  font-size: 9px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--accent);
   cursor: pointer;

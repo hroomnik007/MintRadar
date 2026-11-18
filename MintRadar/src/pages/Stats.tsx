@@ -126,7 +126,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <button type="button" className="nut-modal-back" onClick={onBack} aria-label={`Back to ${sw} versions`}>‹</button>
           <span className="nut-modal-title">{title}</span>
-          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
+          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{mints.length} mint{mints.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
       <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
@@ -187,7 +187,7 @@ function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersio
       <div className="nut-modal-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <span className="nut-modal-title">{sw}</span>
-          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{versions.length} version{versions.length !== 1 ? 's' : ''}</span>
+          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{versions.length} version{versions.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
       <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
@@ -204,7 +204,7 @@ function SoftwareVersionsView({ sw, versions, total, accentColor, onSelectVersio
               <div className="dist-track" style={{ flex: 1, height: 3 }}>
                 <div className="dist-fill" style={{ width: `${vPct}%`, background: accentColor, opacity: 0.55 }} />
               </div>
-              <span style={{ fontSize: 11, fontFamily: 'var(--font-mono-data)', color: 'var(--text2)', flexShrink: 0 }}>{v.count}</span>
+              <span style={{ fontSize: 12, fontFamily: 'var(--font-mono-data)', color: 'var(--text2)', flexShrink: 0 }}>{v.count}</span>
               {v.badge && <span className="sw-badge" style={{ color: v.badgeColor, borderColor: v.badgeBorder, background: v.badgeBg }}>{v.badge}</span>}
             </div>
           )
@@ -307,7 +307,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             {flag && <span style={{ fontSize: 20 }}>{flag}</span>}
             <span className="nut-modal-title">{display}</span>
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{pluralize(mints.length, 'mint')}</span>
+            <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{pluralize(mints.length, 'mint')}</span>
           </div>
         </div>
         {display === CDN_BUCKET && <div className="nut-modal-note">CDN / anycast addresses are not a city</div>}
@@ -500,7 +500,7 @@ function MoreLocationsModal({ locations, onClose, onSelectLocation }: {
         <div className="nut-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span className="nut-modal-title">Other locations</span>
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{locations.length} locations</span>
+            <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text3)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px' }}>{locations.length} locations</span>
           </div>
         </div>
         <div className="nut-modal-list" tabIndex={0} role="group" aria-label="Mints">
@@ -557,9 +557,9 @@ function NetworkHealthComponentRow({ component: c, compact }: {
           <InfoTooltip iconSize={11} width={220} about={c.label} text={c.tooltip} />
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 8, flexShrink: 0 }}>
-          <span style={{ fontSize: compact ? 11.5 : 11, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
+          <span style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
           {/* "pts": without a unit "30/30" read as a count of mints next to "49 mints online". */}
-          <span style={{ fontSize: compact ? 13 : 13, fontWeight: 600, color }}>{points}/{c.weight}<span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text3)' }}> pts</span></span>
+          <span style={{ fontSize: compact ? 13 : 13, fontWeight: 600, color }}>{points}/{c.weight}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text3)' }}> pts</span></span>
         </div>
       </div>
       <div style={{ height: compact ? 3 : 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
@@ -578,7 +578,7 @@ const NETWORK_HEALTH_FORMULA_TEXT = nhiFormulaText()
 // breakdown no longer renders this; see NETWORK_HEALTH_FORMULA_TEXT above).
 function NetworkHealthFormulaNote({ compact }: { compact?: boolean }) {
   return (
-    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: compact ? 8 : 10, marginTop: 2, fontSize: compact ? 11 : 12, color: 'var(--text3)', lineHeight: 1.5 }}>
+    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: compact ? 8 : 10, marginTop: 2, fontSize: 12, color: 'var(--text3)', lineHeight: 1.5 }}>
       {NETWORK_HEALTH_FORMULA_TEXT}
     </div>
   )
@@ -608,7 +608,7 @@ function NetworkHealthModal({ score, components, onClose }: {
         </div>
         <div style={{ textAlign: 'center', marginBottom: 4 }}>
           <div style={{ fontSize: 42, fontWeight: 700, color: info.color, lineHeight: 1, fontFamily: 'var(--font-mono-data)' }}>{score}</div>
-          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 600, color: info.color, background: info.bg, border: `0.5px solid ${info.border}`, borderRadius: 5, padding: '2px 8px', display: 'inline-block', marginTop: 6 }}>
+          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 600, color: info.color, background: info.bg, border: `0.5px solid ${info.border}`, borderRadius: 5, padding: '2px 8px', display: 'inline-block', marginTop: 6 }}>
             {label}
           </span>
         </div>
@@ -1240,7 +1240,7 @@ export default function Stats() {
               )}
             </div>
             {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
-              <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
+              <div style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)',marginTop:8,lineHeight:1.5}}>
                 {geoDist.moreCount > 0 && (
                   <div className="dist-more-row" {...clickableProps(() => setShowMoreLocations(true))}>
                     View others →
@@ -1306,7 +1306,7 @@ export default function Stats() {
             </div>
           )}
           {trendCoverage && (
-            <div className="trend-coverage" style={{marginTop:6,fontSize:10,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{trendCoverage}</div>
+            <div className="trend-coverage" style={{marginTop:6,fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{trendCoverage}</div>
           )}
         </div>
       </div>

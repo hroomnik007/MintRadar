@@ -36,7 +36,8 @@ async function setup(page: Page, width: number) {
 }
 
 // The date follows the 12 px phone floor (MintDetail.css, max-width 767px since cf79605e); desktop keeps 11 / 10 px.
-const SMALL_TEXT: Record<number, { date: string }> = { 1440: { date: '10px' }, 390: { date: '12px' } }
+// 12px text floor at every width since 2026-11-18 (the date was 10px on desktop).
+const SMALL_TEXT: Record<number, { date: string }> = { 1440: { date: '12px' }, 390: { date: '12px' } }
 
 for (const width of [1440, 390]) {
   test(`review comment at ${width}px: 15px, line height 1.55, contrast at least 7:1; the rest of the item unchanged`, async ({ page }) => {

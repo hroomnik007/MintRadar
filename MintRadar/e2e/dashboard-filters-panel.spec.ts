@@ -126,14 +126,14 @@ test.describe('Filters panel — "Show N of M"', () => {
     await expect(page.locator('.filter-panel [aria-live]')).toHaveCount(0)
   })
 
-  // The primary button is 700-weight JetBrains Mono with font-display: swap, and its min-width is in `ch`
+  // The primary button is bold MintRadar Sans Mono (the 600 face) with font-display: swap, and its min-width is in `ch`
   // — so while the face is still arriving the width steps through fallback values (123 → 125.5 → 127 → 129px
   // seen with a delayed font). `document.fonts.ready` alone is not enough: the Bold face is only requested
   // after the button's first layout and `ready` may already have resolved by then. So: ask for the face
   // explicitly, then wait until the measured width stops changing.
   const settledShowBtnWidth = async (page: Page) => {
     await expect(showBtn(page)).toBeVisible()
-    await page.evaluate(async () => { await document.fonts.load('700 11px "JetBrains Mono"'); await document.fonts.ready })
+    await page.evaluate(async () => { await document.fonts.load('700 12px "MintRadar Sans Mono"'); await document.fonts.ready })
     let last = -1
     let steady = 0
     await expect.poll(async () => {

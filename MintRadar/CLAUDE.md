@@ -43,7 +43,7 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 - Frontend: React 19 + TypeScript + Vite 8 + TanStack Query v5 + Zustand + Dexie (IndexedDB) + Recharts + vite-plugin-pwa
 - Backend: Node.js 22 + Express 5 + TypeScript + pg (PostgreSQL 17) + nostr-tools
 - Auth: Nostr NIP-07 (nos2x-fox, Alby) + nsec manual entry (key held in memory for the session to enable signing, zeroed on logout — see Nostr Login below) + NIP-46 bunker (implemented, nostr-tools/nip46 BunkerSigner)
-- Fonts and CSS: DM Sans + JetBrains Mono (self-hosted), CSS variables with the "patina/copper" palette; hex values and tokens: `docs/claude/design-palette-and-chrome.md`.
+- Fonts and CSS: MintRadar Sans + MintRadar Sans Mono (self-hosted subsets of Mona Sans, OFL; the wordmark alone stays DM Sans), CSS variables with the "patina/copper" palette, copper `--action` for anything clickable; hex values, tokens and the type rules: `docs/claude/design-palette-and-chrome.md`.
 
 ## Architecture
 - Watchlist: IndexedDB only (never on the server). Public mint history: PostgreSQL. `/api/*` is proxied by Nginx to the backend.

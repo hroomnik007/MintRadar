@@ -954,8 +954,9 @@ test.describe('Token Inspector result grid, labels and mobile actions', () => {
     expect(colours.nameWeight).toBe('500')
     expect(colours.nameSize).toBe('16px')
     expect(colours.nameFont).toBe(colours.bodyFont)
-    expect(colours.subFont).toMatch(/JetBrains Mono/)
-    expect(colours.amountFont).not.toBe(colours.nameFont)
+    expect(colours.subFont).toMatch(/MintRadar Sans Mono/)
+    // 2026-11-18 type change: numbers are set in the body face with tabular figures, no longer in a monospace face.
+    expect(colours.amountFont).toBe(colours.bodyFont)
   })
 
   test('amount, mint status and Reliability Score are lighter than bold (weight < 600)', async ({ page }) => {

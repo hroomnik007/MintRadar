@@ -92,6 +92,6 @@ test.describe('movers note', () => {
     await open(page, 1440)
     await page.locator('.stats-movers-panel').getByRole('button', { name: '30d', exact: true }).click()
     await expect(note(page)).toBeVisible()
-    expect(await note(page).evaluate(n => getComputedStyle(n).fontSize)).toBe('11.5px')
+    expect(await note(page).evaluate(n => getComputedStyle(n).fontSize)).toBe('12px') // 12px text floor since 2026-11-18
   })
 })

@@ -1078,12 +1078,12 @@ function MintDetailContent({ url }: { url: string }) {
                     {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
                   </button>
                 </div>
-                <span className="md-keyset-meta" style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
+                <span className="md-keyset-meta" style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
                 {typeof ks.input_fee_ppk === 'number' && (
-                  <InfoTooltip text={KEYSET_FEE_TEXT} width={200} className="md-keyset-fee-tip"><span className="md-keyset-meta" style={{fontSize:11,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
+                  <InfoTooltip text={KEYSET_FEE_TEXT} width={200} className="md-keyset-fee-tip"><span className="md-keyset-meta" style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
                 )}
                 <span className="md-keyset-meta" style={{
-                  fontSize:10,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',
+                  fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',
                   color: ks.active ? 'var(--accent)' : 'var(--text3)',
                   background: ks.active ? 'var(--green-soft)' : 'var(--bg4)',
                   border: `0.5px solid ${ks.active ? 'var(--green-soft-strong)' : 'var(--border)'}`,
@@ -1211,7 +1211,7 @@ function MintDetailContent({ url }: { url: string }) {
             <span className="md-hdr-error" style={{display:'inline-flex',alignItems:'center',gap:4}}>
               <span
                 className="md-error-badge"
-                style={{fontSize:11,color:'color-mix(in srgb, var(--red) 75%, var(--text))',fontFamily:'var(--font-mono)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
+                style={{fontSize:12,color:'color-mix(in srgb, var(--red) 75%, var(--text))',fontFamily:'var(--font-mono)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
               >
                 {knownMint.lastError}
               </span>
@@ -1339,7 +1339,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="md-sc-value sm" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
               <span>{version ?? '—'}</span>
               {isOutdated && (
-                <span className="md-outdated-pill" style={{fontSize:9,fontFamily:'var(--font-mono)',fontWeight:600,color:'color-mix(in srgb, var(--red) 75%, var(--text))',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
+                <span className="md-outdated-pill" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'color-mix(in srgb, var(--red) 75%, var(--text))',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
               )}
             </div>
             <div className="md-sc-sub">software</div>

@@ -64,7 +64,7 @@ test.describe('Mint Detail — unverified NIP-05 line', () => {
       const cs = getComputedStyle(el), v = getComputedStyle(el.querySelector('.md-nip05-val')!)
       return { size: cs.fontSize, weight: cs.fontWeight, mono: v.fontFamily }
     })
-    expect(css.size).toBe('11.5px')
+    expect(css.size).toBe('12px') // 12px text floor since 2026-11-18
     expect(css.weight).toBe('400')
     expect(css.mono).toMatch(/mono/i)
   })

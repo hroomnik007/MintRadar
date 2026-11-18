@@ -80,7 +80,7 @@
 .stat-card-btn:hover { border-color: var(--border-strong); }
 
 .stat-sub {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-faint);
   margin-top: 0;
   letter-spacing: 0.01em;
@@ -214,7 +214,7 @@
 .stat-icon.gray   { background: rgba(139, 148, 158, 0.1); color: var(--text-faint); }
 
 .stat-label {
-  font-size: 10px;
+  font-size: 12px;
   /* Token tweak: was --text-faint (--t3), which read muddy against --surface at
      10px uppercase. --text-dim (--t2) is the next tier up and already a token. */
   color: var(--text-dim);
@@ -246,10 +246,10 @@
 /* Muted note on the value line (matches the Stats hero's density): "of all
    known", "from Nuremberg". Sits after the value / unit inside .stat-figure. */
 .stat-note {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-faint);
-  font-family: var(--font-mono);
+  font-family: var(--font-body); /* a note, not code (was mono until 2026-11-18) */
   white-space: nowrap;
 }
 
@@ -321,7 +321,7 @@
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 11px;
+  font-size: 12px;
   color: color-mix(in srgb, var(--text3) 85%, var(--text));
   border: 0.5px solid var(--border);
   border-radius: 3px;
@@ -350,7 +350,7 @@
   border-radius: 6px;
   padding: 5.5px 11px;
   color: var(--text2);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   font-family: var(--font-body);
@@ -455,7 +455,7 @@
 
 .mint-list-table th {
   text-align: left;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text2);
   padding: 8px 10px;
@@ -517,7 +517,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text2);
   font-family: var(--font-mono);
   margin-top: 1px;
@@ -662,7 +662,7 @@
 }
 
 .card-host {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t3);
   margin-top: 1px;
   font-family: var(--font-mono);
@@ -733,7 +733,7 @@
   border: 1px solid transparent;
   border-radius: 5px;
   padding: 1px 7px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t2);
   font-family: var(--font-mono);
 }
@@ -816,7 +816,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.01em;
   color: var(--t2);
   white-space: nowrap;
@@ -837,7 +837,7 @@
   letter-spacing: normal;
   font-family: var(--font-body, inherit);
   font-weight: 600;
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1.3;
   white-space: nowrap;
   border-radius: 4px;
@@ -887,7 +887,7 @@
   display: flex;
   align-items: center;
   min-height: 17px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t3);
   line-height: 1;
 }
@@ -940,7 +940,7 @@
 .card-compare-btn:hover { border-color: var(--green); background: var(--elevated); }
 
 .latency-block .latency-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--t2);
   margin-bottom: 2px;
   letter-spacing: 0.01em;
@@ -968,7 +968,7 @@
    page's Median Latency tile). Always more muted than the value it follows,
    even inside an already-muted (offline/stale) latency-value. */
 .latency-source {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--t3);
 }
@@ -992,7 +992,7 @@
   align-items: center;
   gap: 4px;
   margin-right: auto;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.07em;
   color: var(--text2);
   font-family: var(--font-mono);
@@ -1010,7 +1010,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   color: var(--text2);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   font-family: var(--font-body);
   white-space: nowrap;
@@ -1052,7 +1052,7 @@
 @media (prefers-reduced-motion: reduce) { .notify-spinner { animation: none; } }
 .notify-strip-msg {
   margin-top: 6px;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.3;
   color: var(--amber);
 }
@@ -1221,7 +1221,7 @@
 
 .dashboard-footer {
   text-align: center;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text3);
   padding: 12px var(--page-pad) 20px;
   margin-inline: auto;
@@ -1272,7 +1272,7 @@
 .submit-modal-close:hover { background: var(--bg3); color: var(--text); }
 
 .submit-modal-eyebrow {
-  font-size: 11px; font-weight: 600; color: var(--green-bright);
+  font-size: 12px; font-weight: 600; color: var(--green-bright);
   text-transform: uppercase; letter-spacing: 0.1em;
   font-family: var(--font-mono); margin-bottom: 2px;
 }
@@ -1327,7 +1327,7 @@
 }
 
 .submit-result {
-  font-size: 11px; margin-bottom: 12px; padding: 8px 12px;
+  font-size: 12px; margin-bottom: 12px; padding: 8px 12px;
   border-radius: 7px; font-family: var(--font-body);
 }
 .submit-result.success {
@@ -1346,7 +1346,7 @@
 }
 
 .submit-alias-hint {
-  font-size: 11px; margin: -6px 0 12px; padding: 8px 12px;
+  font-size: 12px; margin: -6px 0 12px; padding: 8px 12px;
   border-radius: 7px; font-family: var(--font-body);
   background: var(--copper-soft); color: var(--copper);
   border: 1px solid var(--copper-soft-strong);
@@ -1355,7 +1355,7 @@
 
 /* Why the field's value cannot be used (Single tab). Muted; the private-key warning is tinted. */
 .submit-reason {
-  font-size: 11px; color: var(--text3); font-family: var(--font-body);
+  font-size: 12px; color: var(--text3); font-family: var(--font-body);
   margin-bottom: 10px; line-height: 1.5;
 }
 .submit-reason.warn { color: color-mix(in srgb, var(--red) 85%, var(--text)); }
@@ -1367,7 +1367,7 @@
 /* The mint a Nostr key's announcement points to — the full URL that will be submitted. */
 .submit-found {
   display: flex; gap: 6px; align-items: baseline;
-  font-size: 11px; color: var(--text3); font-family: var(--font-body);
+  font-size: 12px; color: var(--text3); font-family: var(--font-body);
   margin-bottom: 10px; padding: 6px 10px;
   background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
 }
@@ -1378,7 +1378,7 @@
 }
 
 .submit-probe-loading {
-  font-size: 11px; color: var(--text3);
+  font-size: 12px; color: var(--text3);
   font-family: var(--font-body);
   margin-bottom: 10px; padding: 6px 10px;
   background: var(--bg3); border: 1px solid var(--border);
@@ -1397,12 +1397,12 @@
 }
 
 .submit-probe-meta {
-  display: flex; gap: 6px; font-size: 11px;
+  display: flex; gap: 6px; font-size: 12px;
   color: var(--text3); font-family: var(--font-mono); align-items: center;
 }
 
 .submit-probe-error {
-  font-size: 11px; color: var(--submit-error-text);
+  font-size: 12px; color: var(--submit-error-text);
   background: var(--red-soft);
   border: 1px solid var(--red-soft-strong);
   border-radius: 6px; padding: 6px 10px;
@@ -1435,7 +1435,7 @@
   color: var(--bg);
   border-radius: 99px;
   padding: 0 5px;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   min-width: 15px;
   text-align: center;
@@ -1486,7 +1486,7 @@
   color: var(--accent);
   border-radius: 5px;
   padding: 2px 6px 2px 8px;
-  font-size: 10px;
+  font-size: 12px;
   font-family: var(--font-mono);
 }
 
@@ -1690,7 +1690,7 @@
   flex: 1 1 220px;
   max-width: 380px;
   font-family: var(--font-body);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.35;
   color: var(--text2);
 }
@@ -1798,7 +1798,7 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 3px 10px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text2);
   cursor: pointer;
   font-family: var(--font-body);
@@ -1818,7 +1818,7 @@
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 2px 7px;
-  font-size: 10px;
+  font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text3);
   cursor: pointer;
@@ -1832,7 +1832,7 @@
   position: relative;
   height: 28px; /* the same as the segments (.filter-seg) */
   border-radius: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   cursor: pointer;
   font-family: var(--font-body);
   transition: all var(--transition);
@@ -1852,8 +1852,8 @@
   color: var(--bg);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  /* "Show 100 of 100" at this size is ~100px — the button never resizes with the count */
-  min-width: 120px;
+  /* "Show 120 of 120" at 12px is ~124px wide (since the 2026-11-18 type change) — the button never resizes with the count */
+  min-width: 134px;
 }
 .filter-apply-btn:hover { opacity: 0.9; }
 .filter-reset-btn:focus-visible,
@@ -1884,7 +1884,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 12px;
   color: white;
   transition: all var(--transition);
 }
@@ -1922,7 +1922,7 @@
   border: 1px solid var(--border);
   border-radius: 7px;
   padding: 5px 12px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text2);
   cursor: pointer;
@@ -2029,12 +2029,12 @@
 }
 
 .cmp-vh-version {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text);
 }
 
 .cmp-vh-since {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--text3);
   margin-top: 1px;
 }
@@ -2064,7 +2064,7 @@
   flex-wrap: wrap;
   padding: 0 12px 6px;
 }
-.cmp-m-hint { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+.cmp-m-hint { font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
 .cmp-m-switch {
   display: inline-flex;
   align-items: center;
@@ -2106,7 +2106,7 @@
 @media (prefers-reduced-motion: reduce) {
   .cmp-m-switch-track, .cmp-m-switch-thumb { transition: none; }
 }
-.cmp-m-status { margin: 0; padding: 0 12px; font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
+.cmp-m-status { margin: 0; padding: 0 12px; font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
 .cmp-m-status:empty { display: none; }
 /* Desktop: the same switch and status line above the side-by-side .cmp-grid (12px minimum, aligned with the grid's 20px padding). */
 .cmp-d-toolbar { display: flex; justify-content: flex-end; padding: 10px 20px 0; }
@@ -2145,7 +2145,7 @@
 .cmp-m-corner { padding-left: 12px; }
 .cmp-m-lbl {
   padding-left: 12px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text3);
   text-transform: uppercase;
@@ -2169,7 +2169,7 @@
 .cmp-m-mint-host {
   display: block;
   margin-top: 2px;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--text3);
   font-family: var(--font-mono);
@@ -2183,7 +2183,7 @@
 .cmp-m-chips { display: flex; flex-wrap: wrap; gap: 3px; }
 
 .cmp-mobile-badge {
-  font-size: 9px;
+  font-size: 12px;
   border: 0.5px solid;
   border-radius: 3px;
   padding: 1px 5px;
@@ -2200,7 +2200,7 @@
 }
 .cmp-mobile-vh-group { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; border-bottom: 0.5px solid var(--border2); }
 .cmp-mobile-vh-group:last-child { border-bottom: none; }
-.cmp-mobile-vh-name { font-size: 11px; font-weight: 700; color: var(--text2); font-family: var(--font-mono); }
+.cmp-mobile-vh-name { font-size: 12px; font-weight: 700; color: var(--text2); font-family: var(--font-mono); }
 
 /* ── Submit tabs ─────────────────────────────────────────────── */
 .submit-tabs {
@@ -2219,7 +2219,7 @@
   border: 1px solid transparent;
   border-radius: 5px;
   padding: 4px 14px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text2);
   cursor: pointer;
@@ -2248,7 +2248,7 @@
   border-radius: 8px;
   padding: 10px 12px;
   color: var(--text);
-  font-size: 11.5px;
+  font-size: 12px;
   font-family: var(--font-mono);
   resize: vertical;
   outline: none;
@@ -2259,10 +2259,10 @@
 .bulk-textarea:focus { border-color: var(--accent); }
 
 /* Live validation summary under the Bulk textarea. */
-.bulk-summary { font-size: 11px; color: var(--text2); font-family: var(--font-body); margin-bottom: 6px; }
+.bulk-summary { font-size: 12px; color: var(--text2); font-family: var(--font-body); margin-bottom: 6px; }
 .bulk-issues {
   list-style: none; margin: 0 0 8px; padding: 0;
-  font-size: 11px; line-height: 1.5; color: var(--text3); font-family: var(--font-body);
+  font-size: 12px; line-height: 1.5; color: var(--text3); font-family: var(--font-body);
 }
 .bulk-issue-text { font-family: var(--font-mono); color: var(--text2); }
 
@@ -2286,12 +2286,12 @@
   justify-content: space-between;
   gap: 8px;
   padding: 3px 0;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-mono);
 }
 
 .bulk-url { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.bulk-status { flex-shrink: 0; font-size: 10px; font-family: var(--font-body); }
+.bulk-status { flex-shrink: 0; font-size: 12px; font-family: var(--font-body); }
 .bulk-row.status-added .bulk-status { color: var(--accent); }
 .bulk-row.status-duplicate .bulk-status { color: var(--copper); }
 .bulk-row.status-failed .bulk-status { color: color-mix(in srgb, var(--red) 85%, var(--text)); }
@@ -2299,7 +2299,7 @@
 .bulk-row-alias { flex-wrap: wrap; padding-bottom: 6px; }
 .bulk-row-subtitle {
   flex-basis: 100%;
-  font-size: 10px;
+  font-size: 12px;
   font-family: var(--font-body);
   color: var(--copper);
   overflow: hidden;
@@ -2324,7 +2324,7 @@
 @media (max-width: 900px) {
   .dashboard-controls { flex-wrap: wrap; gap: 6px; }
   .sort-segment { flex: 1 1 100%; }
-  .sort-btn { flex: 1; justify-content: center; padding: 5.5px 6px; font-size: 10.5px; }
+  .sort-btn { flex: 1; justify-content: center; padding: 5.5px 6px; font-size: 12px; }
 }
 
 /* 901–1000px: search + Filters + sort + view toggle + reset + Submit mint need 991px on one row
@@ -2349,7 +2349,7 @@
    ~285px; 350–370px keep the 3px padding above. The scroll fallback stays for anything narrower. */
 @media (max-width: 349px) {
   .sort-segment { gap: 1px; }
-  .sort-btn { padding-inline: 1px; font-size: 10px; }
+  .sort-btn { padding-inline: 1px; font-size: 12px; }
 }
 
 /* Search + Filters stay one row on landscape phones (~800–1000px) too. */
@@ -2530,7 +2530,7 @@
 .notify-more-note {
   flex: 1 1 100%;
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
   color: var(--text3);
 }
@@ -2709,4 +2709,6 @@
   .mint-list-url { max-width: 120px; }
   .mint-list-td-name { min-width: 0; }
   .mint-list-table th, .mint-list-row td { padding-inline: 6px; }
+  /* 12px text floor (2026-11-18): a two-word header ("Uptime 24h") may take two lines, so the column is as wide as its values. */
+  .mint-list-table th { white-space: normal; }
 }

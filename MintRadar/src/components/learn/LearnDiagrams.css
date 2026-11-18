@@ -150,7 +150,7 @@
 }
 
 .risk-link-label {
-  font-size: 10.5px;
+  font-size: 12px;
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -192,7 +192,7 @@
 .donut-center-lbl {
   fill: var(--t3);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }

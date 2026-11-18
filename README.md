@@ -154,7 +154,7 @@ Read-only JSON under `https://mintradar.org/api/`, including a stable API for wa
 - TanStack Query v5, Zustand, Dexie (IndexedDB)
 - Recharts, vite-plugin-pwa (PWA / offline support)
 - nostr-tools (NIP-07, NIP-44, NIP-46 and the nsec login)
-- Self-hosted open-source fonts: **DM Sans** and **JetBrains Mono**, plus the system `ui-monospace` stack for numeric/data values — no Google Fonts, no CDN
+- Self-hosted open-source fonts: **MintRadar Sans** and **MintRadar Sans Mono** (subsets of GitHub's Mona Sans, SIL OFL 1.1) and the wordmark in **DM Sans** — no Google Fonts, no CDN
 
 **Backend**
 - Node.js 22 + Express 5 + TypeScript
@@ -303,7 +303,7 @@ Issues and pull requests are welcome. Please open an issue to discuss significan
 
 [MIT](LICENSE)
 
-App code is MIT. The bundled webfonts (DM Sans, JetBrains Mono) are open-source fonts under their own licenses, self-hosted under `MintRadar/public/fonts/`.
+App code is MIT. The bundled webfonts are subsets of Mona Sans and DM Sans under the SIL Open Font License 1.1, self-hosted under `MintRadar/public/fonts/`; the licence and what was changed are in `MintRadar/public/fonts/OFL.txt`.
 
 ---
 

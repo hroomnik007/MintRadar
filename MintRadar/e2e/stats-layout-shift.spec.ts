@@ -16,24 +16,25 @@ const TOLERANCE = 12 // a reservation may differ from the loaded height by at mo
 // Loaded heights of the fixture (px), measured with the scratch script described in the docs. `board` is the board WITHOUT the
 // movers note (the note's height comes from NOTE_HEIGHTS below, by the number of changes in the 7d window).
 const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number }> = {
-  1440: { head: 88.2, board: 1326.5, nhi: 346.2, stack: 618.1 },
-  1024: { head: 88.2, board: 1844.7, nhi: 332.7, stack: 618.1 },
-  768: { head: 88.2, board: 1615.5, nhi: 274.8, stack: 538.3 },
-  390: { head: 96.4, board: 2837.8, nhi: 181.3, stack: 560.8 },
-  320: { head: 96.4, board: 2983.3, nhi: 181.3, stack: 618.3 },
+  // Re-measured 2026-11-18 for MintRadar Sans and the 12px text floor.
+  1440: { head: 88.2, board: 1385.1, nhi: 368.2, stack: 645.7 },
+  1024: { head: 88.2, board: 1891.8, nhi: 332.7, stack: 645.7 },
+  768: { head: 88.2, board: 1658.8, nhi: 274.8, stack: 562.0 },
+  390: { head: 96.4, board: 2839.0, nhi: 181.3, stack: 562.0 },
+  320: { head: 96.4, board: 3214.0, nhi: 181.3, stack: 619.5 },
 }
 
 // The REAL height of the movers note (px) by the number of changes it lists, as [from width, to width, height] ranges,
-// measured at every width 320 to 1600 (1 px steps), re-measured on 2026-11-15 with methodology v9 (n4 and n5 phone edges
-// moved). The change log can only produce one text per count (a window holds the NEWEST changes): n1 `15 Nov (v9)` ... n5
-// `27 Oct (v5)` to `15 Nov (v9)`. A new
+// measured at every width 320 to 1600 (1 px steps), re-measured on 2026-11-18 for MintRadar Sans with the note at 12px at
+// every width (it was 11.5px from 768px, so the 31.25 / 48.5 / 65.75 heights are gone). The change log can only produce one
+// text per count (a window holds the NEWEST changes): n1 `15 Nov (v9)` ... n5 `27 Oct (v5)` to `15 Nov (v9)`. A new
 // METHODOLOGY_CHANGES entry changes the texts: re-measure (docs/claude/stats-dashboard-watchlist-ui.md).
 const NOTE_HEIGHTS: Record<number, ReadonlyArray<readonly [number, number, number]>> = {
-  1: [[320, 372, 50], [373, 767, 32], [768, 1600, 31.25]],
-  2: [[320, 456, 50], [457, 767, 32], [768, 933, 48.5], [934, 1279, 31.25], [1280, 1600, 48.5]],
-  3: [[320, 547, 50], [548, 767, 32], [768, 1115, 48.5], [1116, 1279, 31.25], [1280, 1600, 48.5]],
-  4: [[320, 365, 68], [366, 646, 50], [647, 767, 32], [768, 1600, 48.5]],
-  5: [[320, 393, 68], [394, 737, 50], [738, 767, 32], [768, 807, 65.75], [808, 1600, 48.5]],
+  1: [[320, 388, 50], [389, 768, 32], [769, 797, 50], [798, 1600, 32]],
+  2: [[320, 473, 50], [474, 767, 32], [768, 967, 50], [968, 1279, 32], [1280, 1600, 50]],
+  3: [[320, 566, 50], [567, 767, 32], [768, 1153, 50], [1154, 1279, 32], [1280, 1600, 50]],
+  4: [[320, 372, 68], [373, 666, 50], [667, 767, 32], [768, 1600, 50]],
+  5: [[320, 400, 68], [401, 758, 50], [759, 767, 32], [768, 821, 68], [822, 1600, 50]],
 }
 const noteHeightAt = (width: number, count: number): number =>
   count === 0 ? 0 : NOTE_HEIGHTS[Math.min(count, 5)]!.find(([from, to]) => width >= from && width <= to)![2]

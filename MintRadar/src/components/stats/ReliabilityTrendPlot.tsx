@@ -9,7 +9,12 @@ import type { TrendPoint } from './ReliabilityTrendChart'
 // The recharts part of the Reliability Score trend. It lives in its own file so that ReliabilityTrendChart.tsx (and with
 // it the Stats route chunk) does not import recharts statically: this file is loaded with React.lazy when a chart is drawn.
 
-const AXIS_TICK = { fontSize: 9, fill: 'var(--text3)', fontFamily: 'var(--font-mono)' } as const
+// Axis labels are dates and numbers, not code: the body face (2026-11-18 type change; they were 9px mono).
+const AXIS_TICK = { fontSize: 12, fill: 'var(--text3)', fontFamily: 'var(--font-body)' } as const
+// One marker label row: the text box of a 12px label is 17px tall, so rows are 18px apart (9px labels had 12px).
+const MARKER_ROW_PX = 18
+// Width of a "v<N>" label at 12px (the helper's default of 16 was for the 9px label).
+const MARKER_LABEL_PX = 20
 // The chart margin (left -28) and the Y axis (width 60) leave the plot 32px in from the left edge, and the right margin
 // is 4px: the first-to-last-point span is the container width minus 36.
 const PLOT_INSET = 36
@@ -29,7 +34,7 @@ function ReliabilityTrendPlot({ data }: { data: readonly TrendPoint[] }) {
   // Version labels next to their lines; they never leave the plot or touch each other (placeMarkerLabels).
   const pxPerIndex = dates.length > 1 ? (width - PLOT_INSET) / (dates.length - 1) : 0
   const labelPlaces = useMemo(
-    () => placeMarkerLabels(markers.map(m => dates.indexOf(m.at) * pxPerIndex), width - PLOT_INSET),
+    () => placeMarkerLabels(markers.map(m => dates.indexOf(m.at) * pxPerIndex), width - PLOT_INSET, MARKER_LABEL_PX),
     [markers, dates, pxPerIndex, width],
   )
 
@@ -57,7 +62,7 @@ function ReliabilityTrendPlot({ data }: { data: readonly TrendPoint[] }) {
         <XAxis dataKey="date" ticks={ticks} interval={0} tick={renderTick} axisLine={false} tickLine={false} />
         <YAxis domain={[0,100]} tick={AXIS_TICK} axisLine={false} tickLine={false} />
         <Tooltip
-          contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:11,fontFamily:'var(--font-mono)'}}
+          contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:12,fontFamily:'var(--font-mono)'}}
           labelStyle={{color:'var(--text3)'}}
           labelFormatter={d => formatDate(String(d)) || String(d)}
           formatter={(v) => [v ?? '—', 'Avg Reliability']}
@@ -76,7 +81,7 @@ function ReliabilityTrendPlot({ data }: { data: readonly TrendPoint[] }) {
               const { side, row } = labelPlaces[i] ?? { side: 'right', row: 0 }
               const left = side === 'left'
               return (
-                <text x={(viewBox?.x ?? 0) + (left ? -3 : 3)} y={(viewBox?.y ?? 0) + 9 + row * 12} textAnchor={left ? 'end' : 'start'} {...AXIS_TICK} fill="var(--copper)">
+                <text x={(viewBox?.x ?? 0) + (left ? -3 : 3)} y={(viewBox?.y ?? 0) + 10 + row * MARKER_ROW_PX} textAnchor={left ? 'end' : 'start'} {...AXIS_TICK} fill="var(--copper)">
                   {`v${m.version}`}
                 </text>
               )

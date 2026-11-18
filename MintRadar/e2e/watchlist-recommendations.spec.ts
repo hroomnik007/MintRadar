@@ -114,7 +114,7 @@ test.describe('Watchlist — recommendations section', () => {
     expect((await slim(page).boundingBox())!.height).toBeCloseTo(44, 0)
     const lastCard = (await page.locator('.wl-grid .mint-card').last().boundingBox())!
     expect((await slim(page).boundingBox())!.y).toBeGreaterThanOrEqual(lastCard.y + lastCard.height)
-    expect(await page.locator('.wl-rec-slim-text').evaluate(el => getComputedStyle(el).fontSize)).toBe('11.5px')
+    expect(await page.locator('.wl-rec-slim-text').evaluate(el => getComputedStyle(el).fontSize)).toBe('12px') // 12px text floor since 2026-11-18
   })
 
   test('with recommendations: heading + rows below the full-width grid', async ({ page }) => {
