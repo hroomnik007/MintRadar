@@ -1,7 +1,7 @@
-# Post-announcement backlog (written 2026-10-22, task E1; statuses checked 2026-11-08)
+# Post-announcement backlog (written 2026-10-22, task E1; statuses checked 2026-11-08; Done, Declined and fixed dates rechecked 2026-11-16, open items not rechecked)
 
 What is planned after the public announcement. Nothing in the "By feedback only" table is started without a reason from users or wallet teams.
-Every status below was checked against the code, the docs or the live site on 2026-11-08; "Owner" means it cannot be checked from the repo.
+Every status below was checked against the code, the docs or the live site on 2026-11-08; "Owner" means it cannot be checked from the repo. On 2026-11-16 only the "Done" and "Declined" tables and the fixed dates were rechecked against the repository (git log, code, docs/claude); the three "Open" items keep their 2026-11-08 status.
 
 ## Open
 
@@ -25,11 +25,12 @@ Every status below was checked against the code, the docs or the live site on 20
 | Date | What |
 |---|---|
 | Monthly | Docker / NodeSource updates |
+| 2026-12-04 | The 28-day audit window of methodology 8 is full for the first time: `audit_cz_daily` rows are stored from 2026-11-13 and the long total adds four 7-day totals that do not overlap (today's row and the rows 7, 14 and 21 days older; `backend-api-and-data.md`, "audit_cz_daily"), so the first full four-span sum exists on 2026-11-13 + 21 days. Until then the window is shorter. |
 | Monthly (next about 2026-12-08) | Audit-part check: add a row to `scoring-and-probing.md`, "Monthly audit-part check" (first done 2026-11-08) |
 | 2027-01-01 | Check the year label of the 90-day trend. The rule is already built ("1 Jan 2027" on the first tick of a new year, `stats-dashboard-watchlist-ui.md`, "X axis rule"); only the look on the day is left to check. |
 | 2027-01-26 | Sunset of `/api/v1/mints/recommend`. The `Deprecation` and `Sunset: Tue, 26 Jan 2027` headers are live; on the day the route goes. |
 
-## Done (verified 2026-11-08)
+## Done (verified 2026-11-08; rows from 2026-11-13 on checked 2026-11-16)
 
 | Item | Where |
 |---|---|
@@ -44,13 +45,21 @@ Every status below was checked against the code, the docs or the live site on 20
 | Real HTTP 404 for unknown paths | Stage 3 SEO, applied 2026-10-26: unknown paths and unknown mints answer 404 with the "Page not found" / "Mint not found" page (the old "soft 404 stays" decision is superseded) |
 | Inline critical CSS | Done 2026-11-08: the entry CSS is inline (`vite-inline-css.ts`); FCP 1 040 -> 320 ms on Slow 4G (`deploy-and-infra.md`, "Code splitting & bundle layout") |
 | Stats note about the 2026-10-08 audit source switch | Replaced by `moversMethodologyNote()`: the movers panel names every methodology change inside its 7/30-day window and the note goes away by itself |
+| Icon resize (earlier decision 2026-10-25: built with `sharp`, reverted) | nginx `image_filter` reduces PNG, JPEG, GIF and WebP icons to at most 144 x 144 px; the icon proxy rejects an icon above 2048 px on a side or with an unreadable size (`MAX_ICON_DIMENSION`, `backend/src/mintIcon.ts`) and hands readable files to nginx with `X-Accel-Redirect` when asked with the `X-Icon-Resize` header; no new npm dependency; a follow-up fix (1245976f) removed `Cache-Control` from the redirect. The nginx location and the distro package `libnginx-mod-http-image-filter` are applied by hand on the server, the deploy does not do it. Verified in production by the owner 2026-11-16 (e7100b15, `deploy/nginx.conf`, `deploy-and-infra.md` "Mint icons resized by nginx") |
+| Methodology 7, 8 and 9 | 7 (2026-11-10): uptime part split in four, 95 % 30-day gate; 8 (2026-11-13): audit part is the worse of the 7-day and a 28-day window; 9 (2026-11-15): contact part counts only recognised formats (`METHODOLOGY_CHANGES` in `backend/src/shared/methodology.ts`, `methodology-and-wallet-pages.md`) |
+| New Audit tab | 2026-11-13/14: verdict, bar, directions, days, one list; shows only cashu.info (`card-and-mint-detail-ui.md`, "Audit tab: layout of 2026-11-13") |
+| External UI/UX review fixes | 2026-11-13: Best Mint wizard order, list heading, Mint Detail fixes, link preview text, Audit scored line, "Log in to write a review", "Not a tracked mint" page with an Add a mint link (`card-and-mint-detail-ui.md`, "External UI/UX review fixes (2026-11-13)") |
+| Radar brand mark and new OG image | 2026-11-14: radar-screen mark in navbar, page headers, favicon and app icons; `og-image-radar.png` is the current OG image, `og-image-reliability.png` is frozen (`design-palette-and-chrome.md`) |
+| Wallet API mint-detail contract test | #200, 2026-11-12: backend integration test and e2e spec pin `GET /api/v1/wallets/mints/{url}`; `docs/API.md` says "do not break" (`wallet-api-mint-detail-contract.test.ts`, `e2e/wallet-mint-link.spec.ts`) |
+| Compare BEST tag | 2026-11-14: the best value of Reliability Score, Uptime 24h and 30d, Latency is tagged "BEST" (`stats-dashboard-watchlist-ui.md`, "BEST" per metric row) |
+| Reset-to-defaults button | #204, 2026-11-14: replaces the manual list refresh next to Add mint (commit 1c8a9df1; `stats-dashboard-watchlist-ui.md` still describes the old refresh button, see the report) |
+| Best Mint wizard ordering rule | 2026-11-14: latency only breaks ties within 2 points unless "Fast" is chosen; ties go by Reliability Score, then URL (`tools-page.md`, "latency only breaks ties, deterministic order, score once") |
 
 ## Declined
 
 | Item | Why |
 |---|---|
 | brotli on nginx | Declined 2026-10-25: needs a third-party nginx module; built-in `gzip_static` with build-time gzip -9 instead (`deploy-and-infra.md`, "Precompressed .gz assets") |
-| Icon resize | Declined 2026-10-25: built with `sharp`, reverted before release (minimal external dependencies). Icons get a 7-day cache + `stale-while-revalidate` + ETag, `loading=lazy`, `decoding=async`, width/height instead. Revisit only with a dependency-free approach. |
 | Moving inline styles to CSS as its own task | Owner 2026-11-08: only when a component is reworked anyway (a mechanical move changes CSS precedence) |
 
 ## By feedback only

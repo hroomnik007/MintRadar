@@ -52,14 +52,14 @@ Sensitive values are in CLAUDE.local.md (gitignored) — ask the developer
 
 ## Hard invariants (one-line rules; details in the linked docs/claude files)
 
-- Icon proxy `GET /api/mint/icon`: every mint `<img>` goes through it (never a mint-supplied `icon_url`); known mints only, `safeFetch`, raster only, any failure → 204. Details: `docs/claude/backend-api-and-data.md` ("Icon proxy", "GET /api/mint/icon").
+- Icon proxy `GET /api/mint/icon`: every mint `<img>` goes through it (never a mint-supplied `icon_url`); known mints only, `safeFetch`, raster only, any failure → 204; nginx reduces the icons to at most 144 x 144 px, the proxy rejects icons above 2048 px, the nginx part is applied by hand. Details: `docs/claude/backend-api-and-data.md` ("Icon proxy", "GET /api/mint/icon") and `docs/claude/deploy-and-infra.md` ("Mint icons resized by nginx").
 - Outbound API calls use `safeFetch`. The root `SimplePool` in `discovery.ts` / `reviewsSync.ts` is NOT DNS-pinned (safe only because its relay lists are hardcoded; a dynamic list must use `DnsPinnedWebSocket`). Details: `docs/claude/discovery-and-relays.md` ("Discovery pipeline").
 ## Relay lists and mint icons
 - Relay lists live in 4 places and must be changed together: frontend `DISCOVERY_RELAYS` + `PROFILE_RELAYS` (`src/core/nostr/relays.ts`), backend `DISCOVERY_RELAYS` (`discovery.ts`), backend `NOSTR_REVIEWS_RELAYS` (`index.ts`); the backend cannot import the frontend file. Details: `docs/claude/discovery-and-relays.md`.
 - Token Inspector shows a mint icon only for tracked mints; never build an icon URL from a token. Details: `docs/claude/tools-page.md` ("Token Inspector").
 
 ## Key features
-Pages: Dashboard (mint grid, filters, sort), Mint Detail, Compare (up to 4 mints), Stats, Tools (Best Mint Wizard, Token Inspector), Watchlist (Nostr login), For wallets (API), Methodology (scoring), Learn (5 modules), About. Details: Index table above.
+Pages: Mints (the Dashboard route: mint grid, filters, sort), Mint Detail, Compare (up to 4 mints), Stats, Tools (Best Mint Wizard, Token Inspector), Watchlist (Nostr login), For wallets (API), Methodology (scoring), Learn (5 modules), About. Details: Index table above.
 
 ## Deploy workflow
 Deploys run in CI (`.github/workflows/deploy.yml`): a push to `main` first runs the backend and frontend unit tests (`test` job), then the `deploy` job (`needs: test`) updates the server checkout, rebuilds the backend image (`docker compose build --pull backend` + `up -d`), builds the frontend and copies `dist/` to the web root. There is no manual rsync or SSH step.
@@ -118,13 +118,13 @@ npm run test:e2e
 
 ## Verification policy
 Pick the tier by the risk of the change; each tier includes the one before it. Backend: its own lint, typecheck and build.
-- **Tier 1, small changes** (documentation, comments, texts, CSS of a single page, e2e-only changes): `npm run typecheck`, `npm run lint`, a production build, and ONLY the targeted specs of the touched area. No full unit suites needed locally (CI runs them before the deploy). No full e2e. Docs-only changes need no suites at all.
+- **Tier 1, small changes** (documentation, comments, texts, CSS of a single page, e2e-only changes): `npm run typecheck`, `npm run lint`, a production build, and ONLY the targeted specs of the touched area. No full unit suites needed locally (CI runs them before the deploy; lint, typecheck and e2e run in CI too, see the last bullet). No full e2e. Docs-only changes need no suites at all.
 - **Tier 2, shared frontend changes** (a component or utility used on several pages, frontend logic): Tier 1 plus the whole backend suite (`cd backend && npm test`) and the whole frontend suite (`npm test`), and the targeted e2e specs of every affected area.
 - **Backend-only changes** (`backend/src`, its tests and docs; no API shape, frontend, workflow or build configuration change): backend lint, typecheck, build, the whole backend suite and, when the change touches the database, the backend integration tests against a throwaway Postgres. NOT a full e2e run: e2e mocks the whole API and says nothing about backend code.
 - **Tier 3, risky changes** (API shapes, dependency updates including Dependabot bumps, build or router configuration, login and key handling, notifications, anything that touches many pages): Tier 2 plus ONE full e2e run (`npm run test:e2e`) before pushing. A second full run only to investigate flakiness.
 - **Milestones:** one full e2e run before announcing the project to others and after a batch of Dependabot updates.
 - A task prompt names its tier; if it does not, the task decides by the rules above and says which tier it chose in the report. A full e2e run is never added "just in case" to a Tier 1 or Tier 2 change.
-- CI (the `test` job) runs the backend and frontend unit tests before every deploy (the `Unit tests` workflow runs the same two suites on pull requests), and the server runs the production build during the deploy; typecheck and lint are NOT in CI, and e2e is NOT in CI either (a broken e2e spec is only noticed when someone runs it).
+- CI (the `test` job in `deploy.yml`) runs the backend and frontend unit tests before every deploy (the `Unit tests` workflow runs the same two suites on pull requests), and the server runs the production build during the deploy. The `CI (lint + e2e)` workflow (`ci.yml`, since PR #199) runs lint, typecheck (frontend and backend) and the Playwright e2e suite (4 shards) on every pull request and every push to `main`, but it is a separate workflow: the deploy does not wait for it (`deploy` needs only `test`), so a red run is a report, not a gate.
 
 ## Docs rule
 A change to user-visible behaviour, to which hosts the browser or the server contacts, or to what is stored about people or for how long updates the matching `docs/claude/` file in the SAME commit; if a public statement changes, also `About.tsx` and `docs/claude/privacy-and-about.md`.
