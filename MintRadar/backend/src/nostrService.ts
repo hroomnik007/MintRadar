@@ -177,6 +177,21 @@ export async function publishToRelays(relays: readonly string[], event: NostrEve
   }
 }
 
+/** Extra log lines for a profile publish: one line with the relays that accepted (host only, or "none"), then one
+ *  "<host> rejected: <message>" line per relay that did not. Only the relay host and the already collapsed and capped
+ *  `message` (relayReason) are used, never keys or the event. A summary without `results` gives no lines. */
+export function profilePublishLogLines(summary: { results?: RelayPublishResult[] }): string[] {
+  const results = summary.results
+  if (!results) return []
+  const host = (relay: string): string => relay.replace(/^wss?:\/\//, '')
+  const accepted = results.filter(r => r.ok).map(r => host(r.relay))
+  const lines = [`accepted by: ${accepted.length > 0 ? accepted.join(', ') : 'none'}`]
+  for (const r of results) {
+    if (!r.ok) lines.push(`${host(r.relay)} rejected: ${r.message || 'no reason given'}`)
+  }
+  return lines
+}
+
 // Publishes the "MintRadar Alerts" kind:0 profile. Called once at startup
 // and re-published daily (cron.ts) since it's a cheap, idempotent
 // replaceable event — keeps it fresh on relays with short retention.
@@ -197,8 +212,9 @@ export async function publishServiceProfile(): Promise<void> {
       },
       serviceSecretKey
     )
-    const { succeeded, failed } = await publishToRelays(META_RELAYS, event)
-    console.log(`[notify-service] published kind:0 profile (${succeeded} succeeded, ${failed} failed)`)
+    const summary = await publishToRelays(META_RELAYS, event)
+    console.log(`[notify-service] published kind:0 profile (${summary.succeeded} succeeded, ${summary.failed} failed)`)
+    for (const line of profilePublishLogLines(summary)) console.log(`[notify-service] ${line}`)
   } catch (err) {
     console.error('[notify-service] kind:0 publish error:', err)
   }

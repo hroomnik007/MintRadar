@@ -12,7 +12,7 @@ import { SimplePool } from 'nostr-tools/pool'
 import { pool as db } from './db.js'
 // nostrService.ts installs the DNS-pinned WebSocket for every nostr-tools relay connection of the backend (importing it
 // is what makes the pool below use it) and owns the existing publish helper used for the profile.
-import { publishToRelays, META_RELAYS } from './nostrService.js'
+import { publishToRelays, profilePublishLogLines, META_RELAYS } from './nostrService.js'
 import { toWalletMint, type KnownMintLike, type Snapshot, type WalletExtra, type WalletMint } from './walletApi.js'
 import { METHODOLOGY_VERSION } from './shared/methodology.js'
 import {
@@ -348,7 +348,7 @@ export async function runAttestationCycle(deps: CycleDeps): Promise<CycleResult>
   }
 }
 
-/** The kind 0 profile of the attestation key to the own relay and the service-profile relays. Counts only in the log. */
+/** The kind 0 profile of the attestation key to the own relay and the service-profile relays. The log has the counts plus the per-relay result (profilePublishLogLines). */
 export async function publishAttestationProfile(
   secretKey: Uint8Array,
   nowMs: number = Date.now(),
@@ -357,8 +357,9 @@ export async function publishAttestationProfile(
 ): Promise<void> {
   try {
     const event = finalizeEvent(buildProfileTemplate(nowMs), secretKey)
-    const { succeeded, failed } = await publish([...ATTESTATION_PROFILE_RELAYS], event)
-    log(`[attestations] published kind:0 profile (${succeeded} succeeded, ${failed} failed)`)
+    const summary = await publish([...ATTESTATION_PROFILE_RELAYS], event)
+    log(`[attestations] published kind:0 profile (${summary.succeeded} succeeded, ${summary.failed} failed)`)
+    for (const line of profilePublishLogLines(summary)) log(`[attestations] ${line}`)
   } catch (err) {
     console.error('[attestations] kind:0 profile publish error:', err instanceof Error ? err.message : 'unknown error')
   }

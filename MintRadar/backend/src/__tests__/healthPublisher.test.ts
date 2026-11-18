@@ -41,7 +41,7 @@ import {
 import { evaluateVantageOutage, type VantageCashuInfo, type VantageMintResult } from '../vantageOutage.js'
 import {
   ATTESTATION_PROFILE_REFRESH_MS, ATTESTATION_RELAY_PAUSE_MS, ATTESTATION_START_OFFSET_MS, ATTESTATION_TICK_MS,
-  describeRelayError, ATTESTATION_ERROR_MAX_CHARS, loadAttestationStates, planCycle, publishBatch, runAttestationCycle, saveAttestationState, startAttestations,
+  describeRelayError, ATTESTATION_ERROR_MAX_CHARS, publishAttestationProfile, loadAttestationStates, planCycle, publishBatch, runAttestationCycle, saveAttestationState, startAttestations,
   type DueItem, type RelayPublisher,
 } from '../healthPublisher.js'
 import type { KnownMintLike, Snapshot } from '../walletApi.js'
@@ -736,5 +736,34 @@ describe('failure reasons in the run log', () => {
     expect(mom).toContain('503')
     expect(lines.some(l => l.includes('relay.damus.io failed'))).toBe(false)
     expect(lines.join('\n')).not.toContain(sk.toString())
+  })
+})
+
+describe('publishAttestationProfile per-relay log', () => {
+  it('logs the count line unchanged, then the accepted hosts and one line per rejected or timed-out relay', async () => {
+    const publish = vi.fn(async (relays: readonly string[]) => ({
+      succeeded: 1, failed: 2,
+      results: [
+        { relay: relays[0] ?? '', ok: true, message: '' },
+        { relay: relays[1] ?? '', ok: false, message: 'blocked: not on the allow-list' },
+        { relay: relays[2] ?? '', ok: false, message: 'timeout' },
+      ],
+    }))
+    const lines: string[] = []
+    await publishAttestationProfile(generateSecretKey(), NOW, publish as never, l => lines.push(l))
+    const relays = publish.mock.calls[0]![0]
+    const host = (i: number) => String(relays[i]).replace(/^wss?:\/\//, '')
+    expect(lines).toEqual([
+      '[attestations] published kind:0 profile (1 succeeded, 2 failed)',
+      `[attestations] accepted by: ${host(0)}`,
+      `[attestations] ${host(1)} rejected: blocked: not on the allow-list`,
+      `[attestations] ${host(2)} rejected: timeout`,
+    ])
+  })
+
+  it('a stub summary without results still logs only the count line', async () => {
+    const lines: string[] = []
+    await publishAttestationProfile(generateSecretKey(), NOW, (async () => ({ succeeded: 2, failed: 0 })) as never, l => lines.push(l))
+    expect(lines).toEqual(['[attestations] published kind:0 profile (2 succeeded, 0 failed)'])
   })
 })

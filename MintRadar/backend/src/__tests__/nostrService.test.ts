@@ -143,6 +143,61 @@ describe('publishServiceProfile', () => {
   })
 })
 
+describe('profilePublishLogLines', () => {
+  it('all accepted: one line with the hosts, no rejection lines', async () => {
+    const svc = await loadWithNsec(undefined)
+    expect(svc.profilePublishLogLines({ results: [
+      { relay: 'wss://a.example', ok: true, message: '' },
+      { relay: 'wss://b.example', ok: true, message: 'duplicate:' },
+    ] })).toEqual(['accepted by: a.example, b.example'])
+  })
+
+  it('mixed: accepted hosts first, then one rejection line per failed relay', async () => {
+    const svc = await loadWithNsec(undefined)
+    expect(svc.profilePublishLogLines({ results: [
+      { relay: 'wss://a.example', ok: true, message: '' },
+      { relay: 'wss://b.example', ok: false, message: 'blocked: not on the allow-list' },
+      { relay: 'ws://c.example', ok: false, message: 'timeout' },
+    ] })).toEqual(['accepted by: a.example', 'b.example rejected: blocked: not on the allow-list', 'c.example rejected: timeout'])
+  })
+
+  it('none accepted and an empty message', async () => {
+    const svc = await loadWithNsec(undefined)
+    expect(svc.profilePublishLogLines({ results: [{ relay: 'wss://a.example', ok: false, message: '' }] }))
+      .toEqual(['accepted by: none', 'a.example rejected: no reason given'])
+  })
+
+  it('a summary without results gives no lines', async () => {
+    const svc = await loadWithNsec(undefined)
+    expect(svc.profilePublishLogLines({})).toEqual([])
+    expect(svc.profilePublishLogLines({ succeeded: 1, failed: 0 } as { results?: never })).toEqual([])
+  })
+})
+
+describe('publishServiceProfile per-relay log', () => {
+  it('logs the count line unchanged, then the accepted hosts and one line per rejected or timed-out relay', async () => {
+    const svc = await loadWithNsec(nip19.nsecEncode(generateSecretKey()))
+    publishMock.mockImplementation((relays: string[]) => relays.map((_, i) =>
+      i === 0 ? Promise.resolve('') : i === 1 ? Promise.reject(new Error('blocked:  not\nallowed')) : i === 2 ? Promise.reject(new Error('timeout')) : Promise.resolve('')))
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      await svc.publishServiceProfile()
+      const lines = log.mock.calls.map(c => String(c[0])).filter(l => l.startsWith('[notify-service]'))
+      const n = svc.META_RELAYS.length
+      const host = (i: number) => svc.META_RELAYS[i]!.replace(/^wss?:\/\//, '')
+      const accepted = svc.META_RELAYS.map((_, i) => i).filter(i => i !== 1 && i !== 2).map(host).join(', ')
+      expect(lines).toEqual([
+        `[notify-service] published kind:0 profile (${n - 2} succeeded, 2 failed)`,
+        `[notify-service] accepted by: ${accepted}`,
+        `[notify-service] ${host(1)} rejected: blocked: not allowed`,
+        `[notify-service] ${host(2)} rejected: timeout`,
+      ])
+    } finally {
+      log.mockRestore()
+    }
+  })
+})
+
 describe('notifySubscribers', () => {
   const MINT = 'https://mint.example.com'
   const CLAIMED_AT = new Date('2026-09-07T12:00:00.000Z')
