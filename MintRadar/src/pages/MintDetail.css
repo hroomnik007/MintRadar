@@ -444,6 +444,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* inherits the 20px .md-sc-value size (15px on mobile) so it matches the sibling
    metric cards — only colour/spacing differ */
 .md-sc-stars        { color: var(--yellow); letter-spacing: 2px; font-family: var(--font-mono); }
+/* The rating number and the star row never break inside themselves (`.md-sc-value` has overflow-wrap: anywhere,
+   which split "4.7" into "4." / "7" in the narrow desktop cell); when both do not fit, the stars move below. */
+.md-sc-rating-num,
+.md-sc-stars        { white-space: nowrap; overflow-wrap: normal; }
 .md-sc-sub { font-size: 10px; color: var(--text-faint); margin-top: 3px; font-family: var(--font-mono); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 /* ── Tab Navigation ─────────────────────────────────────────── */
@@ -2194,6 +2198,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
     white-space: normal;
   }
   .md-sc-sub { order: 3; font-size: 12px; color: var(--text3); font-family: var(--font-body); margin-top: 2px; }
+  /* Stars at the 26px figure size are ~140px wide and do not fit next to the number in a ~146px cell. */
+  .md-sc-stars { font-size: 0.6em; letter-spacing: 1px; }
 }
 
 /* Figure strip: the icon wells are child divs of .md-sc, so they need a child selector to win over `.md-sc > div`. */

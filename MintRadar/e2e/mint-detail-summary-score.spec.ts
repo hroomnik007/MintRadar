@@ -11,6 +11,11 @@ async function open(page: Page, width: number, height = 900) {
   await mockRelays(page)
   await installApiMocks(page)
   await page.route('**/api/mints/outages**', r => r.fulfill({ json: { sinceLastOutageMs: null, avgRecoveryMs: null, outageCount: 0, outages: [] } }))
+  // Two rated reviews (5 and 4): the tile shows "4.5" with stars, a decimal like the one that used to split.
+  await page.route('**/api/mints/nostr-reviews**', r => r.fulfill({ json: [
+    { id: 'a'.repeat(64), pubkey: 'b'.repeat(64), content: 'good', rating: 5, createdAt: 1_700_000_000, source: 'nostr' },
+    { id: 'c'.repeat(64), pubkey: 'd'.repeat(64), content: 'ok', rating: 4, createdAt: 1_700_000_100, source: 'nostr' },
+  ] }))
   await resize(page, width, height)
   await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
   await layoutReady(page)
@@ -32,6 +37,16 @@ for (const width of [1440, 1200, 1024, 900, 769]) {
     // One line: shorter than two lines of its own font size ("Nutshell/0.16.0" used to break inside the word at 900-1199px).
     const oneLine = await version.evaluate(el => el.getBoundingClientRect().height < parseFloat(getComputedStyle(el).fontSize) * 2)
     expect(oneLine).toBe(true)
+    // The community rating (two reviews, 4.5) stays "4.5" on one line, the stars on the same line next to it
+    // (2026-11-18: overflow-wrap: anywhere split "4.7" into "4." / "7" with the stars on two rows at 1440px).
+    const ratingNum = page.locator('.md-summary .md-sc-rating-num')
+    await expect(ratingNum).toHaveText('4.5')
+    const rating = await ratingNum.evaluate(el => {
+      const stars = el.parentElement!.querySelector('.md-sc-stars')!.getBoundingClientRect()
+      const num = el.getBoundingClientRect()
+      return { numOneLine: num.height < parseFloat(getComputedStyle(el).fontSize) * 2, starsBeside: stars.left >= num.right && stars.top < num.bottom }
+    })
+    expect(rating).toEqual({ numOneLine: true, starsBeside: true })
   })
 }
 

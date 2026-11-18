@@ -1387,9 +1387,9 @@ function MintDetailContent({ url }: { url: string }) {
                 {tileAvgRating !== null ? (
                   <div
                     className="md-sc-value"
-                    style={{display:'flex',alignItems:'baseline',gap:6,opacity: tileReviewCount < MIN_MEANINGFUL_REVIEWS ? 0.6 : 1}}
+                    style={{display:'flex',alignItems:'baseline',flexWrap:'wrap',gap:'2px 6px',opacity: tileReviewCount < MIN_MEANINGFUL_REVIEWS ? 0.6 : 1}}
                   >
-                    <span style={{color:'var(--text)'}}>{tileAvgRating}</span>
+                    <span className="md-sc-rating-num" style={{color:'var(--text)'}}>{tileAvgRating}</span>
                     <span className="md-sc-stars" aria-label={`${tileAvgRating} out of 5`}>{starString(tileAvgRating)}</span>
                   </div>
                 ) : (
