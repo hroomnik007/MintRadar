@@ -20,6 +20,12 @@ services:
       - postgres
     networks:
       - mintradar_net
+    # Runs as USER node, binds 3002 (>1024) and only reads the dist mount: it needs no
+    # Linux capability at all (tested with --cap-drop ALL), and nothing may gain one.
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
     # Bound the json-file logs by size (matches the strfry relay container): 3 x 10 MB.
     logging:
       driver: json-file
@@ -39,6 +45,10 @@ services:
       - mintradar_pgdata:/var/lib/postgresql/data
     networks:
       - mintradar_net
+    # No setuid/file-capability escalation. No cap_drop: the entrypoint needs its
+    # capabilities to chown the data directory and switch to the postgres user.
+    security_opt:
+      - "no-new-privileges:true"
     # Bound the json-file logs by size (matches the strfry relay container): 3 x 10 MB.
     logging:
       driver: json-file
