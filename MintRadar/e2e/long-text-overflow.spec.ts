@@ -441,17 +441,15 @@ const HERO_BOXES: Record<number, { left: number; width: number; height: number }
   420: [{ left: 79, width: 85.33, height: 28 }, { left: 170.33, width: 85.34, height: 28 }, { left: 261.67, width: 85.33, height: 28 }],
   1440: [{ left: 901, width: 95, height: 31 }, { left: 1004, width: 157, height: 31 }, { left: 1169, width: 104, height: 31 }],
 }
-// Expected boxes for this machine's glyph widths. 420 (≤640px): the row is three equal flex thirds whose total
-// follows its content, so a glyph difference is shared equally. 1440: buttons are content-sized and right-aligned,
+// Expected boxes for this machine's glyph widths. 420 (≤640px): three equal flex thirds that fill the row (see below). 1440: buttons are content-sized and right-aligned,
 // so a button grows by its own glyph difference and moves left by the growth of itself and every button after it.
 const expectedHeroBoxes = (width: number, glyphs: number[]) => {
   const [rc, rk] = HERO_GLYPHS_RECORDED[width]!
   const d = [0, glyphs[0]! - rc, glyphs[1]! - rk]
   const rec = HERO_BOXES[width]!
-  if (width <= 640) {
-    const share = (d[1]! + d[2]!) / 3
-    return rec.map((b, i) => ({ ...b, left: b.left + i * share, width: b.width + share }))
-  }
+  // 420 (<=640px): since the 2026-11-18 type change the three equal thirds (flex: 1 1 0) fill the actions row, which is as
+  // wide as the name box, so the glyph widths no longer move them (CI's fallback glyphs are 10.06px, here 9/12px).
+  if (width <= 640) return rec
   return rec.map((b, i) => ({ ...b, left: b.left - d.slice(i).reduce((a, x) => a + x, 0), width: b.width + d[i]! }))
 }
 for (const width of [420, 1440]) {
