@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs } from './fixtures/mocks'
 
-// Mobile navbar: row 1 = logo (left) + auth section (right, same row);
-// row 2+ = the nav links. Matches the cashumints.space pattern. Desktop
-// layout is unchanged.
+// Mobile navbar (2026-11-18 redesign, phase 2): row 1 = logo (left), the menu button and the auth section (right);
+// the page links are a menu under the bar, opened by the menu button. Desktop layout: one row (below).
 
 type Page = import('@playwright/test').Page
 
@@ -19,27 +18,46 @@ async function noHorizontalOverflow(page: Page, width: number) {
   expect(w).toBeLessThanOrEqual(width)
 }
 
-for (const width of [375, 390]) {
+for (const width of [320, 375, 390]) {
   test.describe(`mobile ${width}px`, () => {
     test.use({ viewport: { width, height: 780 }, hasTouch: true, isMobile: true })
 
-    test('logged out: logo + Login CTA on one row, links below', async ({ page }) => {
+    test('logged out: logo, menu button and Log in on one row; the links are behind the menu', async ({ page }) => {
       await mockRelays(page)
       await installApiMocks(page)
       await page.goto('/')
 
+      const menu = page.getByRole('button', { name: 'Menu' })
       await sameRow(page, '.nav-logo', '.navbar-auth')
+      await sameRow(page, '.nav-logo', '.navbar-menu-btn')
       await expect(page.locator('.navbar-login-btn')).toBeVisible()
-      // links wrap onto a lower row
-      const auth = await page.locator('.navbar-auth').boundingBox()
-      const tabs = await page.locator('.navbar-tabs').boundingBox()
-      expect(tabs!.y).toBeGreaterThan(auth!.y + 5)
+      await expect(menu).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.locator('.navbar-tabs')).toBeHidden()
       await noHorizontalOverflow(page, width)
 
+      // Open: six links, one per row, under the bar; the current page in copper.
+      await menu.tap()
+      const close = page.getByRole('button', { name: 'Close menu' })
+      await expect(close).toHaveAttribute('aria-expanded', 'true')
+      const links = page.locator('.navbar-tabs a')
+      await expect(links).toHaveText(['Mints', 'Watchlist', 'Stats', 'Tools', 'Wallets', 'Learn'])
+      const boxes = await links.evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { top: r.top, h: r.height } }))
+      const auth = (await page.locator('.navbar-auth').boundingBox())!
+      expect(boxes[0]!.top).toBeGreaterThan(auth.y + auth.height - 1)
+      for (let i = 1; i < boxes.length; i++) expect(boxes[i]!.top).toBeGreaterThan(boxes[i - 1]!.top + 30)
+      for (const b of boxes) expect(b.h).toBeGreaterThanOrEqual(44)
+      await expect(links.first()).toHaveClass(/active/)
+      await noHorizontalOverflow(page, width)
       await page.locator('.navbar-inner').screenshot({ path: `test-results/navbar-out-${width}.png` })
+
+      // A link opens its page and closes the menu.
+      await page.getByRole('link', { name: 'Stats', exact: true }).tap()
+      await expect(page).toHaveURL(/\/stats$/)
+      await expect(page.locator('.navbar-tabs')).toBeHidden()
+      await expect(page.getByRole('button', { name: 'Menu' })).toHaveAttribute('aria-expanded', 'false')
     })
 
-    test('logged in: logo + account chip on one row, links below', async ({ page }) => {
+    test('logged in: logo, menu button and account chip on one row', async ({ page }) => {
       await mockRelays(page)
       await installApiMocks(page)
       await loginAs(page, 'satoshinakamoto_longhandle_2009') // worst case for width
@@ -47,21 +65,33 @@ for (const width of [375, 390]) {
       await page.waitForSelector('.navbar-profile')
 
       await sameRow(page, '.nav-logo', '.navbar-auth')
-      // Two-row layout: the chip is avatar + chevron only (name lives in the account panel)
+      await sameRow(page, '.nav-logo', '.navbar-menu-btn')
+      // The chip is avatar + chevron only (the name lives in the account panel)
       await expect(page.locator('.navbar-username')).toBeHidden()
       await expect(page.locator('.navbar-profile .navbar-chevron')).toBeVisible()
       await expect(page.locator('.navbar-profile')).toHaveAttribute('aria-label', /^Account: /)
-      // long display name is clipped, not overflowing
       await noHorizontalOverflow(page, width)
-
-      const tabs = await page.locator('.navbar-tabs').boundingBox()
-      const auth = await page.locator('.navbar-auth').boundingBox()
-      expect(tabs!.y).toBeGreaterThan(auth!.y + 5)
-
       await page.locator('.navbar-inner').screenshot({ path: `test-results/navbar-in-${width}.png` })
     })
   })
 }
+
+test('phone menu: Escape closes it and gives the focus back, a tap outside closes it', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  await page.setViewportSize({ width: 390, height: 780 })
+  await page.goto('/')
+  const menu = page.locator('.navbar-menu-btn')
+  await menu.click()
+  await expect(page.locator('.navbar-tabs')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.navbar-tabs')).toBeHidden()
+  await expect(menu).toBeFocused()
+  await menu.click()
+  await expect(page.locator('.navbar-tabs')).toBeVisible()
+  await page.mouse.click(200, 700)
+  await expect(page.locator('.navbar-tabs')).toBeHidden()
+})
 
 test.describe('desktop unchanged', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
@@ -79,28 +109,3 @@ test.describe('desktop unchanged', () => {
     await expect(page.locator('.navbar-profile .navbar-chevron')).toBeVisible()
   })
 })
-
-// All six links stay on ONE row on phones (no lone "Learn" on a second row), also logged in with
-// the Watchlist count badge (which only renders for a logged-in user with watched mints). The badge
-// is injected into the DOM with a 3-digit count as the worst case.
-for (const width of [360, 375, 390, 412, 430]) {
-  test(`tab links stay on one row at ${width}px, logged in with a Watchlist badge`, async ({ page }) => {
-    await mockRelays(page)
-    await installApiMocks(page)
-    await loginAs(page)
-    await page.setViewportSize({ width, height: 780 })
-    await page.goto('/')
-    await page.waitForSelector('.navbar-profile')
-    await page.evaluate(() => document.fonts.ready)
-    await page.evaluate(() => {
-      const a = document.querySelector('a[href="/watchlist"]')!
-      const s = document.createElement('span')
-      s.className = 'nav-tab-badge'
-      s.textContent = '123'
-      a.appendChild(s)
-    })
-    const tops = await page.locator('.navbar-tabs a').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)))
-    expect(tops).toHaveLength(6)
-    expect(new Set(tops).size).toBe(1)
-  })
-}

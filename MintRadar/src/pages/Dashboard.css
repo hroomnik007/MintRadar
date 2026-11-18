@@ -178,10 +178,10 @@
 .dash-action {
   /* Height / radius / border matched to the sort chips (.sort-btn). */
   background: transparent;
-  border: 1px solid var(--green-soft-strong);
+  border: 1px solid var(--copper-soft-strong);
   border-radius: 8px;
   padding: 6px 13px;
-  color: var(--accent);
+  color: var(--action-ink);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -191,8 +191,8 @@
 }
 .dash-action:hover {
   color: var(--text);
-  background: var(--green-soft);
-  border-color: var(--green);
+  background: var(--action-soft);
+  border-color: var(--action);
 }
 @media (max-width: 600px) {
   .dash-actions { width: 100%; }
@@ -400,9 +400,9 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  background: var(--green-soft);
-  border: 1px solid var(--green-soft-strong);
-  color: var(--green-bright);
+  background: var(--action-soft);
+  border: 1px solid var(--copper-soft-strong);
+  color: var(--action-ink);
   border-radius: var(--radius-m);
   padding: 8px 14px;
   font-size: 12px;
@@ -412,7 +412,7 @@
   transition: all var(--transition);
 }
 
-.submit-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
+.submit-btn:hover { background: var(--copper-soft-strong); border-color: var(--action); }
 
 .reset-filters-btn {
   background: var(--bg3);
@@ -648,7 +648,7 @@
 /* The ring goes around the whole card, not around the name. */
 .card-link:focus-visible { outline: none; }
 .card-link:focus-visible::after {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--action);
   outline-offset: 2px;
 }
 .mint-card .card-name,
@@ -927,8 +927,8 @@
   height: 26px;
   padding: 0;
   background: transparent;
-  color: var(--green-bright);
-  border: 1px solid var(--green-soft-strong);
+  color: var(--action);
+  border: 1px solid var(--copper-soft-strong);
   border-radius: 7px;
   font-size: 14px;
   line-height: 1;
@@ -937,7 +937,7 @@
   flex-shrink: 0;
   transition: all 150ms ease;
 }
-.card-compare-btn:hover { border-color: var(--green); background: var(--elevated); }
+.card-compare-btn:hover { border-color: var(--action); background: var(--elevated); }
 
 .latency-block .latency-label {
   font-size: 12px;
@@ -1026,7 +1026,7 @@
   color: var(--accent);
 }
 .notify-pill.on:hover { border-color: var(--accent); }
-.notify-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.notify-pill:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 .notify-pill-icon {
   display: inline-flex;
   align-items: center;
@@ -1165,7 +1165,7 @@
 }
 
 .degraded-note-action {
-  color: var(--green-bright);
+  color: var(--action);
   font-weight: 600;
   margin-left: 4px;
 }
@@ -1313,16 +1313,16 @@
 .submit-cancel-btn:hover { border-color: var(--text3); color: var(--text); }
 
 .submit-ok-btn {
-  background: var(--green); color: var(--bg); border: 1px solid var(--green);
+  background: var(--action); color: var(--bg); border: 1px solid var(--action);
   border-radius: 12px; padding: 9px 20px; font-size: 14px;
   font-weight: 700; cursor: pointer; font-family: var(--font-body);
   transition: all var(--transition);
   letter-spacing: 0.03em;
 }
-.submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: var(--green-bright); border-color: var(--green-bright); }
+.submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: color-mix(in srgb, var(--action) 85%, #fff); border-color: var(--action); }
 .submit-ok-btn:disabled, .submit-ok-btn[aria-disabled="true"] {
   /* Unavailable: still a solid button, in a muted green fill with light text (3:1+ instead of faded green at 0.4 opacity). */
-  background: color-mix(in srgb, var(--green) 38%, var(--bg3)); border-color: color-mix(in srgb, var(--green) 38%, var(--bg3)); color: var(--text);
+  background: color-mix(in srgb, var(--green) 38%, var(--bg3)); border-color: color-mix(in srgb, var(--action) 38%, var(--bg3)); color: var(--text);
   cursor: not-allowed;
 }
 
@@ -1613,7 +1613,7 @@
 .filter-seg-opt.active {
   background-image: linear-gradient(var(--accent-dim), var(--accent-dim));
   box-shadow: inset 0 0 0 1px var(--accent-brd);
-  color: var(--accent);
+  color: var(--action);
 }
 /* Native radio stays in the DOM and focusable (arrow keys work); it just covers its segment. */
 .filter-seg-opt input[type="radio"] {
@@ -1627,7 +1627,7 @@
 }
 .filter-seg-opt:active:not(.active) { background-color: var(--surface-2); }
 .filter-seg-opt:focus-visible,
-.filter-seg-opt:has(input:focus-visible) { z-index: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+.filter-seg-opt:has(input:focus-visible) { z-index: 1; outline: 2px solid var(--action); outline-offset: 2px; }
 @media (hover: hover) {
   .filter-seg-opt:not(.active):hover {
     background-image: linear-gradient(var(--border), var(--border));
@@ -1825,7 +1825,7 @@
   transition: all var(--transition);
 }
 .filter-nut-chip:hover { border-color: var(--border2); color: var(--text2); }
-.filter-nut-chip.active { background: var(--green-soft); border-color: var(--green-soft-strong); color: var(--accent); }
+.filter-nut-chip.active { background: var(--action-soft); border-color: var(--copper-soft-strong); color: var(--action-ink); }
 
 .filter-reset-btn,
 .filter-apply-btn {
@@ -1846,7 +1846,7 @@
 .filter-reset-btn:hover { border-color: var(--border2); color: var(--text2); }
 
 .filter-apply-btn {
-  background: var(--accent);
+  background: var(--action);
   border: none;
   padding: 0 10px;
   color: var(--bg);
@@ -1857,7 +1857,7 @@
 }
 .filter-apply-btn:hover { opacity: 0.9; }
 .filter-reset-btn:focus-visible,
-.filter-apply-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.filter-apply-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 @media (pointer: coarse), (max-width: 600px) {
   /* 28 + 8 + 8 = 44px target, like the segments (the rows around leave 8px each for it, see .filter-bar) */
   .filter-reset-btn::before,
@@ -1930,7 +1930,7 @@
   transition: all var(--transition);
 }
 .cmp-bar-btn:hover { border-color: var(--border2); color: var(--text); }
-.cmp-bar-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
+.cmp-bar-btn.primary { background: var(--action); border-color: var(--action); color: var(--bg); font-weight: 700; }
 .cmp-bar-btn.primary:hover { opacity: 0.9; }
 
 /* ── Comparison modal ────────────────────────────────────────── */
@@ -2081,7 +2081,7 @@
   cursor: pointer;
 }
 .cmp-m-switch.on { color: var(--text); border-color: var(--green-soft-strong); }
-.cmp-m-switch:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.cmp-m-switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 .cmp-m-switch-track {
   position: relative;
   width: 28px;
@@ -2117,7 +2117,7 @@
   margin: 6px 0 8px;
   overscroll-behavior-x: contain;
 }
-.cmp-m-scroll:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.cmp-m-scroll:focus-visible { outline: 2px solid var(--action); outline-offset: -2px; }
 .cmp-m-table {
   width: 100%;
   border-collapse: separate;
@@ -2226,8 +2226,8 @@
   font-family: var(--font-body);
   transition: all var(--transition);
 }
-.submit-tab-btn.active { background: var(--green-soft-strong); border-color: var(--accent); color: var(--text); }
-.submit-tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.submit-tab-btn.active { background: var(--copper-soft-strong); border-color: var(--action); color: var(--text); }
+.submit-tab-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
 
 /* Touch: 44px hit areas through an invisible ::before (the visible sizes stay as they are). */
 @media (pointer: coarse), (max-width: 600px) {
@@ -2494,10 +2494,10 @@
 .submit-result { font-size: 13px; line-height: 1.45; border-radius: 10px; }
 .submit-cancel-btn { border: 1px solid var(--border2); border-radius: 10px; padding: 9px 16px; font-size: 14px; }
 .submit-cancel-btn:hover { border-color: var(--text3); }
-.submit-ok-btn { background: transparent; color: var(--green-bright); border: 1px solid var(--green); border-radius: 10px; padding: 9px 18px; font-weight: 600; letter-spacing: 0; }
-.submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: var(--green-soft); border-color: var(--green-bright); }
+.submit-ok-btn { background: transparent; color: var(--action-ink); border: 1px solid var(--action); border-radius: 10px; padding: 9px 18px; font-weight: 600; letter-spacing: 0; }
+.submit-ok-btn:hover:not([aria-disabled="true"]):not(:disabled) { background: var(--action-soft); border-color: var(--action); }
 .submit-ok-btn:disabled, .submit-ok-btn[aria-disabled="true"] { background: transparent; border-color: var(--border2); color: var(--text3); }
-.submit-ok-btn:focus-visible, .submit-cancel-btn:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.submit-ok-btn:focus-visible, .submit-cancel-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 .submit-found, .submit-probe-loading, .submit-probe-error { font-size: 13px; line-height: 1.45; border-radius: 10px; padding: 8px 12px; background: rgba(0, 0, 0, 0.22); }
 .submit-probe-error { background: var(--red-soft); }
 .submit-found-url { font-family: var(--font-body); }
@@ -2644,13 +2644,13 @@
   font-weight: 500;
   cursor: pointer;
 }
-.no-mints-match-btn:hover { border-color: var(--accent); }
+.no-mints-match-btn:hover { border-color: var(--action); }
 .no-mints-match-link {
   min-height: 36px;
   padding: 0 4px;
   border: none;
   background: none;
-  color: var(--accent);
+  color: var(--action);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
@@ -2658,7 +2658,7 @@
   text-underline-offset: 3px;
 }
 .no-mints-match-btn:focus-visible,
-.no-mints-match-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.no-mints-match-link:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 @media (pointer: coarse) {
   .no-mints-match-btn,
   .no-mints-match-link { min-height: 44px; }
@@ -2681,8 +2681,8 @@
   font-weight: 600;
   cursor: pointer;
 }
-.show-all-mints-btn:hover { border-color: var(--accent); }
-.show-all-mints-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.show-all-mints-btn:hover { border-color: var(--action); }
+.show-all-mints-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 
 /* Compare, Limits row: mints list a different number of limits, so the cells start at the top (centred cells put the
    first line of each mint at a different height and nothing could be read across). The label follows. */

@@ -500,3 +500,19 @@ phase by phase. Phase 1 is fonts and tokens only; layouts are later phases.
 - **Test gotcha:** with `font-variant-numeric: tabular-nums` on `body`, `getComputedStyle(el).font` is `""` (the shorthand
   cannot express it). A probe that copies `font: cs.font` measures in the default font; copy the longhands
   (`long-text-overflow.spec.ts` does).
+
+## Redesign phase 2: shared chrome (2026-11-18)
+
+- **Copper for every action.** In every CSS rule of a control (selector names with btn, button, link, tab, chip, seg,
+  toggle, cta, action, sort) and of links (`a`), the green tokens moved to the action tokens: `--accent` / `--green-bright`
+  / `--green` -> `--action`, `--green-soft` -> `--action-soft`, `--green-soft-strong` -> `--copper-soft-strong`; a solid
+  hover fill is `color-mix(in srgb, var(--action) 85%, #fff)`. Every focus ring is `--action`. Kept green on purpose
+  (they are states, not actions): the audit success segment `.au-seg-ok`, the "copied" confirmation, the online dots,
+  the wordmark's "Radar". Solid buttons keep their dark text on copper (6.8:1). New controls use `--action`, new
+  health states use `--accent`.
+- **`--action-ink`** (`color-mix(in srgb, var(--copper) 72%, #fff)`): the text colour of a control that sits on a copper tint
+  (`--action-soft` / `--copper-soft-strong` background, also only on hover). Plain copper on that tint was 3.5-4.1:1
+  (`badge-contrast.spec`: "Add mint", "Show my latency"); every such rule uses the ink colour, 14 of them.
+- **Page header (`PageHead`):** the dimmed radar motif on the right is gone (decoration only); title `--fs-xl` (28px,
+  24px on phones), weight 650; description `--fs-md` (16px); its link copper.
+- **Navbar:** see `mobile-and-tooltips.md` ("Navbar since the 2026-11-18 redesign").

@@ -317,9 +317,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background: var(--green-soft);
-  color: var(--green-bright);
-  border: 1px solid var(--green-soft-strong);
+  background: var(--action-soft);
+  color: var(--action-ink);
+  border: 1px solid var(--copper-soft-strong);
   border-radius: var(--radius-m);
   padding: 8px 15px;
   font-size: 12px;
@@ -334,7 +334,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .md-quick-btn:hover,
-.md-compare-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
+.md-compare-btn:hover { background: var(--copper-soft-strong); border-color: var(--action); }
 
 /* Watch toggle — same star icon/interaction as the Dashboard/Watchlist mint
    card's .card-star (empty = not watched, filled amber = watched), sized to
@@ -363,10 +363,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-qb-short { display: none; }
 
 .latency-test-btn {
-  background: var(--green-soft);
-  border: 1px solid var(--green-soft-strong);
+  background: var(--action-soft);
+  border: 1px solid var(--copper-soft-strong);
   border-radius: var(--radius-m);
-  color: var(--green-bright);
+  color: var(--action-ink);
   font-size: 12px;
   padding: 4px 10px;
   cursor: pointer;
@@ -479,7 +479,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .md-tab:hover { color: var(--text2); }
-.md-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.md-tab.active { color: var(--action); border-bottom-color: var(--action); }
 
 /* ── Body Layout ────────────────────────────────────────────── */
 .md-body {
@@ -770,7 +770,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-contact-checks { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text3); overflow-wrap: anywhere; }
 .md-contact-checks span[title] { text-decoration: underline dotted; text-underline-offset: 2px; white-space: nowrap; }
 .md-panel > .md-contact-checks:first-child { margin-top: 0; }
-.md-nip05-tip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.md-nip05-tip:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: 4px; }
 /* Touch: 44px hit area through an invisible ::before (the icon itself stays 13px). */
 @media (pointer: coarse), (max-width: 700px) {
   .md-nip05-tip::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
@@ -889,9 +889,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .reviews-filter-chip:hover { border-color: var(--border2); color: var(--text2); }
 .reviews-filter-chip.active {
-  background: var(--green-soft);
-  border-color: var(--green-soft-strong);
-  color: var(--green-bright);
+  background: var(--action-soft);
+  border-color: var(--copper-soft-strong);
+  color: var(--action-ink);
 }
 /* The "Hide anon" toggle is visually distinguished from the exclusive
    All/5★/Critical group by a left border separator, since it combines with
@@ -911,11 +911,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
    than the header-row buttons (Watch/Compare/Mint QR): filled tonal background
    + heavier weight, ~+18% font / ~+40% padding over the old outline style. */
 .reviews-write-btn {
-  background: var(--green-soft);
-  border: 1px solid var(--green);
+  background: var(--action-soft);
+  border: 1px solid var(--action);
   border-radius: var(--radius-m);
   padding: 9px 18px;
-  color: var(--green-bright);
+  color: var(--action-ink);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -925,7 +925,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   flex-shrink: 0;
 }
 
-.reviews-write-btn:hover { background: var(--green-soft-strong); border-color: var(--green); }
+.reviews-write-btn:hover { background: var(--copper-soft-strong); border-color: var(--action); }
 
 .review-card {
   background: var(--bg3);
@@ -1062,9 +1062,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .reviews-page-btn:hover:not(:disabled):not(.active) { border-color: var(--border2); color: var(--text2); }
 .reviews-page-btn.active {
-  background: var(--green-soft);
-  border-color: var(--green-soft-strong);
-  color: var(--green-bright);
+  background: var(--action-soft);
+  border-color: var(--copper-soft-strong);
+  color: var(--action-ink);
 }
 .reviews-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .reviews-page-ellipsis {
@@ -1137,7 +1137,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .rv-star[data-filled="true"] { color: var(--yellow); }
 .rv-star:hover { transform: scale(1.12); }
-.rv-star:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+.rv-star:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: 4px; }
 .rv-rate-label {
   font-size: 12px;
   font-family: var(--font-mono);
@@ -1252,7 +1252,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .rv-btn-cancel:hover { border-color: var(--border2); color: var(--text2); }
 .rv-btn-submit {
-  background: var(--accent);
+  background: var(--action);
   color: var(--bg);
   border: none;
   border-radius: 8px;
@@ -1617,7 +1617,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .md-sc-reliability-link {
     font-size: 12px;
     font-family: var(--font-mono);
-    color: var(--accent);
+    color: var(--action);
   }
 }
 
@@ -1834,8 +1834,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 .latency-test-btn:hover:not(:disabled) {
-  background: var(--green-soft-strong);
-  border-color: var(--green);
+  background: var(--copper-soft-strong);
+  border-color: var(--action);
 }
 
 /* ── Latency spinner ────────────────────────────────────────── */
@@ -1971,7 +1971,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   border: none;
   padding: 0;
   font: inherit;
-  color: var(--green-bright);
+  color: var(--action);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1997,7 +1997,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 .review-action-btn:hover { color: var(--text); background: var(--bg2); }
 a.review-action-btn { color: var(--text3); }
-.review-card-hl { outline: 1px solid var(--accent); box-shadow: 0 0 0 3px var(--green-soft); }
+.review-card-hl { outline: 1px solid var(--action); box-shadow: 0 0 0 3px var(--green-soft); }
 
 /* Muted age note on the Reliability Score breakdown's Audit row. */
 .rb-row-note { font-size: 12px; color: var(--text3); white-space: nowrap; }
@@ -2161,7 +2161,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
     padding: 8px 13px;
   }
   .md-quick-btn:hover, .md-compare-btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
-  .latency-test-btn { background: transparent; border-color: var(--green-soft-strong); font-family: var(--font-body); font-size: 12.5px; }
+  .latency-test-btn { background: transparent; border-color: var(--copper-soft-strong); font-family: var(--font-body); font-size: 12.5px; }
 
   /* Figure strip: one bordered panel with dividers instead of five tiles with icon wells. */
   .md-summary {
@@ -2256,7 +2256,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   font-family: var(--font-body);
   font-size: 13px;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--action);
   background: transparent;
   border: none;
   padding: 4px 0;
@@ -2361,7 +2361,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-audit-collapsible, .md-audit-collapsible .md-panel { background: none; }
 .audit-swaps-table th { font-weight: 400; font-size: 13px; }
 .audit-swaps-table td { padding: 8px 8px 8px 0; }
-.audit-swaps-show-all-btn { font-size: 13px; color: var(--accent); }
+.audit-swaps-show-all-btn { font-size: 13px; color: var(--action); }
 
 /* Phones: swap tables fit the card, no sideways scroll. Fixed layout keeps every column on the same
    x in every row; the mint name takes the leftover width and is cut with an ellipsis. Amount and State WRAP instead
@@ -2393,12 +2393,12 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* Reviews: rows with hairlines instead of boxed cards; quiet filter segments. */
 .review-card { background: none; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: 16px 2px 40px; }
 .review-card:first-of-type { border-top: 0; }
-.review-card-hl { outline: 1px solid var(--accent); outline-offset: -1px; border-radius: 8px; }
+.review-card-hl { outline: 1px solid var(--action); outline-offset: -1px; border-radius: 8px; }
 .reviews-disclaimer { font-size: 13px; }
 .reviews-filter-chip { background: none; border-radius: 8px; font-family: var(--font-body); font-size: 12.5px; padding: 4px 11px; color: var(--text2); }
 .reviews-filter-chip.toggle { border-left: 1px solid var(--border); margin-left: 0; padding-left: 11px; }
-.reviews-write-btn { font-family: var(--font-body); font-size: 13px; letter-spacing: 0; background: transparent; border-color: var(--green-soft-strong); }
-.reviews-write-btn:hover { background: var(--green-soft); }
+.reviews-write-btn { font-family: var(--font-body); font-size: 13px; letter-spacing: 0; background: transparent; border-color: var(--copper-soft-strong); }
+.reviews-write-btn:hover { background: var(--action-soft); }
 
 /* Latency tile: the "Show my latency" button sits in the tile's top-right corner on wide screens,
    so it no longer makes this tile (and the whole strip) taller than the others. */
@@ -2533,7 +2533,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .nm-limit:first-of-type { border-top: 0; padding-top: 0; }
 .nm-limit-method { font-family: var(--font-mono); font-size: 13px; color: var(--text); }
 .nm-limit-range { font-family: var(--font-mono); font-size: 13px; color: var(--text2); text-align: right; }
-.nm-link { display: inline-block; margin-top: 16px; font-size: 13px; color: var(--accent); text-decoration: none; }
+.nm-link { display: inline-block; margin-top: 16px; font-size: 13px; color: var(--action); text-decoration: none; }
 .nm-link:hover { text-decoration: underline; }
 
 /* Write-a-review modal: one dialog in both phases. Same header and centred stars; the form unfolds below. */
@@ -2577,9 +2577,9 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 }
 
 /* Logged-out watch prompt: outlined green action like the Nostr login modal's Connect. */
-.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--green-bright); border: 1px solid var(--green); border-radius: 10px; font-size: 14px; font-weight: 600; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
-.rv-btn-login:hover { background: var(--green-soft); border-color: var(--green-bright); }
-.rv-btn-login:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--action-ink); border: 1px solid var(--action); border-radius: 10px; font-size: 14px; font-weight: 600; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
+.rv-btn-login:hover { background: var(--action-soft); border-color: var(--action); }
+.rv-btn-login:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 
 /* ── New language: Add-to-wallet (QR) and Reliability Score breakdown modals ──
    Moved off inline styles; same shapes as the review modal: surface, 1px hairlines,
@@ -2592,7 +2592,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .qr-modal-sub { font-size: 14px; color: var(--text3); margin-top: 2px; line-height: 1.4; }
 .qr-modal-close, .rb-close { width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); cursor: pointer; transition: color var(--transition), border-color var(--transition); }
 .qr-modal-close:hover, .rb-close:hover { color: var(--text); border-color: var(--border2); }
-.qr-modal-close:focus-visible, .rb-close:focus-visible, .qr-modal-copy:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.qr-modal-close:focus-visible, .rb-close:focus-visible, .qr-modal-copy:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 .qr-modal-code { display: flex; justify-content: center; margin: 18px 0; }
 .qr-modal-code-frame { background: #ffffff; border-radius: 12px; padding: 12px; }
 .qr-modal-url-row { display: flex; gap: 8px; align-items: center; }
@@ -2618,7 +2618,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .rb-row-note { font-size: 13px; }
 .rb-row-detail { font-size: 13px; }
 .rb-formula { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 6px; font-size: 13px; color: var(--text3); line-height: 1.5; }
-.rb-method-link { display: inline-block; padding: 4px 0; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.rb-method-link { display: inline-block; padding: 4px 0; color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
 .rb-method-link:hover { color: var(--text); }
 
 /* Phones: cashu.info figures in a plain two-column grid, no vertical dividers (the dividers made the
@@ -2682,7 +2682,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-ua-todo { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .md-ua-list { margin: 0 0 8px; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--text2); overflow-wrap: anywhere; }
 .md-ua-list li { margin: 3px 0; }
-.md-ua-link { display: inline-block; padding: 4px 0; font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.md-ua-link { display: inline-block; padding: 4px 0; font-size: 13px; color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
 
 .md-hr-block { border-bottom: 1px solid var(--border); padding-bottom: 6px; min-width: 0; }
 .md-hr-block:last-child { border-bottom: none; padding-bottom: 0; }
@@ -2693,14 +2693,14 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* Actions: "View on Nostr" (its content width) on the left and the About link on the right edge (margin-left: auto, in line with the
    right edge of the values above) on one line; on a narrow card the link wraps under the button, still on the right. */
 .md-hr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; }
-.md-hr-link { display: inline-block; margin-left: auto; text-align: right; font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+.md-hr-link { display: inline-block; margin-left: auto; text-align: right; font-size: 13px; color: var(--action); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
 /* "View on Nostr" (njump.me, external) is the primary action of the row. */
 .md-hr-view { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; box-sizing: border-box; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--green-soft); color: var(--accent); font-size: 12px; text-decoration: none; }
 /* "View on Nostr": one compact height, padding, font and line height on every pointer. On touch the visual size stays; an
    invisible ::after (below) makes the tap area 44px tall. */
 .md-hr-view { position: relative; height: 32px; min-height: 32px; padding: 6px 12px; box-sizing: border-box; font-family: inherit; font-size: 12px; line-height: 1; display: inline-flex; align-items: center; }
 .md-hr-view:hover { background: var(--green-soft-strong); }
-.md-hr-view:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.md-hr-view:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 /* "For developers": a native <details>, collapsed, full width under the row; the summary has the height of the copy buttons. */
 .md-hr-dev { min-width: 0; }
 .md-hr-dev summary { display: flex; align-items: center; gap: 6px; min-height: 32px; width: fit-content; max-width: 100%; font-size: 12px; color: var(--text2); cursor: pointer; list-style: none; }
@@ -2708,13 +2708,13 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-hr-dev summary::before { content: '\25B8'; display: inline-block; font-size: 12px; transition: transform 0.15s; }
 .md-hr-dev[open] summary::before { transform: rotate(90deg); }
 .md-hr-dev summary:hover { color: var(--text); }
-.md-hr-dev summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+.md-hr-dev summary:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: var(--radius-sm); }
 .md-hr-dev-body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 4px 0 0; min-width: 0; }
 .md-hr-dev-actions { display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%; }
 .md-hr-dev-relay { font-size: 12px; color: var(--text2); overflow-wrap: anywhere; }
 .md-hr-dev-relay code { font-family: var(--font-mono); color: var(--text); }
 .md-hr-dev-note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text3); overflow-wrap: anywhere; }
-.md-hr-dev-note a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.md-hr-dev-note a { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
 @media (pointer: coarse) {
   .md-hr-view { height: 32px; min-height: 32px; padding: 6px 12px; }
   .md-hr-view::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
@@ -2741,8 +2741,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-info-row > .md-info-dates { flex-basis: 100%; justify-content: flex-end; }
 .md-motd-dates { margin-top: 6px; }
 .md-fee-dates { flex-basis: 100%; }
-.md-fee-history-toggle { background: none; border: none; padding: 2px 0; font: inherit; font-size: 12px; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.md-fee-history-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+.md-fee-history-toggle { background: none; border: none; padding: 2px 0; font: inherit; font-size: 12px; color: var(--action); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.md-fee-history-toggle:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: var(--radius-sm); }
 .md-fee-history { flex-basis: 100%; list-style: none; margin: 2px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 1.45; color: var(--text2); font-family: var(--font-mono); overflow-wrap: anywhere; }
 @media (pointer: coarse) { .md-fee-history-toggle { min-height: 44px; } }
 
@@ -2786,7 +2786,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 }
 .audit-cz-seg-btn.active { background: var(--surface-3); color: var(--text); }
 .audit-cz-seg-btn:hover:not(.active) { color: var(--text2); }
-.audit-cz-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.audit-cz-seg-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 .audit-cz-swaps .audit-cz-card { border-top: 0; padding-top: 0; margin-top: 12px; }
 @media (max-width: 767px) {
   .audit-cz-seg { display: flex; }
@@ -2829,7 +2829,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* NIP-87 announcement as a "Mint info" row: a sentence, so it wraps at spaces and its link is underlined
    (not told apart by colour alone). */
 .md-info-nip87 { display: block; font-family: var(--font-body); font-size: 13px; line-height: 1.5; color: var(--text2); word-break: normal; overflow-wrap: anywhere; }
-.md-info-nip87 a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.md-info-nip87 a { color: var(--action); text-decoration: underline; text-underline-offset: 2px; }
 /* Audit tab: the sentence that says which swaps count towards the score, above the tiles. */
 .audit-scored-line { margin: 2px 0 12px; font-size: 13px; color: var(--text2); max-width: 78ch; }
 
@@ -2930,10 +2930,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .au-chip[aria-pressed="true"] {
   background-image: linear-gradient(var(--accent-dim), var(--accent-dim));
   box-shadow: inset 0 0 0 1px var(--accent-brd);
-  color: var(--accent);
+  color: var(--action);
 }
 .au-chip:active:not([aria-pressed="true"]) { background-color: var(--surface-2); }
-.au-chip:focus-visible { z-index: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+.au-chip:focus-visible { z-index: 1; outline: 2px solid var(--action); outline-offset: 2px; }
 @media (hover: hover) {
   .au-chip:not([aria-pressed="true"]):hover {
     background-image: linear-gradient(var(--border), var(--border));
@@ -2946,7 +2946,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .au-chip::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
 }
 .au-chip-n { font-family: var(--font-mono); font-size: 12px; color: var(--text3); margin-left: 4px; }
-.au-chip[aria-pressed="true"] .au-chip-n { color: var(--accent); }
+.au-chip[aria-pressed="true"] .au-chip-n { color: var(--action); }
 .au-table .au-num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .au-table .au-mono { font-family: var(--font-mono); }
 .au-table td, .au-table th { white-space: nowrap; }
@@ -2997,11 +2997,11 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 
 /* Reliability Score in the figure strip above 640px (first tile); the phone keeps its compact donut tile instead. */
 .md-sc.md-sc-score { cursor: pointer; }
-.md-sc.md-sc-score:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.md-sc.md-sc-score:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 /* The label ("High Reliability" / "Not available yet") and "Details ›" each take a full row, so a short label and a long
    one give the tile the same height (no layout shift when the score arrives). */
 .md-sc-score .md-sc-sub { display: block; flex: 0 0 100%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.md-sc-sub.md-sc-score-link { color: var(--accent); }
+.md-sc-sub.md-sc-score-link { color: var(--action); }
 /* Desktop strip (769px and up): the whole tile opens the breakdown, so "Details ›" is not shown; it stays in the mobile panel
    layout. Hidden with visibility, not display: its row still holds the strip's height, so the strip does not shrink and grow
    back while other tiles load (the Uptime 24h sub line wraps while "loading checks…"; mint-detail-score-pending.spec.ts (4)). */

@@ -46,7 +46,7 @@
 }
 .about-toc-link:hover {
   color: var(--text);
-  border-left-color: var(--accent);
+  border-left-color: var(--action);
 }
 
 /* ── Text column ── */
@@ -74,7 +74,7 @@
 .about-text h2:focus { outline: none; }
 .about-text h2:focus-visible,
 .about-card:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--action);
   outline-offset: 4px;
 }
 .about-updated {
@@ -88,7 +88,7 @@
 .about-text li { margin-bottom: 10px; padding-left: 2px; }
 .about-text li::marker { color: var(--text3); }
 .about-text a {
-  color: var(--accent);
+  color: var(--action);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -183,7 +183,7 @@
     font-size: 13px;
     text-decoration: none;
   }
-  .about-toc-link:hover { border-color: var(--accent); }
+  .about-toc-link:hover { border-color: var(--action); }
   .about-h1 { font-size: 24px; }
 }
 

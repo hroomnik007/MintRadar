@@ -209,6 +209,9 @@ for (const width of WIDTHS) {
           await watch.first().click()
           await expect(watch).toHaveCount(n - 1)
         }
+        // Phones: the page links are behind the menu button (2026-11-18 redesign).
+        const menu = page.getByRole('button', { name: 'Menu' })
+        if (await menu.isVisible()) await menu.click()
         await page.getByRole('link', { name: 'Watchlist' }).click()
         await expect(page.locator('.wl-grid .mint-card').first()).toBeVisible()
         await expectNoOverflow(page, `watchlist/${key}`)

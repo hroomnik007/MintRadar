@@ -48,7 +48,7 @@
 }
 .learn-card-link:focus-visible { outline: none; }
 .learn-card-link:focus-visible::after {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--action);
   outline-offset: 2px;
 }
 
@@ -113,7 +113,7 @@
   font-size: 12px;
   font-weight: 500;
   font-family: var(--font-mono);
-  color: var(--accent);
+  color: var(--action);
 }
 
 @keyframes fadein {

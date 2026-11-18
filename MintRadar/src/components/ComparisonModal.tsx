@@ -943,7 +943,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                       key={iv}
                       onClick={() => setHistoryPeriod(iv)}
                       style={{
-                        background: historyPeriod === iv ? 'var(--accent)' : 'transparent',
+                        background: historyPeriod === iv ? 'var(--action)' : 'transparent',
                         color: historyPeriod === iv ? 'var(--bg)' : 'var(--text2)',
                         border: 'none', borderRadius: 4, padding: '2px 8px',
                         fontSize: 12, fontFamily: 'var(--font-mono)',

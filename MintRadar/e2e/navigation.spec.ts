@@ -39,12 +39,14 @@ test.describe('Primary navigation', () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/')
 
-    // Tabs wrap to a full-width row on mobile but remain visible and clickable.
+    // Phones: the links are behind the menu button (2026-11-18 redesign); a link closes the menu.
+    await page.getByRole('button', { name: 'Menu' }).click()
     await expect(page.getByRole('link', { name: 'Tools' })).toBeVisible()
     await page.getByRole('link', { name: 'Tools' }).click()
     await expect(page).toHaveURL(/\/tools$/)
     await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
 
+    await page.getByRole('button', { name: 'Menu' }).click()
     await page.getByRole('link', { name: 'Stats' }).click()
     await expect(page).toHaveURL(/\/stats$/)
     await expect(page.locator('.stats-now-panel')).toBeVisible()

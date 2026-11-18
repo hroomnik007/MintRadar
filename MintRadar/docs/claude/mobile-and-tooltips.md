@@ -89,6 +89,19 @@ has NOT been verified — WebKit handles focus on `tabindex="-1"` differently fr
 so if the white ring reappears on iOS this needs its own targeted diagnostic pass, not an
 assumption that the same fix covers it.
 
+### Navbar since the 2026-11-18 redesign (phase 2) — current rules
+
+- **Links:** plain text links, no segmented box; the current page is `color: var(--text)` with a 2px copper underline
+  (`box-shadow: inset 0 -2px 0 var(--action)`). The Watchlist count badge is copper (a count, not a health state).
+- **Log in:** a neutral outlined button (`--border-strong`, `--text`), visible text "Log in" (the accessible name stays
+  "Login via Nostr"). Copper is kept for the one primary action of a page.
+- **Phones (<=640px): a menu button** (`.navbar-menu-btn`, `aria-expanded`, `aria-controls="navbar-links"`, name "Menu" /
+  "Close menu") left of Log in replaces the row of links. Open, `.navbar-inner.menu-open` shows `.navbar-tabs` as a column
+  under the bar (in flow, rows 44px+, the current page in copper). It closes on a new page (the state is "open on this
+  pathname", so no effect is needed), on Escape (focus back to the button) and on a pointer down outside the navbar.
+  The old two-row layout (logo + Login, then the six links wrapped below) and its <=430 / <=359 px tweaks are gone.
+- Above 640px everything below still applies (one row, the shrink steps by width and login state).
+
 ### Navbar — one row between 641px and where it fits (2026-09-29, `AppShell.css`)
 
 The 640px two-row breakpoint is unchanged. Above it, the single-row navbar used to overflow every

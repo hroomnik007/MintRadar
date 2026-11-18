@@ -154,7 +154,7 @@ function VersionMintsView({ sw, ver, mints, onBack, onClose, duplicateDisplayNam
           <button
             type="button"
             onClick={e => { e.stopPropagation(); setShowAll(true) }}
-            style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+            style={{ width: '100%', background: 'none', border: 'none', color: 'var(--action)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
           >
             Show all {sorted.length} mints
           </button>
@@ -338,7 +338,7 @@ function CityMintsModal({ loc, mints, onClose, duplicateDisplayNames }: {
             <button
               type="button"
               onClick={() => setShowAll(true)}
-              style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+              style={{ width: '100%', background: 'none', border: 'none', color: 'var(--action)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
             >
               Show all {sorted.length} mints
             </button>
@@ -435,7 +435,7 @@ function NutMintsModal({ nut, mints, lacking, noData, onlineTotal, onClose, dupl
             <button
               type="button"
               onClick={() => setShowAll(true)}
-              style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+              style={{ width: '100%', background: 'none', border: 'none', color: 'var(--action)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
             >
               Show all {sorted.length} mints
             </button>
@@ -458,7 +458,7 @@ function NutMintsModal({ nut, mints, lacking, noData, onlineTotal, onClose, dupl
                     <button
                       type="button"
                       onClick={() => setShowAllLacking(true)}
-                      style={{ width: '100%', background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
+                      style={{ width: '100%', background: 'none', border: 'none', color: 'var(--action)', fontSize: 12, fontFamily: 'var(--font-mono)', cursor: 'pointer', padding: '8px 0' }}
                     >
                       Show all {sortedLacking.length} mints
                     </button>

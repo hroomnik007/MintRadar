@@ -1,7 +1,7 @@
 /* Close button of the Comparison modal: the same 32px boxed button as the other dialogs (.md-picker-close, .qr-modal-close). */
 .cmp-modal-close { width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); cursor: pointer; transition: color var(--transition), border-color var(--transition); }
 .cmp-modal-close:hover { color: var(--text); border-color: var(--border2); }
-.cmp-modal-close:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.cmp-modal-close:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 
 /* "BEST" after the better value of a metric row (Reliability Score, Uptime, Uptime 30 days, Latency; utils/compareBest.ts).
    The same small pill as the "New" badge (accent on --green-soft, --green-soft-strong hairline, mono); 12px on phones like
@@ -36,6 +36,6 @@
   font-family: var(--font-body); font-size: 12px; color: var(--accent); background: none; border: 0; cursor: pointer;
 }
 .cmp-remeasure:disabled { color: var(--text3); cursor: default; opacity: 1; }
-.cmp-remeasure:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 3px; }
+.cmp-remeasure:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: 3px; }
 @media (hover: hover) { .cmp-remeasure:not(:disabled):hover { text-decoration: underline; } }
 .cmp-muted { color: var(--text3); font-weight: 400; font-size: 13px; }

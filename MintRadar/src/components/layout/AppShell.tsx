@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchStats, scheduleStatsWarmup } from '@/core/mint/prefetch'
 import { QRCodeSVG } from 'qrcode.react'
-import { Zap, TriangleAlert } from 'lucide-react'
+import { Zap, TriangleAlert, Menu, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
@@ -125,6 +125,22 @@ export function AppShell() {
     return scheduleStatsWarmup(queryClient, () => { statsWarmed.current = true; warmStats() }, pathname !== '/stats')
   }, [pathname, queryClient, warmStats])
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  // Phones (<=640px, CSS): the page links sit behind a menu button (2026-11-18 redesign, phase 2). It closes on a new page,
+  // on Escape (focus back to the button) and on a click outside the navbar.
+  // Open = opened on THIS page: a new pathname closes it without an effect.
+  const [menuOpenOn, setMenuOpenOn] = useState<string | null>(null)
+  const menuOpen = menuOpenOn === pathname
+  const setMenuOpen = useCallback((open: boolean) => setMenuOpenOn(open ? pathname : null), [pathname])
+  const menuBtnRef = useRef<HTMLButtonElement>(null)
+  const navRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMenuOpen(false); menuBtnRef.current?.focus() } }
+    const onDown = (e: PointerEvent) => { if (navRef.current && !navRef.current.contains(e.target as Node)) setMenuOpen(false) }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('pointerdown', onDown)
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown) }
+  }, [menuOpen, setMenuOpen])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -370,8 +386,8 @@ export function AppShell() {
       >
         Skip to content
       </a>
-      <nav className="navbar" aria-label="Main">
-       <div className={`navbar-inner${profile !== null ? ' is-authed' : ''}`}>
+      <nav className="navbar" aria-label="Main" ref={navRef}>
+       <div className={`navbar-inner${profile !== null ? ' is-authed' : ''}${menuOpen ? ' menu-open' : ''}`}>
         <NavLink to="/" className="navbar-brand nav-logo" title="MintRadar">
           <NavLogo />
           <span className="navbar-wordmark">Mint<span style={{color:'var(--accent)'}}>Radar</span></span>
@@ -379,8 +395,8 @@ export function AppShell() {
 
         <div className="navbar-spacer" style={{flex:1}}/>
 
-        {/* Tab segment group */}
-        <div className="navbar-tabs">
+        {/* Page links: plain links with a copper underline on the current page; on phones a menu below the bar. */}
+        <div className="navbar-tabs" id="navbar-links">
           <NavLink to="/" end className={({isActive}) => `nav-tab${isActive ? ' active' : ''}`}>
             Mints
           </NavLink>
@@ -403,10 +419,22 @@ export function AppShell() {
           </NavLink>
         </div>
 
+        <button
+          type="button"
+          ref={menuBtnRef}
+          className="navbar-menu-btn"
+          aria-expanded={menuOpen}
+          aria-controls="navbar-links"
+          aria-label={menuOpen ? 'Close menu' : 'Menu'}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          {menuOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+        </button>
+
         <div className="navbar-auth">
           {profile === null ? (
             <button type="button" className="navbar-login-btn" aria-label="Login via Nostr" onClick={() => setShowLoginModal(true)}>
-              <Zap size={13} strokeWidth={2.4} aria-hidden="true" /> Login
+              <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Log in
             </button>
           ) : (
             <AccountMenu profile={profile} method={authMethod} onLogout={handleLogout} />

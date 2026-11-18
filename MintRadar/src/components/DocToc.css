@@ -5,11 +5,11 @@
 
 .about-toc-link.is-active {
   color: var(--text);
-  border-left-color: var(--accent);
+  border-left-color: var(--action);
 }
 
 @media (max-width: 900px) {
-  .about-toc-link.is-active { border-color: var(--accent); }
+  .about-toc-link.is-active { border-color: var(--action); }
 }
 
 @media (max-width: 640px) {

@@ -193,7 +193,7 @@ The reservations (all in `Stats.css`, values as `--stats-reserve-*` custom prope
 
 | Block | Rule | Values (px) by width |
 |---|---|---|
-| Page header | none since Task D3b: the loading and error screens render the same `StatsPageHead` as the loaded page | 96 up to 518, 75 for 519 to 640, 109 for 641 to 670, 88 from 671 |
+| Page header | none since Task D3b: the loading and error screens render the same `StatsPageHead` as the loaded page | since the 2026-11-19 page header (28px title, 16px description, no radar motif): 104.8 at 320 and 390, 93.6 at 768, 1024 and 1440 (not swept by width; before: 96 up to 518, 75 for 519 to 640, 109 for 641 to 670, 88 from 671) |
 | Waiting block | `.stats-loading { min-height }` (becomes the board in place; also takes the board's max width and centring) | 2731 up to 767, 1658 at 768, 1869 for 769 to 1279, 1385 from 1280 (keeps the footer below the fold) |
 | Network health index | `.stats-board-grid::before { grid-area: nhi; min-height }` (an empty box: the card does not exist before its data does; the card later sits in the same area) | 181 up to 767, 274 at 768, 355 for 769 to 999, 332 for 1000 to 1263, 309 for 1264 to 1279, 368 from 1280 |
 | Left stack | `.stats-stack { min-height }` = Top by Reliability Score + Software in use + gap | 619 up to 327, 602 for 328 to 349, 584 for 350 to 357, 562 for 358 to 407, 539 for 408 to 449, 522 for 450 to 767, 562 at 768, 663 for 769 to 919, 645 from 920 |

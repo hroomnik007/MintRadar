@@ -27,7 +27,7 @@
   gap: 8px 20px;
 }
 .not-found-links a {
-  color: var(--accent);
+  color: var(--action);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

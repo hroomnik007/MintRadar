@@ -959,7 +959,7 @@
    MoreLocationsModal's location-name rows (plain .nut-modal-row-name, own
    geo color) are unaffected. */
 .nut-modal-row:hover .nut-modal-row-name.mint-link {
-  color: var(--accent);
+  color: var(--action);
 }
 
 .nut-modal-row-url {

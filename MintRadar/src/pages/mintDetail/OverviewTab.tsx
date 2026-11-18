@@ -294,7 +294,7 @@ export function OverviewTab({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="md-info-value"
-                style={{color:'var(--accent)', textDecoration:'none'}}
+                style={{color:'var(--action)', textDecoration:'none'}}
                 onClick={e => e.stopPropagation()}
               >
                 View ToS ↗

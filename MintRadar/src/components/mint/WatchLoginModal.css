@@ -60,7 +60,7 @@
 }
 .rv-btn-cancel:hover { border-color: var(--border2); color: var(--text2); }
 .rv-btn-submit {
-  background: var(--accent);
+  background: var(--action);
   color: var(--bg);
   border: none;
   border-radius: 8px;
@@ -90,6 +90,6 @@
 @media (max-width: 480px) { .rv-modal { padding: 18px; } }
 
 /* Logged-out watch prompt: outlined green action like the Nostr login modal's Connect. */
-.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--green-bright); border: 1px solid var(--green); border-radius: 10px; font-size: 14px; font-weight: 600; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
-.rv-btn-login:hover { background: var(--green-soft); border-color: var(--green-bright); }
-.rv-btn-login:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--action-ink); border: 1px solid var(--action); border-radius: 10px; font-size: 14px; font-weight: 600; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
+.rv-btn-login:hover { background: var(--action-soft); border-color: var(--action); }
+.rv-btn-login:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }

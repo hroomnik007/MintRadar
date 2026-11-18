@@ -16,12 +16,13 @@ const TOLERANCE = 12 // a reservation may differ from the loaded height by at mo
 // Loaded heights of the fixture (px), measured with the scratch script described in the docs. `board` is the board WITHOUT the
 // movers note (the note's height comes from NOTE_HEIGHTS below, by the number of changes in the 7d window).
 const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number }> = {
-  // Re-measured 2026-11-18 for MintRadar Sans and the 12px text floor.
-  1440: { head: 88.2, board: 1385.1, nhi: 368.2, stack: 645.7 },
-  1024: { head: 88.2, board: 1891.8, nhi: 332.7, stack: 645.7 },
-  768: { head: 88.2, board: 1658.8, nhi: 274.8, stack: 562.0 },
-  390: { head: 96.4, board: 2839.0, nhi: 181.3, stack: 562.0 },
-  320: { head: 96.4, board: 3214.0, nhi: 181.3, stack: 619.5 },
+  // Re-measured 2026-11-18 for MintRadar Sans and the 12px text floor; `head` again 2026-11-19 (page header: 28px title,
+  // 16px description, no radar motif).
+  1440: { head: 93.6, board: 1385.1, nhi: 368.2, stack: 645.7 },
+  1024: { head: 93.6, board: 1891.8, nhi: 332.7, stack: 645.7 },
+  768: { head: 93.6, board: 1658.8, nhi: 274.8, stack: 562.0 },
+  390: { head: 104.8, board: 2839.0, nhi: 181.3, stack: 562.0 },
+  320: { head: 104.8, board: 3214.0, nhi: 181.3, stack: 619.5 },
 }
 
 // The REAL height of the movers note (px) by the number of changes it lists, as [from width, to width, height] ranges,

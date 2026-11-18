@@ -31,9 +31,9 @@
   font: inherit;
   font-weight: 600;
   color: var(--bg);
-  background: var(--green-bright);
+  background: var(--action);
   border: none;
   border-radius: 10px;
   cursor: pointer;
 }
-.route-error-btn:hover { background: var(--green); }
+.route-error-btn:hover { background: color-mix(in srgb, var(--action) 85%, #fff); }

@@ -112,7 +112,7 @@
   font-size: 12px;
   font-weight: 500;
   font-family: var(--font-mono);
-  color: var(--accent);
+  color: var(--action);
 }
 
 .wallets-footnote {

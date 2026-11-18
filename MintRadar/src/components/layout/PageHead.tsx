@@ -1,9 +1,8 @@
 import type { ReactNode, Ref } from 'react'
-import { NavLogo } from './NavLogo'
 import './PageHead.css'
 
-// One page header for every page: h1, one plain line, and a small radar motif on the right
-// (same chrome width and gutters as the navbar and the card grids below it). The motif is the brand mark itself, dimmed.
+// One page header for every page: h1 and one plain line (same chrome width and gutters as the navbar and the card grids
+// below it). The dimmed radar motif on the right was removed in the 2026-11-18 redesign (phase 2): it was decoration only.
 export function PageHead({ title, srTitle, description, className = '', titleClassName = '', descriptionClassName = '', titleRef, titleTestId }: {
   title: string
   /** Extra text for assistive tech and search engines, appended to the visible title. */
@@ -25,7 +24,6 @@ export function PageHead({ title, srTitle, description, className = '', titleCla
         </h1>
         <p className={`page-head-desc ${descriptionClassName}`.trim()}>{description}</p>
       </div>
-      <NavLogo size={56} className="page-head-radar" />
     </div>
   )
 }

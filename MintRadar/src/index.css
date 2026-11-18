@@ -168,6 +168,9 @@
      Green, amber and red mean the health of a mint only. */
   --action:      var(--copper);
   --action-soft: var(--copper-soft);
+  /* Copper text on a copper tint (an active chip, a hovered outlined button): plain copper reached only 3.5-4.1:1 there,
+     this lighter copper is >= 4.5:1 on the tinted surfaces (badge-contrast.spec). */
+  --action-ink:  color-mix(in srgb, var(--copper) 72%, #fff);
 
   /* Spacing */
   --r:            10px;
