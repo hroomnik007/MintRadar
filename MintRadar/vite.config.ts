@@ -39,6 +39,11 @@ export default defineConfig(({ command }) => ({
         ],
       },
       workbox: {
+        // Explicit on purpose: vite-plugin-pwa only adds skipWaiting + clientsClaim for registerType 'autoUpdate' when
+        // injectRegister is 'auto'; with 'script-defer' (above) it silently does not, and the generated sw.js then
+        // waited for a SKIP_WAITING message nobody sends, so open pages kept the old bundle.
+        skipWaiting: true,
+        clientsClaim: true,
         // Single source of the precache list: includeAssets is deliberately unused — the plugin adds it to
         // globPatterns, so the favicons (already matched by ico/png here) were precached twice.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
