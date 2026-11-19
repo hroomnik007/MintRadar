@@ -160,13 +160,7 @@ export const CASES: ModalCase[] = [
     trigger: p => p.locator('.dist-more-row', { hasText: 'View others' }), open: clickTrigger,
     dialog: css('.nut-modal'), close: '.nut-modal-close',
   },
-  {
-    id: 'Stats: Network Health breakdown (mobile)', name: /network health index/i, statsMints: true,
-    viewport: { width: 390, height: 844 },
-    prepare: p => goto(p, '/stats', '.stats-panel'),
-    trigger: p => p.getByRole('button', { name: 'Show details ›' }), open: clickTrigger,
-    dialog: css('.nut-modal'), close: '.nut-modal-close',
-  },
+  // (The Stats Network Health breakdown dialog went with the 2026-11-19 redesign: the factors are on the page at every width.)
 ]
 
 export async function setupPage(page: Page, c: ModalCase) {
