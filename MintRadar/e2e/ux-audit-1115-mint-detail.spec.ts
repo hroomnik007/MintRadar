@@ -3,7 +3,7 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 import { ALPHA_PATH, auditCzResponse, czSwapList, gotoAuditTab, NO_8333, disableMotion } from './fixtures/auditCz'
 import { resize, layoutReady } from './fixtures/settle'
 
-// UI/UX audit of 2026-11-15, Mint Detail: the Version history and Audit tables at the widths where the left column is
+// UI/UX audit of 2026-11-15, Mint Detail: the Version history (since 2026-11-19 the What happened timeline) and Audit tables at the widths where the left column is
 // narrow, tab deep links on a hash-only change, the Uptime 24h tile before its query answers, the QR title and NUT tiles.
 
 const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString()
@@ -28,21 +28,22 @@ async function open(page: import('@playwright/test').Page, hash = '') {
   await expect(page.locator('.md-tabs')).toBeVisible()
 }
 
+// The software changes are rows of the "What happened" timeline since the 2026-11-19 redesign (it was a three-column
+// Version history table whose To column was cut at narrow widths).
 for (const width of [700, 860, 1000, 1100, 1440, 390]) {
-  test(`Version history at ${width}px: the To column is visible and its version is not cut`, async ({ page }) => {
+  test(`What happened at ${width}px: the newest version is shown whole`, async ({ page }) => {
     await resize(page, width, 900)
     await open(page, '#history')
-    const table = page.locator('.md-panel', { has: page.locator('.md-panel-title', { hasText: 'Version history' }) }).locator('table.md-vh-table')
-    await expect(table.locator('tbody tr')).toHaveCount(3)
+    const rows = page.locator('.md-events > .md-ev-software')
+    await expect(rows).toHaveCount(3)
     await layoutReady(page)
-    const m = await table.evaluate(t => {
-      const to = t.querySelector('tbody tr td:nth-child(3)') as HTMLElement
-      return { toWidth: to.getBoundingClientRect().width, cut: to.scrollWidth > to.clientWidth + 1, tableOver: t.scrollWidth > (t.parentElement as HTMLElement).clientWidth + 1 }
+    const m = await rows.first().evaluate(r => {
+      const text = r.querySelector('.md-ev-text') as HTMLElement
+      return { cut: text.scrollWidth > text.clientWidth + 1, over: r.scrollWidth > r.clientWidth + 1 }
     })
-    expect(m.toWidth, 'To column width').toBeGreaterThanOrEqual(80)
-    expect(m.cut, 'To version cut').toBe(false)
-    expect(m.tableOver, 'table wider than its panel').toBe(false)
-    await expect(table.locator('tbody tr').first().locator('td').nth(2)).toHaveText('cdk-mintd/0.18.3')
+    expect(m.cut, 'version text cut').toBe(false)
+    expect(m.over, 'row wider than its panel').toBe(false)
+    await expect(rows.first()).toContainText('0.18.3')
   })
 }
 

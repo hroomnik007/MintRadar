@@ -624,3 +624,22 @@ Styles in the "phase 4b" block of `MintDetail.css`.
   `methodsCell()` (shared with Compare; "Disabled by the mint", "None declared") with `methodDisplayText()` ("On-chain"),
   and a line pointing to the NUTs tab for limits and fees. The bolt11 / onchain chips are gone.
 - **Keysets** are in the Overview side column at every width; the NUTs tab's phone copy (`.md-keysets-at-nuts`) is gone.
+
+## Mint Detail History, 2026-11-19 redesign (phase 4c)
+
+`mintDetail/HistoryTab.tsx`, helpers in `utils/historyTimeline.ts` (unit test `historyTimeline.test.ts`), styles in the
+"phase 4c" block of `MintDetail.css`.
+- **Period switch** (24h / 7d / 30d / 90d) heads the tab with one sentence; the **metric switch** (Latency / Uptime /
+  Score) sits in the chart panel's head ("Latency, 7 days", "From Nuremberg.").
+- **Four figures in one frame** (`.md-hist-summary.md-hist-figs`): average latency, average uptime, average reliability
+  (band word under it), outages in 30 days (`data-testid="outage-tile-count"`, label `outagesCountLabel(count)`). The line
+  under latency and uptime is a sentence against the period before (`compareSentence`: "35 ms faster than the 7 days
+  before", "Same as …", "Not enough history to compare yet"); the "+N vs prev period" text is gone. The outage line is
+  `outageFigureNote`: "Down for … now" while an outage is ongoing (NEVER a time since the last outage, the old "2m" bug),
+  else the mean time to recover, "(longest …)" when there were several, and how long ago the last one was.
+- **Chart** at full width, 220px tall; on phones (<=640px) every second X label (`narrow`), seven dates ran together.
+- **What happened** (`.md-events`): the outages of the last 30 days and all software changes on one timeline, newest
+  first (`buildHistoryEvents`): "Not answering for 10 min" (+ "so far" while ongoing, the start time, the stored last
+  error on the ongoing outage only), "Updated cdk-mintd 0.17.7 to 0.18.3", "Switched software from Nutshell 0.20.3 to
+  cdk-mintd 0.17.2" (the part before "/" changed), "First seen running …". The Outages tiles, the outage details table and
+  the Version history table are gone (`outageTiles` / `outageErrorCell` removed).

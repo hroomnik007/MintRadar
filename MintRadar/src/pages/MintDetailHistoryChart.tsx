@@ -13,8 +13,10 @@ export interface HistoryChartPoint { label: string; latency: number | null; upti
 // memo: MintDetailContent re-renders on every useNow tick (30 s) and the inline margin/tick/style objects below are
 // new on each render, which made recharts rebuild its points and replay the line animation (~90 commits per tick).
 // With memo the chart only re-renders when data, metric, interval or height actually change.
-function MintDetailHistoryChart({ data, metric, interval, height }: {
+function MintDetailHistoryChart({ data, metric, interval, height, narrow = false }: {
   data: HistoryChartPoint[]
+  /** Phone width: half as many X labels. */
+  narrow?: boolean
   metric: 'latency' | 'uptime' | 'reliability'
   interval: '24h' | '7d' | '30d' | '90d'
   height: number
@@ -28,7 +30,12 @@ function MintDetailHistoryChart({ data, metric, interval, height }: {
           dataKey="label"
           tick={{ fontSize: 12, fill: 'var(--text3)' }}
           axisLine={false} tickLine={false}
-          interval={interval === '24h' ? 3 : data.length <= 7 ? 0 : Math.ceil(data.length / 7) - 1}
+          // At most one label per day (every 4th bucket for 24h); on a phone every second one, or seven "13 Nov" labels
+          // run together (2026-11-19 redesign).
+          interval={(() => {
+            const base = interval === '24h' ? 4 : data.length <= 7 ? 1 : Math.ceil(data.length / 7)
+            return base * (narrow ? 2 : 1) - 1
+          })()}
         />
         <YAxis
           tick={{ fontSize: 12, fill: 'var(--text3)' }}

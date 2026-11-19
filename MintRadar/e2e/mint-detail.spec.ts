@@ -199,11 +199,11 @@ test.describe('Mint Detail — /mint/:url canonicalisation (bare-host collision 
   })
 })
 
-test.describe('Mint Detail — outage table', () => {
-  // The outage rows use the value style of the Version history "To" column (same typography, same row height),
-  // not the page's body text. Short errors only, so no row wraps and the heights are comparable.
+test.describe('Mint Detail — What happened', () => {
+  // Since the 2026-11-19 redesign the outages and the software changes are one timeline, newest first (they were an
+  // outage table in a <details> and a Version history table). Versions in the mono face, nothing sticks out.
   for (const [width, height] of [[1440, 900], [390, 844]] as const) {
-    test(`outage rows share the Version history value typography and row height at ${width}px`, async ({ page }) => {
+    test(`outages and software changes share one timeline, newest first, at ${width}px`, async ({ page }) => {
       const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
       await page.route('**/api/mints/outages**', r => r.fulfill({ json: {
         sinceLastOutageMs: 3_000_000, avgRecoveryMs: 2_000_000, outageCount: 2,
@@ -216,28 +216,18 @@ test.describe('Mint Detail — outage table', () => {
       await page.goto(detailPath)
       await expect(page.locator('.md-tabs')).toBeVisible()
       await page.locator('.md-tab', { hasText: 'History' }).click()
-      await page.getByText('Show outage details').click()
-
-      const outageTable = page.locator('details table.md-vh-table')
-      const versionTable = page.locator('.md-panel', { has: page.locator('.md-panel-title', { hasText: 'Version history' }) }).locator('table.md-vh-table')
-      await expect(outageTable.locator('tbody tr')).toHaveCount(2)
-      await expect(versionTable.locator('tbody tr')).toHaveCount(2)
-
-      const typography = (cell: import('@playwright/test').Locator) => cell.evaluate(el => {
-        const c = getComputedStyle(el)
-        return { family: c.fontFamily, size: c.fontSize, lineHeight: c.lineHeight, letterSpacing: c.letterSpacing, weight: c.fontWeight, color: c.color }
-      })
-      const versionTo = await typography(versionTable.locator('tbody tr').first().locator('td').nth(2))
-      expect(versionTo.family).toContain('MintRadar Sans Mono')
-      for (const col of [0, 1, 2]) {
-        await expect.poll(() => typography(outageTable.locator('tbody tr').first().locator('td').nth(col)), `outage column ${col}`).toEqual(versionTo)
-      }
-      await expect.poll(async () => {
-        const outageRow = (await outageTable.locator('tbody tr').first().boundingBox())!.height
-        const versionRow = (await versionTable.locator('tbody tr').first().boundingBox())!.height
-        return Math.abs(outageRow - versionRow) <= 1
-      }, 'row heights within 1px').toBe(true)
-      // Nothing sticks out of the table on the page.
+      const rows = page.locator('.md-events > .md-ev')
+      await expect(rows).toHaveCount(4)
+      await expect(rows.locator('.md-ev-kind')).toHaveText(['Outage', 'Outage', 'Software', 'Software'])
+      await expect(rows.nth(0)).toContainText('Not answering for 1h 30m')
+      await expect(rows.nth(1)).toContainText('Not answering for 35 min')
+      await expect(rows.nth(2)).toContainText('Updated Nutshell 0.18.3 to 0.19.2')
+      await expect(rows.nth(3)).toContainText('First seen running Nutshell 0.18.3')
+      // A recovered outage names no error (the stored error belongs to an ongoing one only), never "offline".
+      await expect(page.locator('.md-events')).not.toContainText('offline')
+      await expect(page.locator('.md-events')).not.toContainText('HTTP 502')
+      const family = await rows.nth(2).locator('.md-ev-code').first().evaluate(el => getComputedStyle(el).fontFamily)
+      expect(family).toContain('MintRadar Sans Mono')
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
     })
   }

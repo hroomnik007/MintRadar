@@ -67,7 +67,7 @@ const tab = (page: Page, name: RegExp) => page.locator('.md-tab', { hasText: nam
 test('the History tab no longer renders a Changes panel or its empty line', async ({ page }) => {
   await open(page, answer({ changes: [] }))
   await tab(page, /^History/)
-  await expect(page.locator('.md-panel-title', { hasText: /^Version history$/ })).toBeVisible()
+  await expect(page.locator('.md-panel-title', { hasText: /^What happened$/ })).toBeVisible() // the timeline since the 2026-11-19 redesign
   await expect(page.getByTestId('change-log')).toHaveCount(0)
   await expect(page.getByTestId('change-log-empty')).toHaveCount(0)
   await expect(page.getByText(/No changes to keys, fees or keysets recorded/)).toHaveCount(0)

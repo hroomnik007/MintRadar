@@ -40,33 +40,6 @@ export function formatDuration(ms: number): string {
   return rh > 0 ? `${d}d ${rh}h` : `${d}d`
 }
 
-export interface OutageTile { key: 'since' | 'down' | 'recover' | 'count'; label: string; value: string; /** Small line under the label. */ note?: string }
-
-/**
- * The three tiles. While an outage is ongoing the first one reads "Down now" with its duration (never "Since last outage":
- * the mint has not recovered). "Time to recover" is the mean of recovered outages only, as the API computes it.
- */
-export function outageTiles(data: OutagesResponse | undefined, countLabel: string, fmt: (ms: number) => string): OutageTile[] {
-  const ongoing = data?.ongoing === true
-  const first: OutageTile = ongoing
-    ? { key: 'down', label: 'Down now', value: data?.currentOutage ? fmt(data.currentOutage.durationMs) : '—' }
-    : { key: 'since', label: 'Since last outage', value: data?.sinceLastOutageMs != null ? fmt(data.sinceLastOutageMs) : '—' }
-  const recovered = data?.recoveredCount
-  const longest = typeof data?.longestOutageMs === 'number' && data.longestOutageMs > 0 && (data.outageCount ?? 0) > 1 ? data.longestOutageMs : null
-  const recoverLabel = typeof recovered === 'number' && ongoing ? `Time to recover (${recovered} recovered)` : 'Time to recover'
-  return [
-    first,
-    // The mean hides one long outage among short ones (8 outages, mean 21 h, one of them 6.8 days): name the longest.
-    { key: 'recover', label: recoverLabel, value: data?.avgRecoveryMs != null ? fmt(data.avgRecoveryMs) : '—', ...(longest ? { note: `longest ${fmt(longest)}` } : {}) },
-    { key: 'count', label: countLabel, value: data?.outageCount != null ? String(data.outageCount) : '—' },
-  ]
-}
-
-/** Error cell of the details table: the stored last error (already sanitised by the caller) on the ongoing row only. */
-export function outageErrorCell(o: Pick<OutageEntry, 'ongoing'>, lastError: string | null): string {
-  return o.ongoing === true && lastError ? lastError : ''
-}
-
 // ── Reliability Score breakdown from the stored record ──────────────────────────────────────────────────────────────
 
 export interface StoredPart { points: number; max: number }

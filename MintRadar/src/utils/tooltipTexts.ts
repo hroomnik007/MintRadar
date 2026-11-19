@@ -270,9 +270,9 @@ export function auditTooOldDetail(days: number = AUDIT_WINDOW_DAYS): string {
   return `Audit data older than ${days} days: neutral`
 }
 
-/** Mint Detail > Outages. */
-export function outagesCountLabel(days: number = OUTAGES_WINDOW_DAYS): string {
-  return `Outages (${days}d)`
+/** Mint Detail > History, the label under the outage count (2026-11-19 redesign: "Outages in 30 days", "Outage in 30 days"). */
+export function outagesCountLabel(count: number | null, days: number = OUTAGES_WINDOW_DAYS): string {
+  return `${count === 1 ? 'Outage' : 'Outages'} in ${days} days`
 }
 export function noOutagesText(days: number = OUTAGES_WINDOW_DAYS): string {
   return `No outages in the last ${days} days.`

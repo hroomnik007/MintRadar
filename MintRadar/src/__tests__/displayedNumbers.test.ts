@@ -34,7 +34,8 @@ describe('texts equal the literals they replaced (current values)', () => {
     expect(AUDIT_MIN_SAMPLES).toBe(10)
   })
   it('outages', () => {
-    expect(T.outagesCountLabel()).toBe('Outages (30d)')
+    expect(T.outagesCountLabel(2)).toBe('Outages in 30 days')
+    expect(T.outagesCountLabel(1)).toBe('Outage in 30 days')
     expect(T.noOutagesText()).toBe('No outages in the last 30 days.')
   })
   it('watchlist explainer and notices', () => {
@@ -56,7 +57,7 @@ describe('each text follows its constant', () => {
     expect(T.auditTooOldDetail(14)).toBe('Audit data older than 14 days: neutral')
   })
   it('outages', () => {
-    expect(T.outagesCountLabel(90)).toBe('Outages (90d)')
+    expect(T.outagesCountLabel(3, 90)).toBe('Outages in 90 days')
     expect(T.noOutagesText(90)).toBe('No outages in the last 90 days.')
   })
   it('explainer: cooldown unit and daily cap', () => {
@@ -92,7 +93,7 @@ describe('the components use the generated texts, not typed numbers', () => {
     for (const lit of ["'Uptime (40%)'", "'Audit reliability (25%)'", "'NUT Support (15%)'", "'Version (15%)'", "'Contact (5%)'", 'last 7 days', 'last 30 days', 'Outages (30d)', '&days=30']) {
       expect(md, lit).not.toContain(lit)
     }
-    for (const call of ['UPTIME_ROW_LABEL', 'auditTooFewDetail()', 'auditTooOldDetail()', 'outagesCountLabel()', 'noOutagesText()', '&days=${OUTAGES_WINDOW_DAYS}', 'max: UPTIME_POINTS', 'max: CONTACT_POINTS']) {
+    for (const call of ['UPTIME_ROW_LABEL', 'auditTooFewDetail()', 'auditTooOldDetail()', 'outagesCountLabel(count)', 'noOutagesText()', '&days=${OUTAGES_WINDOW_DAYS}', 'max: UPTIME_POINTS', 'max: CONTACT_POINTS']) {
       expect(md, call).toContain(call)
     }
   })

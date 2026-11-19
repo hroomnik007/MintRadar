@@ -2664,3 +2664,55 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-methods-none { color: var(--text3); }
 .mint-detail .md-um-panel-methods .md-panel-hint { margin-top: 10px; font-size: var(--fs-xs); color: var(--text2); }
 .mint-detail .md-body { align-items: start; }
+
+/* ── 2026-11-19 redesign, phase 4c: History ────────────────────────────────────────────────────────────────────────
+   The period switch heads the tab; four figures in one frame (like the strip); the chart at full width; one timeline. */
+.md-hist-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
+.md-hist-intro { margin: 0; font-size: var(--fs-sm); color: var(--text2); max-width: 62ch; }
+.mint-detail .md-hist-figs {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r);
+}
+.mint-detail .md-hist-figs .md-hist-fig {
+  display: grid; align-content: start; gap: 3px; min-width: 0; padding: 16px 20px; margin: 0;
+  background: none; border: 0; border-left: 1px solid var(--border); border-radius: 0;
+}
+.mint-detail .md-hist-figs .md-hist-fig:first-child { border-left: 0; }
+.mint-detail .md-hist-figs .md-hist-fig-value {
+  font-family: var(--font-display); font-size: 36px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em;
+  line-height: 1.05; color: var(--text); display: flex; align-items: baseline; gap: 0; white-space: nowrap;
+}
+.mint-detail .md-hist-figs .md-hist-fig-tip { margin-left: 8px; align-self: center; }
+.mint-detail .md-hist-figs .md-hist-fig-value .md-strip-unit { font-stretch: 100%; }
+.mint-detail .md-hist-figs .md-hist-fig-label { font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 500; color: var(--text); text-transform: none; letter-spacing: 0; }
+.mint-detail .md-hist-figs .md-hist-fig-delta { font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text2); }
+.md-hist-chart .md-panel-h { flex-wrap: wrap; }
+.md-hist-empty, .md-hist-none { margin: 0; font-size: var(--fs-sm); color: var(--text3); }
+.md-hist-none { margin-bottom: 8px; }
+.md-hist-coverage { margin-top: 8px; font-size: var(--fs-xs); color: var(--text3); }
+
+.md-events { list-style: none; margin: 0; padding: 0; }
+.md-ev {
+  display: grid; grid-template-columns: 76px 16px minmax(0, 1fr) auto; gap: 12px; align-items: start;
+  padding: 11px 0; border-top: 1px solid var(--border); font-size: var(--fs-sm);
+}
+.md-ev:first-child { border-top: 0; }
+.md-ev-date { color: var(--text2); white-space: nowrap; }
+.md-ev-mark { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: var(--action); justify-self: center; }
+.md-ev-outage .md-ev-mark { background: var(--red); }
+.md-ev-text b { font-weight: 600; }
+.md-ev-code { font-family: var(--font-mono); font-size: 13px; }
+.md-ev-why { display: block; color: var(--text2); font-size: var(--fs-xs); margin-top: 2px; }
+.md-ev-kind { color: var(--text2); font-size: var(--fs-xs); white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .mint-detail .md-hist-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mint-detail .md-hist-figs .md-hist-fig:nth-child(3) { border-left: 0; }
+  .mint-detail .md-hist-figs .md-hist-fig:nth-child(n+3) { border-top: 1px solid var(--border); }
+}
+@media (max-width: 640px) {
+  .mint-detail .md-hist-figs .md-hist-fig { padding: 14px 16px; }
+  .mint-detail .md-hist-figs .md-hist-fig-value { font-size: 30px; }
+  .md-ev { grid-template-columns: 60px 12px minmax(0, 1fr); }
+  .md-ev-kind { grid-column: 3; }
+}

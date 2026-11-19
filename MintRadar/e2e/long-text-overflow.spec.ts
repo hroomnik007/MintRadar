@@ -339,8 +339,8 @@ for (const width of WIDTHS) {
       expect(await leavingParent(page, '.stats-metrics .stat-note')).toEqual([])
     })
 
-    // The History tab has two `.md-hist-summary` grids since the Outages panel was added (e467e8bf):
-    // Historical data (latency / uptime / reliability) and Outages (since last / recover / count).
+    // The History tab has one `.md-hist-summary` frame of four figures since the 2026-11-19 redesign (latency, uptime,
+    // reliability, outages; it had two grids of three).
     test('Mint Detail: History summary cards stay inside their grid', async ({ page }) => {
       const { url } = await mount(page, {}, { width })
       // Longest realistic outage values (formatDuration: "99d 23h", "23h 59m"), not the "—" placeholders.
@@ -351,10 +351,9 @@ for (const width of WIDTHS) {
       await expect(page.locator('.md-tabs')).toBeVisible()
       await page.locator('.md-tab', { hasText: 'History' }).click()
       const grids = page.locator('.md-hist-summary')
-      await expect(grids).toHaveCount(2)
+      await expect(grids).toHaveCount(1)
       await expect(grids.first()).toBeVisible()
-      await expect(grids.last()).toBeVisible()
-      await expect(page.locator('.md-hist-summary > div')).toHaveCount(6) // an empty match would pass vacuously
+      await expect(page.locator('.md-hist-summary > div')).toHaveCount(4) // an empty match would pass vacuously
       await expect(page.getByText('99d 23h')).toBeVisible()
       expect(await leavingParent(page, '.md-hist-summary > div')).toEqual([])
     })

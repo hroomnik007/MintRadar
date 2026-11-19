@@ -1,49 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import {
-  outageTiles, outageErrorCell, breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor, formatDuration, uptimeTileText,
+  breakdownRowScore, breakdownPointsColor, storedBreakdownTotal, contactKindsText, infoTextFor, formatDuration, uptimeTileText,
   readLastInfo, averageReliability, latencyPercentilesText, showTorFor, contactsNotSavedYet, storedKeysetsAsLive, CONTACTS_NOT_SAVED_TEXT, auditSuccessText,
-  type OutagesResponse, type StoredScoreBreakdown, type BreakdownPart,
+  type StoredScoreBreakdown, type BreakdownPart,
 } from '@/utils/mintDetailFacts'
 import { pickInputFee } from '@/utils/mintProbeDisplay'
 import { COMPARE_UPTIME_LABEL, COMPARE_LATENCY_LABEL, CARD_LATENCY_LABEL } from '@/utils/compareLabels'
 
-const fmt = (ms: number) => `${Math.round(ms / 60000)}m`
 const H = 3_600_000
-
-describe('outage tiles', () => {
-  const ongoing: OutagesResponse = {
-    sinceLastOutageMs: null, avgRecoveryMs: 0.5 * H, outageCount: 7, recoveredCount: 6, ongoing: true,
-    currentOutage: { startedAt: '2026-10-23T19:20:04.895Z', durationMs: 43 * H },
-    outages: [{ startedAt: '2026-10-23T19:20:04.895Z', durationMs: 43 * H, error: 'offline', ongoing: true, truncatedAtWindowStart: false }],
-  }
-  it('an ongoing outage reads "Down now" + its duration and never "Since last outage"', () => {
-    const t = outageTiles(ongoing, 'Outages (30d)', fmt)
-    expect(t[0]).toEqual({ key: 'down', label: 'Down now', value: '2580m' })
-    expect(t.map(x => x.label)).not.toContain('Since last outage')
-    // even when an old API still sends a small sinceLastOutageMs (the "2m" bug)
-    const old = outageTiles({ ...ongoing, sinceLastOutageMs: 2 * 60000 }, 'Outages (30d)', fmt)
-    expect(old.map(x => `${x.label}: ${x.value}`)).not.toContain('Since last outage: 2m')
-  })
-  it('time to recover is the API mean of recovered outages, labelled with their count while one is ongoing', () => {
-    const t = outageTiles(ongoing, 'Outages (30d)', fmt)
-    expect(t[1]).toEqual({ key: 'recover', label: 'Time to recover (6 recovered)', value: '30m' })
-    expect(outageTiles({ ...ongoing, avgRecoveryMs: null, recoveredCount: 0 }, 'x', fmt)[1]!.value).toBe('—')
-  })
-  it('recovered mint: "Since last outage"', () => {
-    const t = outageTiles({ sinceLastOutageMs: 2 * H, avgRecoveryMs: H, outageCount: 2, recoveredCount: 2, ongoing: false, currentOutage: null, outages: [] }, 'Outages (30d)', fmt)
-    expect(t.map(x => x.label)).toEqual(['Since last outage', 'Time to recover', 'Outages (30d)'])
-    expect(t[0]!.value).toBe('120m')
-  })
-  it('no data yet: dashes', () => {
-    expect(outageTiles(undefined, 'c', fmt).map(x => x.value)).toEqual(['—', '—', '—'])
-  })
-  it('error cell: the stored last error on the ongoing row only, never a fake "offline"', () => {
-    expect(outageErrorCell({ ongoing: true }, 'HTTP 502')).toBe('HTTP 502')
-    expect(outageErrorCell({ ongoing: false }, 'HTTP 502')).toBe('')
-    expect(outageErrorCell({}, 'HTTP 502')).toBe('')
-    expect(outageErrorCell({ ongoing: true }, null)).toBe('')
-  })
-})
 
 describe('score breakdown from the stored record', () => {
   // mint.lnpay.cz on 2026-10-25: offline, score 60.
@@ -182,21 +146,8 @@ describe('Audit row value: the same "x / y" as Compare\'s "No mint fault (7d)"',
   })
 })
 
-// Methodology 7: the longest outage under "Time to recover". The four uptime parts are the Uptime row's tooltip
-// (uptimeRowTooltip, tooltipTexts.test.ts).
-describe('longest outage', () => {
-  const base: OutagesResponse = { sinceLastOutageMs: 10 * 24 * H, avgRecoveryMs: 21 * H, outageCount: 8, recoveredCount: 8, ongoing: false, currentOutage: null, outages: [] }
-  it('the recover tile names the longest outage when there is more than one outage', () => {
-    const t = outageTiles({ ...base, longestOutageMs: 162.5 * H }, 'Outages (30d)', formatDuration)
-    expect(t[1]).toEqual({ key: 'recover', label: 'Time to recover', value: '21h', note: 'longest 6d 18h' })
-    expect(t[0]!.note).toBeUndefined()
-    expect(t[2]!.note).toBeUndefined()
-  })
-  it('no note for a single outage (the mean is that outage), none at all, or an API without the field', () => {
-    expect(outageTiles({ ...base, outageCount: 1, longestOutageMs: 3 * H }, 'c', formatDuration)[1]!.note).toBeUndefined()
-    expect(outageTiles({ ...base, outageCount: 0, longestOutageMs: 0 }, 'c', formatDuration)[1]!.note).toBeUndefined()
-    expect(outageTiles(base, 'c', formatDuration)[1]!.note).toBeUndefined()
-  })
+// formatDuration (the longest-outage note moved to outageFigureNote, historyTimeline.test.ts, 2026-11-19 redesign).
+describe('durations', () => {
   it('formatDuration: seconds, minutes, hours and days', () => {
     expect([30_000, 45 * 60_000, 3 * H + 20 * 60_000, 6 * H, 162 * H, 48 * H].map(formatDuration)).toEqual(['30s', '45 min', '3h 20m', '6h', '6d 18h', '2d'])
   })
