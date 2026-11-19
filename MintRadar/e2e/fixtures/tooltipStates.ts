@@ -262,10 +262,13 @@ export const TOOLTIP_STATES: TooltipState[] = [
     id: 'mint-alpha-score-dialog',
     run: async page => {
       await installTooltipMocks(page)
-      await page.goto(mintPath(ALPHA, '#overview'))
+      // From the History tab: Overview's side column has the same five rows (same names) behind the dialog's overlay, which
+      // the contract would pick as "the other tooltip" and click through the backdrop. "How it is made" is in the strip on
+      // every tab (2026-11-19 redesign).
+      await page.goto(mintPath(ALPHA, '#history'))
       await expect(page.locator('.md-tabs')).toBeVisible()
       await settle(page)
-      if (!(await clickIfPresent(page, '.md-sc.md-sc-reliability'))) return false
+      if (!(await clickIfPresent(page, '.md-sc-score-link'))) return false
       if (!(await page.locator('[role=dialog]').isVisible().catch(() => false))) return false
       return true
     },

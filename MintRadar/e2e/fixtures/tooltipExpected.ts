@@ -38,23 +38,27 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   about: same([0, 0]),
   methodology: same([0, 0]),
   'for-wallets': same([0, 0]),
-  'mint-alpha-overview': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  'mint-alpha-history': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
-  'mint-alpha-nuts': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
-  // A mint with an input fee (Task B2): the Fees and limits card adds the fee row's ⓘ, and the Keysets panel's "150 ppk" chip is a trigger (phones: NUTs tab; wide: sidebar).
-  'mint-fee-nuts': [[5, 5], [5, 5], [10, 8], [10, 8], [10, 8]],
-  'mint-alpha-audit': [[6, 6], [6, 6], [11, 8], [11, 8], [11, 8]],
-  'mint-alpha-audit-nodata': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  'mint-alpha-reviews': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  // The Reliability Score dialog is reachable below 768 px only (run() resolves false above).
-  'mint-alpha-score-dialog': [[7, 5], [7, 5], null,  null,  null],
-  'mint-offline-overview': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
-  'mint-test-overview': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
-  'mint-test-audit': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
-  'mint-new-overview': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
-  'mint-new-nuts': [[3, 3], [3, 3], [8, 8], [8, 8], [8, 8]],
-  'mint-operator-overview': [[1, 1], [1, 1], [6, 6], [6, 6], [6, 6]],
-  'mint-operator-reviews': [[2, 2], [2, 2], [7, 7], [7, 7], [7, 7]],
+  // 2026-11-19 redesign (phase 4b): the side column (the five score rows with their ⓘ, Keysets) is on Overview only, at
+  // every width (phones: under the main panel). So Overview has the same count everywhere (phones +5), the other tabs
+  // the phone count everywhere (wide -5), and the Keysets fee chip left the NUTs tab (mint-fee-nuts -1).
+  'mint-alpha-overview': same([7, 7]),
+  'mint-alpha-history': same([1, 1]),
+  'mint-alpha-nuts': same([3, 3]),
+  // A mint with an input fee (Task B2): the Fees and limits card adds the fee row's ⓘ.
+  'mint-fee-nuts': same([4, 4]),
+  'mint-alpha-audit': same([6, 6]),
+  'mint-alpha-audit-nodata': same([2, 2]),
+  'mint-alpha-reviews': same([2, 2]),
+  // The Reliability Score dialog opens from "How it is made" at every width since the 2026-11-19 redesign (the state opens
+  // it on the History tab); the page's one trigger stays counted behind it.
+  'mint-alpha-score-dialog': same([6, 5]),
+  'mint-offline-overview': same([6, 6]),
+  'mint-test-overview': same([6, 6]),
+  'mint-test-audit': same([2, 2]),
+  'mint-new-overview': same([7, 7]), // +1: the "New" badge's ⓘ
+  'mint-new-nuts': same([3, 3]),
+  'mint-operator-overview': same([6, 6]),
+  'mint-operator-reviews': same([2, 2]),
   // +1 (2026-10-25): the ⓘ next to "NUT Support" explains the green / grey NUT chips.
   'compare-modal': same([8, 3]),
   // 0 opened: the Submit dialog has no ⓘ of its own; the page's four triggers sit behind its overlay.

@@ -63,7 +63,7 @@ export const CASES: ModalCase[] = [
   {
     id: 'Watch-login modal (Mint Detail)', name: /watch this mint/i,
     prepare: p => goto(p, DETAIL, '.md-tabs'),
-    trigger: p => p.locator('.md-watch-star-hero').first(), open: clickTrigger,
+    trigger: p => p.locator('.md-dh-star').first(), open: clickTrigger,
     dialog: css('.rv-modal'), close: '.rv-modal-close',
   },
   {
@@ -121,10 +121,10 @@ export const CASES: ModalCase[] = [
   },
   {
     id: 'Reliability breakdown (Mint Detail)', name: /reliability score breakdown/i,
-    // The only trigger is the compact tile .md-sc-reliability, displayed at ≤640px; the desktop sidebar shows the breakdown inline (no modal).
+    // Trigger: "How it is made" in the strip's score tile (every width since the 2026-11-19 redesign; it was the phone donut tile).
     viewport: { width: 390, height: 844 },
     prepare: p => goto(p, DETAIL, '.md-tabs'),
-    trigger: p => p.locator('.md-sc-reliability').locator('visible=true').first(), open: clickTrigger,
+    trigger: p => p.locator('.md-sc-score-link').first(), open: clickTrigger,
     dialog: p => p.getByRole('dialog'), close: 'button[aria-label="Close"]',
   },
   {
