@@ -319,7 +319,7 @@ async function survivesRefetch(ctx: BrowserContext, pointer: Pointer) {
   await page.route('**/api/stats', r => { hits++; return r.fulfill({ json: { ...MOCK_STATS, avgReliabilityScore: 50 + hits } }) })
   await page.clock.install()
   await page.goto('/stats')
-  await expect(page.locator('.nhi-gauge-wrap')).toBeVisible()
+  await expect(page.locator('.nhi-readout')).toBeVisible()
   const uptime = page.locator('.stats-now-panel [data-tooltip-trigger]').first() // the "outdated software" ⓘ (the average-uptime one was removed)
   await uptime.scrollIntoViewIfNeeded()
   const box = (await uptime.boundingBox())!

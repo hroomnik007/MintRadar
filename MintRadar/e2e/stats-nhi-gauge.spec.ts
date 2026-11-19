@@ -1,14 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_STATS } from './fixtures/mocks'
 
-// The Network Health Index gauge draws its arc with reliabilityDonutArc() (shared with
-// the Mint Detail Reliability Score gauge). It once carried a spurious
-// strokeDashoffset="42.4" that split the arc and made it read ~25% short. These
-// tests pin the arc geometry against the number shown in the middle.
-
-const gauge = (page: import('@playwright/test').Page) => page.locator('.nhi-gauge-wrap')
-const arc = (page: import('@playwright/test').Page) => page.locator('.nhi-gauge-wrap circle').nth(1)
-const CIRCUMFERENCE = 2 * Math.PI * 27
+// The Network health number (2026-11-19 redesign: a condensed readout and a word, no ring). It is the weighted sum of
+// the five factor rows beside it ("<points> of <weight>"), and its colour and word follow the bands of the legend.
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1400 })
@@ -21,19 +15,17 @@ for (const v of [
   { label: 'mid', patch: { avgReliabilityScore: 40, onlineMints: 2, offlineMints: 2 } },
   { label: 'high', patch: { avgReliabilityScore: 100, onlineMints: 4, offlineMints: 0 } },
 ]) {
-  test(`NHI gauge arc fills the shown percent (${v.label})`, async ({ page }) => {
+  test(`Network health: the number is the sum of the factor points and names its band (${v.label})`, async ({ page }) => {
     await page.route('**/api/stats', r => r.fulfill({ json: { ...MOCK_STATS, ...v.patch } }))
     await page.goto('/stats')
-    await expect(gauge(page)).toBeVisible()
-
-    const shown = Number((await page.locator('.nhi-gauge-num').textContent())!.trim())
-    const [filled, gap] = ((await arc(page).getAttribute('stroke-dasharray')) || '').split(' ').map(Number) as [number, number]
-
-    // No dash offset — the arc starts at 12 o'clock purely via rotate(-90).
-    expect(await arc(page).getAttribute('stroke-dashoffset')).toBe('0')
-    // filled + gap span the whole r=27 circle.
-    expect(filled + gap).toBeCloseTo(CIRCUMFERENCE, 1)
-    // filled arc == shown percent of the circumference.
-    expect(filled / CIRCUMFERENCE).toBeCloseTo(shown / 100, 2)
+    const readout = page.locator('.nhi-readout')
+    await expect(readout).toBeVisible()
+    const shown = Number((await readout.textContent())!.trim())
+    const points = await page.locator('.nhi-row-pts').evaluateAll(els => els.map(e => Number(e.firstChild!.textContent!.trim())))
+    expect(points).toHaveLength(5)
+    // Each row's points are rounded on their own, so the sum may differ from the rounded total by the rounding of five parts.
+    expect(Math.abs(points.reduce((a, b) => a + b, 0) - shown)).toBeLessThanOrEqual(3)
+    const word = shown >= 70 ? 'Healthy' : shown >= 40 ? 'Moderate' : 'At risk'
+    await expect(page.locator('.nhi-word')).toHaveText(word)
   })
 }

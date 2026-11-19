@@ -18,7 +18,7 @@ test.describe('Stats breakdown-row tooltips state what is computed', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 1400 })
     await page.goto('/stats')
-    await expect(page.locator('.nhi-gauge-wrap')).toBeVisible()
+    await expect(page.locator('.nhi-readout')).toBeVisible()
   })
 
   test('breakdown rows: each row tooltip matches the row it explains', async ({ page }) => {

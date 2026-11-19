@@ -149,8 +149,9 @@ for (const w of [1440, 390]) {
       })
       all.push(...(await scan(page)))
       assertAll(all, 'stats/wallets/banners')
+      // The movers' deltas are coloured text since the 2026-11-19 redesign (no chip), so they are not a badge to reach.
       expectSeen(all, [
-        ['stats-movers-delta', /-9/], ['wallet-platform-tag', 'Android'], ['bulk-status', '✗ Failed'],
+        ['wallet-platform-tag', 'Android'], ['bulk-status', '✗ Failed'],
         ['queued-banner-dismiss', '×'], ['wl-sync-error-banner', /Couldn't sync/], ['sw-badge', 'latest'], ['sw-badge', 'outdated'],
       ], 'stats/wallets/banners')
     })

@@ -189,6 +189,15 @@ What moved, measured on that fixture before the change (phone: Lighthouse report
 
 The reservations (all in `Stats.css`, values as `--stats-reserve-*` custom properties on `.stats-page`, one value per width band, minimum of the band):
 
+**Re-measured 2026-11-19 for the phase-5 redesign** (see "Stats, 2026-11-19 redesign (phase 5)" below): board (without the
+note) 1424 from 1280, 2125 for 769 to 1279, 1858 at 768 (the Geography card sets that row, so the note does not add:
+`boardMin` 1908.5 in the spec's `LOADED`), 3438 up to 767; Network health 330 from 856, 354 for 769 to 855, 336 at 768, 417
+for 418 to 767, 441 up to 417; left stack 722 from 920, 740 for 769 to 919, 637 at 768, 615 for 425 to 767, 632 for 383 to
+424, 655 for 333 to 382, 677 for 325 to 332, 695 up to 324. Movers note (text face now): n1 50 up to 331, else 32; n2 50 up
+to 398, 32 up to 767, 50 at 768-817, 32 from 818; n3 50 up to 468, 32 up to 767, 50 at 768-957, 32 at 958-1279, 50 from
+1280; n4 50 up to 537, 32 up to 767, 50 at 768-1095, 32 at 1096-1279, 50 from 1280; n5 68 up to 334, 50 up to 614, 32 up to
+767, 50 at 768-1233, 32 at 1234-1279, 50 from 1280. The table below is the 2026-11-18 state.
+
 **Re-measured 2026-11-18** (MintRadar Sans, 12px text floor; see `design-palette-and-chrome.md`, "Type change"): every value below and the movers note table. The movers note is 12px at every width now (one line 32 px, two 50 px, three 68 px); the new edges are in the `Stats.css` comment and `NOTE_HEIGHTS`. Measured with the real date (a pinned future date makes the fixture's mints stale, so Top by Reliability Score shows "No data yet" and the stack is ~175 px short) and with the reservations switched off (`min-height: 0 !important` on the stack and the NHI box), sweeping 1600 to 320 px in 1 px steps on one loaded page; fresh loads at nine widths gave the same numbers. Also from that day: the now-panel figures are 2 x 2 at 769-1023 px and the geography list is one column below 360 px.
 
 | Block | Rule | Values (px) by width |
@@ -581,3 +590,24 @@ The Dashboard button described here was removed the same day by #204 (see "Reset
   the stored choice (`mintRadar_viewMode`) is kept for wider screens. `utils/listColumns.ts` (the phone column rule) was
   removed with the phone list.
 - **Phones:** "Add mint" is the plus alone (accessible name "Add mint"); sort, reset and the plus share one row.
+
+## Stats, 2026-11-19 redesign (phase 5)
+
+Approved mockup `~/Claude/refs/mintradar-redesign-1118/stats.html` (phone: `mobile-png/07-stats.png`); styles in the
+"phase 5" block at the end of `Stats.css` (legacy Network health index rules pruned).
+- **Network health** (`.stats-nhi-panel`): the condensed number (`.nhi-readout`, band colour) and its word (Healthy /
+  Moderate / At risk) beside the five factor rows, AT EVERY WIDTH: "<label> <weight>% ⓘ … <points> of <weight>" with a
+  thin bar (`.nhi-row`). The ring, the phone-only "Show details" button and its breakdown dialog are gone (the formula
+  text `nhiFormulaText()` is no longer shown; the factor ⓘ say what each part counts, test mints included). The bands
+  are one line of dots under it: "Healthy from 70 · Moderate 40 to 69 · At risk below 40". The title has no ⓘ
+  (`tooltips-removed-captions.spec.ts`).
+- **The network right now:** left-aligned readout numbers with the unit beside them, labels and notes in the text face; the
+  boxed ochre "Tracked mints running outdated software" row is kept as it was (owner, 2026-11-18).
+- **Rankings, NUT coverage, Software, Where the servers are:** readout numbers in Top by …; NUT rows are tag | name over a
+  thin share bar | "<n> of <online>" (it was a coloured "n/online"); Software and Geography rows carry a share bar (against
+  the largest row); Geography is ONE column at every width (two columns with bars broke the city names on phones).
+- **Movers:** "Up" / "Down" (were Risers / Fallers), the delta is coloured text, no chip; the methodology note in the text
+  face. Trend: the summary under the chart in the text face; the copper version markers were already there.
+- Toggles (Uptime / Reliability, 7d / 30d, 30d / 90d) in the text face.
+- The layout-shift reservations were re-measured for this (see "Re-measured 2026-11-19" above); the spec's
+  `LOADED`, `NOTE_HEIGHTS` and the n1 note case date (21 Nov, its text is the measured one) follow.

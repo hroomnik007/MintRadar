@@ -149,11 +149,9 @@ test('Geographic distribution: description, CDN / anycast as the last cell of th
   const listTops = await tops()
   expect(listTops, 'cells follow each other downwards').toEqual([...listTops].sort((a, b) => a - b))
   expect(new Set(listTops).size, 'no two cells on the same row').toBe(5)
-  // Below 1280 px (here 1000) the cities go back to two balanced columns: 3 + 2, the bucket last.
+  // Since the 2026-11-19 redesign one list at every width too (each row has a share bar; two columns broke the names).
   await resize(page, 1000, 900)
-  const narrow = await lefts()
-  expect(new Set(narrow).size, 'two columns below 1280 px').toBe(2)
-  expect(narrow.filter(x => x === Math.min(...narrow)).length, 'balanced columns, 3 + 2').toBe(3)
+  expect(new Set(await lefts()).size, 'one column at 1000 px').toBe(1)
   await resize(page, 1280, 720)
   // No underline any more, the flag has its own cell, the row is still clickable.
   const row = geo.locator('.stats-geo-cols .dist-row', { hasText: 'Frankfurt' })

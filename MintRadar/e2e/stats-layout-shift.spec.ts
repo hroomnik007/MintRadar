@@ -15,28 +15,30 @@ const TOLERANCE = 12 // a reservation may differ from the loaded height by at mo
 
 // Loaded heights of the fixture (px), measured with the scratch script described in the docs. `board` is the board WITHOUT the
 // movers note (the note's height comes from NOTE_HEIGHTS below, by the number of changes in the 7d window).
-const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number }> = {
-  // Re-measured 2026-11-18 for MintRadar Sans and the 12px text floor; `head` again 2026-11-19 (page header: 28px title,
-  // 16px description, no radar motif).
-  1440: { head: 93.6, board: 1385.1, nhi: 368.2, stack: 645.7 },
-  1024: { head: 93.6, board: 1891.8, nhi: 332.7, stack: 645.7 },
-  768: { head: 93.6, board: 1658.8, nhi: 274.8, stack: 562.0 },
-  390: { head: 104.8, board: 2839.0, nhi: 181.3, stack: 562.0 },
-  320: { head: 104.8, board: 3214.0, nhi: 181.3, stack: 619.5 },
+// `boardMin`: at 768px the movers card shares its row with the taller Geography card, so the note makes the board no taller
+// than this (the loaded board is the larger of board + note and boardMin).
+const LOADED: Record<number, { head: number; board: number; nhi: number; stack: number; boardMin?: number }> = {
+  // Re-measured 2026-11-19 for the phase-5 Stats redesign (readout numbers, the five factors at every width, one-column
+  // geography with share bars, the movers note in the text face).
+  1440: { head: 93.6, board: 1424.6, nhi: 330.7, stack: 722.7 },
+  1024: { head: 93.6, board: 2125.8, nhi: 330.7, stack: 722.7 },
+  768: { head: 93.6, board: 1858.5, nhi: 336.0, stack: 637.5, boardMin: 1908.5 },
+  390: { head: 104.8, board: 3532.5, nhi: 441.0, stack: 632.5 },
+  320: { head: 104.8, board: 3657.5, nhi: 441.0, stack: 695.0 },
 }
 
 // The REAL height of the movers note (px) by the number of changes it lists, as [from width, to width, height] ranges,
-// measured at every width 320 to 1600 (1 px steps), re-measured on 2026-11-18 for MintRadar Sans with the note at 12px at
-// every width (it was 11.5px from 768px, so the 31.25 / 48.5 / 65.75 heights are gone). The change log can only produce one
+// measured at every width 320 to 1600 (1 px steps), re-measured on 2026-11-19 with the note in the text face (it was mono). The change log can only produce one
 // text per count (a window holds the NEWEST changes): n1 `15 Nov (v9)` ... n5 `27 Oct (v5)` to `15 Nov (v9)`. A new
 // METHODOLOGY_CHANGES entry changes the texts: re-measure (docs/claude/stats-dashboard-watchlist-ui.md).
 const NOTE_HEIGHTS: Record<number, ReadonlyArray<readonly [number, number, number]>> = {
-  1: [[320, 388, 50], [389, 768, 32], [769, 797, 50], [798, 1600, 32]],
-  2: [[320, 473, 50], [474, 767, 32], [768, 967, 50], [968, 1279, 32], [1280, 1600, 50]],
-  3: [[320, 566, 50], [567, 767, 32], [768, 1153, 50], [1154, 1279, 32], [1280, 1600, 50]],
-  4: [[320, 372, 68], [373, 666, 50], [667, 767, 32], [768, 1600, 50]],
-  5: [[320, 400, 68], [401, 758, 50], [759, 767, 32], [768, 821, 68], [822, 1600, 50]],
+  1: [[320, 331, 50], [332, 1600, 32]],
+  2: [[320, 398, 50], [399, 767, 32], [768, 817, 50], [818, 1600, 32]],
+  3: [[320, 468, 50], [469, 767, 32], [768, 957, 50], [958, 1279, 32], [1280, 1600, 50]],
+  4: [[320, 537, 50], [538, 767, 32], [768, 1095, 50], [1096, 1279, 32], [1280, 1600, 50]],
+  5: [[320, 334, 68], [335, 614, 50], [615, 767, 32], [768, 1233, 50], [1234, 1279, 32], [1280, 1600, 50]],
 }
+const loadedBoard = (e: { board: number; boardMin?: number }, note: number): number => Math.max(e.board + note, e.boardMin ?? 0)
 const noteHeightAt = (width: number, count: number): number =>
   count === 0 ? 0 : NOTE_HEIGHTS[Math.min(count, 5)]!.find(([from, to]) => width >= from && width <= to)![2]
 const WIDTHS = Object.keys(LOADED).map(Number)
@@ -135,7 +137,7 @@ for (const width of WIDTHS) {
       expect(await heightOf(page, '.page-head'), 'loaded page header').toBeCloseTo(expected.head, -0.6)
       expect(await heightOf(page, '.stats-nhi-panel'), 'loaded Network health index').toBeCloseTo(expected.nhi, -0.6)
       expect(await heightOf(page, '.stats-stack'), 'loaded stack').toBeCloseTo(expected.stack, -0.6)
-      expect(boardBox.height, 'loaded board').toBeCloseTo(expected.board + noteHeight, -0.6)
+      expect(boardBox.height, 'loaded board').toBeCloseTo(loadedBoard(expected, noteHeight), -0.6)
 
       // Each reservation is within TOLERANCE of the loaded height: not missing, not leaving a big empty space.
       for (const [name, reserve, height] of [
@@ -194,7 +196,8 @@ const NOTE_CASES = [
   // `note7` = the note of the default 7d view (what the waiting block and the first paint show), `note` = the note of `period`.
   { name: '7d window holds three changes', date: '2026-10-28T12:00:00Z', period: '7d', note7: true, note: true },
   { name: '7d window holds two changes', date: '2026-10-30T12:00:00Z', period: '7d', note7: true, note: true },
-  { name: '7d window holds one change', date: '2026-11-04T12:00:00Z', period: '7d', note7: true, note: true },
+  // 21 Nov: the 7d window holds only 15 Nov (v9), the n1 text NOTE_HEIGHTS was measured with (2026-11-19).
+  { name: '7d window holds one change', date: '2026-11-21T12:00:00Z', period: '7d', note7: true, note: true },
   { name: '30d window holds five changes, 7d two', date: '2026-10-30T12:00:00Z', period: '30d', note7: true, note: true },
   { name: '30d window holds five changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
   { name: '30d window holds four changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: true },
@@ -241,7 +244,7 @@ for (const width of [1440, 1024, 768, 390, 320]) {
           expect(Math.abs(reserve7 - await noteActual()), 'reserved against the real height of the 7d note').toBeLessThanOrEqual(1)
           const board = (await page.locator('.stats-board-grid').boundingBox())!.height
           const note7Height = noteHeightAt(width, methodologyChangesInWindow(7, Date.parse(c.date)).length)
-          expect(board, 'loaded board').toBeCloseTo(expected.board + note7Height, -0.6)
+          expect(board, 'loaded board').toBeCloseTo(loadedBoard(expected, note7Height), -0.6)
           expect(waiting, 'the waiting block is not taller than the board').toBeLessThanOrEqual(board + TOLERANCE)
           if (width === 1440) expect(board - waiting, 'the waiting block is within TOLERANCE of the board').toBeLessThanOrEqual(TOLERANCE)
         }

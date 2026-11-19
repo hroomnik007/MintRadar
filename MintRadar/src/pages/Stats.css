@@ -37,7 +37,6 @@
    so the hero tile row's left edge lines up with the first Dashboard mint
    card. */
 
-
 /* Hero tiles reuse Dashboard's .stat-card / .stat-row / .stat-icon /
    .stat-figure / .stat-value / .stat-note (defined in Dashboard.css, which
    is always in the main bundle since Dashboard isn't lazy-loaded) instead of
@@ -87,43 +86,6 @@
   align-self: stretch;
 }
 
-.nhi-fill {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  flex: 1;
-  margin-top: var(--stats-header-gap);
-}
-
-.nhi-wrap {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.nhi-gauge-wrap {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  flex-shrink: 0;
-}
-
-.nhi-gauge-wrap svg { width: 60px; height: 60px; }
-
-.nhi-gauge-num {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 16px;
-  font-weight: 600;
-  text-align: center;
-  font-family: var(--font-mono-data);
-  letter-spacing: -0.02em;
-}
-
 /* Typography comes from .stats-panel-title itself (applied as a second class
    in the markup), so this heading is byte-identical to "SOFTWARE IN USE" /
    "GEOGRAPHIC DISTRIBUTION" / "MOST RELIABLE" by construction. Only layout is
@@ -135,42 +97,6 @@
   align-items: center;
   gap: 5px;
   white-space: nowrap;
-}
-
-/* Compact score-band legend — replaces the old single dynamic "Healthy" /
-   "Moderate" / "At Risk" badge with all three bands at once, so the gauge's
-   colour/number can be read against a key instead of a one-word label. The
-   band matching the current score is highlighted (opacity 1 + bold); the
-   other two stay muted. Same three thresholds/colours as healthLabel() /
-   reliabilityScoreInfo() — no new formula, purely a legend for the existing one. */
-.nhi-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12.5px;
-  font-family: var(--font-mono);
-}
-
-.nhi-legend-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  /* Muted by colour, not by opacity: the old 0.55 opacity put the text at 3:1 against the panel. */
-  color: var(--text3);
-  transition: color 150ms ease;
-}
-
-.nhi-legend-row.active {
-  opacity: 1;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.nhi-legend-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 /* ── 2×2 hero grid: Software in Use | Most Reliable, Geographic
@@ -222,7 +148,6 @@
 /* NUT Coverage (span 3) + Reliability Score Movers (1 col, no override needed —
    auto-placement drops it into the remaining column). Reliability Score Trend,
    full width (.stats-trend-panel below). */
-
 
 /* Software in Use and Geographic Distribution both need the same flex-fill
    mechanism as .nhi-fill now that .stats-hero-grid stretches them: a flex
@@ -1065,12 +990,6 @@
    4-column spans. Reliability Score Trend needs no override: .stats-trend-panel
    is always 1 / -1 regardless of column count. */
 
-
-
-
-
-
-
 /* ── Geographic Distribution (2026-10-07 mockup): subtitle, a separate CDN / anycast row, larger rows ── */
 .stats-geo-panel .stats-panel-title-row { margin-bottom: 4px; }
 .stats-geo-sub {
@@ -1185,54 +1104,43 @@
            to 1600 for 1 to 5 changes (docs, "Movers note reservation"). Since the 12px text floor (2026-11-18) the note is
            12px at every width: one line is 32 px, two lines 50 px, three lines 68 px.
            It is added to the board and to the movers card.
-   All values re-measured 2026-11-18 for MintRadar Sans and the 12px floor (each value = the smallest loaded height of its
-   band, so a reservation never exceeds the loaded height). */
+   All values re-measured 2026-11-19 for the phase-5 redesign (readout numbers, factor rows at every width, one-column
+   geography with share bars, the note in the text face): each value = the smallest loaded height of its band, so a
+   reservation never exceeds the loaded height. */
 .stats-page {
   --stats-reserve-note: 0px;
-  --stats-reserve-board: 1385px;
-  --stats-reserve-nhi: 368px;
-  --stats-reserve-stack: 645px;
+  --stats-reserve-board: 1424px;
+  --stats-reserve-nhi: 330px;
+  --stats-reserve-stack: 722px;
 }
-@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 1869px; --stats-reserve-nhi: 309px; } }
-@media (max-width: 1263px) { .stats-page { --stats-reserve-nhi: 332px; } }
-@media (max-width: 999px)  { .stats-page { --stats-reserve-nhi: 355px; } }
-@media (max-width: 919px)  { .stats-page { --stats-reserve-stack: 663px; } }
-@media (max-width: 768px)  { .stats-page { --stats-reserve-board: 1658px; --stats-reserve-nhi: 274px; --stats-reserve-stack: 562px; } }
-@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 2731px; --stats-reserve-nhi: 181px; --stats-reserve-stack: 522px; } }
-@media (max-width: 449px)  { .stats-page { --stats-reserve-stack: 539px; } }
-@media (max-width: 407px)  { .stats-page { --stats-reserve-stack: 562px; } }
-@media (max-width: 357px)  { .stats-page { --stats-reserve-stack: 584px; } }
-@media (max-width: 349px)  { .stats-page { --stats-reserve-stack: 602px; } }
-@media (max-width: 327px)  { .stats-page { --stats-reserve-stack: 619px; } }
+@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 2125px; } }
+@media (max-width: 919px)  { .stats-page { --stats-reserve-stack: 740px; } }
+@media (max-width: 855px)  { .stats-page { --stats-reserve-nhi: 354px; } }
+@media (max-width: 768px)  { .stats-page { --stats-reserve-board: 1858px; --stats-reserve-nhi: 336px; --stats-reserve-stack: 637px; } }
+@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 3438px; --stats-reserve-nhi: 417px; --stats-reserve-stack: 615px; } }
+@media (max-width: 424px)  { .stats-page { --stats-reserve-stack: 632px; } }
+@media (max-width: 417px)  { .stats-page { --stats-reserve-nhi: 441px; } }
+@media (max-width: 382px)  { .stats-page { --stats-reserve-stack: 655px; } }
+@media (max-width: 332px)  { .stats-page { --stats-reserve-stack: 677px; } }
+@media (max-width: 324px)  { .stats-page { --stats-reserve-stack: 695px; } }
 /* The note's height depends on how many lines its text takes, and the text depends on the changes the window holds.
    The change log can only produce one text per count (the window always holds the NEWEST changes), so there are five:
    n1 `15 Nov (v9)`, n2 `13 Nov (v8), 15 Nov (v9)`, n3 `10 Nov (v7)` ... `(v9)`, n4 `28 Oct (v6)` ... `(v9)`, n5 `27 Oct (v5)`
    ... `(v9)`. Edges below = the widths where the line count flips, measured at every width 320 to 1600 px (1 px steps),
-   re-measured 2026-11-18 for MintRadar Sans at 12px (e2e/stats-layout-shift.spec.ts pins the same table):
-     n1  50 up to 388, 32 up to 768, 50 at 769-797, 32 from 798
-     n2  50 up to 473, 32 up to 767, 50 at 768-967, 32 at 968-1279, 50 from 1280
-     n3  50 up to 566, 32 up to 767, 50 at 768-1153, 32 at 1154-1279, 50 from 1280
-     n4  68 up to 372, 50 up to 666, 32 up to 767, 50 from 768
-     n5  68 up to 400, 50 up to 758, 32 up to 767, 68 at 768-821, 50 from 822
+   re-measured 2026-11-19 with the note in the text face (e2e/stats-layout-shift.spec.ts pins the same table):
+     n1  50 up to 331, 32 from 332
+     n2  50 up to 398, 32 up to 767, 50 at 768-817, 32 from 818
+     n3  50 up to 468, 32 up to 767, 50 at 768-957, 32 at 958-1279, 50 from 1280
+     n4  50 up to 537, 32 up to 767, 50 at 768-1095, 32 at 1096-1279, 50 from 1280
+     n5  68 up to 334, 50 up to 614, 32 up to 767, 50 at 768-1233, 32 at 1234-1279, 50 from 1280
    A sixth change inside one window needs a sixth measurement (Stats.tsx caps the class at n5). */
 .stats-page.has-movers-note { --stats-reserve-note: 32px; }
-@media (min-width: 768px) {
-  .stats-page.movers-note-n2, .stats-page.movers-note-n3, .stats-page.movers-note-n4, .stats-page.movers-note-n5 { --stats-reserve-note: 50px; }
-}
-@media (min-width: 769px) and (max-width: 797px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
-@media (min-width: 968px) and (max-width: 1279px) { .stats-page.movers-note-n2 { --stats-reserve-note: 32px; } }
-@media (min-width: 1154px) and (max-width: 1279px) { .stats-page.movers-note-n3 { --stats-reserve-note: 32px; } }
-@media (min-width: 768px) and (max-width: 821px) { .stats-page.movers-note-n5 { --stats-reserve-note: 68px; } }
-@media (max-width: 767px) {
-  .stats-page.has-movers-note { --stats-reserve-note: 32px; }
-}
-@media (max-width: 388px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
-@media (max-width: 473px) { .stats-page.movers-note-n2 { --stats-reserve-note: 50px; } }
-@media (max-width: 566px) { .stats-page.movers-note-n3 { --stats-reserve-note: 50px; } }
-@media (max-width: 666px) { .stats-page.movers-note-n4 { --stats-reserve-note: 50px; } }
-@media (max-width: 758px) { .stats-page.movers-note-n5 { --stats-reserve-note: 50px; } }
-@media (max-width: 372px) { .stats-page.movers-note-n4 { --stats-reserve-note: 68px; } }
-@media (max-width: 400px) { .stats-page.movers-note-n5 { --stats-reserve-note: 68px; } }
+@media (max-width: 331px) { .stats-page.movers-note-n1 { --stats-reserve-note: 50px; } }
+@media (max-width: 398px), (min-width: 768px) and (max-width: 817px) { .stats-page.movers-note-n2 { --stats-reserve-note: 50px; } }
+@media (max-width: 468px), (min-width: 768px) and (max-width: 957px), (min-width: 1280px) { .stats-page.movers-note-n3 { --stats-reserve-note: 50px; } }
+@media (max-width: 537px), (min-width: 768px) and (max-width: 1095px), (min-width: 1280px) { .stats-page.movers-note-n4 { --stats-reserve-note: 50px; } }
+@media (max-width: 614px), (min-width: 768px) and (max-width: 1233px), (min-width: 1280px) { .stats-page.movers-note-n5 { --stats-reserve-note: 50px; } }
+@media (max-width: 334px) { .stats-page.movers-note-n5 { --stats-reserve-note: 68px; } }
 /* The loading block becomes the board in place, so it has the board's width and centring as well (above 1340 px the board is
    narrower than the viewport and a full-width block moved sideways). */
 .stats-loading { min-height: calc(var(--stats-reserve-board) + var(--stats-reserve-note)); max-width: var(--dash-chrome-max); margin-inline: auto; width: 100%; }
@@ -1375,50 +1283,6 @@
 /* Network health index: ring left, factors right on desktop. */
 .stats-nhi-panel { display: flex; flex-direction: column; }
 .nhi-title-row { display: inline-flex; align-items: center; gap: 6px; }
-.nhi-breakdown { margin-top: 14px; }
-/* Desktop: ring on the left; legend and the five factors stacked on the right. */
-@media (min-width: 769px) {
-  .stats-nhi-panel .nhi-fill {
-    display: grid;
-    grid-template-columns: 140px minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    column-gap: 24px;
-    align-items: center;
-    justify-content: stretch;
-  }
-  .stats-nhi-panel .nhi-wrap { display: contents; }
-  .stats-nhi-panel .nhi-gauge-wrap { grid-column: 1; grid-row: 1 / 3; }
-  .stats-nhi-panel .nhi-legend { grid-column: 2; grid-row: 1; flex-direction: row; flex-wrap: wrap; gap: 4px 14px; align-self: end; }
-  .stats-nhi-panel .nhi-breakdown { grid-column: 2; grid-row: 2; margin-top: 8px; align-self: start; }
-}
-/* Design template (desktop only): factors right next to the ring with thicker bars and evenly spaced rows;
-   the legend stays above them (one row where it fits). (A one-line "label | bar | value" row does not fit: the label
-   carries its weight and tooltip, the value carries the percentage and points.) The row's inline bar height is
-   overridden on purpose. */
-@media (min-width: 1280px) {
-  .stats-nhi-panel .nhi-fill { grid-template-rows: auto auto; align-content: center; }
-  .stats-nhi-panel .nhi-gauge-wrap { grid-row: 1 / 3; }
-  .stats-nhi-panel .nhi-breakdown { grid-column: 2; grid-row: 2; margin-top: 0; align-self: start; }
-  .stats-nhi-panel .nhi-breakdown > div { margin-bottom: 14px !important; }
-  .stats-nhi-panel .nhi-breakdown > div:last-child { margin-bottom: 0 !important; }
-  .stats-nhi-panel .nhi-breakdown > div > div:last-child { height: 6px !important; border-radius: 3px !important; }
-  .stats-nhi-panel .nhi-legend { grid-column: 2; grid-row: 1; margin-bottom: 14px; align-self: end; gap: 4px 8px; font-size: 12px; }
-}
-.nhi-show-details {
-  display: none;
-  background: none;
-  border: 0;
-  color: var(--accent);
-  font-family: var(--font-body);
-  font-size: 13px;
-  padding: 6px 0 0;
-  margin-left: auto;
-  cursor: pointer;
-  /* Touch target of at least 24 px (WCAG 2.5.8): the 23 px box grows by 1 px, which the negative bottom margin
-     takes back, so nothing below it moves. */
-  min-height: 24px;
-  margin-bottom: -1px;
-}
 
 /* Top + Software: plain rows with hairline dividers (no boxed rows). */
 .stats-top5-list, .stats-sw-fill > div > div[style] { display: flex; flex-direction: column; gap: 0 !important; }
@@ -1479,8 +1343,6 @@
   .stats-now-panel .stat-card:nth-child(odd) { padding-left: 0; border-left: 0; }
   .stats-now-panel .stat-value { font-size: 26px; }
 
-  .nhi-show-details { display: block; }
-
   .stats-top5-row, .sw-row { padding: 8px 2px; }
   .stats-nut-row { padding: 5px 2px; }
   .stats-geo-cols { grid-template-columns: 1fr 1fr; grid-auto-flow: column; column-gap: 14px; row-gap: 6px; }
@@ -1510,3 +1372,85 @@
    date keeps 8px to its neighbour at the 56px desktop tick spacing (the labels were 9px before the 12px text floor). */
 .stats-trend-panel .recharts-text,
 .stats-trend-panel .stats-trend-marker text { font-stretch: 85%; }
+
+/* ── 2026-11-19 redesign, phase 5 ──────────────────────────────────────────────────────────────────────────────────
+   Approved mockup ~/Claude/refs/mintradar-redesign-1118/stats.html. Numbers in the condensed readout face, labels in
+   the text face (no mono below the numbers), thin share bars, colour-only deltas. The boxed ochre "outdated software"
+   row stays as it was (owner, 2026-11-18). */
+.stats-page .nhi-health { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+.stats-page .nhi-big { display: grid; gap: 6px; min-width: 96px; }
+.stats-page .nhi-readout {
+  position: static; transform: none; font-family: var(--font-display); font-size: 72px; font-weight: 680;
+  font-stretch: 75%; letter-spacing: -0.02em; line-height: 1;
+}
+.stats-page .nhi-word { font-size: var(--fs-sm); color: var(--text2); }
+.stats-page .nhi-breakdown { margin: 0; display: grid; gap: 12px; }
+.nhi-row-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 5px; }
+.nhi-row-label { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--fs-sm); color: var(--text); }
+.nhi-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nhi-row-weight { color: var(--text3); font-size: var(--fs-xs); flex: none; }
+.nhi-row-pts { font-weight: 600; white-space: nowrap; font-size: var(--fs-sm); }
+.nhi-row-of { color: var(--text3); font-weight: 400; font-size: var(--fs-xs); }
+.nhi-row-meter { height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.nhi-row-meter > i { display: block; height: 100%; border-radius: 2px; }
+.stats-page .nhi-legend {
+  display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px 14px; margin-top: 14px; align-items: center;
+  font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text2); letter-spacing: 0;
+}
+.stats-page .nhi-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.stats-page .nhi-legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+
+/* The network right now: left-aligned figures with the unit beside the number. */
+.stats-page .stats-now-panel .stat-card { align-items: flex-start; text-align: left; }
+.stats-page .stats-now-panel .stat-value {
+  font-family: var(--font-display); font-size: 40px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; line-height: 1.05;
+}
+.stats-page .stats-now-panel .stat-unit { font-family: var(--font-body); font-size: var(--fs-md); font-weight: 500; color: var(--text2); margin-left: 2px; }
+.stats-page .stats-now-panel .stat-label { font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 500; color: var(--text); text-transform: none; letter-spacing: 0; }
+.stats-page .stats-now-panel .stat-note { font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text2); }
+
+/* Rankings and movers: readout numbers, colour-only deltas. */
+.stats-page .stats-top5-value { font-family: var(--font-display); font-size: 26px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; }
+.stats-page .stats-movers-delta {
+  background: none; border: 0; padding: 0; font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 650; font-stretch: 85%;
+}
+.stats-page .stats-host-line { font-family: var(--font-mono) !important; }
+
+/* Thin share bars: NUT coverage, Software in use, Where the servers are. */
+.stats-meter { display: block; height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; min-width: 0; }
+.stats-meter > i { display: block; height: 100%; background: var(--accent); border-radius: 2px; opacity: .75; }
+.stats-page .stats-nut-row { grid-template-columns: 62px minmax(0, 1fr) auto; }
+.stats-page .snr-nut-name { display: grid; gap: 4px; font-family: var(--font-body); white-space: normal; }
+.stats-page .snr-nut-name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats-page .snr-nut-count { font-family: var(--font-body); font-weight: 400; color: var(--text2); white-space: nowrap; }
+.stats-page .snr-nut-count b { color: var(--text); font-weight: 600; font-size: var(--fs-sm); }
+.stats-page .sw-row { background: none; border: 0; border-radius: 0; border-top: 1px solid var(--border); padding: 9px 0; display: grid; grid-template-columns: minmax(0, 1fr) 120px 30px 10px; }
+.stats-page .sw-row:first-child { border-top: 0; }
+.stats-page .sw-row-name { color: var(--action); font-weight: 500; font-size: var(--fs-sm); }
+.stats-page .sw-row .dist-count { text-align: right; font-weight: 600; color: var(--text) !important; }
+.stats-page .dist-row-clickable { display: grid; grid-template-columns: 22px minmax(0, 1fr) 64px 22px; gap: 10px; }
+.stats-page .dist-row-clickable .dist-count { text-align: right; }
+@media (max-width: 767px) {
+  .stats-page .nhi-health { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .stats-page .nhi-readout { font-size: 64px; }
+  .stats-page .sw-row { grid-template-columns: minmax(0, 1fr) 90px 30px 10px; }
+}
+@media (min-width: 1280px) {
+  .stats-page .stats-now-panel .stat-card { padding: 0 18px; }
+  .stats-page .stats-now-panel .stat-card:first-child { padding-left: 0; }
+  .stats-page .stats-now-panel .stat-figure { justify-content: flex-start; }
+}
+/* Text under the chart and the movers' methodology note: the text face (they were mono). */
+.stats-page .trend-summary-row, .stats-page .trend-summary-item, .stats-page .trend-summary-label { font-family: var(--font-body); }
+.stats-page .trend-summary-item > span:last-child { font-weight: 600; }
+.stats-page .stats-movers-note { font-family: var(--font-body); }
+/* The now panel's figures sit at the top of the panel (the row is as tall as Network health). */
+.stats-page .stats-now-panel { justify-content: flex-start; }
+.stats-page .stats-now-panel .stats-metrics { margin-top: 8px; }
+.stats-page .stats-tab-btn { font-family: var(--font-body); letter-spacing: 0; }
+.stats-page .stats-now-panel .stats-metrics { flex: 0 0 auto; align-items: start; }
+/* Where the servers are: one column with a share bar per row (mockup), at every width; the inline row count of the old
+   two-column layout is overridden. */
+.stats-page .stats-geo-cols { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; grid-template-rows: none !important; }
+.stats-page .stats-geo-cdn { display: grid; grid-template-columns: 22px minmax(0, 1fr) 64px 22px; gap: 10px; }
+.stats-page .stats-geo-cdn .dist-count { grid-column: 4; text-align: right; }

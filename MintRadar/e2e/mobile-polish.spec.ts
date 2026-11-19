@@ -112,17 +112,19 @@ for (const phone of PHONES) {
       expect(small, `tools result text below ${MIN_TEXT_PX}px`).toEqual([])
     })
 
-    test('stats: "Show details" of the Network health index is at least 24x24', async ({ page }) => {
+    // The "Show details" button went with the 2026-11-19 redesign: the factors are on the page; their ⓘ are 24 x 24.
+    test('stats: the Network health factor tooltips are at least 24x24', async ({ page }) => {
       await page.setViewportSize(phone)
       await loadRoute(page, AUDIT_ROUTES.find(r => r.id === 'stats')!)
       await layoutReady(page)
-      const button = page.locator('button.nhi-show-details')
-      await expect(button).toBeVisible()
-      const box = await button.boundingBox()
-      expect(box).not.toBeNull()
-      expect(box!.width).toBeGreaterThanOrEqual(MIN_TARGET_PX)
-      expect(box!.height).toBeGreaterThanOrEqual(MIN_TARGET_PX)
+      const triggers = page.locator('.stats-nhi-panel [data-tooltip-trigger]')
+      await expect(triggers).toHaveCount(5)
+      for (const box of await triggers.evaluateAll(els => els.map(e => e.getBoundingClientRect()))) {
+        expect(box.width).toBeGreaterThanOrEqual(MIN_TARGET_PX)
+        expect(box.height).toBeGreaterThanOrEqual(MIN_TARGET_PX)
+      }
     })
+
 
     test('home: no horizontal overflow and the sort controls stay inside the viewport', async ({ page }) => {
       await page.setViewportSize(phone)

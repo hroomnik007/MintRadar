@@ -967,18 +967,6 @@
     ],
     "triggers": 6
   },
-  "stats-nhi-dialog@390": {
-    "texts": [
-      "26 of 30 points: the share of online mints among all mints not offline for 24h or more (test mints included). Not a count of mints.",
-      "Average Reliability Score (0-100) of online mints. An online mint without a score counts as 0. Test mints are included.",
-      "Average share of online mints offering each of: P2PK, DLEQ, HTLCs, WebSocket, clear auth, blind auth, BOLT12, on-chain. BOLT12 and on-chain are read from mint and melt methods. A feature no mint offers counts as 0%.",
-      "How evenly mints are spread across different software - heavy reliance on one implementation scores lower.",
-      "MintRadar",
-      "Share of all tracked mints that MintRadar has known for 1 month or more, from the day it first saw each. It does not measure how stable the network is. A stand-in for churn, which MintRadar cannot measure yet.",
-      "Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score."
-    ],
-    "triggers": 6
-  },
   "stats-software-modal@1440": {
     "texts": [
       "26 of 30 points: the share of online mints among all mints not offline for 24h or more (test mints included). Not a count of mints.",
@@ -993,10 +981,15 @@
   },
   "stats-software-modal@390": {
     "texts": [
+      "26 of 30 points: the share of online mints among all mints not offline for 24h or more (test mints included). Not a count of mints.",
+      "Average Reliability Score (0-100) of online mints. An online mint without a score counts as 0. Test mints are included.",
+      "Average share of online mints offering each of: P2PK, DLEQ, HTLCs, WebSocket, clear auth, blind auth, BOLT12, on-chain. BOLT12 and on-chain are read from mint and melt methods. A feature no mint offers counts as 0%.",
+      "How evenly mints are spread across different software - heavy reliance on one implementation scores lower.",
       "MintRadar",
+      "Share of all tracked mints that MintRadar has known for 1 month or more, from the day it first saw each. It does not measure how stable the network is. A stand-in for churn, which MintRadar cannot measure yet.",
       "Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score."
     ],
-    "triggers": 1
+    "triggers": 6
   },
   "stats@1440": {
     "texts": [
@@ -1012,10 +1005,15 @@
   },
   "stats@390": {
     "texts": [
+      "26 of 30 points: the share of online mints among all mints not offline for 24h or more (test mints included). Not a count of mints.",
+      "Average Reliability Score (0-100) of online mints. An online mint without a score counts as 0. Test mints are included.",
+      "Average share of online mints offering each of: P2PK, DLEQ, HTLCs, WebSocket, clear auth, blind auth, BOLT12, on-chain. BOLT12 and on-chain are read from mint and melt methods. A feature no mint offers counts as 0%.",
+      "How evenly mints are spread across different software - heavy reliance on one implementation scores lower.",
       "MintRadar",
+      "Share of all tracked mints that MintRadar has known for 1 month or more, from the day it first saw each. It does not measure how stable the network is. A stand-in for churn, which MintRadar cannot measure yet.",
       "Share of tracked Nutshell and cdk-mintd mints that are two or more minor versions behind the newest stable release. Pre-releases of a current line are not counted. Not a security score."
     ],
-    "triggers": 1
+    "triggers": 6
   },
   "submit-modal@1440": {
     "texts": [

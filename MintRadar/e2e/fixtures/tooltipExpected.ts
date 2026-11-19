@@ -21,12 +21,11 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   'home-filters-hidetest': same([4, 3]),
   // 0: the notification strip's explanations are visible text since 2026-10-14 (tooltip-promoted-lines.spec.ts); the cards carry no ⓘ.
   'watchlist-3-notify': same([0, 0]),
-  // The outdated-software ⓘ is the only one below 1024 px; the wide layout adds the Network Health Index rows.
-  stats: [[1, 1], [1, 1], [1, 1], [6, 6], [6, 6]],
+  // The outdated-software ⓘ and the five Network health factor ⓘ, at every width since the 2026-11-19 redesign (the
+  // factors were behind a phone-only dialog below 1024 px).
+  stats: same([6, 6]),
   // 0 opened: a modal covers the page, its own content (software list) has no ⓘ, the page's triggers are behind the overlay.
-  'stats-software-modal': [[1, 0], [1, 0], [1, 0], [6, 0], [6, 0]],
-  // The Network Health Index dialog is reachable at 768 px and below only (run() resolves false above).
-  'stats-nhi-dialog': [[6, 5], [6, 5], [6, 5], null, null],
+  'stats-software-modal': same([6, 0]),
   // 0: the Tools page has explanatory text only; tooltips appear on a token RESULT (next state).
   tools: same([0, 0]),
   // 3 since 2026-10-27: the Verify part's "Mint fee" ⓘ joined the Signature check and the redeem ones.

@@ -191,7 +191,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       return true
     },
   },
-  page_('stats', '/stats', p => expect(p.locator('.nhi-gauge-wrap')).toBeVisible()),
+  page_('stats', '/stats', p => expect(p.locator('.nhi-readout')).toBeVisible()),
   {
     id: 'stats-software-modal',
     run: async page => {
@@ -200,18 +200,6 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await expect(page.locator('.sw-row').first()).toBeVisible()
       await page.locator('.sw-row').first().click()
       await expect(page.locator('.nut-modal')).toBeVisible()
-      await settle(page)
-      return true
-    },
-  },
-  {
-    id: 'stats-nhi-dialog',
-    run: async page => {
-      await installTooltipMocks(page)
-      await page.goto('/stats')
-      await expect(page.locator('.nhi-gauge-wrap')).toBeVisible()
-      await page.locator('.nhi-gauge-wrap').click()
-      if (!(await page.locator('[role=dialog]').isVisible().catch(() => false))) return false
       await settle(page)
       return true
     },

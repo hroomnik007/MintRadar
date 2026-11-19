@@ -16,7 +16,7 @@ import { trackedCount, onlineCount as countOnline } from '@/utils/mintCounts'
 import { TRACKED_NUTS, NUT_META } from '@/constants/nuts'
 import { nutOfferBreakdown } from '@/utils/nutFilters'
 import { NutDescription, NutSpecLink } from '@/components/NutSpec'
-import { reliabilityColor, reliabilityScoreInfo, reliabilityDonutArc, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
+import { reliabilityColor, reliabilityScoreInfo, displayName, computeDuplicateMintNames, mintAgeBadge } from '@/utils/mintFormatting'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
 import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
@@ -29,7 +29,7 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { LoadError } from '@/components/LoadError'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import {
-  NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSubtitle, nhiFormulaText,
+  NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSubtitle,
   nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption,
 } from '@/utils/networkHealthIndex'
 import { pluralize } from '@/utils/plural'
@@ -541,83 +541,22 @@ interface NetworkHealthComponent { label: string; value: number; weight: number;
 // and the inline desktop breakdown in Stats() below, so the two can never
 // silently drift apart. `compact` shrinks spacing/type for the narrower
 // desktop panel (span-1 grid column) without changing the modal's sizing.
-function NetworkHealthComponentRow({ component: c, compact }: {
-  component: NetworkHealthComponent
-  compact?: boolean
-}) {
+function NetworkHealthComponentRow({ component: c }: { component: NetworkHealthComponent }) {
   const points = Math.round(c.value * c.weight / 100)
   const color = reliabilityColor(c.value)
-
+  // 2026-11-19 redesign (phase 5): label and weight, "<points> of <weight>" in the band colour, a thin bar.
   return (
-    <div style={{ marginBottom: compact ? 8 : 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <span style={{ fontSize: compact ? 12 : 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
-          <span style={{ color: 'var(--text3)', flexShrink: 0 }}>({c.weight}%)</span>
+    <div className="nhi-row">
+      <div className="nhi-row-top">
+        <span className="nhi-row-label">
+          <span className="nhi-row-name">{c.label}</span>
+          <span className="nhi-row-weight">{c.weight}%</span>
           <InfoTooltip iconSize={11} width={220} about={c.label} text={c.tooltip} />
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 8, flexShrink: 0 }}>
-          <span style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono-data)' }}>{Math.round(c.value)}%</span>
-          {/* "pts": without a unit "30/30" read as a count of mints next to "49 mints online". */}
-          <span style={{ fontSize: compact ? 13 : 13, fontWeight: 600, color }}>{points}/{c.weight}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text3)' }}> pts</span></span>
-        </div>
+        <span className="nhi-row-pts" style={{ color }}>{points} <span className="nhi-row-of">of {c.weight}</span></span>
       </div>
-      <div style={{ height: compact ? 3 : 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, c.value))}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
-      </div>
-    </div>
-  )
-}
-
-// Single source of truth for the formula explanation text — used by the
-// modal's footer (NetworkHealthFormulaNote). The header has no tooltip; the weights are visible in the breakdown rows.
-// Built from NHI_WEIGHTS, so it can never disagree with the computation.
-const NETWORK_HEALTH_FORMULA_TEXT = nhiFormulaText()
-
-// Shared formula/explanation footer — modal only now (desktop inline
-// breakdown no longer renders this; see NETWORK_HEALTH_FORMULA_TEXT above).
-function NetworkHealthFormulaNote({ compact }: { compact?: boolean }) {
-  return (
-    <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: compact ? 8 : 10, marginTop: 2, fontSize: 12, color: 'var(--text3)', lineHeight: 1.5 }}>
-      {NETWORK_HEALTH_FORMULA_TEXT}
-    </div>
-  )
-}
-
-function NetworkHealthModal({ score, components, onClose }: {
-  score: number
-  components: NetworkHealthComponent[]
-  onClose: () => void
-}) {
-  const dialogRef = useModalFocus()
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
-
-  const info = reliabilityScoreInfo(score)
-  const label = score >= 70 ? 'Healthy' : score >= 40 ? 'Moderate' : 'At Risk'
-
-  return (
-    <div className="nut-modal-overlay" onClick={onClose}>
-      <div className="nut-modal" onClick={e => e.stopPropagation()} style={{ width: 420 }} role="dialog" aria-modal="true" aria-label="Network Health Index Breakdown" ref={dialogRef}>
-        <button type="button" className="nut-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
-        <div className="nut-modal-header">
-          <span className="nut-modal-title">Network Health Index Breakdown</span>
-        </div>
-        <div style={{ textAlign: 'center', marginBottom: 4 }}>
-          <div style={{ fontSize: 42, fontWeight: 700, color: info.color, lineHeight: 1, fontFamily: 'var(--font-mono-data)' }}>{score}</div>
-          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 600, color: info.color, background: info.bg, border: `0.5px solid ${info.border}`, borderRadius: 5, padding: '2px 8px', display: 'inline-block', marginTop: 6 }}>
-            {label}
-          </span>
-        </div>
-        <div style={{ overflowY: 'auto' }}>
-          {components.map(c => (
-            <NetworkHealthComponentRow key={c.label} component={c} />
-          ))}
-        </div>
-        <NetworkHealthFormulaNote />
+      <div className="nhi-row-meter" role="img" aria-label={`${c.label}: ${Math.round(c.value)}%`}>
+        <i style={{ width: `${Math.min(100, Math.max(0, c.value))}%`, background: color }} />
       </div>
     </div>
   )
@@ -636,7 +575,6 @@ export default function Stats() {
   const [reliableTab, setReliableTab] = useState<'reliable' | 'reliability'>('reliability')
   const [moversPeriod, setMoversPeriod] = useState<'7d' | '30d'>('7d')
   const [trendDays, setTrendDays] = useState<30 | 90>(30)
-  const [showHealthBreakdown, setShowHealthBreakdown] = useState(false)
   // Same 768px breakpoint as the rest of the app's mobile/desktop split (see
   // useIsMobile.ts). Desktop shows the breakdown inline in the panel itself
   // (no reason to click through to a modal that would show the exact same
@@ -931,70 +869,36 @@ export default function Stats() {
         {/* Network Health Index (first card of the board). */}
         {networkHealth && (() => {
           const info = reliabilityScoreInfo(networkHealth.score)
-          const gaugeArc = reliabilityDonutArc(networkHealth.score)
+          const word = networkHealth.score >= 70 ? 'Healthy' : networkHealth.score >= 40 ? 'Moderate' : 'At risk'
+          // 2026-11-19 redesign (phase 5): the condensed number and its word (no second ring: the Mint Detail one meant
+          // something else), the five factors beside it at every width, the bands as a line of dots.
           return (
             <div className="stats-panel stats-nhi-panel">
               <div className="stats-panel-head">
                 <div>
-                <div className="stats-panel-title nhi-title-row">
-                  Network health index
-                </div>
-                <div className="stats-panel-desc">{nhiSubtitle()}</div>
+                  <div className="stats-panel-title nhi-title-row">
+                    Network health
+                  </div>
+                  <div className="stats-panel-desc">{nhiSubtitle()}</div>
                 </div>
               </div>
-              {/* .nhi-fill is the flex:1 region below the header — this panel
-                  shares its .stats-hero-grid row with Geographic
-                  Distribution and stretches to match whichever is taller
-                  (align-self:
-                  stretch on .stats-nhi-panel, opting out of the grid's own
-                  align-items:start just for this one panel), so there can be
-                  real surplus height here to distribute. justify-content:
-                  space-between pins the gauge/badge to the top and the
-                  breakdown block to the bottom edge, putting any extra space
-                  between them instead of leaving it all as dead space below
-                  the breakdown. On mobile (no breakdown block, and nothing
-                  stretches this panel taller than its own content) this is a
-                  no-op — the gauge just sits at its natural position. */}
               <div className="nhi-fill">
-                <div className="nhi-wrap" {...(isMobile ? { ...clickableProps(() => setShowHealthBreakdown(true)), 'aria-haspopup': 'dialog' as const } : {})} style={isMobile ? undefined : { cursor: 'default' }}>
-                  <div className="nhi-gauge-wrap" style={isMobile ? undefined : { width: 140, height: 140 }}>
-                    <svg viewBox="0 0 72 72" style={isMobile ? undefined : { width: 140, height: 140 }}>
-                      <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
-                      <circle cx="36" cy="36" r="27" fill="none" stroke={info.color} strokeWidth="7"
-                        strokeDasharray={gaugeArc.dashArray}
-                        strokeDashoffset={gaugeArc.dashOffset}
-                        strokeLinecap="round"
-                        transform="rotate(-90 36 36)" />
-                    </svg>
-                    <div className="nhi-gauge-num" style={{ color: info.color, ...(isMobile ? {} : { fontSize: 36 }) }}>{networkHealth.score}</div>
+                <div className="nhi-health">
+                  <div className="nhi-big">
+                    <span className="nhi-gauge-num nhi-readout" style={{ color: info.color }}>{networkHealth.score}</span>
+                    <span className="nhi-word">{word}</span>
                   </div>
-                  <div className="nhi-legend">
-                    <div className={`nhi-legend-row${networkHealth.score >= 70 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: 'var(--accent)' }} />Healthy · 70+
-                    </div>
-                    <div className={`nhi-legend-row${networkHealth.score >= 40 && networkHealth.score < 70 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: 'var(--amber)' }} />Moderate · 40-69
-                    </div>
-                    <div className={`nhi-legend-row${networkHealth.score < 40 ? ' active' : ''}`}>
-                      <span className="nhi-legend-dot" style={{ background: 'var(--red)' }} />At Risk · &lt;40
-                    </div>
-                  </div>
-                </div>
-                {isMobile && (
-                  <button type="button" className="nhi-show-details" onClick={() => setShowHealthBreakdown(true)} aria-haspopup="dialog">Show details ›</button>
-                )}
-                {/* Desktop only: same breakdown the mobile modal shows, inline
-                    instead of behind a click. The formula footer is NOT
-                    repeated here (moved to the header ⓘ tooltip, see
-                    NETWORK_HEALTH_FORMULA_TEXT above) — the space it freed up
-                    went to enlarging the gauge instead. */}
-                {!isMobile && (
                   <div className="nhi-breakdown">
                     {networkHealth.components.map(c => (
-                      <NetworkHealthComponentRow key={c.label} component={c} compact />
+                      <NetworkHealthComponentRow key={c.label} component={c} />
                     ))}
                   </div>
-                )}
+                </div>
+                <div className="nhi-legend">
+                  <span><i className="nhi-legend-dot" style={{ background: 'var(--accent)' }} />Healthy from 70</span>
+                  <span><i className="nhi-legend-dot" style={{ background: 'var(--amber)' }} />Moderate 40 to 69</span>
+                  <span><i className="nhi-legend-dot" style={{ background: 'var(--red)' }} />At risk below 40</span>
+                </div>
               </div>
             </div>
           )
@@ -1151,7 +1055,8 @@ export default function Stats() {
                         className="sw-row"
                         {...clickableProps(() => setSoftwareModal(sw))}
                       >
-                        <span className="dist-label" style={{fontWeight:600,color:'var(--text)',fontSize:13}}>{sw}</span>
+                        <span className="dist-label sw-row-name">{sw}</span>
+                        <span className="stats-meter" aria-hidden="true"><i style={{ width: `${(total / Math.max(1, ...versionDist.map(v => v.total))) * 100}%` }} /></span>
                         <span className="dist-count" style={{color:'var(--text2)'}}>{total}</span>
                         <span className="sw-chevron" style={{color:'var(--text3)'}}>›</span>
                       </div>
@@ -1189,8 +1094,12 @@ export default function Stats() {
               return (
                 <div key={nut} className="stats-nut-row" {...clickableProps(() => setNutModal(nut))}>
                   <span className="snr-nut-tag">{nut}</span>
-                  <span className="snr-nut-name">{meta.short}</span>
-                  <span className="snr-nut-count" style={{color:barColor}}>{count}/{data.onlineMints}</span>
+                  {/* Name over a thin share bar, "<n> of <online>" (2026-11-19 redesign; it was a coloured "n/online"). */}
+                  <span className="snr-nut-name">
+                    <span>{meta.short}</span>
+                    <span className="stats-meter" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.max(0, percent))}%`, background: barColor }} /></span>
+                  </span>
+                  <span className="snr-nut-count"><b>{count}</b> of {data.onlineMints}</span>
                 </div>
               )
             })}
@@ -1227,6 +1136,7 @@ export default function Stats() {
                   <div key={loc} className="dist-row dist-row-clickable" {...clickableProps(() => setCityModal(loc))}>
                     <span className="stats-geo-flag" aria-hidden="true">{flag}</span>
                     <span className="dist-label dist-label-city">{display}</span>
+                    <span className="stats-meter" aria-hidden="true"><i style={{ width: `${(count / Math.max(1, ...geoCities.map(g => g.count), geoCdn?.count ?? 0)) * 100}%` }} /></span>
                     <span className="dist-count">{count}</span>
                   </div>
                 )
@@ -1351,13 +1261,6 @@ export default function Stats() {
           />
         )
       })()}
-      {showHealthBreakdown && networkHealth && (
-        <NetworkHealthModal
-          score={networkHealth.score}
-          components={networkHealth.components}
-          onClose={() => setShowHealthBreakdown(false)}
-        />
-      )}
     </div>
   )
 }

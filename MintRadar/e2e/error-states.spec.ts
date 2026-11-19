@@ -174,7 +174,7 @@ test('Mint Detail: a slow successful list shows a quiet Loading… (not an error
 // The Stats page owns its data (/api/stats). A failure there shows the same
 // error state (fixed sentence + "Try again"), never a raw error text, and "Try again" recovers once the mock is healthy.
 const OWN_DATA_PAGES = [
-  { id: 'Stats', path: '/stats', route: '**/api/stats', text: 'Could not load the statistics. Please try again.', ready: '.nhi-gauge-wrap', ok: MOCK_STATS },
+  { id: 'Stats', path: '/stats', route: '**/api/stats', text: 'Could not load the statistics. Please try again.', ready: '.nhi-readout', ok: MOCK_STATS },
 ]
 
 for (const pg of OWN_DATA_PAGES) {

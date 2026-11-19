@@ -20,7 +20,7 @@ for (const width of [1440, 768, 390, 320]) {
   test(`Stats at ${width}px: no tooltip trigger on the average-uptime tile or the index header, new captions`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1400 })
     await page.goto('/stats')
-    await expect(page.locator('.nhi-gauge-wrap')).toBeVisible()
+    await expect(page.locator('.nhi-readout')).toBeVisible()
 
     const tile = page.locator('.stat-card').filter({ hasText: 'average uptime' })
     await expect(tile).toHaveCount(1)
@@ -38,24 +38,14 @@ for (const width of [1440, 768, 390, 320]) {
   })
 }
 
-test('the gauge opens the breakdown dialog from the keyboard (Tab to the gauge, Enter) and by click', async ({ page }) => {
+// Since the 2026-11-19 redesign the five factors show on phones too (the gauge and its breakdown dialog are gone).
+test('on a phone the Network health factors are on the page, no dialog to open', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/stats')
-  await expect(page.locator('.nhi-gauge-wrap')).toBeVisible()
-
-  let reached = false
-  for (let i = 0; i < 60 && !reached; i++) {
-    await page.keyboard.press('Tab')
-    reached = await page.evaluate(() => document.activeElement?.classList.contains('nhi-wrap') ?? false)
-  }
-  expect(reached, 'the gauge is reachable with Tab').toBe(true)
-  await page.keyboard.press('Enter')
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-
-  await page.locator('.nhi-gauge-wrap').click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.locator('.nhi-readout')).toBeVisible()
+  await expect(page.locator('.stats-nhi-panel .nhi-row')).toHaveCount(5)
+  await expect(page.locator('.stats-nhi-panel .nhi-row').first()).toBeVisible()
+  await expect(page.locator('.nhi-show-details')).toHaveCount(0)
 })
 
 for (const width of [1440, 768, 390, 320]) {

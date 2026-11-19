@@ -349,39 +349,6 @@ export function mintStatusLabel(status: MintStatus): Exclude<StatusDotWord, 'Unk
   return MINT_STATUS_LABEL[status]
 }
 
-// ── Reliability Score donut geometry ────────────────────────────────
-// The Mint Detail / Stats gauges draw the arc as a stroke-dasharray on an
-// r=27 SVG <circle>, so the drawable circumference is 2·π·27 ≈ 169.646.
-// The SVG is rotated with transform="rotate(-90 36 36)" so the circle's
-// native 3-o'clock start point moves to 12 o'clock, and the native path
-// direction is clockwise — so a plain two-value dasharray "filled gap"
-// with NO dash offset already gives a single contiguous arc that starts at
-// 12 o'clock and fills exactly `pct`% of the ring clockwise.
-//
-// (The old code also set strokeDashoffset to a quarter-circle, which split
-// the arc in two around the 9-o'clock mark and made e.g. 80% look like ~55%.)
-export const RELIABILITY_DONUT_RADIUS = 27
-export const RELIABILITY_DONUT_CIRCUMFERENCE = 2 * Math.PI * RELIABILITY_DONUT_RADIUS
-
-export interface DonutArc {
-  /** value for strokeDasharray: "<filled> <gap>" */
-  dashArray: string
-  /** value for strokeDashoffset — always 0, arc starts at 12 o'clock via rotate(-90) */
-  dashOffset: number
-  /** filled arc length in user units (exposed for tests / debugging) */
-  filled: number
-}
-
-export function reliabilityDonutArc(pct: number): DonutArc {
-  const clamped = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0))
-  const filled = (clamped / 100) * RELIABILITY_DONUT_CIRCUMFERENCE
-  const gap = RELIABILITY_DONUT_CIRCUMFERENCE - filled
-  return {
-    dashArray: `${filled.toFixed(2)} ${gap.toFixed(2)}`,
-    dashOffset: 0,
-    filled,
-  }
-}
 
 // ── Latency colour (Dashboard card + list, Add-a-mint probe result) ─────────────
 // Coloured only when slow: a typical mint answers our probe in about half a second (the network median), so that is

@@ -40,7 +40,7 @@ export const AUDIT_ROUTES: AuditRoute[] = [
     id: 'home', path: '/', ready: '.mint-card',
     before: async page => { await page.route('**/api/mints/known', r => r.fulfill({ json: MOCK_KNOWN_MINTS.map(m => ({ ...m, iconUrl: 'https://icon.example/i.png' })) })) },
   },
-  { id: 'stats', path: '/stats', ready: '.nhi-gauge-wrap' },
+  { id: 'stats', path: '/stats', ready: '.nhi-readout' },
   { id: 'tools', path: '/tools', ready: '.tool-title' },
   { id: 'wallets', path: '/wallets', ready: 'h1' },
   { id: 'learn', path: '/learn', ready: 'h1' },

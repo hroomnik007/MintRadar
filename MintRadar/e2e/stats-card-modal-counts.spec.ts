@@ -38,7 +38,7 @@ const modal = (page: Page) => page.locator('.nut-modal')
 test('NUT coverage: the modal lists the mints the card counts, not the offline ones', async ({ page }) => {
   const { nut09, online } = await open(page)
   const row = page.locator('.stats-nut-row', { hasText: 'NUT-09' })
-  await expect(row.locator('.snr-nut-count')).toHaveText(`${nut09}/${online}`)
+  await expect(row.locator('.snr-nut-count')).toHaveText(`${nut09} of ${online}`) // "n of online" since the 2026-11-19 redesign
   await row.click()
   await expect(modal(page).locator('.nut-modal-row')).toHaveCount(nut09)
   await expect(modal(page).getByText('Offline', { exact: false }).filter({ hasText: /Mint Offline/ })).toHaveCount(0)
