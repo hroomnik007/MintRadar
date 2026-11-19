@@ -79,24 +79,17 @@ for (const width of [1440, 768, 390, 320]) {
 }
 
 for (const width of [1440, 768]) {
-  test(`Mint Detail at ${width}px: the Reliability Score card header has no tooltip, one muted line says it is not solvency`, async ({ page }) => {
+  // Since the 2026-11-19 redesign the side card is "How the <score> is made" and the not-solvency line is in the strip's
+  // score tile; the card header has no tooltip and the five weights stay visible as row labels.
+  test(`Mint Detail at ${width}px: the score card header has no tooltip, the strip says it is not solvency`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1200 })
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
     const panel = page.locator('.md-reliability-panel')
     await expect(panel).toBeVisible()
-    await expect(panel.locator('.md-panel-title')).toHaveText('Reliability Score')
-    await expect(triggers(panel.locator('.md-panel-title').locator('xpath=..'))).toHaveCount(0)
-    const note = panel.locator('.rb-scope-note')
-    await expect(note).toHaveCount(1)
-    await expect(note).toHaveText('Operational health, not solvency.')
-    await expect(note).toBeVisible()
-    // the note sits inside the card, below the badge, above the breakdown rows
-    const [badge, noteBox, row] = await Promise.all([
-      panel.locator('.reliability-wrap').boundingBox(), note.boundingBox(), panel.locator('.rb-row').first().boundingBox(),
-    ])
-    expect(noteBox!.y).toBeGreaterThanOrEqual(badge!.y + badge!.height - 1)
-    expect(noteBox!.y + noteBox!.height).toBeLessThanOrEqual(row!.y + 1)
-    // the weights of the five components stay visible as row labels
+    await expect(panel.locator('.md-panel-title')).toHaveText(/^How the (\d+|score) is made$/)
+    await expect(triggers(panel.locator('.md-panel-h'))).toHaveCount(0)
+    await expect(page.getByTestId('md-summary-score')).toContainText('Operational health, not solvency.')
+    await expect(page.getByText('Operational health, not solvency.')).toHaveCount(1)
     for (const l of ['Uptime (40%)', 'Audit reliability (25%)', 'NUT Support (15%)', 'Version (15%)', 'Contact (5%)']) await expect(panel.getByText(l)).toBeVisible()
   })
 }

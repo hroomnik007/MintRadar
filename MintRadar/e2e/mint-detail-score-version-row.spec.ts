@@ -55,7 +55,7 @@ test.describe('Reliability breakdown: version row', () => {
       await expect.poll(async () => {
         const scores = await panel.locator('.rb-row-score').allTextContents()
         const sum = scores.reduce((a, s) => a + Number(s.split('/')[0]), 0)
-        const total = Number((await panel.locator('.gauge-num').innerText()).replace('%', ''))
+        const total = Number((await panel.page().getByTestId('md-summary-score').locator('.md-sc-value').innerText()).replace('%', ''))
         return total - Math.min(100, Math.round(sum))
       }).toBe(0)
       await expect(row.locator('.rb-row-score')).toHaveText(c.points)

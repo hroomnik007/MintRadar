@@ -43,10 +43,11 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
     // render a per-input fee ("N ppk"/"free") value.
     await expect(overviewPanel.getByText('sat', { exact: true })).toHaveCount(2)
     await expect(overviewPanel.getByText('usd', { exact: true })).toHaveCount(1)
-    await expect(page.locator('.md-keysets-at-nuts')).toBeHidden()
+    await expect(page.locator('.md-keysets-at-nuts')).toHaveCount(0)
 
+    // The side column is on Overview only since the 2026-11-19 redesign: no Keysets on the NUTs tab.
     await page.locator('.md-tab', { hasText: 'NUTs' }).click()
-    await expect(page.locator('.md-keysets-at-nuts')).toBeHidden()
+    await expect(page.locator('.md-keysets-at-overview')).toHaveCount(0)
   })
 
   test('the keyset explanation is visible text under the heading, not a tooltip', async ({ page }) => {
@@ -87,30 +88,32 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
 test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
+  // Phones show the Overview side column under the main panel since the 2026-11-19 redesign (Keysets used to be on the NUTs tab).
   async function openNutsTab(page: import('@playwright/test').Page) {
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()
-    await page.locator('.md-tab', { hasText: 'NUTs' }).click()
   }
 
-  test('renders on the NUTs tab and NOT on Overview', async ({ page }) => {
+  test('renders on Overview below the main panel and NOT on the NUTs tab', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()
-    await expect(page.locator('.md-keysets-at-overview')).toBeHidden()
-    await page.locator('.md-tab', { hasText: 'NUTs' }).click()
-    const panel = page.locator('.md-keysets-at-nuts')
+    const panel = page.locator('.md-keysets-at-overview')
+    const [left, ks] = await Promise.all([page.locator('.md-left').boundingBox(), panel.boundingBox()])
+    expect(ks!.y).toBeGreaterThan(left!.y + left!.height - 1)
     await expect(panel).toBeVisible()
     await expect(panel.locator('.md-panel-title', { hasText: 'Keysets' })).toBeVisible()
     await expect(panel.locator('.md-keyset-row')).toHaveCount(2)
     await panel.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
     await expect(panel.locator('.md-keyset-row')).toHaveCount(3)
+    await page.locator('.md-tab', { hasText: 'NUTs' }).click()
+    await expect(page.locator('.md-keysets-at-overview')).toHaveCount(0)
   })
 
   test('visible hint under the heading + active/inactive badges + copy still work', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(KS) }))
     await openNutsTab(page)
-    const panel = page.locator('.md-keysets-at-nuts')
+    const panel = page.locator('.md-keysets-at-overview')
     await expect(panel.locator('.md-panel-hint')).toHaveText(/tokens from old keys can still be spent/)
     await panel.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
     await expect(panel.getByText('Active', { exact: true })).toHaveCount(2)
@@ -123,7 +126,7 @@ test.describe('Mint Detail — Keysets panel placement (mobile)', () => {
   test('empty state unchanged when the probe returns no keysets', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(null, false) }))
     await openNutsTab(page)
-    const panel = page.locator('.md-keysets-at-nuts')
+    const panel = page.locator('.md-keysets-at-overview')
     await expect(panel).toBeVisible()
     await expect(panel.getByText('Keyset data not available.')).toBeVisible()
     await expect(panel.getByText('Active', { exact: true })).toHaveCount(0)
@@ -143,9 +146,8 @@ test.describe('Mint Detail — Keysets order (active first)', () => {
   test('both copies list the active keyset first, inactive ones keep their relative order', async ({ page }) => {
     await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(MIXED) }))
     await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
-    // The desktop copy lives in the Overview sidebar, the mobile copy on the NUTs tab (one is CSS-hidden per breakpoint): read the text, not the visibility.
-    for (const copy of ['.md-keysets-at-overview', '.md-keysets-at-nuts']) {
-      if (copy === '.md-keysets-at-nuts') await page.locator('.md-tab', { hasText: 'NUTs' }).click()
+    // One copy since the 2026-11-19 redesign: the Overview side column at every width.
+    for (const copy of ['.md-keysets-at-overview']) {
       const rows = page.locator(`${copy} .md-keyset-row`)
       // The fold state belongs to the page (one state for both copies): the first copy starts folded, the second one is already expanded.
       if (copy === '.md-keysets-at-overview') {
@@ -174,7 +176,7 @@ test.describe('Mint Detail — Keysets fold (inactive keysets)', () => {
 
   for (const [label, viewport, copy] of [
     ['desktop', { width: 1440, height: 900 }, '.md-keysets-at-overview'],
-    ['phone', { width: 390, height: 844 }, '.md-keysets-at-nuts'],
+    ['phone', { width: 390, height: 844 }, '.md-keysets-at-overview'],
   ] as const) {
     test.describe(label, () => {
       test.use({ viewport })
@@ -183,7 +185,6 @@ test.describe('Mint Detail — Keysets fold (inactive keysets)', () => {
         await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(keysets) }))
         await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
         await expect(page.locator('.md-tabs')).toBeVisible()
-        if (label === 'phone') await page.locator('.md-tab', { hasText: 'NUTs' }).click()
         const panel = page.locator(copy)
         await expect(panel.locator('.md-panel-title', { hasText: 'Keysets' })).toBeVisible()
         return panel
@@ -225,8 +226,7 @@ test.describe('Mint Detail — Keysets fold (inactive keysets)', () => {
     test('the button is at least 44 px tall with text of 12 px or more', async ({ page }) => {
       await page.route('**/api/mint/probe**', route => route.fulfill({ json: probeWith(FOUR) }))
       await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
-      await page.locator('.md-tab', { hasText: 'NUTs' }).click()
-      const toggle = page.locator('.md-keysets-at-nuts .md-keysets-toggle')
+      const toggle = page.locator('.md-keysets-at-overview .md-keysets-toggle')
       await expect(toggle).toBeVisible()
       const box = (await toggle.boundingBox())!
       expect(box.height).toBeGreaterThanOrEqual(44)

@@ -608,3 +608,19 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/mint.html`; styles in the
   date scale (29 days ago … Today). Hidden without `uptimeDaily30`.
 - **Tabs:** on phones (<=768px) the five tabs are equal grid columns, no sideways scroll (owner, 2026-11-18); 13px below 375px.
 - The Overview sidebar (gauge, breakdown, units, keysets) is unchanged in 4a; phase 4b replaces it.
+
+## Mint Detail Overview, 2026-11-19 redesign (phase 4b)
+
+Styles in the "phase 4b" block of `MintDetail.css`.
+- **Side column on Overview only** (`.md-body-overview`, `activeTab === 'overview'`); the other tabs are one full-width
+  column. On phones the side column follows the main panel (it used to be hidden there).
+- **Left:** ONE panel; About, Mint info, Network and Get in touch are sections divided by a rule (`.md-panel` inside
+  `.md-body-overview .md-left` lose their own frame). Values in the text face; the mono face only for code (`.md-info-code`:
+  version, IP; the public key keeps its own). The MOTD alert title reads "Message from the operator" (was "Operator notice").
+- **"How the <score> is made"** (`.md-reliability-panel`): title, "Methodology version N", a "Methodology" link, then the
+  five breakdown rows with their sources (and the limited-data / last-score / new-mint notes). No gauge and no band badge:
+  the score and "<band>. Operational health, not solvency." are in the strip only.
+- **Units and methods** is a table (`.md-methods-table`): Unit (`.unit-badge`) | Deposit | Withdraw, methods by
+  `methodsCell()` (shared with Compare; "Disabled by the mint", "None declared") with `methodDisplayText()` ("On-chain"),
+  and a line pointing to the NUTs tab for limits and fees. The bolt11 / onchain chips are gone.
+- **Keysets** are in the Overview side column at every width; the NUTs tab's phone copy (`.md-keysets-at-nuts`) is gone.

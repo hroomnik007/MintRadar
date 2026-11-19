@@ -23,8 +23,8 @@ for (const vp of VIEWPORTS) {
 
     test('Keysets: the explanation is a visible line under the title', async ({ page }) => {
       await installTooltipMocks(page)
-      await page.goto(mintPath(ALPHA, vp.width < 901 ? '#nuts' : '#overview'))
-      const panel = page.locator(vp.width < 901 ? '.md-keysets-at-nuts' : '.md-keysets-at-overview')
+      await page.goto(mintPath(ALPHA, '#overview'))
+      const panel = page.locator('.md-keysets-at-overview') // every width since the 2026-11-19 redesign
       const hint = panel.locator('.md-panel-hint')
       await expect(hint).toBeVisible()
       await expect(hint).toHaveText('Signing keys per unit. Active keys sign new tokens; tokens from old keys can still be spent.')
@@ -33,17 +33,14 @@ for (const vp of VIEWPORTS) {
       expect(await noSideScroll(page)).toBe(true)
     })
 
-    test('New mint: "Capped at 75" under the score where the panel shows, the badge tooltip is shorter', async ({ page }) => {
+    test('New mint: "Capped at 75" in the score panel, the badge tooltip is shorter', async ({ page }) => {
       await installTooltipMocks(page)
       await page.goto(mintPath(NEW_MINT, '#overview'))
       await expect(page.locator('.md-tabs')).toBeVisible()
       const note = page.locator('.rb-new-note')
-      if (vp.width > 640) { // the full Reliability Score panel is hidden on phones (the dialog opened from the compact tile has the formula line)
-        await expect(note).toHaveText('Capped at 75 for the first 30 days (new mint).')
-        await expectInside(page, '.rb-new-note', '.md-reliability-panel')
-      } else {
-        await expect(note).toBeHidden()
-      }
+      // The score panel shows at every width since the 2026-11-19 redesign (phones: under the main panel).
+      await expect(note).toHaveText('Capped at 75 for the first 30 days (new mint).')
+      await expectInside(page, '.rb-new-note', '.md-reliability-panel')
       const badge = page.locator('.md-name [data-tooltip-trigger]', { hasText: 'New' })
       await badge.hover()
       await expect(page.getByRole('tooltip')).toHaveText('Reliability Score capped at 75 for the first 30 days.')

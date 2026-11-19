@@ -58,6 +58,8 @@ test.describe('Audit row without audit data', () => {
   test('breakdown row says "No cashu.info audit data: neutral"; Audit tab text unchanged', async ({ page }) => {
     await open(page, ['rated'], { auditNMints: null, auditNMelts: null, auditRecentTotal: null, auditRecentErrors: null, auditCheckedAt: null, auditSyncedAt: null, auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null })
     const mobile = page.viewportSize()!.width <= 768
+    // The breakdown is in the Overview side column (Overview only since the 2026-11-19 redesign), or the dialog on phones.
+    if (!mobile) await page.locator('.md-tab', { hasText: /^Overview/ }).click()
     if (mobile) await page.locator('.md-sc-score-link').click()
     const row = page.getByText('No cashu.info audit data: neutral', { exact: true }).locator('visible=true')
     await expect(row.first()).toBeVisible()

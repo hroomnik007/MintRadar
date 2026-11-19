@@ -53,11 +53,12 @@ async function open(page: Page, o: { stored: number | null; history: History; si
   return { release, reached, historyRequests: () => count }
 }
 
-const gaugeNum = (page: Page) => page.locator('.md-reliability-panel .gauge-num')
-const badge = (page: Page) => page.locator('.md-reliability-panel .reliability-badges > span').first()
+// The score number: the strip's tile since the 2026-11-19 redesign (the side panel's gauge is gone).
+const gaugeNum = (page: Page) => page.getByTestId('md-summary-score').locator('.md-sc-value')
+const badge = (page: Page) => page.getByTestId('md-summary-score').locator('.md-sc-sub > span').first()
 const uptimeScore = (page: Page) => page.locator('.md-reliability-panel .rb-row-score').first()
 // Top and height of the boxes that hold the score: the placeholder must take exactly the space the number takes.
-const BOXES_DESKTOP = ['.md-reliability-panel .reliability-wrap', '.md-reliability-panel .gauge-wrap', '.md-reliability-panel .reliability-badges', '.md-reliability-panel .rb-scope-note']
+const BOXES_DESKTOP = ['.md-sc-score', '.md-sc-score .md-sc-value', '.md-sc-score .md-sc-sub', '.md-reliability-panel .md-panel-h']
 // Phones: the strip's score tile (the donut tile went with the 2026-11-19 redesign).
 const BOXES_PHONE = ['.md-sc-score', '.md-sc-score .md-sc-value', '.md-sc-score .md-sc-sub']
 const boxes = (page: Page, selectors: string[]): Promise<number[][]> =>
@@ -72,10 +73,10 @@ test.describe('Mint Detail score without a stored score', () => {
     await expect(gaugeNum(page)).toBeVisible()
     await expect(gaugeNum(page)).toHaveText(PLACEHOLDER)
     await expect(gaugeNum(page)).toHaveAttribute('aria-label', 'Score not available yet')
-    // Two placeholders: the gauge and the Reliability Score tile of the figure strip (above 640px since 2026-11-14).
-    await expect(page.getByRole('img', { name: 'Score not available yet' })).toHaveCount(2)
+    // One placeholder: the strip's score tile (the side panel's gauge went with the 2026-11-19 redesign).
+    await expect(page.getByRole('img', { name: 'Score not available yet' })).toHaveCount(1)
     await expect(page.getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText(PLACEHOLDER)
-    await expect(badge(page)).toHaveText('Not available yet')
+    await expect(badge(page)).toContainText('Not available yet')
     await expect(badge(page)).not.toContainText('Reliability')
     // the Uptime row is the part computed from the missing history: no "0%" and no "0/40" either
     await expect(page.locator('.md-reliability-panel .rb-row-display').first()).toHaveText(PLACEHOLDER)
@@ -92,7 +93,7 @@ test.describe('Mint Detail score without a stored score', () => {
     await expect(gaugeNum(page)).toHaveText('71')
     await expect(gaugeNum(page)).not.toHaveAttribute('aria-label', /.+/)
     await expect(page.getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText('71')
-    await expect(badge(page)).toHaveText('High Reliability')
+    await expect(badge(page)).toContainText('High Reliability')
     await expect(uptimeScore(page)).toHaveText('40/40')
   })
 
@@ -125,7 +126,7 @@ test.describe('Mint Detail score without a stored score', () => {
     await frames(page, 3)
     await expect(gaugeNum(page)).toHaveText(PLACEHOLDER)
     await expect(gaugeNum(page)).toHaveAttribute('aria-label', 'Score not available yet')
-    await expect(badge(page)).toHaveText('Not available yet')
+    await expect(badge(page)).toContainText('Not available yet')
     await expect(uptimeScore(page)).toHaveText(`${PLACEHOLDER}/40`)
     await expect(page.locator('.md-reliability-panel')).not.toContainText(/\b(31|71)\b/)
     expect(errors, 'no uncaught page error').toEqual([])
@@ -136,7 +137,7 @@ test.describe('Mint Detail score without a stored score', () => {
     await m.reached
     await expect(gaugeNum(page)).toHaveText('88')
     await expect(gaugeNum(page)).not.toHaveAttribute('aria-label', /.+/)
-    await expect(badge(page)).toHaveText('High Reliability')
+    await expect(badge(page)).toContainText('High Reliability')
     await expect(page.getByRole('img', { name: 'Score not available yet' })).toHaveCount(0)
     m.release()
     await expect(gaugeNum(page)).toHaveText('88')

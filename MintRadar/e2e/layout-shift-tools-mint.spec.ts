@@ -140,7 +140,7 @@ for (const width of [390, 1440]) {
 // layout only) keeps it under the fold. Docs: card-and-mint-detail-ui.md ("Audit deep link, Task Z3").
 const AUDIT_LIMIT = 0.05
 
-test('Mint Detail #audit deep link at 390px: the right column stays below the first screen while the audit data is held, shift below 0.05', async ({ page }) => {
+test('Mint Detail #audit deep link at 390px: no side column on the Audit tab, shift below 0.05 while the audit data is held', async ({ page }) => {
   await prepare(page, 390)
   const rows = MOCK_KNOWN_MINTS.map((m, i) => (i === 0 ? { ...m, ...NO_8333 } : m))
   await page.route('**/api/mints/known', route => route.fulfill({ json: rows }))
@@ -151,15 +151,14 @@ test('Mint Detail #audit deep link at 390px: the right column stays below the fi
   await page.goto(`${ALPHA_PATH}#audit`)
 
   await expect(page.getByRole('status').filter({ hasText: 'Loading audit data…' })).toBeVisible()
-  const rightTop = (): Promise<number> => page.evaluate(() => document.querySelector('.md-right')!.getBoundingClientRect().top)
-  const viewport = page.viewportSize()!.height
-  expect(await rightTop(), 'right column while loading').toBeGreaterThanOrEqual(viewport)
+  // Since the 2026-11-19 redesign the side column is on Overview only: the Audit tab has none that could move.
+  await expect(page.locator('.md-right')).toHaveCount(0)
 
   await audit.release()
   await expect(page.locator('.au-figures')).toBeVisible()
   await networkQuiet(page)
   await layoutReady(page)
   await frames(page, 3)
-  expect(await rightTop(), 'right column once loaded').toBeGreaterThanOrEqual(viewport)
+  await expect(page.locator('.md-right')).toHaveCount(0)
   expect(await shiftTotal(page), 'layout shift of the #audit deep link at 390px').toBeLessThan(AUDIT_LIMIT)
 })

@@ -1,7 +1,7 @@
 // Mint Detail "NUTs" tab: fees & limits, the (mobile-only) keysets panel and the NUT compatibility grid.
 // Extracted verbatim from MintDetail.tsx (pure refactor: same DOM, classes, inline styles, aria and tooltips).
 // All data is computed by MintDetail and passed in; this component holds no state.
-import type { ComponentProps, JSX, ReactNode } from 'react'
+import type { ComponentProps, JSX } from 'react'
 import {
   ShieldCheck, ShieldOff, Info,
   Coins, Flame, SlidersHorizontal, RefreshCw, Lock, Key, Shield,
@@ -49,8 +49,6 @@ const NUT_ICONS: Record<string, JSX.Element> = {
 export interface NutsTabProps {
   /** Props for the Fees & limits panel; null while the mint is not in the known-mints list (panel hidden). */
   feesLimits: ComponentProps<typeof MintFeesLimits> | null
-  /** The shared Keysets panel (shown here on mobile only; CSS hides it on desktop). */
-  keysetsPanel: ReactNode
   supportsBackupRestore: boolean
   /** Tracked NUTs the mint declares as supported and has not switched off. */
   supportedNuts: string[]
@@ -62,17 +60,14 @@ export interface NutsTabProps {
   now: number
 }
 
-export function NutsTab({ feesLimits, keysetsPanel, supportsBackupRestore, supportedNuts, disabledNuts, onSelectNut, infoFetchedAt, now }: NutsTabProps) {
+export function NutsTab({ feesLimits, supportsBackupRestore, supportedNuts, disabledNuts, onSelectNut, infoFetchedAt, now }: NutsTabProps) {
   const nutzapLine = nutzapNote(infoFetchedAt, now)
   return (<>
     {feesLimits && (
       <MintFeesLimits {...feesLimits} />
     )}
 
-    {/* Mobile (<901px) only — on desktop the Keysets panel moves to the
-        Overview sidebar next to "Units & Methods". */}
-    <div className="md-keysets-at-nuts">{keysetsPanel}</div>
-
+    {/* Keysets live in the Overview side column at every width since the 2026-11-19 redesign (this tab had a phone copy). */}
       <div className="md-panel">
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
           <div className="md-panel-title" style={{marginBottom:0}}>NUT compatibility</div>

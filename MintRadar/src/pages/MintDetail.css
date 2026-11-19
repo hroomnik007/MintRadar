@@ -302,23 +302,8 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-left  { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .md-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
-/* Keysets panel placement: NUTs tab on mobile, Overview sidebar on desktop.
-   Same DOM in both spots — only the breakpoint-appropriate copy is shown. */
-.md-keysets-at-overview { display: none; }
-@media (min-width: 901px) {
-  .md-keysets-at-overview { display: block; }
-  .md-keysets-at-nuts { display: none; }
-}
-
-/* Units & Methods + Keysets sit side by side on desktop so the now-fixed
-   380px-wide sidebar (see .md-body above) doesn't stack them into an
-   overly tall column. Stacked (default) on mobile/narrow desktop, where
-   .md-keysets-at-overview is hidden anyway and the row collapses to just
-   the Units & Methods panel. */
-.md-um-keysets-row { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .md-um-panel { flex: 1; min-width: 0; margin: 0; }
 @media (min-width: 901px) {
-  .md-um-keysets-row { flex-direction: row; align-items: flex-start; }
   /* Asymmetric split, not 50/50 — Units & Methods only ever needs to show a
      unit badge + a couple of short method chips, while Keysets rows (id +
      copy + unit + status badge) read better with more room. 38/62 keeps
@@ -634,25 +619,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .nut-name { font-size: 13px; font-weight: 500; color: var(--text); font-family: var(--font-mono); }
 .nut-desc { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); }
 .nut-check { font-size: 13px; flex-shrink: 0; }
-
-/* ── Reliability score ────────────────────────────────────────────── */
-/* Row layout, not stacked — the gauge sits on the left, the High/Moderate/
-   Low Reliability badge to its right, vertically centered against it (was
-   stacked with the badge centered below, 2026-09-20). */
-.reliability-wrap  { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 16px; margin-top: 6px; }
-.gauge-wrap  { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
-.gauge-wrap svg { width: 96px; height: 96px; }
-.gauge-num {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--accent);
-  text-align: center;
-  font-family: var(--font-mono);
-  letter-spacing: -0.02em;
-}
 
 /* ── Reviews ────────────────────────────────────────────────── */
 .reviews-header  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
@@ -1081,66 +1047,11 @@ button.md-url-copy.copied > svg { opacity: 1; }
   .rv-btn-cancel, .rv-btn-submit { width: 100%; }
   .rv-permanence-note { text-align: center; }
 }
-
-/* ── Units & Methods ────────────────────────────────────────── */
-/* Font sizes: 11px for body text and 10px for the small uppercase mono label
-   (matching .md-panel-title). .method-chip was already at 11px and is left as-is. */
-.unit-block { margin-bottom: 14px; }
-.unit-block:last-child { margin-bottom: 0; }
-.unit-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .unit-badge {
   font-family: var(--font-mono); font-size: 12px; font-weight: 700;
   color: var(--green-bright); background: var(--green-soft);
   border: 1px solid var(--green-soft-strong);
   padding: 3px 10px; border-radius: 100px;
-}
-.method-rows { display: flex; flex-direction: column; gap: 8px; padding-left: 2px; }
-/* Label sits above the chips (not beside them) — beside them ate a fixed
-   44px out of an already-narrow sidebar column, so a mint advertising
-   several methods (bolt11/bolt12/onchain/venmo/paypal) could only fit one
-   chip per line and the panel grew very tall (2026-09-20). */
-.method-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; }
-.method-label {
-  display: inline-flex; align-items: center; gap: 6px;
-  color: var(--text3); font-size: 13px;
-  text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-mono);
-}
-.method-chips { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
-/* 2-per-line once there's more than one method (see chipsClassName() in
-   MintDetail.tsx) — plain flex-wrap put one chip per line in the narrower
-   Units & Methods column, growing very tall for a mint offering several
-   methods per direction. A single method never gets this class, so it
-   keeps rendering exactly as before. */
-.method-chips-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-.method-chip {
-  font-family: var(--font-mono); font-size: 13px; color: var(--text2);
-  background: var(--bg3); border: 1px solid var(--border);
-  padding: 3px 8px; border-radius: 7px;
-  text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-/* Slightly denser than a lone chip so two of them fit per line in the
-   narrower sidebar column ("onchain" is the longest method name). */
-.method-chips-grid .method-chip { font-size: 12px; padding: 3px 4px; }
-/* A direction the operator has switched off entirely (NUT-04/05 disabled) —
-   its chips are struck through, and a single amber badge sits next to the
-   MINT/MELT label (not one repeated per chip — disabled is a per-direction
-   flag, not per-method, and a second badge chip in the list below wrapped
-   onto its own line on a narrow sidebar, 2026-09-20). */
-.method-row-off .method-chip { text-decoration: line-through; opacity: 0.5; color: var(--text); }
-.method-off-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--amber);
-  background: var(--amber-soft);
-  border: 1px solid var(--amber-soft-strong);
-  padding: 1px 6px;
-  border-radius: 5px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 .md-limit-off {
   display: inline-flex;
@@ -1303,10 +1214,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
      .card-compare-btn, deliberately left icon-only). */
   .md-compare-label { display: inline; }
 
-  /* Compact Reliability Score fills the empty grid cell next to Community rating;
-     the full breakdown card in .md-right is redundant on mobile (its
-     Uptime/NUTs/Latency rows repeat the metric tiles above). */
-  .md-reliability-panel { display: none; }
 }
 
 /* Fallback for extremely narrow screens where the 3-button hero action row
@@ -1802,10 +1709,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-body { grid-template-columns: minmax(0, 1fr) minmax(300px, 400px); }
 }
 
-/* Units & methods and Keysets: one column, each its own panel (was side by side in a narrow strip). */
-.md-um-keysets-row { flex-direction: column; gap: 16px; }
 @media (min-width: 901px) {
-  .md-um-keysets-row { flex-direction: column; align-items: stretch; }
   .md-um-panel-methods, .md-um-panel-keysets { flex: none; }
 }
 
@@ -1901,10 +1805,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 @media (pointer: coarse), (max-width: 700px) {
   .md-keysets-toggle { min-height: 44px; display: inline-flex; align-items: center; }
 }
-
-/* Units and methods */
-.method-label { text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 13px; }
-.method-chip { background: rgba(0, 0, 0, 0.22); border-color: transparent; }
 
 /* Table headers and mobile tile labels in the same voice (sentence case, sans). */
 .md-vh-table th { text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 12.5px; font-weight: 400; }
@@ -2234,7 +2134,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-method-ver { margin-left: auto; font-size: 12px; color: var(--text3); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; white-space: nowrap; }
 .md-method-ver:hover { color: var(--text); }
 .rb-method-ver { margin-left: auto; }
-.reliability-badges { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
 .md-limited-data-chip { font-size: 12px; font-weight: 600; font-family: var(--font-mono); color: color-mix(in srgb, var(--amber) 80%, var(--text)); background: var(--amber-soft); border: 0.5px solid var(--amber-soft-strong); border-radius: 5px; padding: 2px 8px; white-space: nowrap; }
 .rb-hero { flex-wrap: wrap; }
 
@@ -2717,3 +2616,51 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* One line box for every figure ("—" for an offline mint and "50 ms" with its smaller unit are the same height). */
 .mint-detail .md-strip .md-sc-value:not(.sm):not(.md-strip-readout) { height: 1.1em; }
 .mint-detail .md-strip .md-strip-unit { line-height: 1; }
+
+/* ── 2026-11-19 redesign, phase 4b: Overview ───────────────────────────────────────────────────────────────────────
+   Side column on Overview only (the other tabs are one full-width column); the Overview's left side is ONE panel whose
+   parts (About, Mint info, Network, Get in touch) are sections divided by a rule; values in the text face, the mono face
+   only for code (version, public key, IP). */
+.mint-detail .md-body { padding: 20px var(--page-pad); gap: 20px; }
+.mint-detail .md-body:not(.md-body-overview) { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 901px) {
+  .mint-detail .md-body.md-body-overview { grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); }
+}
+/* Keysets: in the Overview side column at every width. */
+.mint-detail .md-keysets-at-overview { display: block; }
+
+.md-body-overview .md-left {
+  gap: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px 22px;
+}
+.md-body-overview .md-left > .md-panel {
+  background: none; border: 0; border-radius: 0; padding: 18px 0;
+}
+.md-body-overview .md-left > .md-panel + .md-panel { border-top: 1px solid var(--border); }
+.md-body-overview .md-left > .md-panel.md-unavailable { background: none; }
+.mint-detail .md-panel-title { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 0 0 12px; letter-spacing: 0; text-transform: none; }
+.mint-detail .md-info-label { font-family: var(--font-body); font-size: var(--fs-sm); color: var(--text2); }
+.mint-detail .md-info-value { font-family: var(--font-body); font-size: var(--fs-sm); word-break: normal; overflow-wrap: anywhere; }
+.mint-detail .md-info-value.md-info-code { font-family: var(--font-mono); font-size: 13px; }
+.mint-detail .md-mint-alert-title { font-family: var(--font-body); text-transform: none; letter-spacing: 0; font-weight: 600; }
+
+/* Side column panels */
+.md-panel-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.md-panel-h .md-panel-title { margin: 0; }
+.md-panel-sub { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--text2); }
+.mint-detail .md-method-ver { font-size: var(--fs-xs); color: var(--action); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.md-rb-limited { margin-bottom: 10px; }
+.md-rb-rows { width: 100%; }
+
+.md-methods-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.md-methods-table th, .md-methods-table td { text-align: left; padding: 8px 10px 8px 0; border-top: 1px solid var(--border); vertical-align: top; }
+.md-methods-table thead th { border-top: 0; padding-top: 0; font-size: var(--fs-xs); font-weight: 500; color: var(--text2); }
+.md-methods-table th[scope="row"] { font-weight: 400; }
+.md-methods-table .unit-badge { font-family: var(--font-mono); font-size: var(--fs-xs); }
+.md-methods-disabled { color: color-mix(in srgb, var(--red) 75%, var(--text)); }
+.md-methods-none { color: var(--text3); }
+.mint-detail .md-um-panel-methods .md-panel-hint { margin-top: 10px; font-size: var(--fs-xs); color: var(--text2); }
+.mint-detail .md-body { align-items: start; }

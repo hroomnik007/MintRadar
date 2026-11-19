@@ -127,7 +127,7 @@ export function OverviewTab({
               >
                 <AlertTriangle size={16} className="md-mint-alert-icon" />
                 <div className="md-mint-alert-body">
-                  <div className="md-mint-alert-title">Operator notice</div>
+                  <div className="md-mint-alert-title">Message from the operator</div>
                   <div className="md-mint-alert-text">{motd}</div>
                   {motdDatesLine}
                 </div>
@@ -199,7 +199,7 @@ export function OverviewTab({
           </div>
           <div className="md-info-row">
             <span className="md-info-label">Version</span>
-            <span className="md-info-value">{version ?? '—'}</span>
+            <span className="md-info-value md-info-code">{version ?? '—'}</span>
           </div>
           <div className="md-info-row">
             <span className="md-info-label">Discovered</span>

@@ -17,7 +17,7 @@ describe('nutzap sentence under the NUT grid: source and time', () => {
   })
   it('renders as one sentence under the grid, the exact time as title, no verdict', () => {
     const { container } = render(
-      <NutsTab feesLimits={null} keysetsPanel={null} supportsBackupRestore={false} supportedNuts={['NUT-11']} disabledNuts={[]}
+      <NutsTab feesLimits={null} supportsBackupRestore={false} supportedNuts={['NUT-11']} disabledNuts={[]}
         onSelectNut={() => {}} infoFetchedAt="2026-10-30T09:00:00Z" now={NOW} />,
     )
     const note = container.querySelector('.md-nut-nutzap-note')!
@@ -27,7 +27,7 @@ describe('nutzap sentence under the NUT grid: source and time', () => {
   })
   it('renders without a time as a plain sentence', () => {
     const { container } = render(
-      <NutsTab feesLimits={null} keysetsPanel={null} supportsBackupRestore={false} supportedNuts={[]} disabledNuts={[]}
+      <NutsTab feesLimits={null} supportsBackupRestore={false} supportedNuts={[]} disabledNuts={[]}
         onSelectNut={() => {}} infoFetchedAt={null} now={NOW} />,
     )
     expect(container.querySelector('.md-nut-nutzap-note')!.textContent).toBe(`${NUTZAP_NUTS_NOTE} · from the mint's /v1/info.`)

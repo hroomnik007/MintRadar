@@ -66,7 +66,7 @@ test.describe('Mint Detail display fixes', () => {
     await expect(panel.locator('.rb-row', { hasText: 'Uptime' }).locator('.rb-row-score')).toHaveText('0/40')
     const scores = await panel.locator('.rb-row-score').allTextContents()
     expect(scores.reduce((a, t) => a + Number(t.split('/')[0]), 0)).toBe(60)
-    await expect(panel.locator('.gauge-num')).toHaveText(/^60/)
+    await expect(panel.page().getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText(/^60/)
   })
 
   test('offline: last known MOTD/description with a muted "last seen", pubkey from the stored record', async ({ page }) => {

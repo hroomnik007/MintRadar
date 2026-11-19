@@ -61,7 +61,7 @@ for (const w of [1440, 390]) {
       if (w === 1440) expectSeen(recs, [['search-shortcut', '/']], 'cards')
     })
 
-    test('Mint Detail: status, New, Test mint, alerts, disabled method chips', async ({ page }) => {
+    test('Mint Detail: status, New, Test mint, alerts, unit badges', async ({ page }) => {
       const mints = [
         { ...DIMMED_MINTS[2], url: 'https://testnut.cashu.space', name: 'Testnut', discoveredAt: new Date().toISOString() },
         { ...DIMMED_MINTS[4], url: 'https://offerr.mint.example', name: 'Offerr', lastError: 'Connection timed out' },
@@ -87,8 +87,9 @@ for (const w of [1440, 390]) {
       }
       assertAll(all, 'detail')
       expectSeen(all, [
-        ['md-age-badge-inline', 'New'], ['md-mint-alert-title', 'Operator notice'], ['md-error-badge', 'Connection timed out'],
-        ['method-chip', 'bolt11'],
+        ['md-age-badge-inline', 'New'], ['md-mint-alert-title', 'Message from the operator'], ['md-error-badge', 'Connection timed out'],
+        // Units and methods is a table since the 2026-11-19 redesign: the methods are plain text, the unit stays a badge.
+        ['unit-badge', /^SAT$/],
       ], 'detail')
       // The audit.8333.space "Couldn't load recent swaps" banner and its Retry button left the Audit tab on 2026-11-08.
     })

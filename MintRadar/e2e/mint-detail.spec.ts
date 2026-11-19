@@ -68,12 +68,12 @@ test.describe('Mint Detail', () => {
     await expect(panel.getByText('Version (15%)')).toBeVisible()
     await expect(panel.getByText('Contact (5%)')).toBeVisible()
     // The (i) beside the panel title (which held the score formula) was removed 2026-10-14; the weights are in the
-    // row labels above, and one muted line says what the score is not.
+    // row labels above. What the score is not is said once, in the strip's score tile (2026-11-19 redesign).
     await expect(panel.locator('.md-audit-info')).toHaveCount(0)
-    await expect(panel.getByText('Operational health, not solvency.')).toBeVisible()
+    await expect(page.getByTestId('md-summary-score').getByText('Operational health, not solvency.')).toBeVisible()
   })
 
-  test('Reliability Score details modal still opens from the mobile compact tile', async ({ page }) => {
+  test('Reliability Score details modal opens from "How it is made" on a phone', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.locator('.md-sc-score-link').click()
     await expect(page.getByText('Reliability Score Breakdown')).toBeVisible()
@@ -194,8 +194,8 @@ test.describe('Mint Detail — /mint/:url canonicalisation (bare-host collision 
     await expect(page.getByText('Not a tracked mint')).toBeVisible()
     // No fake full detail: no tabs, no Reliability gauge/score.
     await expect(page.locator('.md-tabs')).toHaveCount(0)
-    await expect(page.locator('.md-sc-reliability-num')).toHaveCount(0)
-    await expect(page.locator('.gauge-num')).toHaveCount(0)
+    await expect(page.getByTestId('md-summary-score')).toHaveCount(0)
+    await expect(page.locator('.md-reliability-panel')).toHaveCount(0)
   })
 })
 

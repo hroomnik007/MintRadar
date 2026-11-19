@@ -63,8 +63,10 @@ test.describe('W5b A: source line under every score row', () => {
 
   test('score header links to the methodology with the real version', async ({ page }) => {
     await open(page, ALPHA, {})
-    const link = page.locator('.md-reliability-panel').getByRole('link', { name: `Methodology v${METHODOLOGY_VERSION}` })
+    // Since the 2026-11-19 redesign: "Methodology version N" under the title, a plain "Methodology" link beside it.
+    const link = page.locator('.md-reliability-panel').getByRole('link', { name: 'Methodology', exact: true })
     await expect(link).toHaveAttribute('href', '/methodology')
+    await expect(page.locator('.md-reliability-panel .md-panel-sub')).toHaveText(`Methodology version ${METHODOLOGY_VERSION}`)
   })
 
   test('Audit tab, cashu.info view: no sentence under the heading, the window is in the ⓘ', async ({ page }) => {
@@ -96,7 +98,7 @@ test.describe('W5b B: Limited data', () => {
 
   test('absent for a mint with enough data', async ({ page }) => {
     await open(page, ALPHA, {})
-    await expect(page.locator('.md-reliability-panel .gauge-num')).toBeVisible()
+    await expect(page.locator('.md-reliability-panel .rb-row').first()).toBeVisible()
     await expect(label(page)).toHaveCount(0)
   })
 
@@ -153,8 +155,8 @@ test.describe('W5b C: a mint that is not online', () => {
         await expect(block.getByRole('link', { name: 'Read about the risks of using a mint' })).toHaveAttribute('href', '/learn/understanding-the-risks')
         await expect(block).not.toContainText(/\b(dead|scam|safe|recommended)\b/i)
         // Last known keysets instead of "Keyset data not available".
-        const keysets = width === 1440 ? page.locator('.md-keysets-at-overview') : page.locator('.md-keysets-at-nuts')
-        if (width !== 1440) await page.locator('.md-tab', { hasText: 'NUTs' }).click()
+        // The Overview side column at every width since the 2026-11-19 redesign (it was on the NUTs tab on phones).
+        const keysets = page.locator('.md-keysets-at-overview')
         // One active, one inactive keyset: the active one shows, the inactive one is behind the button.
         await expect(keysets.locator('.md-keyset-row')).toHaveCount(1)
         await keysets.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
@@ -298,7 +300,8 @@ test.describe('W5b D: Signed health record', () => {
     expect(await value.getAttribute('title')).toBeNull()
     const m = await page.evaluate(() => {
       const cs = (el: Element) => getComputedStyle(el)
-      const ver = [...document.querySelectorAll('.md-info-row')].find(r => r.querySelector('.md-info-label')?.textContent === 'Version')!
+      // A plain-text row: Version is code (mono) since the 2026-11-19 redesign, Name is the text face like this row.
+      const ver = [...document.querySelectorAll('.md-info-row')].find(r => r.querySelector('.md-info-label')?.textContent === 'Name')!
       const hr = document.querySelector('.md-hr-row')!
       const c = (r: Element) => { const l = r.querySelector('.md-info-label')!, v = r.querySelector('.md-info-value')!; return { lf: cs(l).fontSize, lfam: cs(l).fontFamily, vf: cs(v).fontSize, vfam: cs(v).fontFamily, vcol: cs(v).color, lcol: cs(l).color, pad: cs(r).padding, ta: cs(v).textAlign } }
       const l = hr.querySelector('.md-info-label')!.getBoundingClientRect(), v = hr.querySelector('.md-info-value')!.getBoundingClientRect()

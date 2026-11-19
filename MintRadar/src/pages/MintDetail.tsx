@@ -40,7 +40,7 @@ import { supportedNutKeys, offeredNutKeys } from '@/utils/nutSupport'
 import { NutDescription, NutSpecLink } from '@/components/NutSpec'
 import { nutOfferBreakdown } from '@/utils/nutFilters'
 import { formatDate } from '@/utils/formatDate'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, reliabilityDonutArc, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel, uptime30dColor } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel, uptime30dColor } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
@@ -54,6 +54,8 @@ import { IcClose } from '@/components/IcClose'
 import { useAuditCz } from '@/hooks/useAuditCz'
 import { adaptAuditCz, auditCzSyncNote } from '@/utils/auditCz'
 import { sortUnits } from '@/utils/sortUnits'
+import { methodsCell } from '@/utils/compareMethods'
+import { methodDisplayText } from '@/utils/methodFilter'
 import {
   computeReliabilityScore as sharedComputeReliabilityScore,
   uptimeComponent, nutComponent, versionComponent, contactComponent,
@@ -87,7 +89,7 @@ import './MintDetail.css'
 // mintDetail/HistoryTab.tsx.
 const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m => ({ default: m.ComparisonModal })))
 import {
-  Copy, Check, Info, AlertTriangle,
+  Copy, Check, Info,
   Zap, QrCode,
   ArrowUpRight, User,
 } from 'lucide-react'
@@ -776,7 +778,6 @@ function MintDetailContent({ url }: { url: string }) {
   // role="img" gives the placeholder's aria-label something to be announced on.
   const scoreA11y = scorePending ? { role: 'img', 'aria-label': SCORE_PENDING_ARIA_LABEL } as const : {}
   const tsInfo = reliabilityScore === null ? SCORE_PENDING_INFO : reliabilityScoreInfo(reliabilityScore)
-  const reliabilityDonut = reliabilityDonutArc(reliabilityScore ?? 0)
 
   // Reliability Score Breakdown modal rows — hoisted out of the modal's JSX (was a
   // nested IIFE) because the react-compiler ESLint rules disallow reading a
@@ -1373,7 +1374,7 @@ function MintDetailContent({ url }: { url: string }) {
         ))}
       </div>
 
-      <div className="md-body">
+      <div className={`md-body md-body-${activeTab}`}>
         <div className="md-left" role="tabpanel" id="md-tabpanel" aria-labelledby={`md-tab-${activeTab}`}>
 
           {activeTab === 'overview' && (
@@ -1433,7 +1434,6 @@ function MintDetailContent({ url }: { url: string }) {
                 now,
                 changes: mintChanges,
               } : null}
-              keysetsPanel={keysetsPanel}
               supportsBackupRestore={supportsBackupRestore}
               supportedNuts={offeredNuts}
               disabledNuts={disabledNuts}
@@ -1506,139 +1506,64 @@ function MintDetailContent({ url }: { url: string }) {
 
         </div>
 
+        {/* The side column is on Overview only since the 2026-11-19 redesign (phase 4b): the other tabs get the full width
+            for charts and tables. Keysets are here at every width (the NUTs tab's phone copy is gone). */}
+        {activeTab === 'overview' && (
         <div className="md-right">
 
-          <div className="md-panel md-reliability-panel">
-            <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:11}}>
-              <span className="md-panel-title" style={{marginBottom:0}}>Reliability Score</span>
-              <Link to="/methodology" className="md-method-ver">Methodology v{METHODOLOGY_VERSION}</Link>
-            </div>
-            <div className="reliability-wrap">
-              <div className="gauge-wrap">
-                <svg viewBox="0 0 72 72">
-                  <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="7" />
-                  <circle cx="36" cy="36" r="27" fill="none" stroke={scoreTone('var(--green-bright)')} strokeWidth="7"
-                    strokeDasharray={reliabilityDonut.dashArray}
-                strokeOpacity={scorePending ? 0 : 1}
-                    strokeDashoffset={reliabilityDonut.dashOffset}
-                    strokeLinecap="round"
-                    transform="rotate(-90 36 36)" />
-                </svg>
-                <div className="gauge-num" style={{ color: scorePending ? 'var(--text3)' : scoreTone('var(--green-bright)'), fontFamily: 'var(--font-mono-data)' }} {...scoreA11y}>{scoreText}</div>
+          {/* "How the 92 is made" (phase 4b): the score is in the strip, so no gauge here; the five parts, each with its source. */}
+          <section className="md-panel md-reliability-panel" aria-labelledby="md-rb-title">
+            <div className="md-panel-h">
+              <div>
+                <h2 id="md-rb-title" className="md-panel-title">{scorePending ? 'How the score is made' : `How the ${scoreText} is made`}</h2>
+                <p className="md-panel-sub">Methodology version {METHODOLOGY_VERSION}</p>
               </div>
-              <div className="reliability-badges">
-                <span data-testid="md-reliability-card-badge" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:badgeInfo.color,background:badgeInfo.bg,border:`0.5px solid ${badgeInfo.border}`,borderRadius:5,padding:'4px 10px',textAlign:'center'}}>{tsInfo.label}{badgeLastNote}</span>
-                {limitedDataLabel}
-              </div>
+              <Link to="/methodology" className="md-method-ver">Methodology</Link>
             </div>
-            <div className="rb-scope-note">Operational health, not solvency.</div>
+            {limitedDataLabel && <div className="md-rb-limited">{limitedDataLabel}</div>}
             {unavailable && <div className="rb-scope-note md-ua-caption">{LAST_SCORE_CAPTION}</div>}
             {isNew && <div className="rb-new-note">{newMintCapNote()}</div>}
-            {/* All 5 components always visible here (no "Details" click / donut
-                tap needed) — the modal below (opened only from the mobile
-                compact tile, where this panel is hidden) shows the same rows. */}
-            <div style={{marginTop:16,width:'100%'}}>
+            <div className="md-rb-rows">
               {reliabilityBreakdownRows.map(row => (
                 <ReliabilityBreakdownRow key={row.label} {...row} />
               ))}
               {storedCapLine}
             </div>
-          </div>
+          </section>
 
-          {/* Units & Methods + Keysets sit side by side on desktop (≥901px,
-              see .md-um-keysets-row) so both stay visible without stacking
-              the sidebar too tall. Unlike the old Overview-tab-only gate,
-              the sidebar itself persists across every tab (see .md-right
-              above) — Keysets must too, or switching to e.g. Audit made it
-              disappear entirely instead of just changing tab content. On
-              mobile the Keysets copy here stays hidden and the NUTs-tab
-              copy (.md-keysets-at-nuts) is shown instead. */}
-          <div className="md-um-keysets-row">
-            {knownMint?.units && knownMint.units.length > 0 && (
-              <div className="md-panel md-um-panel md-um-panel-methods">
-                <div className="md-panel-title">Units and methods</div>
-                {sortUnits(knownMint.units).map(unit => {
-                  const mintChips = (knownMint.mintMethods ?? []).filter(m => m.unit === unit)
-                  const meltChips = (knownMint.meltMethods ?? []).filter(m => m.unit === unit)
-                  // Same set of payment methods for both directions (e.g. bolt11 +
-                  // bolt12 + onchain + venmo, mint AND melt) is common and, shown as
-                  // two separate rows, just repeats the same chip list twice. Collapse
-                  // into one "Mint & Melt" row when neither side is disabled and the
-                  // method sets are identical (order-independent) — see the reported
-                  // "doesn't look nice" case with several methods per direction.
-                  const methodKey = (arr: { method: string }[]) => arr.map(m => m.method).slice().sort().join('|')
-                  const methodsUnified = !nut4Disabled && !nut5Disabled
-                    && mintChips.length > 0 && meltChips.length > 0
-                    && methodKey(mintChips) === methodKey(meltChips)
-                  // 2 chips per line once there's more than one method — one per
-                  // line (the flex-wrap default) got very tall for a mint offering
-                  // several methods per direction. A single method stays exactly
-                  // as it was (no grid, no extra classes).
-                  const chipsClassName = (count: number) => `method-chips${count > 1 ? ' method-chips-grid' : ''}`
-                  return (
-                    <div className="unit-block" key={unit}>
-                      <div className="unit-header"><span className="unit-badge">{unit.toUpperCase()}</span></div>
-                      <div className="method-rows">
-                        {methodsUnified ? (
-                          <div className="method-row">
-                            <span className="method-label">Mint & Melt</span>
-                            <div className={chipsClassName(mintChips.length)}>
-                              {mintChips.map((m, i) => (
-                                <span className="method-chip" key={i}>{m.method}</span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            {(mintChips.length > 0 || nut4Disabled) && (
-                              <div className={`method-row${nut4Disabled ? ' method-row-off' : ''}`}>
-                                <span className="method-label">
-                                  Mint
-                                  {/* Disabled is a per-direction flag, not per-chip — a
-                                      separate "⚠ DISABLED" chip alongside the (also
-                                      struck-through) method chips duplicated the same
-                                      information and, on a narrow sidebar, wrapped onto
-                                      its own line under a single chip. One badge next to
-                                      the row label instead. */}
-                                  {nut4Disabled && <span className="method-off-badge"><AlertTriangle size={10} /> Disabled</span>}
-                                </span>
-                                {mintChips.length > 0 && (
-                                  <div className={chipsClassName(mintChips.length)}>
-                                    {mintChips.map((m, i) => (
-                                      <span className="method-chip" key={i}>{m.method}</span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {(meltChips.length > 0 || nut5Disabled) && (
-                              <div className={`method-row${nut5Disabled ? ' method-row-off' : ''}`}>
-                                <span className="method-label">
-                                  Melt
-                                  {nut5Disabled && <span className="method-off-badge"><AlertTriangle size={10} /> Disabled</span>}
-                                </span>
-                                {meltChips.length > 0 && (
-                                  <div className={chipsClassName(meltChips.length)}>
-                                    {meltChips.map((m, i) => (
-                                      <span className="method-chip" key={i}>{m.method}</span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+          {knownMint?.units && knownMint.units.length > 0 && (
+            <section className="md-panel md-um-panel md-um-panel-methods" aria-labelledby="md-um-title">
+              <h2 id="md-um-title" className="md-panel-title">Units and methods</h2>
+              {/* One row per unit: what you can deposit with (NUT-04) and withdraw with (NUT-05), as the mint declares it. */}
+              <table className="md-methods-table">
+                <thead>
+                  <tr><th scope="col">Unit</th><th scope="col">Deposit</th><th scope="col">Withdraw</th></tr>
+                </thead>
+                <tbody>
+                  {sortUnits(knownMint.units).map(unit => {
+                    const cell = (list: typeof knownMint.mintMethods, off: boolean) => {
+                      const c = methodsCell((list ?? []).filter(m => m.unit === unit), off)
+                      return c.state === 'list'
+                        ? <span className="md-methods-list">{c.text.split(', ').map(methodDisplayText).join(', ')}</span>
+                        : <span className={`md-methods-${c.state}`}>{c.text}</span>
+                    }
+                    return (
+                      <tr key={unit}>
+                        <th scope="row"><span className="unit-badge">{unit.toUpperCase()}</span></th>
+                        <td>{cell(knownMint.mintMethods, nut4Disabled)}</td>
+                        <td>{cell(knownMint.meltMethods, nut5Disabled)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              <p className="md-panel-hint">Limits and fees are on the <button type="button" className="md-strip-link" onClick={() => selectTab('nuts')}>NUTs tab</button>.</p>
+            </section>
+          )}
 
-            <div className="md-keysets-at-overview md-um-panel md-um-panel-keysets">{keysetsPanel}</div>
-          </div>
-
+          <div className="md-keysets-at-overview md-um-panel md-um-panel-keysets">{keysetsPanel}</div>
         </div>
+        )}
       </div>
 
       {showQr && !isArchived && (

@@ -34,7 +34,8 @@ async function openBreakdown(page: Page, audit: { total: number | null; blamed: 
 async function readParts(panel: ReturnType<Page['locator']>) {
   const { scores, gauge } = await panel.evaluate(el => ({
     scores: Array.from(el.querySelectorAll('.rb-row-score')).map(e => e.textContent ?? ''),
-    gauge: (el.querySelector('.gauge-num') as HTMLElement | null)?.innerText ?? '',
+    // the strip's score (the side panel's gauge went with the 2026-11-19 redesign)
+    gauge: (document.querySelector('[data-testid="md-summary-score"] .md-sc-value') as HTMLElement | null)?.innerText ?? '',
   }))
   expect(scores).toHaveLength(5)
   const parts = scores.map(s => {

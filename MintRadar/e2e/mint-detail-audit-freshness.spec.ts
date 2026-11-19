@@ -9,6 +9,14 @@ const D = 24 * H
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
 const SHOTS = process.env.AUDIT_SHOTS_DIR
 
+// The score breakdown (its rows carry the audit note) is in the Overview side column only since the 2026-11-19 redesign.
+async function onOverview(page: Page): Promise<Page> {
+  const tab = page.locator('.md-tab', { hasText: /^Overview/ })
+  if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click()
+  await expect(page.locator('.md-reliability-panel .rb-row').first()).toBeVisible()
+  return page
+}
+
 async function gotoAudit(page: Page, over: Record<string, unknown>) {
   await mockRelays(page)
   await installApiMocks(page)
@@ -38,41 +46,41 @@ test.describe('Audit data freshness', () => {
     await expect(page.locator('.audit-summary-cell', { hasText: "Auditor's last check" })).toHaveCount(0)
     await expect(page.locator('.audit-summary-cell', { hasText: 'MintRadar last synced' })).toHaveCount(0)
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
-    await expect(page.locator('.rb-row-detail')).toHaveCount(0)
-    await expect(page.locator('.rb-row-note')).toHaveCount(0)
+    await expect((await onOverview(page)).locator('.rb-row-detail')).toHaveCount(0)
+    await expect((await onOverview(page)).locator('.rb-row-note')).toHaveCount(0)
     await shot(page, 'fresh')
   })
 
   test('detail 5 days old: still scored, quiet "data 5 days old" note, no copper notice', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCheckedAt: ago(3 * H), auditSyncedAt: ago(2 * H), auditCzFetchedAt: ago(5 * D + H) })
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
-    await expect(page.locator('.rb-row-detail')).toHaveCount(0)
-    await expect(page.locator('.rb-row-note').first()).toHaveText('data 5 days old')
+    await expect((await onOverview(page)).locator('.rb-row-detail')).toHaveCount(0)
+    await expect((await onOverview(page)).locator('.rb-row-note').first()).toHaveText('data 5 days old')
     await shot(page, 'detail-5d')
   })
 
   test('detail 30 hours old: note says "data 1 day old"', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCzFetchedAt: ago(30 * H) })
-    await expect(page.locator('.rb-row-note').first()).toHaveText('data 1 day old')
+    await expect((await onOverview(page)).locator('.rb-row-note').first()).toHaveText('data 1 day old')
   })
 
   test('detail older than 7 days: neutral text, no note', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCzFetchedAt: ago(8 * D) })
-    await expect(page.locator('.rb-row-detail').first()).toHaveText('Audit data older than 7 days: neutral')
-    await expect(page.locator('.rb-row-note')).toHaveCount(0)
+    await expect((await onOverview(page)).locator('.rb-row-detail').first()).toHaveText('Audit data older than 7 days: neutral')
+    await expect((await onOverview(page)).locator('.rb-row-note')).toHaveCount(0)
     await shot(page, 'detail-8d')
   })
 
   test('fewer than 10 swaps: "Not enough audit data yet" neutral text', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCzTotal: 9, auditCzBlamed: 0, auditCzFetchedAt: ago(2 * H) })
-    await expect(page.locator('.rb-row-detail').first()).toHaveText('Not enough audit data yet (fewer than 10 swaps in the last 7 days): neutral')
+    await expect((await onOverview(page)).locator('.rb-row-detail').first()).toHaveText('Not enough audit data yet (fewer than 10 swaps in the last 7 days): neutral')
   })
 
   test('stale audit.8333.space data does not touch the score row (no note, scored text)', async ({ page }) => {
     await gotoAudit(page, { ...base, auditCheckedAt: ago(10 * D + H), auditSyncedAt: ago(2 * D), auditCzFetchedAt: ago(2 * H) })
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
-    await expect(page.locator('.rb-row-detail')).toHaveCount(0)
-    await expect(page.locator('.rb-row-note')).toHaveCount(0)
+    await expect((await onOverview(page)).locator('.rb-row-detail')).toHaveCount(0)
+    await expect((await onOverview(page)).locator('.rb-row-note')).toHaveCount(0)
     await shot(page, 'auditor-old')
   })
 
@@ -80,8 +88,8 @@ test.describe('Audit data freshness', () => {
     await gotoAudit(page, { auditNMints: null, auditNMelts: null, auditRecentTotal: null, auditRecentErrors: null, auditCheckedAt: null, auditSyncedAt: null, auditCzTotal: null, auditCzBlamed: null, auditCzFetchedAt: null })
     await expect(page.getByText('No audit data available for this mint.')).toBeVisible()
     await expect(page.locator('.audit-stale-notice')).toHaveCount(0)
-    await expect(page.locator('.rb-row-note')).toHaveCount(0)
-    await expect(page.locator('.rb-row-detail').first()).toHaveText('No cashu.info audit data: neutral')
+    await expect((await onOverview(page)).locator('.rb-row-note')).toHaveCount(0)
+    await expect((await onOverview(page)).locator('.rb-row-detail').first()).toHaveText('No cashu.info audit data: neutral')
     await shot(page, 'no-data')
   })
 })

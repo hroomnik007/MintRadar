@@ -47,14 +47,14 @@ for (const width of [700, 860, 1000, 1100, 1440, 390]) {
 }
 
 for (const width of [800, 900, 1000]) {
-  test(`Audit swap list at ${width}px: fits its box without a sideways scroll (narrow left column)`, async ({ page }) => {
+  // The Audit tab has the full width since the 2026-11-19 redesign (the side column is on Overview only).
+  test(`Audit swap list at ${width}px: fits its box without a sideways scroll`, async ({ page }) => {
     await resize(page, width, 900)
     await gotoAuditTab(page, { alpha: { ...NO_8333 }, cz: auditCzResponse({ swaps: czSwapList([ok, ok, melt, ok, ok]) }) })
     await expect(page.locator('.audit-swaps-table tbody tr').first()).toBeVisible()
     await layoutReady(page)
     const m = await page.locator('.audit-swaps-table-wrap').evaluate(w => ({ sw: w.scrollWidth, cw: w.clientWidth }))
     expect(m.sw).toBeLessThanOrEqual(m.cw)
-    await expect(page.locator('.audit-swaps-table thead th.au-col-dur')).toBeHidden()
   })
 }
 

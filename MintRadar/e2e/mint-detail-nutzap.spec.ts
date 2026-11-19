@@ -92,12 +92,12 @@ test('a mint without a stored score: the fallback score and the NUT row count `s
   const noStored = { reliabilityScore: null }
   const read = async () => {
     const panel = page.locator('.md-reliability-panel')
-    await expect(panel.locator('.gauge-num')).toBeVisible()
+    await expect(panel.page().getByTestId('md-summary-score').locator('.md-sc-value')).toBeVisible()
     // Without a stored score the page shows "—" until the 24 h history has arrived and only then the computed score (Task F3):
     // wait for the number, then read it.
-    await expect(panel.locator('.gauge-num')).toHaveText(/^\d+$/)
+    await expect(panel.page().getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText(/^\d+$/)
     return {
-      score: (await panel.locator('.gauge-num').innerText()).trim(),
+      score: (await panel.page().getByTestId('md-summary-score').locator('.md-sc-value').innerText()).trim(),
       nutRow: (await panel.locator('.rb-row', { hasText: 'NUT Support' }).innerText()).replace(/\s+/g, ' '),
     }
   }
@@ -108,7 +108,7 @@ test('a mint without a stored score: the fallback score and the NUT row count `s
   const b = await page.context().newPage()
   await open(b, { '4': {}, '5': {}, '10': { supported: true }, '7': { supported: false }, '14': null }, [1440, 900], 'overview', noStored)
   const panel = b.locator('.md-reliability-panel')
-  await expect(panel.locator('.gauge-num')).toBeVisible()
-  await expect(panel.locator('.gauge-num')).toHaveText(a.score)
+  await expect(panel.page().getByTestId('md-summary-score').locator('.md-sc-value')).toBeVisible()
+  await expect(panel.page().getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText(a.score)
   expect((await panel.locator('.rb-row', { hasText: 'NUT Support' }).innerText()).replace(/\s+/g, ' ')).toContain('3 / 14 NUTs')
 })

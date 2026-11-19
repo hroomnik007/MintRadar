@@ -67,13 +67,13 @@ async function open(page: Page, o: { history: History; uptimePct: number | null;
   return { release, reached, historyRequests: () => count }
 }
 
-const gaugeNum = (page: Page) => page.locator('.md-reliability-panel .gauge-num')
+const gaugeNum = (page: Page) => page.getByTestId('md-summary-score').locator('.md-sc-value') // the strip's score since the 2026-11-19 redesign
 const uptimeRow = (page: Page) => page.locator('.md-reliability-panel .rb-row').first()
 const display = (page: Page) => uptimeRow(page).locator('.rb-row-display')
 const score = (page: Page) => uptimeRow(page).locator('.rb-row-score')
 // The line with the value ('.rb-row-top') is what this task changes. The grey source line below it gains "N checks" when the history
 // arrives and may wrap to a second line at 1440px; that is not the value cell and is not covered here.
-const BOXES = ['.md-reliability-panel .reliability-wrap', '.md-reliability-panel .rb-row-top']
+const BOXES = ['.md-reliability-panel .md-panel-h', '.md-reliability-panel .rb-row-top']
 const boxes = (page: Page): Promise<number[][]> =>
   page.evaluate(sels => sels.map(sel => { const r = document.querySelector(sel)!.getBoundingClientRect(); return [r.y, r.height].map(v => Math.round(v * 10) / 10) }), BOXES)
 const shiftTotal = (page: Page): Promise<number> =>
