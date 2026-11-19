@@ -621,3 +621,92 @@
 .wl-login-gate .wl-login-browse { margin: 20px 0 0; font-size: 13px; }
 .wl-login-browse a { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
 @media (pointer: coarse) { .wl-login-what summary { min-height: 44px; } .wl-login-browse a { display: inline-block; padding: 12px 0; } }
+
+/* ── 2026-11-19 redesign, phase 6d: the logged-out gate ─────────────────────────────────────────────────────────────
+   Approved mockup watchlist.html: left-aligned like the other pages (it was a narrow centred column), the solid copper
+   login (it was green), the three points with an icon each. */
+.watchlist-page .wl-login-gate {
+  max-width: var(--dash-chrome-max); margin: 24px auto 0; width: 100%; box-sizing: border-box;
+  padding: 0 var(--page-pad);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start;
+  text-align: left; color: var(--text2);
+}
+.wl-gate-main, .watchlist-page .wl-login-points {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+}
+.watchlist-page .wl-login-gate h1 { font-size: var(--fs-xl); font-weight: 650; color: var(--text); margin: 0; }
+.wl-gate-lede { margin: 8px 0 0; font-size: var(--fs-md); color: var(--text2); max-width: 52ch; }
+.wl-gate-cta { display: flex; gap: 12px 16px; align-items: center; flex-wrap: wrap; margin-top: 22px; }
+.watchlist-page .wl-gate-login {
+  background: var(--action); color: #1a1006; border: 1px solid var(--action); font-weight: 600; font-size: var(--fs-sm);
+  min-height: 40px; padding: 9px 18px; border-radius: 8px;
+}
+.watchlist-page .wl-gate-login:hover { background: color-mix(in srgb, var(--action) 88%, #fff); }
+.watchlist-page .wl-login-gate .wl-login-browse { font-size: var(--fs-sm); color: var(--action); text-decoration: underline; text-underline-offset: 3px; margin: 0; }
+.watchlist-page .wl-login-what { margin: 20px 0 0; max-width: none; }
+.watchlist-page .wl-login-points { margin: 0; max-width: none; list-style: none; display: grid; gap: 14px; font-size: var(--fs-md); color: var(--text); }
+.watchlist-page .wl-login-points li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 0; }
+.watchlist-page .wl-login-points li::before { content: none; }
+.watchlist-page .wl-login-points svg { color: var(--accent); margin-top: 3px; }
+@media (max-width: 860px) {
+  .watchlist-page .wl-login-gate { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+
+/* ── 2026-11-19 redesign, phase 6d: watched mints as rows ───────────────────────────────────────────────────────────
+   Approved mockup watchlist.html ("Your mints"): one panel, one row per mint with the icon, the name (watch star right
+   after it), the 30 daily bars, the latency and the score; status, units and Compare under it, then the alerts. The
+   card's own markup is unchanged (MintCard is shared with the Mints page): its wrappers are flattened with
+   display: contents and the parts placed on a grid here. The mockup's single "Alerts" switch was NOT copied: the server
+   keeps five separate alerts (down, up, mint/melt, outdated version, lost NUT-04/05), so NotifyStrip stays as it is. */
+.watchlist-page .wl-grid {
+  display: block; padding: 4px 20px; margin: 12px 0 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+.watchlist-page .wl-grid .mint-card {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1.4fr) minmax(120px, 200px) auto 64px;
+  grid-template-areas: "ico name bars lat score" ". foot foot foot foot" ". notify notify notify notify";
+  gap: 6px 16px; align-items: center;
+  padding: 14px 0; background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0;
+}
+.watchlist-page .wl-grid .mint-card:first-child { border-top: 0; }
+.watchlist-page .wl-grid .mint-card:hover { border-color: var(--border); background: transparent; }
+.watchlist-page .wl-grid .mint-card:hover .card-name { color: var(--action-ink); }
+.watchlist-page .wl-grid .card-link::after { border-radius: 0; }
+.watchlist-page .wl-grid .card-top,
+.watchlist-page .wl-grid .card-name-row,
+.watchlist-page .wl-grid .card-lower { display: contents; }
+.watchlist-page .wl-grid .card-name-row > :first-child { grid-area: ico; }
+.watchlist-page .wl-grid .card-id { grid-area: name; }
+.watchlist-page .wl-grid .card-trace { grid-area: bars; gap: 4px; }
+.watchlist-page .wl-grid .card-facts { grid-area: lat; grid-template-columns: auto auto; justify-content: start; gap: 4px 20px; }
+/* The 30-day uptime is the bars beside it; latency and reviews stay. */
+.watchlist-page .wl-grid .card-facts > div:not(.latency-block):not(.card-fact-reviews) { display: none; }
+.watchlist-page .wl-grid .card-fact-reviews { justify-items: start; text-align: left; }
+.watchlist-page .wl-grid .card-reliability { grid-area: score; justify-self: end; align-items: flex-end; }
+.watchlist-page .wl-grid .card-foot { grid-area: foot; padding-top: 0; border-top: 0; }
+.watchlist-page .wl-grid .notify-strip { grid-area: notify; margin-top: 0; padding-top: 0; border-top: 0; }
+.watchlist-page .wl-grid .skeleton-card { margin: 12px 0; }
+@media (max-width: 760px) {
+  .watchlist-page .wl-grid { padding: 4px 16px; }
+  .watchlist-page .wl-grid .mint-card {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-areas: "ico name score" "foot foot foot" "notify notify notify";
+    column-gap: 12px;
+  }
+  .watchlist-page .wl-grid .card-trace,
+  .watchlist-page .wl-grid .card-facts { display: none; }
+}
+@media (max-width: 400px) {
+  /* 320 px: the label and both pills must fit one line inside the panel (they ran 7 px over). */
+  .watchlist-page .wl-grid { padding: 4px 10px; }
+  .watchlist-page .wl-grid .notify-strip-label { letter-spacing: 0; }
+}
+/* In a row the alerts sit together (label, the two pills, "More alerts"), not stretched to the row's two ends. */
+@media (min-width: 761px) {
+  .watchlist-page .wl-grid .notify-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+  .watchlist-page .wl-grid .notify-strip-label { margin-right: 4px; }
+  .watchlist-page .wl-grid .notify-more-toggle { margin-top: 0; }
+  .watchlist-page .wl-grid .notify-more-pills, .watchlist-page .wl-grid .notify-strip-msg { flex-basis: 100%; }
+  .watchlist-page .wl-grid .notify-strip-msg:empty { display: none; }
+}

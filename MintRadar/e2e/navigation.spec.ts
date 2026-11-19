@@ -18,7 +18,7 @@ test.describe('Primary navigation', () => {
     // Watchlist
     await page.getByRole('link', { name: 'Watchlist' }).click()
     await expect(page).toHaveURL(/\/watchlist$/)
-    await expect(page.getByRole('heading', { name: 'My Watchlist' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Watchlist', exact: true })).toBeVisible()
 
     // Stats
     await page.getByRole('link', { name: 'Stats' }).click()

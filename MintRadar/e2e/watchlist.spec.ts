@@ -12,11 +12,14 @@ test.describe('Watchlist', () => {
 
     // Without a Nostr session the watchlist is gated behind login.
     const gate = page.locator('.wl-login-gate')
-    await expect(gate.getByRole('heading', { name: 'My Watchlist' })).toBeVisible()
-    await expect(gate.getByText(/sync your watchlist across devices/)).toBeVisible()
-    await expect(gate.getByRole('button', { name: /Login via Nostr/ })).toBeVisible()
+    // 2026-11-19 redesign: left-aligned gate, the copper "Log in with Nostr", three points with an icon each.
+    await expect(gate.getByRole('heading', { level: 1, name: 'Watchlist', exact: true })).toBeVisible()
+    await expect(gate.getByText(/the same on every device/)).toBeVisible()
+    await expect(gate.getByRole('button', { name: 'Log in with Nostr' })).toBeVisible()
+    await expect(gate.locator('.wl-login-points li svg')).toHaveCount(3)
+    await expect(gate.getByRole('link', { name: 'Browse mints without logging in' })).toHaveAttribute('href', '/')
     // One list of what it gives (it used to repeat the DM sentence in a line above it).
-    await expect(gate.getByText(/optional private message when one of them goes down or comes back, or when its key or fee changes/)).toBeVisible()
+    await expect(gate.getByText(/Get a private message when one of them goes down or comes back, or when its key or fee changes\. Optional, per mint\./)).toBeVisible()
     await expect(gate.locator('.wl-login-hint')).toHaveCount(0)
     // No watchlist grid is rendered.
     await expect(page.locator('.wl-grid')).toHaveCount(0)

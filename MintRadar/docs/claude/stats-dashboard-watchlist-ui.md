@@ -71,6 +71,25 @@
 - `ComparisonModal` also renders a Community Rating row (★ badge, "—" fallback when no reviews)
   and a shield-badge Reliability Score (see "Reliability Score vs Community Rating" above) — added 2026-09-03.
 
+## Watchlist, 2026-11-19 redesign (phase 6d): current layout, supersedes the card grid described below
+
+Approved mockup `~/Claude/refs/mintradar-redesign-1118/watchlist.html`; styles in the "phase 6d" blocks of `Watchlist.css`.
+- **Logged out:** `.wl-login-gate` is a two-column section at the page width (one column at 860 px and below), left-aligned
+  like the other pages. Left panel: h1 "Watchlist", "Keep the mints you use in one short list, the same on every device.",
+  the solid copper **"Log in with Nostr"** (it was green "Login via Nostr") with "Browse mints without logging in" beside
+  it, then "What is Nostr?". Right panel: three points with an icon each (star, bell, key). The "Watch this mint" dialogs
+  (MintCard, Mint Detail) say "Log in with Nostr" too; the navbar button keeps its accessible name "Login via Nostr".
+- **Logged in:** `.wl-grid` is ONE framed panel of rows, not a multi-column card grid. Each row is the unchanged
+  `MintCard` (shared with the Mints page): its wrappers (`.card-top`, `.card-name-row`, `.card-lower`) are flattened
+  with `display: contents` and the parts placed on a grid: icon | name with the watch star | 30 daily bars | latency and
+  reviews | score; status, units and Compare under it; then the alerts. Below 760 px the bars and the facts are hidden
+  (icon | name | score). The 30-day uptime figure is hidden in rows (the bars show it).
+- **Alerts:** the mockup's single "Alerts" switch was NOT copied: the server keeps five separate alerts (down, up,
+  mint/melt issues, outdated version, lost NUT-04/05), so `NotifyStrip` stays; in a row its label, pills and "More
+  alerts" sit together on one line.
+- The login dialog already matched the mockup's notes (three methods as rows, the signer first on phones, "New to
+  Nostr? Get started"); it was not changed.
+
 ## Watchlist changes (2026-09-04/05)
 
 - **Filters + sort row removed entirely.** Watchlist previously had its own local

@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHead } from '@/components/layout/PageHead'
 import { cardsLatencyNote } from '@/constants/probeLocation'
 import { useQuery } from '@tanstack/react-query'
-import { Zap } from 'lucide-react'
+import { Bell, KeyRound, Star, Zap } from 'lucide-react'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
@@ -293,34 +293,37 @@ export default function Watchlist() {
   if (profile === null) {
     return (
       <div className="watchlist-page">
-        <div className="wl-login-gate">
-          <h1>My Watchlist</h1>
-          <p>Log in with Nostr to sync your watchlist across devices.</p>
-          <button
-            type="button"
-            className="wl-add-btn"
-            onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}
-          >
-            <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Login via Nostr
-          </button>
-          {/* Someone without Nostr used to meet a dead end here: one button and no word on what it is or what it gives. */}
+        {/* 2026-11-19 redesign (phase 6d): left-aligned like the other pages, the solid copper login, what you get as
+            three points with an icon each (star, bell, key). Someone without Nostr still gets "What is Nostr?". */}
+        <section className="wl-login-gate" aria-labelledby="wl-gate-title">
+          <div className="wl-gate-main">
+            <h1 id="wl-gate-title">Watchlist</h1>
+            <p className="wl-gate-lede">Keep the mints you use in one short list, the same on every device.</p>
+            <div className="wl-gate-cta">
+              <button
+                type="button"
+                className="wl-add-btn wl-gate-login"
+                onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}
+              >
+                <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Log in with Nostr
+              </button>
+              <Link className="wl-login-browse" to="/">Browse mints without logging in</Link>
+            </div>
+            <details className="wl-login-what">
+              <summary>What is Nostr?</summary>
+              <p>
+                Nostr is an open protocol in which your identity is a key pair, not an account at a company. A browser
+                extension or a signer app holds the key and approves each request; MintRadar only ever sees your public key.
+                If you have no key yet, a signer such as Alby (browser) or Amber (Android) creates one in a minute.
+              </p>
+            </details>
+          </div>
           <ul className="wl-login-points">
-            <li>Keep a short list of the mints you use, the same on every device.</li>
-            <li>Get an optional private message when one of them goes down or comes back, or when its key or fee changes.</li>
-            <li>No email and no password: you sign in with a key that stays in your signer.</li>
+            <li><Star size={18} aria-hidden="true" /><span>Star a mint anywhere on the site and it lands here.</span></li>
+            <li><Bell size={18} aria-hidden="true" /><span>Get a private message when one of them goes down or comes back, or when its key or fee changes. Optional, per mint.</span></li>
+            <li><KeyRound size={18} aria-hidden="true" /><span>No email and no password: you sign in with a key that stays in your signer.</span></li>
           </ul>
-          <details className="wl-login-what">
-            <summary>What is Nostr?</summary>
-            <p>
-              Nostr is an open protocol in which your identity is a key pair, not an account at a company. A browser
-              extension or a signer app holds the key and approves each request; MintRadar only ever sees your public key.
-              If you have no key yet, a signer such as Alby (browser) or Amber (Android) creates one in a minute.
-            </p>
-          </details>
-          <p className="wl-login-browse">
-            <Link to="/">Browse the mints without logging in</Link>
-          </p>
-        </div>
+        </section>
       </div>
     )
   }

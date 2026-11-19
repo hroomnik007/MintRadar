@@ -19,7 +19,7 @@ test.describe('MintCard — watch star while logged out', () => {
     await star.click()
     const dialog = page.getByRole('dialog', { name: 'Watch this mint' })
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByRole('button', { name: 'Login via Nostr' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Log in with Nostr' })).toBeVisible()
 
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await expect(dialog).toHaveCount(0)

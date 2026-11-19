@@ -1631,7 +1631,7 @@ function MintDetailContent({ url }: { url: string }) {
             </div>
             <div className="rv-actions">
               <button type="button" className="rv-btn-cancel" onClick={closeWatchLoginModal}>Cancel</button>
-              <button type="button" className="rv-btn-submit rv-btn-login" onClick={confirmWatchLogin}><Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Login via Nostr</button>
+              <button type="button" className="rv-btn-submit rv-btn-login" onClick={confirmWatchLogin}><Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Log in with Nostr</button>
             </div>
           </div>
         </div>

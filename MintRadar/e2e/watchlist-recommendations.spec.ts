@@ -168,8 +168,8 @@ test.describe('Watchlist — recommendations section', () => {
       const empty = await measure({ noFollows: true })
       const filled = await measure({ recs: true })
       expect(filled).toEqual(empty)
-      // Full page width, like the Dashboard grid: more than one column once there is room.
-      if (width >= 768) expect(new Set(empty.cards.map(c => c[0])).size).toBeGreaterThan(1)
+      // One panel of rows since the 2026-11-19 redesign (it was a multi-column card grid): every mint starts at one x.
+      expect(new Set(empty.cards.map(c => c[0])).size).toBe(1)
     })
   }
 
