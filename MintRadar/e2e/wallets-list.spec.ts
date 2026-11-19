@@ -25,10 +25,11 @@ test('Nutshell lives in a "Run your own mint" subsection, not the main wallet gr
   await expect(mainGrid.locator('.wallet-card')).toHaveCount(9)
   await expect(mainGrid.locator('.wallet-card', { hasText: 'Nutshell' })).toHaveCount(0)
 
-  // Self-host section below the grid carries Nutshell (same card style).
+  // Self-host section below the grid: one panel of rows since the 2026-11-19 redesign (Nutshell, cdk-mintd).
   const selfHost = page.locator('.wallets-selfhost')
   await expect(selfHost.getByText('Run your own mint')).toBeVisible()
-  await expect(selfHost.locator('.wallet-card', { hasText: 'Nutshell' })).toHaveCount(1)
+  await expect(selfHost.locator('.wallets-selfhost-row dt')).toHaveText(['cdk-mintd', 'Nutshell'])
+  await expect(selfHost.locator('.wallets-selfhost-row', { hasText: 'Nutshell' }).getByRole('link')).toHaveAttribute('href', 'https://github.com/cashubtc/nutshell')
 })
 
 test('platform label is not duplicated (icon on the left, chips on the right only)', async ({ page }) => {
@@ -63,4 +64,23 @@ test('the Cashu.me wallet card and Learn Module 4 link to the web wallet, wallet
   const link = page.locator('.learn-content a[href*="cashu.me"]')
   await expect(link).toHaveCount(1)
   await expect(link).toHaveAttribute('href', 'https://wallet.cashu.me')
+})
+
+// 2026-11-19 redesign: alphabetical (an order that cannot be read as a ranking) and a platform filter.
+test('wallets are in alphabetical order and the platform filter keeps only that platform', async ({ page }) => {
+  await mockRelays(page)
+  await installApiMocks(page)
+  await page.goto('/wallets')
+  await page.waitForSelector('.wallet-card')
+  const names = await page.locator('.wallets-grid .wallet-name').allTextContents()
+  expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })))
+  await page.getByRole('button', { name: 'iOS', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'iOS', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  const cards = page.locator('.wallets-grid .wallet-card')
+  expect(await cards.count()).toBeGreaterThan(0)
+  for (const tags of await cards.evaluateAll(els => els.map(e => [...e.querySelectorAll('.wallet-platform-tag')].map(t => t.textContent)))) {
+    expect(tags).toContain('iOS')
+  }
+  await page.getByRole('button', { name: 'All', exact: true }).click()
+  await expect(cards).toHaveCount(names.length)
 })

@@ -3,7 +3,7 @@
 // endpoint: the list changes rarely, carries no per-mint or user data, and needs
 // no ranking, reviews or moderation. Purely informational.
 //
-// Keep entries alphabetical-ish by relevance; each `blurb` is one plain sentence
+// The Wallets page sorts the entries alphabetically (2026-11-19: an order that cannot be read as a ranking); each `blurb` is one plain sentence
 // in English (the app is EN-first). Every `url` must be an absolute https:// link
 // to the wallet's own site — it is rendered as an external link.
 
@@ -82,6 +82,13 @@ export const WALLETS: WalletInfo[] = [
     platforms: ['CLI'],
     blurb: 'The reference Python implementation, including a command-line wallet handy for scripting and running your own mint.',
     url: 'https://github.com/cashubtc/nutshell',
+    selfHost: true,
+  },
+  {
+    name: 'cdk-mintd',
+    platforms: ['CLI'],
+    blurb: 'The Rust mint server built on the Cashu Development Kit, for running your own mint.',
+    url: 'https://github.com/cashubtc/cdk',
     selfHost: true,
   },
 ]

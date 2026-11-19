@@ -1,167 +1,70 @@
-.wallets-page {
-  background: transparent;
-}
+/* Wallets page, 2026-11-19 redesign (phase 6a): approved mockup ~/Claude/refs/mintradar-redesign-1118/wallets.html.
+   Alphabetical cards (the whole card is the link), a platform filter, "Run your own mint" as one panel of rows. */
+.wallets-page { background: transparent; }
 
-/* ── Grid ────────────────────────────────────────────────────── */
-/* Grid recipe unified with .learn-grid. */
+.wallets-filter, .wallets-grid, .wallets-selfhost, .wallets-footnote {
+  max-width: var(--dash-chrome-max);
+  margin-inline: auto;
+  width: 100%;
+  padding-inline: var(--page-pad);
+  box-sizing: border-box;
+}
+.wallets-filter { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.wallets-filter-label { color: var(--text2); font-size: var(--fs-sm); }
+.wallets-seg { display: inline-flex; border: 1px solid var(--border2); border-radius: 8px; overflow: hidden; }
+.wallets-seg button {
+  background: none; border: 0; border-left: 1px solid var(--border2); color: var(--text2); cursor: pointer;
+  font: inherit; font-size: var(--fs-sm); padding: 6px 12px; min-height: 32px;
+}
+.wallets-seg button:first-child { border-left: 0; }
+.wallets-seg button.on { background: var(--raised); color: var(--text); }
+.wallets-seg button:hover:not(.on) { color: var(--text); }
+.wallets-seg button:focus-visible { outline: 2px solid var(--action); outline-offset: -2px; }
+
 .wallets-grid {
   display: grid;
-  /* Three columns on a wide screen (minmax 340px): four left the last card alone in its row (9 wallets = 4 + 4 + 1,
-     5 modules = 4 + 1). */
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 16px;
-  max-width: var(--dash-chrome-max);
-  margin-inline: auto;
-  padding: 16px var(--page-pad);
-  width: 100%;
-}
-
-/* ── Card ────────────────────────────────────────────────────── */
-/* Card recipe unified with .learn-card (same padding, transition, entry
-   animation). border-radius: var(--radius-m) and var(--r) are both 10px. */
-.wallet-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  color: inherit;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-  animation: fadein 0.22s ease both;
-}
-
-/* Local copy of .learn-card's entry keyframe — Learn.css is not loaded on
-   /wallets, so the name would otherwise be undefined here. */
-@keyframes fadein {
-  from { opacity: 0; transform: translateY(5px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* The whole card is one <a>; keep every descendant free of underlines so a
-   hover never underlines the title/blurb. Hover changes only the border,
-   matching .learn-card:hover. */
-.wallet-card,
-.wallet-card * {
-  text-decoration: none !important;
-}
-
-.wallet-card:hover {
-  border-color: var(--accent-brd);
-}
-
-.wallet-card-head {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
-}
-
-/* Same muted fill/radius language as Dashboard's .stat-icon.gray — no more
-   copper/orange icon well. */
-.wallet-icon {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: rgba(139, 148, 158, 0.1);
-  color: var(--text-faint);
-}
-
-.wallet-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Title on its own row below the head — mirrors .learn-card-title. */
-.wallet-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-
-.wallet-platforms {
-  display: flex;
-  gap: 0;
-  flex-wrap: wrap;
-  margin-left: auto;
-}
-
-.wallet-platform-tag {
-  font-size: 12px;
-  color: var(--text3);
-}
-.wallet-platform-tag + .wallet-platform-tag::before { content: '·'; margin: 0 6px; }
-
-.wallet-blurb {
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: var(--text2);
-  flex: 1;
-}
-
-.wallet-link {
-  align-self: flex-start;
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: var(--font-mono);
-  color: var(--action);
-}
-
-.wallets-footnote {
-  max-width: var(--dash-chrome-max);
-  margin-inline: auto;
-  width: 100%;
-  padding: 4px var(--page-pad) 32px;
-  font-size: 13px;
-  color: var(--text3);
-}
-
-/* ── "Run your own mint" — self-host section below the wallet grid ── */
-.wallets-selfhost {
-  max-width: var(--dash-chrome-max);
-  margin: 8px auto 0;
-  padding: 8px var(--page-pad) 4px;
-  width: 100%;
-}
-.wallets-selfhost-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-.wallets-selfhost-sub {
-  margin-top: 3px;
-  font-size: 13px;
-  color: var(--text3);
-}
-.wallets-grid-selfhost {
-  /* auto-fill (not auto-fit): with a single self-host card, auto-fit
-     collapses every other track to 0fr and lets that one card's 1fr max
-     stretch across the whole row — visibly wider than the same-width cards
-     in the grid above. auto-fill keeps the other tracks in the layout (just
-     empty), so the card is sized like any other column in the row instead
-     of stretching to fill it. */
+  /* Three columns on a wide screen (340px minimum): with 300px the nine wallets were 4 + 4 + 1. */
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  padding-left: 0;
-  padding-right: 0;
-  margin-top: 12px;
+  gap: 16px;
+  padding-block: 18px;
 }
+.wallet-card {
+  display: grid; gap: 10px; align-content: start;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+  color: inherit; text-decoration: none; transition: border-color 150ms ease;
+}
+.wallet-card:hover { border-color: var(--border-strong); }
+.wallet-card:hover .wallet-name { color: var(--action); }
+.wallet-card:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+.wallet-name { font-size: var(--fs-lg); font-weight: 620; color: var(--text); letter-spacing: -0.01em; }
+.wallet-platforms { display: flex; gap: 6px; flex-wrap: wrap; }
+.wallet-platform-tag {
+  font-size: var(--fs-xs); color: var(--text2); border: 1px solid var(--border2); border-radius: 5px; padding: 1px 7px;
+}
+.wallet-blurb { font-size: var(--fs-sm); line-height: 1.5; color: var(--text2); }
+.wallet-link { display: inline-flex; gap: 6px; align-items: center; color: var(--action); font-size: var(--fs-sm); }
 
-/* Breakpoint + single-column collapse matched to .learn-grid's @media(700px). */
+.wallets-selfhost {
+  margin-top: 18px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start;
+}
+.wallets-selfhost > * { min-width: 0; }
+.wallets-selfhost-title { font-size: var(--fs-lg); font-weight: 620; margin: 0; }
+.wallets-selfhost-sub { margin: 6px 0 0; font-size: var(--fs-sm); color: var(--text2); }
+.wallets-selfhost-rows { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px 20px; }
+.wallets-selfhost-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.wallets-selfhost-row:first-child { border-top: 0; }
+.wallets-selfhost-row dt { font-weight: 600; font-size: var(--fs-sm); }
+.wallets-selfhost-row dd { margin: 0; font-size: var(--fs-sm); color: var(--text2); overflow-wrap: anywhere; }
+.wallets-selfhost-row a { color: var(--action); }
+
+.wallets-footnote { padding-block: 20px 32px; font-size: var(--fs-xs); color: var(--text3); }
+
+@media (max-width: 760px) {
+  .wallets-selfhost { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .wallets-selfhost-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
 @media (max-width: 700px) {
-  .wallets-grid {
-    grid-template-columns: 1fr;
-    padding: 12px var(--page-pad);
-    gap: 12px;
-  }
-  .wallets-selfhost { padding-left: var(--page-pad); padding-right: var(--page-pad); }
-  .wallets-grid-selfhost { padding-left: 0; padding-right: 0; }
+  .wallets-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; padding-block: 12px; }
+  .wallet-card { padding: 16px; }
 }
