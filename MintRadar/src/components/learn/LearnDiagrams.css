@@ -1,76 +1,9 @@
-/* Shared layout for the Learn module diagrams (token flow, risk asymmetry,
+/* Shared layout for the Learn module diagrams (risk asymmetry,
    Reliability Score donut). All colour comes from the existing patina/copper
    tokens — no diagram introduces a colour of its own. */
 
 .learn-diagram {
   margin: 22px 0;
-}
-
-/* ── Module 1 — token flow ──────────────────────────────────── */
-.flow-diagram {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-}
-
-.flow-step {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 14px 10px;
-}
-
-.flow-step-icon {
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  flex-shrink: 0;
-}
-
-.flow-step-icon svg {
-  width: 21px;
-  height: 21px;
-}
-
-.flow-tone-green {
-  color: var(--green-bright);
-  background: var(--green-soft);
-  border: 1px solid var(--green-soft-strong);
-}
-
-.flow-tone-copper {
-  color: var(--copper);
-  background: var(--copper-soft);
-  border: 1px solid var(--copper-soft-strong);
-}
-
-.flow-step-label {
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--text2);
-}
-
-.flow-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--t3);
-  flex-shrink: 0;
-}
-
-.flow-arrow svg {
-  width: 22px;
-  height: 11px;
 }
 
 /* ── Module 2 — risk asymmetry ──────────────────────────────── */
@@ -234,24 +167,12 @@
 
 /* ── Mobile ─────────────────────────────────────────────────── */
 @media (max-width: 620px) {
-  /* Both step/box rows become vertical stacks; the connectors rotate a
-     quarter turn so they keep pointing along the new reading direction. */
-  .flow-diagram,
+  /* The box row becomes a vertical stack; the connector turns a quarter so it keeps pointing along the new reading
+     direction. (Module 1's token flow is a numbered strip since the 2026-11-19 redesign: LearnModule.css .learn-flow.) */
   .risk-diagram {
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
-  }
-
-  .flow-step {
-    flex-direction: row;
-    text-align: left;
-    gap: 12px;
-    padding: 11px 14px;
-  }
-
-  .flow-step-label {
-    font-size: 15px;
   }
 
   /* 12px minimum on phones. */
@@ -262,14 +183,6 @@
   /* A rotated element keeps its pre-rotation layout box, so both connectors
      get an explicit min-height to reserve the room their turned glyph
      visually occupies — without it they bleed into the boxes above/below. */
-  .flow-arrow {
-    min-height: 24px;
-  }
-
-  .flow-arrow svg {
-    transform: rotate(90deg);
-  }
-
   .risk-link {
     flex-direction: row;
     justify-content: center;

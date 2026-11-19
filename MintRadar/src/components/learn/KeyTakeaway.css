@@ -8,19 +8,18 @@
 }
 
 .key-takeaway-label {
-  font-size: 12px;
-  font-weight: 600;
+  /* Sentence case in the text face (2026-11-19 redesign; it was ALL CAPS mono). */
+  font-size: var(--fs-sm);
+  font-weight: 500;
   color: var(--copper);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: var(--font-mono);
   margin-bottom: 6px;
 }
 
 .key-takeaway-quote {
   margin: 0;
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: var(--fs-lg);
+  line-height: 1.4;
+  font-weight: 560;
   color: var(--text);
 }
 

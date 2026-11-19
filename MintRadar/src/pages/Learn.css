@@ -1,130 +1,43 @@
-.learn-page {
+/* Learn index, 2026-11-19 redesign (phase 6b): approved mockup ~/Claude/refs/mintradar-redesign-1118/learn.html.
+   The five modules as a numbered list (a real sequence) and "The short version" beside it. */
+.learn-page { background: transparent; }
+.learn-course {
+  max-width: var(--dash-chrome-max); margin-inline: auto; width: 100%; box-sizing: border-box;
+  padding: 16px var(--page-pad) 40px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start;
 }
-
-.learn-grid {
-  display: grid;
-  /* Three columns on a wide screen (minmax 340px): four left the last card alone in its row (9 wallets = 4 + 4 + 1,
-     5 modules = 4 + 1). */
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 16px;
-  max-width: var(--dash-chrome-max);
-  margin-inline: auto;
-  padding: 16px var(--page-pad);
-  width: 100%;
+.learn-modules { list-style: none; margin: 0; padding: 0; }
+.learn-mod {
+  position: relative; display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 18px; align-items: start;
+  padding: 22px 0; border-top: 1px solid var(--border);
 }
-
-.learn-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
-  cursor: pointer;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  animation: fadein 0.22s ease both;
+.learn-mod:first-child { border-top: 0; padding-top: 4px; }
+.learn-mod-num {
+  font-family: var(--font-display); font-size: 56px; font-weight: 700; font-stretch: 75%; line-height: .9; color: var(--text3);
 }
-
-.learn-card {
-  position: relative;
+.learn-mod:hover .learn-mod-num { color: var(--action); }
+.learn-mod-body { min-width: 0; }
+.learn-mod-title { font-size: var(--fs-lg); font-weight: 620; margin: 0; }
+.learn-mod-link { color: var(--text); text-decoration: none; }
+.learn-mod-link::after { content: ''; position: absolute; inset: 0; }
+.learn-mod-link:focus-visible { outline: none; }
+.learn-mod:has(.learn-mod-link:focus-visible) { outline: 2px solid var(--action); outline-offset: 4px; border-radius: 6px; }
+.learn-mod:hover .learn-mod-link { color: var(--action); }
+.learn-mod-summary { margin: 4px 0 0; color: var(--text2); max-width: 62ch; font-size: var(--fs-md); line-height: 1.5; }
+.learn-mod-go { display: inline-block; margin-top: 10px; color: var(--action); font-size: var(--fs-sm); }
+.learn-mod-len { color: var(--text3); font-size: var(--fs-xs); white-space: nowrap; padding-top: 6px; }
+.learn-aside {
+  position: sticky; top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
 }
-
-.learn-card:hover {
-  border-color: var(--accent-brd);
+.learn-aside-title { font-size: var(--fs-md); font-weight: 600; margin: 0; }
+.learn-aside ol { margin: 10px 0 0; padding-left: 20px; color: var(--text2); font-size: var(--fs-sm); line-height: 1.5; }
+.learn-aside li { margin: 6px 0; }
+@media (max-width: 860px) {
+  .learn-course { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .learn-aside { position: static; }
 }
-
-/* Stretched link: the title is the real link, its ::after covers the whole card. */
-.learn-card-link,
-.learn-card-link:hover {
-  color: inherit;
-  text-decoration: none;
-}
-.learn-card-link::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 12px;
-}
-.learn-card-link:focus-visible { outline: none; }
-.learn-card-link:focus-visible::after {
-  outline: 2px solid var(--action);
-  outline-offset: 2px;
-}
-
-.learn-card-head {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-/* Same muted fill/radius language as Dashboard's .stat-icon.gray — no more
-   copper/orange icon well. */
-.learn-card-icon {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: rgba(139, 148, 158, 0.1);
-  color: var(--text-faint);
-}
-
-.learn-card-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Reading time: top right of the header row (it used to be the "Module N" label). */
-.learn-card-time {
-  margin-left: auto;
-  white-space: nowrap;
-  font-size: 12px;
-  color: var(--text3);
-  font-family: var(--sans);
-}
-
-/* "Module N" sits on its own line under the header row, right above the title. */
-.learn-card-number {
-  margin-bottom: -4px;
-  font-size: 12px;
-  color: var(--text3);
-  font-family: var(--sans);
-}
-
-.learn-card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-
-.learn-card-summary {
-  font-size: 13.5px;
-  color: var(--text2);
-  line-height: 1.5;
-  flex: 1;
-}
-
-.learn-card-cta {
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: var(--font-mono);
-  color: var(--action);
-}
-
-@keyframes fadein {
-  from { opacity: 0; transform: translateY(5px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 700px) {
-  .learn-grid {
-    grid-template-columns: 1fr;
-    padding: 12px var(--page-pad);
-    gap: 12px;
-  }
+@media (max-width: 760px) {
+  .learn-mod { grid-template-columns: 44px minmax(0, 1fr); gap: 14px; }
+  .learn-mod-num { font-size: 40px; }
+  .learn-mod-len { grid-column: 2; padding: 0; }
 }

@@ -121,8 +121,8 @@ are deliberately distinguished by icon, not just by label, everywhere they appea
 (`MintCard.tsx`, `ComparisonModal.tsx`, `MintDetail.tsx`): Reliability Score carries a shield icon,
 Community Rating a green star. The shield is `IcShield` (`src/components/mint/IcShield.tsx`) —
 a small shared SVG component (`size` prop, default 13px, `currentColor` stroke) — also reused
-by the Best Mint wizard's result rows (`Tools.tsx`) and
-`LearnIcons.tsx`. Do not duplicate this shield inline in a new component; import `IcShield`.
+by the Best Mint wizard's result rows (`Tools.tsx`) (`LearnIcons.tsx`, the other user, is gone since the 2026-11-19
+redesign). Do not duplicate this shield inline in a new component; import `IcShield`.
 
 Community Rating excludes reviews from a key that is both a listed Nostr contact and the author of the mint's NIP-87 announcement (labelled "Operator"; a contact-only key is counted and only labelled, Task Y L; operator = contact key that also authored the mint's announcement, see "Operator reviews are
 labelled and not counted" in reviews-and-nostr.md); the Reliability Score formula is unaffected.

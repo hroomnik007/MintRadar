@@ -4,7 +4,7 @@ import { RiskAsymmetryDiagram } from '@/components/learn/RiskAsymmetryDiagram'
 export default function Module2() {
   return (
     <div className="learn-content">
-      <h1>Understanding the Risks</h1>
+      <h1>Understanding the risks</h1>
 
       <p>
         This is the most important module in this course. Read it before you put any real money into Cashu.

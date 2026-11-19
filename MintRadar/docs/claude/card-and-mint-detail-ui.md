@@ -693,3 +693,21 @@ Styles in the "phase 4b" block of `MintDetail.css`.
   check box "Hide anonymous (N)" (`.md-rv-toggle`; it was a chip); review rows with stars and date on one line, the
   comment at 16px, "Rated without a comment." (`.review-no-comment`, not a `.review-comment`) for a rating without
   text; the pager is "Page N of M" between two arrows (`.reviews-page-of`; `reviewPageList` removed).
+
+## Learn index and article, 2026-11-19 redesign (phase 6b)
+
+Supersedes "Learn index cards" above. `Learn.tsx` / `Learn.css`, `LearnModule.tsx` / `LearnModule.css`, mockups
+`learn.html` and `learn-module.html` (approved with their content changes).
+- **Index:** the five modules are an ordered list (`.learn-mod`, a real sequence, so the big condensed number means
+  something): number | title (the row's one link, stretched over it) + summary + "Read module N" (copper) | "N min". Beside
+  it (below 860px under it) **The short version**: three sentences for a reader who will not take the course. The page
+  description says "Five short modules, about N minutes in all" (summed from `readingMinutes`). The module icons
+  (`LearnIcons.tsx`) are gone.
+- **Texts:** module titles in sentence case ("Cashu basics", "Understanding the risks", "How to choose a Cashu mint",
+  "Getting started with a wallet", "Safe habits"; `LEARN_MODULES` and each module's h1), the summaries rewritten without
+  dashes, and Module 1 edited as in the mockup (commas instead of dashes, "bitcoin" for the currency, the numbered steps as
+  a four-part strip `.learn-flow`; `TokenFlowDiagram.tsx` removed). Module 1 is now 2 minutes (`learnReadingTime.test`).
+  Modules 2 to 5 keep their wording (their dashes were not part of the approved mockup).
+- **Article:** 17px, line height 1.62, column at most 68ch (16px on phones), "Module N of 5, M minutes" above the title,
+  "← All modules" (it was "← Back to Learn"), "Previous, module N" / "Next, module N" in the footer, and the Key takeaway
+  in sentence case with a 20px sentence (`KeyTakeaway.css`).

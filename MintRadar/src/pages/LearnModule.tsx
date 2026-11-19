@@ -58,7 +58,9 @@ export default function LearnModule() {
   return (
     <div className="learn-module-page">
       <article className="learn-module">
-      <Link to="/learn" className="learn-back-link">← Back to Learn</Link>
+      {/* 2026-11-19 redesign (phase 6b): "All modules", where the reader is in the course, and "Next, module N". */}
+      <Link to="/learn" className="learn-back-link"><span aria-hidden="true">←</span> All modules</Link>
+      <p className="learn-kicker">Module {mod.order} of {sorted.length}, {mod.readingMinutes} {mod.readingMinutes === 1 ? 'minute' : 'minutes'}</p>
 
       <Suspense fallback={lazyFallback}>
         <ModuleComponent />
@@ -67,18 +69,18 @@ export default function LearnModule() {
       <div className="learn-module-nav">
         {prev ? (
           <button type="button" className="learn-nav-btn" onClick={() => navigate(`/learn/${prev.id}`)}>
-            <span className="learn-nav-dir">← Previous</span>
+            <span className="learn-nav-dir">Previous, module {prev.order}</span>
             <span className="learn-nav-title">{prev.title}</span>
           </button>
         ) : <span />}
         {next ? (
           <button type="button" className="learn-nav-btn learn-nav-next" onClick={() => navigate(`/learn/${next.id}`)}>
-            <span className="learn-nav-dir">Next:</span>
+            <span className="learn-nav-dir">Next, module {next.order}</span>
             <span className="learn-nav-title">{next.title}</span>
           </button>
         ) : (
           <button type="button" className="learn-nav-btn learn-nav-next" onClick={() => navigate('/')}>
-            <span className="learn-nav-dir">Done →</span>
+            <span className="learn-nav-dir">Done</span>
             <span className="learn-nav-title">Browse mints</span>
           </button>
         )}

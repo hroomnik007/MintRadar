@@ -4,7 +4,7 @@ import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
 export default function Module5() {
   return (
     <div className="learn-content">
-      <h1>Safe Habits</h1>
+      <h1>Safe habits</h1>
 
       <p>
         A short list of habits that meaningfully reduce your risk when using Cashu day to day — roughly in order of how much they matter.

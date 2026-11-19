@@ -17,7 +17,7 @@ const ROUTES: Expected[] = [
   { path: '/', canonical: `${ORIGIN}/`, title: 'MintRadar - Cashu Mints Directory & Reliability Score Monitor', description: SITE_DESCRIPTION },
   { path: '/about', canonical: `${ORIGIN}/about`, title: 'About and privacy | MintRadar', description: 'What MintRadar is, how it measures Cashu mints, what data it keeps about you and the rules of using it.' },
   { path: '/learn', canonical: `${ORIGIN}/learn`, title: 'Learn Cashu - MintRadar', description: 'A short course on how Cashu works, what can go wrong, and how to choose a safe Cashu mint.' },
-  { path: '/learn/cashu-basics', canonical: `${ORIGIN}/learn/cashu-basics`, title: 'Cashu Basics - MintRadar Learn', description: null },
+  { path: '/learn/cashu-basics', canonical: `${ORIGIN}/learn/cashu-basics`, title: 'Cashu basics - MintRadar Learn', description: null },
   { path: '/stats', canonical: `${ORIGIN}/stats`, title: 'Cashu Mints Network Stats - MintRadar', description: 'Live network-wide stats for Cashu mints: uptime, average Reliability Score, latency, NUT adoption and the Network Health Index.' },
   { path: '/tools', canonical: `${ORIGIN}/tools`, title: 'Cashu Mint Tools - Token Inspector & Best Mint Finder | MintRadar', description: 'Inspect a Cashu token before redeeming it, or find the best Cashu mint for you with the Best Mint wizard.' },
   { path: '/wallets', canonical: `${ORIGIN}/wallets`, title: 'Cashu Wallets - MintRadar', description: 'Wallets that work with Cashu mints, plus how to run your own mint. A plain list, no ranking or reviews.' },

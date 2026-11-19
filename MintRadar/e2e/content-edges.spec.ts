@@ -119,10 +119,10 @@ const STATES: State[] = [
   // The self-host grid is one panel of rows since the 2026-11-19 redesign; the platform filter row has the edges too.
   { name: 'Wallets', containers: [A('.wallets-header'), A('.wallets-filter'), A('.wallets-grid'), A('.wallets-selfhost')],
     setup: async p => { await boot(p); await p.goto('/wallets'); await expect(p.locator('.wallets-grid').first()).toBeVisible() } },
-  { name: 'Learn', containers: [A('.learn-page-header'), A('.learn-grid')],
-    setup: async p => { await boot(p); await p.goto('/learn'); await expect(p.locator('.learn-card').first()).toBeVisible() } },
+  { name: 'Learn', containers: [A('.learn-page-header'), A('.learn-course')],
+    setup: async p => { await boot(p); await p.goto('/learn'); await expect(p.locator('.learn-mod').first()).toBeVisible() } },
   { name: 'Learn module', containers: [A('.learn-module-page')],
-    setup: async p => { await boot(p); await p.goto('/learn'); await p.locator('.learn-card').first().click(); await expect(p.locator('.learn-module')).toBeVisible() } },
+    setup: async p => { await boot(p); await p.goto('/learn'); await p.locator('.learn-mod-link').first().click(); await expect(p.locator('.learn-module')).toBeVisible() } },
   ...(['overview', 'history', 'nuts', 'audit', 'reviews'] as const).map((tab): State => ({
     name: `Mint Detail — ${tab} tab`,
     containers: [A('.md-header', 'border'), A('.md-tabs'), A('.md-body')],

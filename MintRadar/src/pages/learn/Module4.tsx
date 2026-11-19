@@ -4,7 +4,7 @@ import { KeyTakeaway } from '@/components/learn/KeyTakeaway'
 export default function Module4() {
   return (
     <div className="learn-content">
-      <h1>Getting Started with a Wallet</h1>
+      <h1>Getting started with a wallet</h1>
 
       <h2>Choosing your first wallet</h2>
       <p>

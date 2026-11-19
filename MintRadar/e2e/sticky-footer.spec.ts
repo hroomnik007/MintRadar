@@ -59,14 +59,15 @@ async function expectFooterInFirstViewport(page: Page, viewportHeight: number) {
 }
 
 test.describe('Sticky footer on short routes', () => {
-  for (const vp of [{ width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
-    test(`/learn: footer in first viewport, module cards above it (${vp.width}×${vp.height})`, async ({ page }) => {
+  // The numbered module list (2026-11-19 redesign) is taller than 900px: /learn is a short route at 1080px only.
+  for (const vp of [{ width: 1920, height: 1080 }]) {
+    test(`/learn: footer in first viewport, module rows above it (${vp.width}×${vp.height})`, async ({ page }) => {
       await page.setViewportSize(vp)
       await page.goto('/learn')
-      await page.waitForSelector('.learn-card')
+      await page.waitForSelector('.learn-mod')
 
       const footerBox = await expectFooterInFirstViewport(page, vp.height)
-      const { rects } = await measureSettled(page, ['.learn-card'])
+      const { rects } = await measureSettled(page, ['.learn-mod'])
       expect(rects.length).toBeGreaterThan(0)
       for (const b of rects) expect(b.y + b.height).toBeLessThanOrEqual(footerBox.y)
     })

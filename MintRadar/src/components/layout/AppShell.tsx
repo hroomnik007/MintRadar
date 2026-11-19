@@ -27,8 +27,7 @@ const IcShield = () => (
     <polyline points="4.5,7 6.2,8.7 9.5,5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
-// Method badges — Tabler icon paths (MIT), stroke-only to match the project's
-// hand-drawn icon set (see LearnIcons.tsx / WalletIcons.tsx).
+// Method badges — Tabler icon paths (MIT), stroke-only like the lucide-react icons used elsewhere.
 const svgProps = {
   viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
   strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,

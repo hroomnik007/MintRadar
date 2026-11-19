@@ -3,7 +3,7 @@
 // import this file, never the publishing script.
 //
 // The parser only understands the small set of JSX tags actually used across the 5 modules (h2, h3, p, ul/ol/li,
-// strong/em/code, <a>/<Link>, <KeyTakeaway>, and self-closing diagram components like <TokenFlowDiagram />). If a
+// strong/em/code, <a>/<Link>, <KeyTakeaway>, and self-closing diagram components like <RiskAsymmetryDiagram />). If a
 // module starts using something outside that vocabulary, extend convertInline()/extractBlocks(): parseModule() throws
 // when anything in the module body is left unconverted (single <div>, h1 matching the title, nothing dropped), so
 // drift fails loudly instead of publishing something incomplete.
@@ -68,7 +68,7 @@ function extractListItems(listInner: string): string[] {
 // Top-level blocks, in source order. Order of the alternatives matters: the top-level <Link> must come before the
 // generic self-closing component so it isn't mistaken for it; it is a standalone CTA element (e.g. Module 3's "Try the
 // Best Mint Wizard" button), while a <Link> inside a <p> is handled by convertInline().
-const BLOCK_RE = /<h2>([\s\S]*?)<\/h2>|<h3>([\s\S]*?)<\/h3>|<ol>([\s\S]*?)<\/ol>|<ul>([\s\S]*?)<\/ul>|<KeyTakeaway>([\s\S]*?)<\/KeyTakeaway>|<Link to="([^"]+)"[^>]*>([\s\S]*?)<\/Link>|<([A-Z]\w*)\s*\/>|<p>([\s\S]*?)<\/p>/g
+const BLOCK_RE = /<h2>([\s\S]*?)<\/h2>|<h3>([\s\S]*?)<\/h3>|<ol(?: className="[\w -]*")?>([\s\S]*?)<\/ol>|<ul>([\s\S]*?)<\/ul>|<KeyTakeaway>([\s\S]*?)<\/KeyTakeaway>|<Link to="([^"]+)"[^>]*>([\s\S]*?)<\/Link>|<([A-Z]\w*)\s*\/>|<p>([\s\S]*?)<\/p>/g
 
 // Walks the module body in source order, converting each top-level block to Markdown. The page's section headings
 // are <h2> (the <h1> is the article title, sent separately), so <h2> becomes "##" and <h3> "###".

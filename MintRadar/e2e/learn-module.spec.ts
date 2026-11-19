@@ -30,12 +30,13 @@ test('unknown numeric or unknown slug still shows "Module not found"', async ({ 
   }
 })
 
-test('a middle module footer links "Next:" to the following module', async ({ page }) => {
+test('a middle module footer links "Next, module 2" to the following module', async ({ page }) => {
   await page.goto('/learn/cashu-basics')
-  await expect(page.locator('.learn-back-link')).toBeVisible()
+  await expect(page.locator('.learn-back-link')).toHaveText('← All modules')
+  await expect(page.locator('.learn-kicker')).toHaveText('Module 1 of 5, 2 minutes')
   const next = page.locator('.learn-nav-next')
-  await expect(next).toContainText('Next:')
-  await expect(next).toContainText('Understanding the Risks')
+  await expect(next).toContainText('Next, module 2')
+  await expect(next).toContainText('Understanding the risks')
   await next.click()
   await expect(page).toHaveURL(/\/learn\/understanding-the-risks$/)
 })
@@ -48,23 +49,33 @@ test('the last module footer is "Browse mints" → Dashboard', async ({ page }) 
   await expect(page).toHaveURL(/\/$/)
 })
 
-// Learn article column (L1): 16px body text in a ~780px centred column; phones keep full width minus padding.
+// Learn article column: since the 2026-11-19 redesign 17px body text (16px on phones), line height 1.62, a column of at
+// most 68 characters, centred; phones keep full width minus padding.
 // The text pages (/about, /methodology, /for-wallets) have their own rules and must stay as they were.
 test.describe('Learn article column', () => {
-  test('1440px: paragraphs and list items are at least 16px, the column is 740-820px wide and centred', async ({ page }) => {
+  test('1440px: paragraphs and list items are 17px (16 in the step strip), the column is at most 68 characters and centred', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     for (const slug of SLUGS) {
       await page.goto(`/learn/${slug}`)
       await expect(page.locator('.learn-content h1')).toBeVisible()
       const m = await page.evaluate(() => {
-        const col = document.querySelector('.learn-module')!.getBoundingClientRect()
+        const article = document.querySelector('.learn-module') as HTMLElement
+        const col = article.getBoundingClientRect()
+        const probe = document.createElement('span')
+        probe.style.cssText = 'position:absolute;visibility:hidden;width:68ch'
+        article.appendChild(probe)
+        const ch68 = probe.getBoundingClientRect().width
+        probe.remove()
         const sizes = [...document.querySelectorAll('.learn-content p, .learn-content li')].map(e => parseFloat(getComputedStyle(e).fontSize))
-        return { w: col.width, left: col.left, right: window.innerWidth - col.right, min: Math.min(...sizes), n: sizes.length }
+        const p = document.querySelector('.learn-content p') as HTMLElement
+        return { w: col.width, ch68, left: col.left, right: window.innerWidth - col.right, min: Math.min(...sizes), n: sizes.length, p: parseFloat(getComputedStyle(p).fontSize), lh: parseFloat(getComputedStyle(p).lineHeight) / parseFloat(getComputedStyle(p).fontSize) }
       })
       expect(m.n, slug).toBeGreaterThan(3)
       expect(m.min, slug).toBeGreaterThanOrEqual(16)
-      expect(m.w, slug).toBeGreaterThanOrEqual(740)
-      expect(m.w, slug).toBeLessThanOrEqual(820)
+      expect(m.p, slug).toBe(17)
+      expect(m.lh, slug).toBeCloseTo(1.62, 2)
+      expect(m.w, slug).toBeLessThanOrEqual(m.ch68 + 1)
+      expect(m.w, slug).toBeGreaterThan(500)
       expect(Math.abs(m.left - m.right), slug).toBeLessThanOrEqual(3)
     }
   })
