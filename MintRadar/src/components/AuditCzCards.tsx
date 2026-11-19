@@ -2,7 +2,7 @@ import { Fragment, useState, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import {
   auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
-  auditVerdictHeadline, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT,
+  auditVerdictHeadline, auditVerdictSentence, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT,
   auditSinceLine,
   type AuditCzView, type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
 } from '@/utils/auditCz'
@@ -21,9 +21,11 @@ const ROWS_DEFAULT = 8
 /** The 7-day heading, the score hint, and (when it counts) the one longer-window line. */
 export function AuditVerdictBlock({ verdict, view }: { verdict: AuditVerdict; view: AuditCzView }) {
   return (
-    <div className="au-verdict" data-testid="audit-verdict">
+    // The big number beside its sentence, on phones too (owner, 2026-11-18); the readout names the whole headline.
+    <div className="au-verdict au-headline" data-testid="audit-verdict">
+      <span className={`au-headline-n ${verdict.blamed > 0 ? 'au-verdict-bad' : 'au-verdict-ok'}`} role="img" aria-label={auditVerdictHeadline(verdict)} data-testid="audit-verdict-n">{auditVerdictSentence(verdict).number}</span>
       <div className="au-verdict-text">
-        <strong className={verdict.blamed > 0 ? 'au-verdict-bad' : undefined} data-testid="audit-verdict-headline">{auditVerdictHeadline(verdict)}</strong>
+        <strong className={verdict.blamed > 0 ? 'au-verdict-bad' : undefined} data-testid="audit-verdict-headline" aria-hidden="true">{auditVerdictSentence(verdict).words}</strong>
         <span className="au-verdict-hint" data-testid="audit-score-hint">{AUDIT_SCORE_HINT}</span>
         {view.longer && <span className="au-verdict-more" data-testid="audit-longer-line">{auditSinceLine(view.longer, formatDate(`${view.longer.day}T00:00:00Z`))}</span>}
       </div>
@@ -162,7 +164,10 @@ function breakAfterUnderscore(text: string): ReactNode {
  */
 export function AuditStateText({ row: s }: { row: AuditSwapRow }) {
   const tip = auditCzStateTitle(s)
-  const text = s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral] : <>{breakAfterUnderscore(s.state)}{s.stage ? <>{' ('}{breakAfterUnderscore(s.stage)}{')'}</> : null}</>
+  // "Succeeded" for cashu.info's OK (2026-11-19 redesign); any other state stays the source's word.
+  const text = s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral]
+    : s.state === 'OK' ? 'Succeeded'
+    : <>{breakAfterUnderscore(s.state)}{s.stage ? <>{' ('}{breakAfterUnderscore(s.stage)}{')'}</> : null}</>
   return (
     <>
       {tip ? <InfoTooltip text={tip} width={240}><span>{text}</span></InfoTooltip> : text}

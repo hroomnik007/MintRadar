@@ -2767,3 +2767,66 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 }
 /* A NUT the mint does not support: the name one step dimmer (still >= 4.5:1), the state word says it. */
 .mint-detail .nut-card.nut-row.unsupported .nut-row-name b { color: var(--text2); font-weight: 500; }
+
+/* ── 2026-11-19 redesign, phase 4e: Audit ──────────────────────────────────────────────────────────────────────────
+   The number of failures put on this mint beside its sentence (phones too, owner 2026-11-18), the four figures in one
+   frame like the strip, swaps per day beside "How the auditor tests", the swaps in their own panel; results as text. */
+.md-audit { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.mint-detail .au-verdict.au-headline {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 20px; align-items: center; margin: 14px 0 6px;
+}
+.au-headline-n {
+  font-family: var(--font-display); font-size: 56px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em;
+  line-height: 1; color: var(--accent);
+}
+.au-headline-n.au-verdict-bad { color: var(--red); }
+.mint-detail .au-headline .au-verdict-text strong { font-size: var(--fs-lg); font-weight: 620; }
+.mint-detail .au-headline .au-verdict-hint { font-size: var(--fs-sm); color: var(--text2); }
+
+.mint-detail .md-audit .au-figures {
+  margin: 0; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r);
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.mint-detail .md-audit .au-dirs { display: contents; }
+.mint-detail .md-audit .au-dirs-metrics { border: 0; }
+.mint-detail .md-audit .au-dir { padding: 16px 20px; border-left: 1px solid var(--border); gap: 4px; }
+.mint-detail .md-audit .au-figures > .au-dirs:first-child > .au-dir:first-child { border-left: 0; }
+.mint-detail .md-audit .au-dir-value {
+  font-family: var(--font-display); font-size: 36px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; line-height: 1.05;
+}
+.mint-detail .md-audit .au-dir-value small { font-family: var(--font-body); font-stretch: 100%; font-size: var(--fs-md); font-weight: 500; color: var(--text2); letter-spacing: 0; }
+.mint-detail .md-audit .au-dir-label { order: 2; font-size: var(--fs-sm); font-weight: 500; color: var(--text); }
+.mint-detail .md-audit .au-dir-value { order: 1; }
+.mint-detail .md-audit .au-mini { order: 3; }
+.mint-detail .md-audit .au-dir-sub { order: 4; font-size: var(--fs-xs); color: var(--text2); }
+
+.md-audit-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.md-audit-how-text { margin: 0; font-size: var(--fs-sm); color: var(--text2); line-height: 1.55; max-width: 62ch; }
+.md-audit-how-src { margin: 12px 0 0; font-size: var(--fs-xs); color: var(--text3); }
+.mint-detail .md-audit-how-src .audit-external-link { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
+.mint-detail .md-audit-swaps .md-panel-title { margin-bottom: 10px; }
+
+/* Results as text (the coloured chips are gone): green for a success, amber for a failure, muted when neutral. */
+.mint-detail .md-audit .au-res { font-family: var(--font-body); font-size: var(--fs-sm); padding: 0; min-height: 0; border-radius: 0; background: none; }
+.mint-detail .md-audit .audit-swaps-table td, .mint-detail .md-audit .audit-swaps-table th { font-family: var(--font-body); }
+.mint-detail .md-audit .audit-swaps-table td.au-mono { font-family: var(--font-mono); font-size: 13px; }
+
+@media (max-width: 900px) {
+  .mint-detail .md-audit .au-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mint-detail .md-audit .au-dirs-metrics > .au-dir { border-top: 1px solid var(--border); }
+  .mint-detail .md-audit .au-dirs-metrics > .au-dir:first-child { border-left: 0; }
+  .md-audit-two { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .mint-detail .au-verdict.au-headline { gap: 6px 14px; align-items: start; }
+  .au-headline-n { font-size: 48px; }
+  .mint-detail .au-headline .au-verdict-text strong { font-size: 18px; }
+  .mint-detail .md-audit .au-dir { padding: 14px 16px; }
+  .mint-detail .md-audit .au-dir-value { font-size: 30px; }
+}
+.md-audit-two.md-audit-one { grid-template-columns: minmax(0, 1fr); }
+/* The narrowest phones: two figures per row leave ~110px of text, so the tiles pad less and the labels may wrap. */
+@media (max-width: 400px) {
+  .mint-detail .md-audit .au-dir { padding: 12px 10px 12px 12px; }
+  .mint-detail .md-audit .au-dir-label { font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+}

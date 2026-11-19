@@ -122,7 +122,7 @@ test.describe('header sync note', () => {
     await layoutReady(page)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(0)
-    const card = await page.locator('.md-audit-collapsible').boundingBox()
+    const card = await page.locator('.md-audit').boundingBox()
     const box = await note.boundingBox()
     expect(box!.x + box!.width).toBeLessThanOrEqual(card!.x + card!.width)
     const via = await page.locator('.md-audit-toggle .md-audit-via').boundingBox()
@@ -159,7 +159,7 @@ test.describe('swap list filter', () => {
     await chips(page).nth(3).click()
     await expect(swapList(page).locator('[aria-pressed="true"]')).toHaveText('Failed 2')
     await expect(swapList(page).locator('tbody tr')).toHaveCount(2)
-    await expect(page.locator('.md-audit-collapsible').getByRole('tab')).toHaveCount(0)
+    await expect(page.locator('.md-audit').getByRole('tab')).toHaveCount(0)
     await expect(page.locator('.audit-swap-bar')).toHaveCount(0)
     await expect(page.getByTestId('audit-swap-bar-caption')).toHaveCount(0)
   })
@@ -180,7 +180,7 @@ test.describe('swap list filter', () => {
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: swaps() })))
     await layoutReady(page)
     // Measured from the top of the card: a shorter list can change the page's scroll position, not the layout above the filter.
-    const top = async () => (await swapList(page).getByRole('group', { name: 'Filter swaps' }).boundingBox())!.y - (await page.locator('.md-audit-collapsible').boundingBox())!.y
+    const top = async () => (await swapList(page).getByRole('group', { name: 'Filter swaps' }).boundingBox())!.y - (await page.locator('.md-audit').boundingBox())!.y
     const before = await top()
     await chips(page).nth(3).click()
     expect(Math.abs((await top()) - before)).toBeLessThanOrEqual(0.5)
@@ -310,7 +310,7 @@ for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const
     await layoutReady(page)
     for (const filter of [0, 3] as const) {
       await chips(page).nth(filter).click()
-      const m = await page.locator('.md-audit-collapsible').evaluate(root => {
+      const m = await page.locator('.md-audit').evaluate(root => {
         const pr = root.getBoundingClientRect()
         const out: string[] = []
         const small: string[] = []

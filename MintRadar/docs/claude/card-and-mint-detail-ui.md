@@ -659,3 +659,23 @@ Styles in the "phase 4b" block of `MintDetail.css`.
   Nutzaps (NIP-61) (NUT-07, 10, 11, 12), Restore from seed (NUT-09), Live updates (NUT-17), Pay one invoice from several
   mints (NUT-15), each "Yes, …" / "No, …", and the backup sentence under it. The "Backup supported" pill and the icon grid
   are gone. Phones (<=860px): one column.
+
+## Mint Detail Audit, 2026-11-19 redesign (phase 4e)
+
+`mintDetail/AuditTab.tsx`, `components/AuditCzCards.tsx`, styles in the "phase 4e" block of `MintDetail.css`.
+- **Verdict panel** (`.md-audit-collapsible`, the "Audit stats · via cashu.info ⓘ · synced …" header unchanged): the big
+  number of failures cashu.info puts on this mint (`.au-headline-n`, `data-testid="audit-verdict-n"`, red when above 0;
+  its `aria-label` is the whole headline `auditVerdictHeadline()`) BESIDE its words (`auditVerdictSentence()`: "failures
+  caused by this mint in 126 swaps over 7 days"), on phones too (owner, 2026-11-18); `AUDIT_SCORE_HINT` now reads "The
+  Reliability Score counts only the failures cashu.info puts on this mint. A payment that fails somewhere else on
+  Lightning is not held against it."; then the bar and its legend.
+- **Four figures in one frame** (`.au-figures`): deposits, withdrawals, success rate, average swap time; one row above
+  900px, 2 x 2 below; the numbers in the condensed readout face. Below 400px the tiles pad less and the labels wrap.
+- **Swaps per day** (only when a stored day has swaps) beside **How the auditor tests**: a fixed sentence of what we
+  know of cashu.info's method (test deposits and withdrawals over Lightning, only failures cashu.info puts on the mint
+  count, attempts it stops before sending are not swaps; same facts as `scoring-and-probing.md`, nothing about amounts or
+  frequency, which we do not know) and "Data from cashu.info, synced … Open this mint on cashu.info" (the old "Open on
+  cashu.info →" link).
+- **Recent swaps** in its own panel; the Result is text, not a chip: "Succeeded" for cashu.info's OK, any other state in
+  the source's words (amber), neutral rows muted. The whole tab is `.md-audit` (one grid column `minmax(0, 1fr)`, so the
+  swap table never widens the page).

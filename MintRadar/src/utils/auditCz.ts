@@ -222,7 +222,17 @@ export function isLongerAuditWindow<T extends { windowDays: number }>(l: T | nul
   return !!l && l.windowDays > AUDIT_WINDOW_DAYS
 }
 
-/** "Last 7 days: 50 swaps, 0 failures caused by this mint"; with no swaps, only the count. */
+/**
+ * The Audit tab's headline beside its big number (2026-11-19 redesign): the number is the failures cashu.info puts on
+ * this mint, the words say of how many swaps over how long. "failures caused by this mint in 126 swaps over 7 days",
+ * "failure caused by this mint in 1 swap over 7 days"; with no swaps the number is the 0 swaps: "swaps in the last 7 days".
+ */
+export function auditVerdictSentence(v: AuditVerdict): { number: string; words: string } {
+  if (v.total === 0) return { number: '0', words: `swaps in the last ${AUDIT_WINDOW_DAYS} days` }
+  return { number: fmt(v.blamed), words: `${v.blamed === 1 ? 'failure' : 'failures'} caused by this mint in ${swapsWord(v.total)} over ${AUDIT_WINDOW_DAYS} days` }
+}
+
+/** "Last 7 days: 50 swaps, 0 failures caused by this mint"; with no swaps, only the count (the readout's aria name). */
 export function auditVerdictHeadline(v: AuditVerdict): string {
   if (v.total === 0) return `Last ${AUDIT_WINDOW_DAYS} days: 0 swaps`
   return `Last ${AUDIT_WINDOW_DAYS} days: ${swapsWord(v.total)}, ${failuresWord(v.blamed)} caused by this mint`
@@ -246,7 +256,7 @@ export function auditSuccessRateCaption(): string {
 }
 
 /** Under the success rate: the score still ignores failures the source does not attribute to this mint. */
-export const AUDIT_SCORE_HINT = 'The score only counts failures caused by this mint.'
+export const AUDIT_SCORE_HINT = 'The Reliability Score counts only the failures cashu.info puts on this mint. A payment that fails somewhere else on Lightning is not held against it.'
 
 /**
  * The one longer-window figure the Audit tab shows. Hidden while the long window is 7 days or

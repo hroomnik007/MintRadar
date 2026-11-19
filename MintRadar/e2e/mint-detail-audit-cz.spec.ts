@@ -10,7 +10,7 @@ type Page = import('@playwright/test').Page
 // (e2e/fixtures/auditCz.ts); nothing here reaches cashu.info or audit.8333.space.
 
 const row = (page: Page, host: string) => page.locator('.audit-swaps-table tbody tr', { hasText: host })
-const czLink = (page: Page) => page.getByRole('link', { name: 'Open on cashu.info →' })
+const czLink = (page: Page) => page.getByRole('link', { name: 'Open this mint on cashu.info' }) // in "How the auditor tests" since the 2026-11-19 redesign
 // cashu.info view (2026-11-13 layout): the verdict, one bar, the direction figures by key, swaps per day and ONE swap
 // list with a filter ("All | Deposits | Withdrawals | Failed"), 8 rows until "Show all".
 const tile = (page: Page, key: string) => page.locator(`.au-dirs [data-tile="${key}"]`)
@@ -79,13 +79,16 @@ test('only cz has data: header, verdict, bar, directions, one swap list with a f
   await expect(header).toHaveText(/^Audit stats\s*·\s*via cashu\.info/, { useInnerText: true })
 
   // The verdict is the score's 7-day window: 126 swaps, 0 caused by this mint. Success rate is raw (107/126), not the score.
-  await expect(page.getByTestId('audit-verdict-headline')).toHaveText('Last 7 days: 126 swaps, 0 failures caused by this mint')
+  // The big number names the whole headline; the words beside it (2026-11-19 redesign) say the rest.
+  await expect(page.getByTestId('audit-verdict-n')).toHaveAttribute('aria-label', 'Last 7 days: 126 swaps, 0 failures caused by this mint')
+  await expect(page.getByTestId('audit-verdict-n')).toHaveText('0')
+  await expect(page.getByTestId('audit-verdict-headline')).toHaveText('failures caused by this mint in 126 swaps over 7 days')
   const rateTile = page.getByTestId('audit-success-rate')
   await expect(rateTile.locator('.au-dir-value')).toHaveText('84.9%') // 107/126
   await expect(rateTile.locator('.au-dir-label')).toHaveText('Success rate · 7 days')
   await expectNeutralRate(page)
   await expect(rateTile).toHaveAttribute('aria-label', 'Success rate · 7 days: 84.9%')
-  await expect(page.getByTestId('audit-score-hint')).toHaveText('The score only counts failures caused by this mint.')
+  await expect(page.getByTestId('audit-score-hint')).toHaveText('The Reliability Score counts only the failures cashu.info puts on this mint. A payment that fails somewhere else on Lightning is not held against it.')
   await expect(page.getByTestId('audit-legend').locator('span')).toHaveText(['107 succeeded', '19 failed elsewhere', '0 caused by this mint'])
   // No long window in the response: the longer-window line is hidden.
   await expect(page.getByTestId('audit-longer-line')).toHaveCount(0)
@@ -187,7 +190,7 @@ test('limits, balance and pending rows are neutral, failures amber, OK green: on
   for (const host of ['limits2', 'limits8', 'limits11']) await state(`${host}.example`).toBe('below minimum')
   for (const host of ['balance4', 'balance9']) await state(`${host}.example`).toBe('auditor balance')
   await state('pending5.example').toBe('pending')
-  for (const host of ['ok0', 'ok3', 'ok6', 'ok10', 'ok13']) await state(`${host}.example`).toBe('OK')
+  for (const host of ['ok0', 'ok3', 'ok6', 'ok10', 'ok13']) await state(`${host}.example`).toBe('Succeeded') // cashu.info's OK, in words
 
   // The Result chip carries the outcome: one class per kind, and a failed row is not the red of "caused by this mint".
   const res = (host: string) => row(page, host).locator('.au-res')
@@ -214,13 +217,14 @@ test('limits, balance and pending rows are neutral, failures amber, OK green: on
 // ── d) tiles, checks and tables from the stored detail ──────────
 test.describe('verdict and directions from the stored detail', () => {
   const cleanCase = (total: number, failed: number, blamed: number) => czDetail({ swaps7d: { ...LNPAY_DETAIL.swaps7d, errorsBlamed: blamed, all: { ...LNPAY_DETAIL.swaps7d.all, total, failed, success: total - failed } } })
-  const headline = (page: Page) => page.getByTestId('audit-verdict-headline')
+  // The big number: its aria-label is the whole headline (2026-11-19 redesign), its class says red or green.
+  const headline = (page: Page) => page.getByTestId('audit-verdict-n')
   const rate = (page: Page) => page.getByTestId('audit-success-rate')
   const legend = (page: Page) => page.getByTestId('audit-legend').locator('span')
 
   test('LNpay-like: 0 attributed of 105 with 16 failed', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(105, 16, 0) }))
-    await expect(headline(page)).toHaveText('Last 7 days: 105 swaps, 0 failures caused by this mint')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 105 swaps, 0 failures caused by this mint')
     await expect(headline(page)).not.toHaveClass(/au-verdict-bad/)
     await expect(rate(page).locator('.au-dir-value')).toHaveText('84.8%') // 89/105
     await expectNeutralRate(page)
@@ -230,7 +234,7 @@ test.describe('verdict and directions from the stored detail', () => {
 
   test('lnw.cash-like: 202 attributed of 229 with 207 failed', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(229, 207, 202) }))
-    await expect(headline(page)).toHaveText('Last 7 days: 229 swaps, 202 failures caused by this mint')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 229 swaps, 202 failures caused by this mint')
     await expect(headline(page)).toHaveClass(/au-verdict-bad/)
     await expect(rate(page).locator('.au-dir-value')).toHaveText('9.6%') // 22/229
     await expectNeutralRate(page)
@@ -240,7 +244,7 @@ test.describe('verdict and directions from the stored detail', () => {
 
   test('no failed swaps: 100% success rate, a bar of one colour', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(50, 0, 0) }))
-    await expect(headline(page)).toHaveText('Last 7 days: 50 swaps, 0 failures caused by this mint')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 50 swaps, 0 failures caused by this mint')
     await expect(rate(page).locator('.au-dir-value')).toHaveText('100%')
     await expectNeutralRate(page)
     await expect(page.locator('.au-stack i')).toHaveCount(1)
@@ -249,21 +253,21 @@ test.describe('verdict and directions from the stored detail', () => {
 
   test('fewer than 10 swaps still shows the numbers', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(4, 0, 0) }))
-    await expect(headline(page)).toHaveText('Last 7 days: 4 swaps, 0 failures caused by this mint')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 4 swaps, 0 failures caused by this mint')
     await expect(rate(page).locator('.au-dir-value')).toHaveText('100%')
     await expectNeutralRate(page)
   })
 
   test('one swap and one blamed failure use the singular', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(1, 1, 1) }))
-    await expect(headline(page)).toHaveText('Last 7 days: 1 swap, 1 failure caused by this mint')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 1 swap, 1 failure caused by this mint')
     await expect(rate(page).locator('.au-dir-value')).toHaveText('0%')
     await expectNeutralRate(page)
   })
 
   test('blamed above total is clamped', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(20, 20, 999) }))
-    await expect(headline(page)).toHaveText('Last 7 days: 20 swaps, 20 failures caused by this mint')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 20 swaps, 20 failures caused by this mint')
     await expect(legend(page)).toHaveText(['0 succeeded', '0 failed elsewhere', '20 caused by this mint'])
     await expect(rate(page).locator('.au-dir-value')).toHaveText('0%')
     await expectNeutralRate(page)
@@ -272,7 +276,7 @@ test.describe('verdict and directions from the stored detail', () => {
   test('total 0: heading and a dash for the rate, no bar, the directions stay', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { detail: cleanCase(0, 0, 0) }))
     await expect(page.locator('.au-dirs .au-dir')).toHaveCount(4)
-    await expect(headline(page)).toHaveText('Last 7 days: 0 swaps')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 0 swaps')
     await expect(rate(page).locator('.au-dir-value')).toHaveText('—')
     await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 7 days')
     await expectNeutralRate(page)
@@ -391,7 +395,7 @@ test.describe('cz does not cover the mint (covered: false)', () => {
     await gotoAuditTab(page, { alpha: FRESH_8333, cz: auditCzResponse({ swaps: czSwapList([ok, ok]) }) })
     await expect(page.locator('.md-audit-header-main')).toContainText('via cashu.info')
     await expect(segGroup(page)).toHaveCount(0)
-    await expect(page.locator('.md-audit-collapsible')).not.toContainText('8333')
+    await expect(page.locator('.md-audit')).not.toContainText('8333')
   })
 })
 
@@ -474,7 +478,7 @@ test('hostile values in the detail fields are shown as nothing or as plain text:
   await expect(tile(page, 'avg')).toHaveCount(0)
   await expect(tileValue(page, 'mints')).toHaveText('56 of 62')
   await expect(checksCard(page)).toHaveCount(0)
-  await expect(page.locator('.md-audit-collapsible')).not.toContainText('onerror')
+  await expect(page.locator('.md-audit')).not.toContainText('onerror')
   await expect(page.locator('.md-audit-collapsible img')).toHaveCount(0)
   await expect(page.locator('[onerror], img[src="x"]')).toHaveCount(0)
   expect(h.requests.filter(u => new URL(u).pathname === '/x')).toEqual([])
@@ -592,7 +596,7 @@ test.describe('failure reason in the State cell', () => {
       await expect(stateCell(page, host)).not.toHaveAttribute('title', /.*/)
       await expect(stateCell(page, host).getByRole('button')).toHaveCount(0)
       await expect(stateCell(page, host).locator('.sr-only')).toHaveCount(0)
-      expect(await visibleState(page, host)).toBe('OK')
+      expect(await visibleState(page, host)).toBe('Succeeded')
     }
     // and nothing in the OK rows carries the text anywhere
     await expect(row(page, 'ok0.example')).not.toContainText('leftover text')
@@ -659,7 +663,7 @@ test.describe('390px viewport', () => {
       await expect(page.locator('.md-audit-toggle')).toContainText('via cashu.info')
       await expect(page.locator('.audit-swaps-table tbody tr').first()).toBeVisible()
 
-      const [card, wrap] = await measureSettled(page, ['.md-audit-collapsible', '.audit-swaps-table-wrap'])
+      const [card, wrap] = await measureSettled(page, ['.md-audit', '.audit-swaps-table-wrap'])
       const m = await page.evaluate(() => {
         const w = document.querySelector('.audit-swaps-table-wrap') as HTMLElement
         const table = w.querySelector('table')!
@@ -721,7 +725,13 @@ test.describe('verdict-to-bar spacing', () => {
     expect(Math.abs(mints!.y - melts!.y)).toBeLessThan(8)
     expect(rate!.x + rate!.width).toBeLessThanOrEqual(avg!.x + 1)
     expect(Math.abs(rate!.y - avg!.y)).toBeLessThan(8)
-    expect(mints!.y + mints!.height).toBeLessThanOrEqual(rate!.y + 1)
+    // Since the 2026-11-19 redesign the four figures are one frame: one row above 900px, two rows of two below.
+    if (page.viewportSize()!.width > 900) {
+      expect(melts!.x + melts!.width).toBeLessThanOrEqual(rate!.x + 1)
+      expect(Math.abs(mints!.y - rate!.y)).toBeLessThan(8)
+    } else {
+      expect(mints!.y + mints!.height).toBeLessThanOrEqual(rate!.y + 1)
+    }
     expect(rate!.y).toBeGreaterThan(headline!.y + headline!.height)
   }
 
@@ -781,7 +791,7 @@ test.describe('verdict-to-bar spacing', () => {
   test.describe('1440px', () => {
     test.use({ viewport: { width: 1440, height: 900 } })
 
-    test('failures: the bar follows the heading; success rate sits left of average swap time below the directions', async ({ page }) => {
+    test('failures: the bar follows the heading; the four figures share one row', async ({ page }) => {
       await gotoAuditTab(page, failures)
       const [text, last, verdict, bar] = await measureSettled(page, ['.au-verdict-text', '.au-verdict-text > :last-child', '.au-verdict', '.au-stack-wrap'])
       expect(text!.y + text!.height - (last!.y + last!.height)).toBeLessThan(4)

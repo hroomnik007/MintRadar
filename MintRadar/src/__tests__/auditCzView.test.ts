@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT, auditLongerWindow, auditSinceLine, isLongerAuditWindow, type AuditCzView } from '@/utils/auditCz'
+import { auditVerdictSentence, adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT, auditLongerWindow, auditSinceLine, isLongerAuditWindow, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -57,13 +57,17 @@ describe('verdict, directions and average from the stored detail (LNpay values)'
     expect(auditVerdictHeadline(verdict({ total: 1, success: 0, failed: 1 }, 1)!)).toBe('Last 7 days: 1 swap, 1 failure caused by this mint')
     expect(auditVerdictHeadline(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe('Last 7 days: 50 swaps, 0 failures caused by this mint')
     expect(auditVerdictHeadline(verdict({ total: 0, success: 0, failed: 0 }, 0)!)).toBe('Last 7 days: 0 swaps')
+    // The headline beside the big number (2026-11-19 redesign).
+    expect(auditVerdictSentence(verdict({ total: 126, success: 107, failed: 19 }, 0)!)).toEqual({ number: '0', words: 'failures caused by this mint in 126 swaps over 7 days' })
+    expect(auditVerdictSentence(verdict({ total: 1, success: 0, failed: 1 }, 1)!)).toEqual({ number: '1', words: 'failure caused by this mint in 1 swap over 7 days' })
+    expect(auditVerdictSentence(verdict({ total: 0, success: 0, failed: 0 }, 0)!)).toEqual({ number: '0', words: 'swaps in the last 7 days' })
     expect(auditSuccessRate(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe(100)
     expect(auditSuccessRateText(verdict({ total: 50, success: 50, failed: 0 }, 0)!)).toBe('100%') // no trailing .0
     expect(auditSuccessRate(verdict({ total: 50, success: 46, failed: 4 }, 1)!)).toBe(92) // raw 46/50, not 49/50
     expect(auditSuccessRateText(verdict({ total: 50, success: 46, failed: 4 }, 1)!)).toBe('92%')
     expect(auditSuccessRateText(verdict({ total: 0, success: 0, failed: 0 }, 0)!)).toBe('—')
     expect(auditSuccessRateCaption()).toBe('Success rate · 7 days')
-    expect(AUDIT_SCORE_HINT).toBe('The score only counts failures caused by this mint.')
+    expect(AUDIT_SCORE_HINT).toBe('The Reliability Score counts only the failures cashu.info puts on this mint. A payment that fails somewhere else on Lightning is not held against it.')
   })
   it('verdict: fewer than 10 swaps still shows the numbers', () => {
     expect(verdict({ total: 4, success: 4, failed: 0 }, 0)).toEqual({ total: 4, blamed: 0, failedElsewhere: 0, ok: 4 })
