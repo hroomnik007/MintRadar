@@ -62,6 +62,9 @@ export interface KnownMint {
    *  "Most Reliable" panel only — uptimePct24h remains the field used
    *  everywhere else (mint cards, avg-uptime hero tile, degraded detection). */
   uptimePct7d?: number | null
+  /** Uptime per UTC day for the last 30 days, oldest first, today last (null = no probe that day); null for a mint
+   *  without any probe in 30 days. Website only (dailyUptime.ts). */
+  uptimeDaily30?: Array<number | null> | null
   /** 30-day uptime in whole percent, the figure the score's 30-day part and the recommendation gate use; null without history. */
   uptimePct30d?: number | null
   /** The same share unrounded (two decimals, rounded down): what the recommendation gate (hasSteadyUptime) compares. */

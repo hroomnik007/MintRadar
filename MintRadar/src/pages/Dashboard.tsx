@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { NostrEvent } from 'nostr-tools'
 import { loadSharedPool } from '@/core/nostr/lazy'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
+import { UptimeBars } from '@/components/mint/UptimeBars'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
@@ -18,8 +19,7 @@ import type { MintStatus } from '@core/mint/api'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
-import { cardsLatencyNote } from '@/constants/probeLocation'
-import { listMobileColumn, type ListMobileColumn } from '@/utils/listColumns'
+import { PROBE_LOCATION } from '@/constants/probeLocation'
 import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
@@ -90,6 +90,11 @@ const IcClose = () => (
     <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 )
+const IcChevronDown = () => (
+  <svg className="sort-select-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+)
+// The sort options of the select, in reading order (Reliability Score is the default).
+const SORT_LABELS = [['reliability', 'Reliability Score'], ['reviewCount', 'Most reviewed'], ['rating', 'Rating'], ['latency', 'Latency'], ['name', 'Name']] as const
 const IcList = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <line x1="5" y1="4" x2="14" y2="4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
@@ -437,12 +442,8 @@ function MintListView({
   }
 
   const { shown, onlineTotal, collapsed } = collapseOnline(sortedFiltered, collapseOnlineTo)
-  // A phone has room for two more columns next to Mint, status and Uptime 24h: Rating, and the one the list is sorted by, so the
-  // order can be read off the rows (it used to hide Latency, Reliability and NUTs, the default sort key included).
-  const mobileKey = listMobileColumn(sortBy)
-  // Rating (the review stars) is always shown on a phone too, like on the cards (2026-11-14).
-  const mobileCol = (col: ListMobileColumn): string => (col === mobileKey || col === 'rating' ? '' : 'col-hide-mobile')
 
+  // 2026-11-19 redesign (phase 3): desktop only (phones show the cards); the same facts as a card, one row per mint.
   return (
     <>
       <div className="mint-list-table-wrap">
@@ -450,12 +451,12 @@ function MintListView({
           <thead>
             <tr>
               <th>Mint</th>
-              <th><span className="sr-only-mobile">Status</span></th>
-              <th>Uptime 24h</th>
-              <th className={mobileCol('latency')}>Latency</th>
-              <th className={mobileCol('reliability')}>Reliability</th>
-              <th className={mobileCol('rating')}>Rating</th>
-              <th className="col-hide-mobile">NUTs</th>
+              <th>Last 30 days</th>
+              <th className="num">Latency</th>
+              <th className="num">Uptime 30 d</th>
+              <th className="num">Reviews</th>
+              <th>Software</th>
+              <th className="num">Reliability</th>
             </tr>
           </thead>
           <tbody>
@@ -469,35 +470,33 @@ function MintListView({
               return (
                 <tr key={mint.url} className="mint-list-row" onClick={e => { if (!(e.target as Element).closest('a')) navigate(`/mint/${encodeURIComponent(mint.url)}`) }} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
                   <td className="mint-list-td-name">
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={24} radius={5} />
+                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={7} />
                     <div style={{ minWidth: 0 }}>
-                      <div className="mint-list-name" title={displayName}><Link className="mint-list-link" to={`/mint/${encodeURIComponent(mint.url)}`}>{displayName}</Link></div>
+                      <div className="mint-list-name" title={displayName}>
+                        <span className="mint-list-dot" aria-hidden="true" style={{ background: isOnline ? 'var(--accent)' : isArchived ? 'var(--text3)' : 'var(--red)' }} />
+                        <Link className="mint-list-link" to={`/mint/${encodeURIComponent(mint.url)}`}>{displayName}</Link>
+                      </div>
+                      <span className="sr-only mint-list-status">{statusLabel}</span>
                       {displayName !== getHostname(mint.url) && <div className="mint-list-url" title={getHostname(mint.url)}>{getHostname(mint.url)}</div>}
                     </div>
                   </td>
-                  <td>
-                    <span style={{ fontSize: 12, color: isOnline ? 'var(--accent)' : isArchived ? 'var(--text3)' : 'var(--red)' }}>
-                      ●<span className="status-text-mobile-hide"> {statusLabel}</span>
-                    </span>
+                  <td className="mint-list-bars"><UptimeBars days={mint.uptimeDaily30} /></td>
+                  <td className="num" style={{ color: isOnline ? latencyColor(mint.latencyMs) : 'var(--text3)' }}>
+                    {isOnline && mint.latencyMs != null ? <>{mint.latencyMs}<span className="mint-list-unit">ms</span></> : '—'}
                   </td>
-                  <td style={{ color: uptimeColor(mint.uptimePct24h), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
-                    {mint.uptimePct24h != null ? `${mint.uptimePct24h}%` : '—'}
+                  <td className="num" style={{ color: uptimeColor(mint.uptimePct30d ?? null) }}>
+                    {mint.uptimePct30d != null ? <>{mint.uptimePct30d}<span className="mint-list-unit">%</span></> : '—'}
                   </td>
-                  <td className={mobileCol('latency')} style={{ color: latencyColor(mint.latencyMs), fontFamily: 'var(--font-mono-data)', fontSize: 12 }}>
-                    {isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
-                  </td>
-                  <td className={`reliability-col ${mobileCol('reliability')}`} style={{ color: score != null ? reliabilityColor(score) : 'var(--text3)', fontFamily: 'var(--font-mono-data)', fontSize: 12, fontWeight: 600 }}>
-                    {score != null ? `${score}` : '—'}
-                  </td>
-                  <td className={`rating-col ${mobileCol('rating')}`} style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                  <td className="num rating-col">
                     {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (
                       <span aria-label={`${mint.reviewAvgRating.toFixed(1)} out of 5, ${mint.reviewCount} ${mint.reviewCount === 1 ? 'review' : 'reviews'}`}>
-                        <span aria-hidden="true" style={{ color: 'var(--yellow)' }}>★</span> {mint.reviewAvgRating.toFixed(1)}<span className="rating-count-mobile-hide" style={{ color: 'var(--text3)' }}> ({mint.reviewCount})</span>
+                        <span aria-hidden="true" style={{ color: 'var(--amber)' }}>★</span> {mint.reviewAvgRating.toFixed(1)}<span className="mint-list-unit"> ({mint.reviewCount})</span>
                       </span>
-                    ) : '—'}
+                    ) : <span className="mint-list-none">None yet</span>}
                   </td>
-                  <td className="col-hide-mobile" style={{ fontFamily: 'var(--font-mono-data)', fontSize: 12, color: 'var(--text2)' }}>
-                    {mint.nutCount != null ? `${mint.nutCount}/${TRACKED_NUT_KEYS.length}` : '—'}
+                  <td className="mint-list-software">{mint.version ? mint.version.replace('/', ' ') : '—'}</td>
+                  <td className="num reliability-col">
+                    <span className="mint-list-score" style={{ color: score != null ? (isOnline ? reliabilityColor(score) : 'var(--text3)') : 'var(--text3)' }}>{score != null ? score : '—'}</span>
                   </td>
                 </tr>
               )
@@ -627,6 +626,9 @@ export default function Dashboard() {
       return 'cards'
     }
   })
+  // Phones (<=768px) always show the cards: the list view is a desktop table (2026-11-19 redesign); the stored choice stays.
+  const isNarrow = useMediaQuery('(max-width: 768px)')
+  const shownView: 'cards' | 'list' = isNarrow ? 'cards' : viewMode
 
   // Filter panel draft state — only committed to the URL (activeFilters) via
   // "Apply filter". Re-synced from activeFilters whenever the panel opens
@@ -958,17 +960,6 @@ export default function Dashboard() {
     try { localStorage.setItem('mintRadar_viewMode', mode) } catch { /* blocked or full storage: the choice lasts for this page view */ }
   }
 
-  // Where the sort segment scrolls inside itself (≤370px, see Dashboard.css) keep the active option in view.
-  const sortSegmentRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const seg = sortSegmentRef.current
-    const active = seg?.querySelector<HTMLElement>('.sort-btn.active')
-    if (!seg || !active || seg.scrollWidth <= seg.clientWidth) return
-    const a = active.getBoundingClientRect()
-    const b = seg.getBoundingClientRect()
-    seg.scrollLeft += a.left - b.left - (b.width - a.width) / 2
-  }, [sortBy])
-
   function handleSortClick(s: typeof sortBy) {
     if (s === sortBy) {
       commitFilters({ sortDir: sortDir === 'asc' ? 'desc' : 'asc' })
@@ -1297,39 +1288,35 @@ export default function Dashboard() {
       <PageHead
         title="Cashu mints"
         srTitle="Reliability Score & Uptime Monitor"
-        description={<>See how reliably each Cashu mint runs before you keep sats on it. New to Cashu? <Link to="/learn/cashu-basics">Start with the basics</Link>.</>}
+        description={<>How reliably each Cashu mint runs, so you can decide where to keep your sats. New to Cashu? <Link to="/learn/cashu-basics">Start with the basics</Link>.</>}
         titleRef={headingRef}
         titleTestId="dashboard-heading"
       />
 
+      {/* 2026-11-19 redesign (phase 3): the network state is one sentence in a box framed like the Filters button
+          (owner, 2026-11-18), the two start actions sit beside it (stacked under it on phones). */}
       <div className="dash-intro">
+        {!search && !knownError && (
+          <div className="dash-status">
+            <p className="dash-status-btn">
+              <span className="dash-status-live" aria-hidden="true" />
+              <span className="dash-status-item">
+                <b>{knownLoading ? '—' : onlineCount} of {knownLoading ? '—' : knownTotal}</b> mints answered the last check
+                {' '}<span className="dash-status-time">{formatTimeAgo(lastCheckTime)}</span>{' '}
+                <span className="dash-status-note" data-testid="dash-latency-note">from {PROBE_LOCATION}</span>.
+              </span>
+            </p>
+          </div>
+        )}
         <div className="dash-actions" role="group" aria-label="Get started">
-          <button type="button" className="dash-action" onClick={() => navigate('/tools#pick')}>
-            Find a mint
+          <button type="button" className="dash-action dash-action-primary" onClick={() => navigate('/tools#pick')}>
+            Find a mint for me
           </button>
           <button type="button" className="dash-action" onClick={() => navigate('/tools#token')}>
             Inspect a token
           </button>
         </div>
-        <p className="grid-score-explainer">
-          We score how it runs. They score how it went. You pick.
-        </p>
       </div>
-
-      {!search && !knownError && (
-        <div className="dash-status">
-          <div className="dash-status-btn">
-            <span className="dash-status-live" aria-hidden="true" />
-            <span className="dash-status-item"><b><span>{knownLoading ? '—' : onlineCount}</span></b> online mints</span>
-            <span className="dash-status-sep" aria-hidden="true" />
-            <span className="dash-status-item"><b><span>{knownLoading ? '—' : knownTotal}</span></b> tracked mints</span>
-            <span className="dash-status-item dash-status-end">
-              <span>last checked {formatTimeAgo(lastCheckTime)}</span>
-              <span className="dash-status-note" data-testid="dash-latency-note"><span className="dash-status-note-sep" aria-hidden="true"> · </span>{cardsLatencyNote()}</span>
-            </span>
-          </div>
-        </div>
-      )}
 
       {visibleQueuedBanner && (
         <div className={`queued-banner queued-banner-${visibleQueuedBanner.tone}`} role="status">
@@ -1377,25 +1364,28 @@ export default function Dashboard() {
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
           </button>
         </div>
-        <div className="sort-segment" ref={sortSegmentRef}>
-          {(['reviewCount', 'rating', 'latency', 'name', 'reliability'] as const).map(s => (
-            <button
-              key={s}
-              type="button"
-              className={`sort-btn${sortBy === s ? ' active' : ''}`}
-              onClick={() => handleSortClick(s)}
+        {/* One select instead of five chips (2026-11-19 redesign): the controls take one row; the arrow button next to it
+            flips the direction (each option starts in its own default direction). */}
+        <div className="sort-control">
+          <label className="sort-select-wrap">
+            <span className="sr-only">Sort by</span>
+            <select
+              className="sort-select"
+              value={sortBy}
+              onChange={e => handleSortClick(e.target.value as typeof sortBy)}
             >
-              {s === 'reliability' || s === 'reviewCount' ? (
-                // Two labels, one shown at a time by CSS (display: none), so the accessible name is always the visible
-                // text. The short one fits all five chips on one row at 320–389px (see .sort-lbl-short in Dashboard.css).
-                <>
-                  <span className="sort-lbl-full">{s === 'reliability' ? 'Reliability Score' : 'Most reviewed'}</span>
-                  <span className="sort-lbl-short">{s === 'reliability' ? 'Reliability' : 'Reviews'}</span>
-                </>
-              ) : s.charAt(0).toUpperCase() + s.slice(1)}
-              {sortBy === s && <span className="sort-arrow" style={{marginLeft: 3, fontSize: 12, opacity: 0.7}}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
-            </button>
-          ))}
+              {SORT_LABELS.map(([key, label]) => <option key={key} value={key}>Sort: {label}</option>)}
+            </select>
+            <IcChevronDown />
+          </label>
+          <button
+            type="button"
+            className="sort-dir-btn"
+            aria-label={sortDir === 'asc' ? 'Sort ascending, switch to descending' : 'Sort descending, switch to ascending'}
+            onClick={() => commitFilters({ sortDir: sortDir === 'asc' ? 'desc' : 'asc' })}
+          >
+            <span aria-hidden="true">{sortDir === 'asc' ? '↑' : '↓'}</span>
+          </button>
         </div>
         <div className="view-toggle">
           <button type="button" className={`view-toggle-btn${viewMode === 'cards' ? ' active' : ''}`} onClick={() => handleViewMode('cards')} title="Card view" aria-label="Card view" aria-pressed={viewMode === 'cards'}>
@@ -1415,8 +1405,8 @@ export default function Dashboard() {
         >
           <IcClearFilters />
         </button>
-        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={openSubmit}>
-          <IcPlus /> Add mint
+        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={openSubmit} aria-label="Add mint">
+          <IcPlus /> <span className="submit-btn-label">Add mint</span>
         </button>
       </div>
 
@@ -1646,7 +1636,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {viewMode === 'list' ? (
+          {shownView === 'list' ? (
             <MintListView
               mints={filteredMints}
               collapseOnlineTo={collapseOnlineTo}

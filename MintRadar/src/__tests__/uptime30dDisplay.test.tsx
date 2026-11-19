@@ -11,7 +11,7 @@ import { resolve } from 'node:path'
 import { MIN_RECOMMENDATION_UPTIME_30D_PCT, hasSteadyUptime, exactPct as feExactPct } from '@/utils/reliabilityScore'
 import { exactPct as beExactPct } from '../../backend/src/shared/reliabilityScore'
 import { isUptime30dLow, uptime30dColor } from '@/utils/mintFormatting'
-import { COMPARE_UPTIME_30D_LABEL, cardUptime30dChip } from '@/utils/compareLabels'
+import { COMPARE_UPTIME_30D_LABEL } from '@/utils/compareLabels'
 
 vi.mock('@/core/nostr/pool', () => ({
   sharedPool: { querySync: () => new Promise<never>(() => undefined), subscribeMany: () => ({ close: () => undefined }) },
@@ -66,17 +66,19 @@ describe('the warning tone starts where the recommendation gate does', () => {
 
 describe('mint card', () => {
   const chip = (c: HTMLElement) => c.querySelector('[data-testid="card-uptime-30d"]')
-  it('shows the 30-day chip only below the limit', () => {
+  // Since the 2026-11-19 redesign the low 30-day uptime is the ochre "Uptime 30 d" fact itself (it was a "77% up 30d" chip).
+  it('marks the 30-day uptime only below the limit', () => {
     expect(chip(render(wrap(<MintCard mint={STEADY} />)).container)).toBeNull()
     expect(chip(render(wrap(<MintCard mint={UNKNOWN} />)).container)).toBeNull()
     expect(chip(render(wrap(<MintCard mint={{ ...STEADY, uptimePct30d: MIN_RECOMMENDATION_UPTIME_30D_PCT }} />)).container)).toBeNull()
-    const low = chip(render(wrap(<MintCard mint={WEEK_DOWN} />)).container)
-    expect(low?.textContent).toBe(cardUptime30dChip(77))
-    expect(low?.textContent).toBe('77% up 30d')
+    const low = chip(render(wrap(<MintCard mint={WEEK_DOWN} />)).container) as HTMLElement | null
+    expect(low?.textContent).toBe('77%')
+    expect(low?.style.color).toContain('--med')
   })
-  it('the 24-hour chip stays next to it', () => {
+  // The "up 24h" chip went with the 2026-11-19 redesign (phase 3): the card shows the 30-day uptime as a fact instead.
+  it('the Uptime 30 d fact shows the same figure', () => {
     const { container } = render(wrap(<MintCard mint={WEEK_DOWN} />))
-    expect(container.querySelector('.card-pills')?.textContent).toContain('100% up 24h')
+    expect(container.querySelector('.card-facts')?.textContent).toContain('Uptime 30 d77%')
   })
 })
 

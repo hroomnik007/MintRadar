@@ -11,6 +11,7 @@ import { globalMeanRating, weightedRating } from './weightedRating.js'
 import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isArchivedMint } from './archived.js'
 import { healthRecordPublishedAtIso } from './healthAssertions.js'
+import { getDailyUptime } from './dailyUptime.js'
 import { keysetsOf, changesOf, type Snapshot, type WalletExtra, type AuditDirectionsRow, latency24hOf } from './walletApi.js'
 import { readStoredBreakdown } from './scoreBreakdown.js'
 import { readStoredContactChecks } from './contactChecks.js'
@@ -145,6 +146,9 @@ export function computeKnownMints(): Promise<Snapshot> {
     getLatestVersionsMap(),
   ])
     .then(([result, latestVersions]) => {
+      // Daily uptime buckets of the last 30 UTC days (website cards and Mint Detail): the last background read, no query
+      // here (dailyUptime.ts).
+      const dailyUptime = getDailyUptime()
       // C for the IMDB-style weighted Rating sort (see below) — computed from
       // the raw rollup columns before the row map so each mint's WR can be set
       // inline in the literal.
@@ -239,6 +243,9 @@ export function computeKnownMints(): Promise<Snapshot> {
           // unchanged and still used everywhere else (mint cards, avg-uptime
           // hero tile, degraded detection).
           uptimePct7d: total7d === 0 ? null : Math.round(onlineCount7d / total7d * 100),
+          // Additive (2026-11-19, website only): uptime per UTC day for the last 30 days, oldest first, today last; a day
+          // without probes is null; null for a mint without any probe in 30 days. See dailyUptime.ts.
+          uptimeDaily30: dailyUptime.get(r.url as string) ?? null,
           // Additive (methodology 7): 30-day uptime, the figure the recommendation gate (hasSteadyUptime) and the
           // score's 30-day part use. The value stored with the score at the newest probe; the live count only until
           // the first probe after a deploy has stored one.

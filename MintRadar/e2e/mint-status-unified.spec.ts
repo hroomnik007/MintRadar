@@ -38,8 +38,9 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
       await expect(pill).toHaveClass(/offline/)
       await page.goto('/?status=all')
       const card = page.locator('.mint-card', { hasText: 'Charlie Mint' })
-      await expect(card.locator('.card-hdr-badge')).toHaveText('Degraded')
-      await expect(card.locator('.status-dot')).toHaveAttribute('title', 'Degraded')
+      // Said once since the 2026-11-19 redesign: the state word in the card foot (no separate badge, no dot tooltip).
+      await expect(card.locator('.card-state')).toHaveText('Degraded')
+      await expect(card.locator('.card-hdr-badge')).toHaveCount(0)
     })
 
     test('an offline mint under the degraded rule still reads "Offline"', async ({ page }) => {
@@ -63,8 +64,9 @@ test('list view and Compare use the same word for a degraded mint', async ({ pag
   await page.goto('/?status=all')
   await page.locator('.view-toggle-btn[title="List view"]').click()
   const row = page.locator('.mint-list-row', { hasText: 'Charlie Mint' })
-  await expect(row.locator('td').nth(1)).toHaveText('● Degraded')
-  await expect(page.locator('.mint-list-row', { hasText: 'Alpha Mint' }).locator('td').nth(1)).toHaveText('● Online')
+  // The list shows a status dot before the name since the 2026-11-19 redesign; the word is read out with it.
+  await expect(row.locator('.mint-list-status')).toHaveText('Degraded')
+  await expect(page.locator('.mint-list-row', { hasText: 'Alpha Mint' }).locator('.mint-list-status')).toHaveText('Online')
 
   await page.goto('/mint/charlie.mint.example')
   await page.getByRole('button', { name: /Compare/ }).first().click()

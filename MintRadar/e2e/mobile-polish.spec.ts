@@ -124,14 +124,14 @@ for (const phone of PHONES) {
       expect(box!.height).toBeGreaterThanOrEqual(MIN_TARGET_PX)
     })
 
-    test('home: no horizontal overflow and the sort buttons stay inside the viewport', async ({ page }) => {
+    test('home: no horizontal overflow and the sort controls stay inside the viewport', async ({ page }) => {
       await page.setViewportSize(phone)
       await loadRoute(page, AUDIT_ROUTES.find(r => r.id === 'home')!)
       await layoutReady(page)
       const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
       expect(sw).toBeLessThanOrEqual(cw)
-      const boxes = await page.locator('.sort-btn').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { left: r.left, right: r.right } }))
-      expect(boxes).toHaveLength(5)
+      const boxes = await page.locator('.sort-select, .sort-dir-btn').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { left: r.left, right: r.right } }))
+      expect(boxes).toHaveLength(2)
       for (const b of boxes) {
         expect(b.left).toBeGreaterThanOrEqual(0)
         expect(b.right).toBeLessThanOrEqual(phone.width)
@@ -169,7 +169,7 @@ test.describe('home status strip: the data arriving moves nothing', () => {
       await resize(page, phone.width, phone.height)
       await page.goto('/')
       await requestReachedMock
-      await expect(page.locator('.dash-status-item b').first()).toHaveText('—')
+      await expect(page.locator('.dash-status-item b').first()).toHaveText('— of —') // one sentence since the 2026-11-19 redesign
       await layoutReady(page)
 
       const strip = () => page.evaluate(() => {
@@ -182,7 +182,7 @@ test.describe('home status strip: the data arriving moves nothing', () => {
       await page.evaluate(() => { (window as unknown as { __shifts: unknown[] }).__shifts.length = 0 })
 
       release()
-      await expect(page.locator('.dash-status-item b').first()).toHaveText('12')
+      await expect(page.locator('.dash-status-item b').first()).toHaveText('12 of 12')
       // Phones show the first 10 online mints and a "Show all 12" button (ui-quick-wins.spec.ts).
       await expect(page.locator('.mint-card')).toHaveCount(10)
       await expect(page.getByTestId('show-all-mints')).toHaveText('Show all 12')

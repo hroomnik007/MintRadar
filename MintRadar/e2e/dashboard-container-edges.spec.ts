@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
 // Every Dashboard view (card grid, list table) uses the shared container edges: the content box of
-// .dashboard-controls (search row) and .dash-status (stats strip), i.e. --dash-chrome-max minus --page-pad.
+// .dashboard-controls (search row) and .dash-intro (the status and actions row), i.e. --dash-chrome-max minus --page-pad.
 // The list wrapper once kept the app shell's old 1400px width and overshot the page content by ~58px per side.
 
 const base = MOCK_KNOWN_MINTS[0]
@@ -42,7 +42,8 @@ for (const width of [1920, 1536, 1440, 1280, 1100]) {
     test(`Dashboard ${view} view lines up with the search row and stats strip at ${width}px`, async ({ page }) => {
       await open(page, width, view)
       const t = await edges(page, target)
-      for (const ref of ['.dashboard-controls', '.dash-status']) {
+      // .dash-intro: the row that holds the status box since the 2026-11-19 redesign (the box itself is content-sized).
+      for (const ref of ['.dashboard-controls', '.dash-intro']) {
         const e = await edges(page, ref)
         expect(Math.abs(t.left - e.left), `${target} left vs ${ref}`).toBeLessThanOrEqual(1)
         expect(Math.abs(t.right - e.right), `${target} right vs ${ref}`).toBeLessThanOrEqual(1)
@@ -57,7 +58,8 @@ for (const width of [1920, 1536, 1440, 1280, 1100]) {
   }
 }
 
-for (const width of [900, 768, 390]) {
+// The list view is a desktop table since the 2026-11-19 redesign (phones, <=768px, show the cards).
+for (const width of [1024, 900, 769]) {
   test(`Dashboard list view does not widen the page at ${width}px; the table fits or scrolls inside its wrapper`, async ({ page }) => {
     await open(page, width, 'list')
     const m = await page.evaluate(() => {
@@ -75,7 +77,7 @@ for (const width of [900, 768, 390]) {
   })
 }
 
-for (const width of [1440, 390]) {
+for (const width of [1440, 900]) {
   test(`Dashboard list rows all have the same height at ${width}px (with and without a hostname line)`, async ({ page }) => {
     await open(page, width, 'list')
     const rows = page.locator('.mint-list-row')
@@ -86,3 +88,14 @@ for (const width of [1440, 390]) {
     expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(0.5)
   })
 }
+
+test('phones show the cards even with the list view stored, and no view toggle', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('mintRadar_viewMode', 'list'))
+  await mockRelays(page)
+  await installApiMocks(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page.locator('.mint-card').first()).toBeVisible()
+  await expect(page.locator('.mint-list-row')).toHaveCount(0)
+  await expect(page.locator('.view-toggle')).toBeHidden()
+})

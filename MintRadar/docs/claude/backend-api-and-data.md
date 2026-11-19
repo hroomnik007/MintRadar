@@ -318,3 +318,16 @@ Facts about the contact entries a mint lists in `/v1/info` (`backend/src/contact
 
 
 - **Readiness gate (2026-10-22, task E4; `backend/src/readiness.ts`).** Until `initDb()` and the seed have finished, every `/api/` path (also via `/api/v1/*`) and `/sitemap.xml` answer **503 `{"error":"starting"}` + `Retry-After: 2`**, from a middleware placed before the body parser and the rate limiter (a refused request costs no rate-limit slot). `/health` and `/api/v1/health` are never gated: same 200 and fields as before plus **`ready`** (`false` while starting, `true` after). While `ready` is false `/health` makes no database call (E4b): `lastAuditSyncAt` and `lastReviewsSyncAt` are `null`, the in-memory fields are unchanged. `/api/og/page` and `/api/nip05/verify` need no database and are not gated. **Why:** requests during `initDb()` ran against a database mid-DDL and competed with start-up work for the 5-connection pool. The gate opens only after both steps resolved (`openGateAfter()`), never closes again, and a failing `initDb()` leaves it closed (the process exits as before). Details and the list of what was checked in `deploy-and-infra.md` "Task E4". Tests: `integration/readiness.test.ts`.
+
+## `uptimeDaily30` on /api/mints/known (2026-11-19, redesign phase 3)
+
+Website only (the wallet API maps its fields one by one and does not carry it; `WALLET_MINT_FIELDS` unchanged).
+30 numbers, one per UTC day, oldest first, the last one is today: the share of successful probes of `mint_history` that day
+in percent, one decimal, rounded DOWN (99.99 % never reads 100); `null` for a day without any probe; the whole field is
+`null` for a mint without any probe in 30 days. Computed in `backend/src/dailyUptime.ts` (`buildDailyBuckets`, unit test
+`dailyUptime.test.ts`) by ONE grouped read (`GROUP BY url, UTC day` over the last 30 days) on its own timer: at server
+start and every 10 min (`startDailyUptimeRefresh`, `DAILY_UPTIME_TTL_MS`, unref'ed). The known-mints snapshot (about every
+minute) only reads the last result (`getDailyUptime()`), so a snapshot refresh stays ONE database read (the snapshot tests
+count `pool.query` calls). A failed read keeps the previous buckets (or none) and never fails the snapshot; right after a
+start, before the first read, the field is `null`. Read by the 30 bars on
+the mint cards and the list view (`UptimeBars`).

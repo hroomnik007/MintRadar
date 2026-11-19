@@ -145,13 +145,13 @@ test('Home: while the list is pending the header strip shows dashes (never "0 on
   await page.goto('/')
   await expect.poll(() => arrived, { message: 'the request is waiting at the mock' }).toBe(true)
   const strip = page.locator('.dash-status')
-  await expect(strip).toHaveText(/^\s*—\s*online mints\s*—\s*tracked mints\s*last checked —\s*·\s*latency from Nuremberg\s*$/)
+  await expect(strip).toHaveText(/^\s*—\s*of\s*—\s*mints answered the last check\s*—\s*from Nuremberg\.\s*$/)
   await expect(page.locator('body')).not.toContainText(/\b0 (online|tracked) mints/i)
   letThrough()
   await expect(page.locator('.mint-grid .mint-card').first()).toBeVisible({ timeout: 15_000 })
   await expect(strip).not.toContainText('—')
-  await expect(strip.locator('b').first()).toHaveText(/^[1-9]\d*$/)
-  await expect(strip.locator('b').nth(1)).toHaveText(String(MOCK_KNOWN_MINTS.length))
+  // One sentence since the 2026-11-19 redesign: "<b>N of M</b> mints answered the last check …".
+  await expect(strip.locator('b').first()).toHaveText(new RegExp(`^[1-9]\\d* of ${MOCK_KNOWN_MINTS.length}$`))
 })
 
 test('Mint Detail: a slow successful list shows a quiet Loading… (not an error) and then the page', async ({ page }) => {

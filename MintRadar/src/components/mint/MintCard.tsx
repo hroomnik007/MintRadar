@@ -6,16 +6,15 @@ import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import './WatchLoginModal.css'
-import { Zap } from 'lucide-react'
+import { Zap, ArrowLeftRight } from 'lucide-react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
-import { IcShield } from '@/components/mint/IcShield'
+import { UptimeBars } from '@/components/mint/UptimeBars'
 import { IcStar } from '@/components/mint/IcStar'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { CARD_LATENCY_LABEL, cardUptime30dChip } from '@/utils/compareLabels'
-import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLightningLabel, uptimeColor, latencyColor, isUptime30dLow, formatTimeAgo, statusDotColor, mintStatusLabel } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, shouldShowHostLine, isNewMint, cardLatencyLabel, cardLightningLabel, latencyColor, isUptime30dLow, formatTimeAgo, statusDotColor, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { isTestMint } from '@/constants/testMints'
 import { sortUnits } from '@/utils/sortUnits'
@@ -93,12 +92,6 @@ export function MintCard({
   // Offline (24h+) cards are not dimmed with opacity; status colours are muted towards a text token instead.
   const offlineTone = (color: string, base: string) =>
     isOfflineDegraded ? `color-mix(in srgb, ${color} 50%, ${base})` : color
-  // The red (<80%) "up 24h" chip text is lifted towards --text so it reaches 4.5:1 on the card surface.
-  const upChipColor = (pct: number) => {
-    const c = uptimeColor(pct)
-    if (isOfflineDegraded) return offlineTone(c, 'var(--text2)')
-    return c === 'var(--slow)' ? 'color-mix(in srgb, var(--red) 85%, var(--text))' : c
-  }
   // Latency is coloured only when slow (latencyColor, the list view's rule); the error tone is lifted like the chip's.
   const latencyTone = (ms: number) => {
     const c = latencyColor(ms)
@@ -107,7 +100,6 @@ export function MintCard({
   const displayName = mintDisplayName(mint, duplicateDisplayNames)
   const starLabel = isLoggedIn && isWatched ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`
   const showHost = shouldShowHostLine(mint, duplicateDisplayNames)
-  const uptimePct24h = mint.uptimePct24h ?? null
   const isNew = isNewMint(mint.discoveredAt ?? null)
   const lightningLabel = cardLightningLabel(mint)
   const reliabilityBadges = (
@@ -128,6 +120,21 @@ export function MintCard({
     </>
   )
 
+  // Reliability readout (2026-11-19 redesign, phase 3): the condensed number in its band colour and one word under it.
+  const score = mint.reliabilityScore
+  const scoreColor = score == null ? 'var(--text3)' : offlineTone(score >= 70 ? 'var(--green-bright)' : score >= 40 ? 'var(--amber)' : 'var(--red)', 'var(--text3)')
+  // The state (Offline / Degraded) is said once, in the card foot; the score keeps its band word (greyed when offline).
+  const scoreWord = score == null ? 'No score yet' : score >= 70 ? 'High' : score >= 40 ? 'Moderate' : 'Low'
+  const units = mint.units && mint.units.length > 0 ? sortUnits(mint.units).join(', ') : null
+  const lightningText = lightningLabel ? lightningLabel.replace(/^LN/, 'Lightning') : null
+  const lowUptime30d = isUptime30dLow(mint.uptimePct30d)
+  const stateBadge = isArchived && !isOnline ? (
+    <span className="card-pill card-hdr-badge card-hdr-archived" style={{ fontWeight: 600, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border2)' }}>Archived</span>
+  ) : isNew ? (
+    <span className="card-pill card-hdr-badge card-hdr-new" style={{ fontWeight: 600, color: 'color-mix(in srgb, var(--amber) 80%, var(--text))', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }}>New</span>
+  ) : null
+  const hasBadges = stateBadge !== null || isTestMint(mint.url) || (sameOperatorUrls?.length ?? 0) > 0
+
   return (
     <>
     <div
@@ -137,8 +144,8 @@ export function MintCard({
     >
       <div className="card-top">
         <div className="card-name-row">
-          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={6} className={isOfflineDegraded ? 'card-avatar-offline' : ''} />
-          <div style={{ minWidth: 0 }}>
+          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={36} radius={9} className={isOfflineDegraded ? 'card-avatar-offline' : ''} />
+          <div className="card-id">
             <div className="card-name-line">
               {/* Stretched link: its ::after covers the whole card (see .card-link in Dashboard.css), so the
                   card opens with middle/ctrl/cmd-click and "copy link address". Buttons and chips with a
@@ -146,134 +153,73 @@ export function MintCard({
               <Link className="card-link" to={`/mint/${encodeURIComponent(mint.url)}`}>
                 <span className="card-name" title={mint.nameFull ?? displayName}>{displayName}</span>
               </Link>
-              <span
-                className={`status-dot${isOnline ? ' online' : ''}`}
-                style={{ background: statusDotColor(statusWord) }}
-                title={statusWord}
-              />
+              {/* Watch star right after the name (owner, 2026-11-18), not next to Compare. */}
+              <button
+                type="button"
+                className={`card-star${isLoggedIn && isWatched ? ' on' : ''}`}
+                aria-label={starLabel}
+                aria-pressed={isLoggedIn && isWatched}
+                title={starLabel}
+                onClick={e => {
+                  e.stopPropagation()
+                  if (!isLoggedIn) {
+                    setShowWatchLoginModal(true)
+                    return
+                  }
+                  void (isWatched ? removeWatchedMint(mint.url, displayName) : addMint(mint.url))
+                }}
+              >
+                <IcStar filled={isLoggedIn && isWatched} />
+              </button>
             </div>
             {showHost && <div className="card-host" title={hostname}>{hostname}</div>}
           </div>
-          <div className="card-hdr-right">
-          {onCompare && isOnline && (
-            <button
-              type="button"
-              className="card-compare-btn"
-              aria-label={`Compare ${displayName}`}
-              title={`Compare ${displayName}`}
-              onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
-            >
-              ⇄
-            </button>
-          )}
-          <button
-            type="button"
-            className={`card-star${isLoggedIn && isWatched ? ' on' : ''}`}
-            aria-label={starLabel}
-            aria-pressed={isLoggedIn && isWatched}
-            title={starLabel}
-            onClick={e => {
-              e.stopPropagation()
-              if (!isLoggedIn) {
-                setShowWatchLoginModal(true)
-                return
-              }
-              void (isWatched ? removeWatchedMint(mint.url, displayName) : addMint(mint.url))
-            }}
-          >
-            <IcStar filled={isLoggedIn && isWatched} />
-          </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="card-pills">
-        {mint.units && mint.units.length > 0 && (
-          <span className="card-pill" style={{ fontFamily: 'var(--font-mono-data)' }}>
-            {sortUnits(mint.units).map(u => u.toUpperCase()).join(' / ')}
-          </span>
-        )}
-        {lightningLabel && (
-          <span
-            className="card-pill card-ln"
-            style={{ fontFamily: 'var(--font-mono-data)', display: 'flex', alignItems: 'center', gap: 3 }}
-          >
-            <Zap size={10} aria-hidden />
-            <span>{lightningLabel}</span>
-          </span>
-        )}
-        {uptimePct24h !== null && (
-          <span className="card-pill" style={{ color: upChipColor(uptimePct24h), fontFamily: 'var(--font-mono-data)' }}>
-            {uptimePct24h}% up 24h
-          </span>
-        )}
-        {isUptime30dLow(mint.uptimePct30d) && (
-          <span className="card-pill" data-testid="card-uptime-30d" style={{ color: offlineTone('var(--med)', 'var(--text2)'), fontFamily: 'var(--font-mono-data)' }}>
-            {cardUptime30dChip(mint.uptimePct30d)}
-          </span>
-        )}
-        {isArchived && !isOnline ? (
-          <span className="card-pill card-hdr-badge card-hdr-archived" style={{ fontWeight: 600, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border2)' }}>
-            Archived
-          </span>
-        ) : isOfflineDegraded ? (
-          <span className="card-pill card-hdr-badge" style={{ fontWeight: 600, color: 'color-mix(in srgb, var(--red) 65%, var(--text))', background: 'var(--red-soft)', border: '1px solid var(--red-soft-strong)' }}>
-            Degraded
-          </span>
-        ) : isNew && (
-          <span className="card-pill card-hdr-badge card-hdr-new" style={{ fontWeight: 600, color: 'color-mix(in srgb, var(--amber) 80%, var(--text))', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)' }}>
-            New
-          </span>
-        )}
-      </div>
-
-      <div className="card-lower">
-        <div className="card-reliability-toprow">
-          <div className="card-reliability-badges">{reliabilityBadges}</div>
-          <div className={mint.reliabilityScore == null ? 'card-reliability-na' : 'card-reliability-label'}>
-            <IcShield /><span>{mint.reliabilityScore == null ? 'Reliability n/a' : 'Reliability'}</span>
-          </div>
-        </div>
-
-        <div className="card-lower-row">
-        <div className="card-bottom-main">
-          <div className="latency-block">
-            <div className="latency-label">{isOfflineDegraded ? 'Last seen' : isOnline && mint.latencyMs !== null ? CARD_LATENCY_LABEL : 'Latency'}</div>
-            {isOfflineDegraded ? (
-              <div
-                className="latency-value muted"
-                style={mint.lastOnlineAt ? { fontSize: 15 } : { fontSize: 13, whiteSpace: 'normal', lineHeight: 1.25 }}
-              >
-                {mint.lastOnlineAt
-                  ? formatTimeAgo(new Date(mint.lastOnlineAt))
-                  : 'Never seen online'}
-              </div>
-            ) : isOnline && mint.latencyMs !== null ? (
-              <div className="latency-value" style={{ color: latencyTone(mint.latencyMs) }}>
-                {mint.latencyMs}<span className="latency-unit">ms</span>
-              </div>
-            ) : (
-              <div className="latency-value muted">
-                {cardLatencyLabel(mint)}
-              </div>
-            )}
-          </div>
-          <div className="card-actions">
-          </div>
-        </div>
-
-        <div className="card-reliability">
-          {mint.reliabilityScore != null && (
-            <div
-              className="card-reliability-score"
-              style={{ color: offlineTone(mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)', 'var(--text3)') }}
-            >
-              {mint.reliabilityScore}
+          <div className="card-reliability">
+            <div className={`card-reliability-score${score == null ? ' card-reliability-score-na' : ''}`} style={{ color: scoreColor }}>
+              {score ?? '–'}
             </div>
+            <div className={score == null ? 'card-reliability-na' : 'card-reliability-label'}>{scoreWord}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* The lower block is pinned to the bottom of the card, so cards in one grid row line up whether or not they carry
+          a badges row. */}
+      <div className="card-lower">
+      {mint.uptimeDaily30 && (
+        <div className="card-trace">
+          <UptimeBars days={mint.uptimeDaily30} />
+          <div className="uptime-scale" aria-hidden="true"><span>30 days</span><span>Today</span></div>
+        </div>
+      )}
+
+      <dl className="card-facts">
+        <div className="latency-block">
+          <dt className="latency-label">{isOfflineDegraded ? 'Last seen' : 'Latency'}</dt>
+          {isOfflineDegraded ? (
+            <dd className="latency-value muted">
+              {mint.lastOnlineAt ? formatTimeAgo(new Date(mint.lastOnlineAt)) : 'Never seen online'}
+            </dd>
+          ) : isOnline && mint.latencyMs !== null ? (
+            <dd className="latency-value" style={{ color: latencyTone(mint.latencyMs) }}>
+              {mint.latencyMs}<span className="latency-unit">ms</span>
+            </dd>
+          ) : (
+            <dd className="latency-value muted">{cardLatencyLabel(mint)}</dd>
           )}
+        </div>
+        <div>
+          <dt>Uptime 30 d</dt>
+          {/* A low 30-day uptime (below the recommendation gate) is ochre here; it was a separate "77% up 30d" chip. */}
+          <dd className="card-fact-value" data-testid={lowUptime30d ? 'card-uptime-30d' : undefined} style={lowUptime30d ? { color: offlineTone('var(--med)', 'var(--text2)') } : undefined}>
+            {mint.uptimePct30d == null ? '–' : <>{mint.uptimePct30d}<span className="latency-unit">%</span></>}
+          </dd>
+        </div>
+        <div className="card-fact-reviews">
+          <dt>Reviews</dt>
           {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (
-            <span className="card-reliability-rating">
-              <span className="card-reliability-star">★</span>
+            <dd className="card-reliability-rating">
+              <span className="card-reliability-star" aria-hidden="true">★</span>
               <span className="card-reliability-rating-val">{mint.reviewAvgRating.toFixed(1)}</span>
               <span className="card-reliability-rating-n">({mint.reviewCount})</span>
               {mint.reviewSurge && (
@@ -281,22 +227,48 @@ export function MintCard({
                   className="card-review-surge-flag"
                   tone="warn"
                   width={200}
-                  iconSize={10}
+                  iconSize={12}
                   label="Recent review surge"
                   text={reviewSurgeText()}
                 />
               )}
-            </span>
+            </dd>
           ) : (
-            <span className="card-reliability-no-reviews">No reviews yet</span>
+            <dd className="card-reliability-no-reviews">None yet</dd>
           )}
         </div>
-        </div>
-        {mint.reliabilityScore != null && (
-          <div className="card-score-bar" aria-hidden="true">
-            <i style={{ width: `${Math.max(0, Math.min(100, mint.reliabilityScore))}%`, background: offlineTone(mint.reliabilityScore >= 70 ? 'var(--green-bright)' : mint.reliabilityScore >= 40 ? 'var(--amber)' : 'var(--red)', 'var(--text3)') }} />
-          </div>
+      </dl>
+
+      <div className="card-foot">
+        <span className="card-state">
+          <span
+            className={`status-dot${isOnline ? ' online' : ''}`}
+            style={{ background: statusDotColor(statusWord) }}
+            aria-hidden="true"
+          />
+          <span className="card-state-word" style={isOfflineDegraded ? { color: 'color-mix(in srgb, var(--red) 65%, var(--text))', fontWeight: 600 } : undefined}>{statusWord}</span>
+        </span>
+        {/* State and identity badges sit in the foot, so a badge never makes one card taller than the next. */}
+        {hasBadges && <span className="card-pills">{stateBadge}{reliabilityBadges}</span>}
+        {(units || lightningText) && (
+          <span className="card-units">
+            {units}
+            {units && lightningText ? ', ' : ''}
+            {lightningText && <span className="card-ln">{lightningText}</span>}
+          </span>
         )}
+        {onCompare && isOnline && (
+          <button
+            type="button"
+            className="card-compare-btn"
+            aria-label={`Compare ${displayName}`}
+            title={`Compare ${displayName}`}
+            onClick={e => { e.stopPropagation(); onCompare(mint.url) }}
+          >
+            <ArrowLeftRight size={16} aria-hidden="true" />
+          </button>
+        )}
+      </div>
       </div>
 
       {showNotifyToggles && (

@@ -179,6 +179,19 @@ const detailCases = [
   'contact', 'reviewer60', 'reviewText', 'version50', 'units5', 'tos', 'lastError',
 ] as const
 
+// The list view is a desktop table since the 2026-11-19 redesign (<=768px shows the cards): its narrowest width is 769px.
+for (const width of [769, 1024]) {
+  for (const key of cardCases) {
+    test(`no horizontal overflow @ ${width}px › Dashboard list view — ${key}`, async ({ page }) => {
+      await mount(page, CASES[key]!, { width })
+      await page.addInitScript(() => localStorage.setItem('mintRadar_viewMode', 'list'))
+      await page.goto('/')
+      await expect(page.locator('.mint-list-row').first()).toBeVisible()
+      await expectNoOverflow(page, `dashboard-list/${key}`)
+    })
+  }
+}
+
 for (const width of WIDTHS) {
   test.describe(`no horizontal overflow @ ${width}px`, () => {
     for (const key of cardCases) {
@@ -190,14 +203,6 @@ for (const width of WIDTHS) {
         await page.locator('.filter-btn').click()
         await expect(page.locator('.filter-panel')).toBeVisible()
         await expectNoOverflow(page, `dashboard/${key}`)
-      })
-
-      test(`Dashboard list view — ${key}`, async ({ page }) => {
-        await mount(page, CASES[key]!, { width })
-        await page.addInitScript(() => localStorage.setItem('mintRadar_viewMode', 'list'))
-        await page.goto('/')
-        await expect(page.locator('.mint-list-row').first()).toBeVisible()
-        await expectNoOverflow(page, `dashboard-list/${key}`)
       })
 
       test(`Watchlist — ${key}`, async ({ page }) => {
@@ -317,14 +322,14 @@ async function leavingParent(page: Page, selector: string): Promise<string[]> {
 
 for (const width of WIDTHS) {
   test.describe(`container overflows @ ${width}px`, () => {
-    test('Dashboard: sort buttons fit inside the sort segment (no inner scrolling)', async ({ page }) => {
+    test('Dashboard: the sort select and its direction button stay inside their row', async ({ page }) => {
       await mount(page, {}, { width })
       await page.goto('/')
-      await expect(page.locator('.sort-segment')).toBeVisible()
+      await expect(page.locator('.sort-control')).toBeVisible()
       await settled(page)
-      const seg = await page.locator('.sort-segment').evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth }))
-      expect(seg.sw, `sort-segment scrollWidth ${seg.sw} > clientWidth ${seg.cw}`).toBeLessThanOrEqual(seg.cw + 1)
-      expect(await leavingParent(page, '.sort-btn')).toEqual([])
+      const seg = await page.locator('.sort-control').evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth }))
+      expect(seg.sw, `sort-control scrollWidth ${seg.sw} > clientWidth ${seg.cw}`).toBeLessThanOrEqual(seg.cw + 1)
+      expect(await leavingParent(page, '.sort-control')).toEqual([])
     })
 
     test('Stats: hero notes stay inside their tile', async ({ page }) => {

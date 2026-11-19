@@ -5,12 +5,13 @@ import { installApiMocks, mockRelays } from './fixtures/mocks'
 const card = (page: Page, name: string) => page.locator('.mint-card', { hasText: name })
 
 test.describe('canonical unit order (display only)', () => {
-  test('card chips show SAT / USD and SAT / USD / EUR whatever order the API returns', async ({ page }) => {
+  // Plain text in the card foot since the 2026-11-19 redesign (it was a SAT / USD chip).
+  test('card units read sat, usd and sat, usd, eur whatever order the API returns', async ({ page }) => {
     await gotoMixedRow(page)
     // API order: ['usd','sat'] and ['eur','usd','sat']
-    await expect(card(page, 'Normal Mint').locator('.card-pills .card-pill').first()).toHaveText('SAT / USD')
-    await expect(card(page, 'Testmint Mint').locator('.card-pills .card-pill').first()).toHaveText('SAT / USD / EUR')
-    await expect(card(page, 'Newbie Mint').locator('.card-pills .card-pill').first()).toHaveText('SAT / USD')
+    await expect(card(page, 'Normal Mint').locator('.card-units')).toHaveText(/^sat, usd(, |$)/)
+    await expect(card(page, 'Testmint Mint').locator('.card-units')).toHaveText(/^sat, usd, eur(, |$)/)
+    await expect(card(page, 'Newbie Mint').locator('.card-units')).toHaveText(/^sat, usd(, |$)/)
   })
 
   for (const [name, url, expected] of [

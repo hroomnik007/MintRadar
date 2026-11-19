@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs } from './fixtures/mocks'
 
 // Mock review rollup (see e2e/fixtures/mocks.ts):
-//   Alpha   → 12 reviews @ 4.2   Bravo   → 0 reviews ("No reviews yet")
+//   Alpha   → 12 reviews @ 4.2   Bravo   → 0 reviews (Reviews: "None yet")
 //   Charlie → 4 reviews @ 3.0    Delta   → 3 reviews @ 4.8
 // Charlie is offline: it has no Reliability Score badge but still shows a
 // Community Rating badge.
@@ -27,21 +27,20 @@ test.describe('MintCard — Community Rating badge', () => {
     await expect(card(page, 'Delta Mint').locator('.card-reliability-rating', { hasText: '4.8(3)' })).toBeVisible()
     // Offline mint — Reliability Score number absent ("Reliability n/a"), Community Rating still shown.
     await expect(card(page, 'Charlie Mint').locator('.card-reliability-rating', { hasText: '3.0(4)' })).toBeVisible()
-    // 0 reviews → no rating pill, but a muted "No reviews yet" note instead.
+    // 0 reviews → no rating, the Reviews fact reads a muted "None yet" (2026-11-19 redesign).
     await expect(card(page, 'Bravo Mint').locator('.card-reliability-rating')).toHaveCount(0)
-    await expect(card(page, 'Bravo Mint').locator('.card-reliability-no-reviews')).toHaveText('No reviews yet')
+    await expect(card(page, 'Bravo Mint').locator('.card-reliability-no-reviews')).toHaveText('None yet')
   })
 
-  test('Reliability block uses a shield icon, not a star, and no %', async ({ page }) => {
+  // Since the 2026-11-19 redesign the readout is the number and one band word under it (no shield icon).
+  test('Reliability block is a number and a word, never a star, and no %', async ({ page }) => {
     await page.goto('/?status=all')
     const alpha = card(page, 'Alpha Mint')
     const reliability = alpha.locator('.card-reliability')
     await expect(reliability).toBeVisible()
-    // The RELIABILITY label sits in its own top row (above LATENCY), not
-    // nested inside `.card-reliability` — see "card-reliability-toprow" in
-    // MintCard.tsx/Dashboard.css.
-    await expect(alpha.locator('.card-reliability-label svg')).toHaveCount(1)
-    await expect(alpha.locator('.card-reliability-label')).not.toContainText('★')
+    await expect(alpha.locator('.card-reliability-label')).toHaveText('High')
+    await expect(reliability).not.toContainText('★')
+    await expect(reliability).not.toContainText('%')
     await expect(reliability.locator('.card-reliability-score')).toHaveText('92')
   })
 

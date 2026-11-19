@@ -82,16 +82,15 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
 test.describe('disabled NUT-04/05 in lists and filters', () => {
   test.use({ viewport: { width: 1280, height: 900 } })
 
-  test('Dashboard ?nuts=4 drops the mint; the list view NUT column does not count them', async ({ page }) => {
+  // The list view's NUT column went with the 2026-11-19 redesign (Mint Detail's header counts NUTs, mint-detail specs).
+  test('Dashboard ?nuts=4 drops the mint in the cards and in the list view', async ({ page }) => {
     await setup(page, ['4', '5'])
     await page.goto('/?status=all&nuts=4')
     await expect(page.locator('.mint-card', { hasText: 'Alpha Mint' })).toBeVisible()
     await expect(page.locator('.mint-card', { hasText: 'Delta Mint' })).toHaveCount(0)
 
-    await page.goto('/?status=all')
     await page.locator('.view-toggle-btn[title="List view"]').click()
-    const row = page.locator('.mint-list-table tbody tr', { hasText: 'Delta Mint' })
-    const delta = MOCK_KNOWN_MINTS.find(m => m.url === DELTA)!
-    await expect(row).toContainText(`${(delta.nutCount as number) - 2}/14`)
+    await expect(page.locator('.mint-list-row', { hasText: 'Alpha Mint' })).toBeVisible()
+    await expect(page.locator('.mint-list-row', { hasText: 'Delta Mint' })).toHaveCount(0)
   })
 })

@@ -35,22 +35,26 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await expect(page.locator('.mint-card .card-pill', { hasText: /Nutshell|cdk-mintd/ })).toHaveCount(0)
   })
 
-  test('Reliability block shows a bare number (no %), or "Reliability n/a" when missing', async ({ page }) => {
+  test('Reliability block shows a bare number (no %), or "No score yet" when missing', async ({ page }) => {
     await page.goto('/?status=all')
     const alphaReliability = card(page, 'Alpha Mint').locator('.card-reliability')
     await expect(alphaReliability).toBeVisible()
     await expect(alphaReliability.locator('.card-reliability-score')).toHaveText('92')
     await expect(alphaReliability).not.toContainText('%')
-    // Offline mint with a null score still shows the block, as "Reliability n/a".
-    await expect(card(page, 'Charlie Mint').locator('.card-reliability-na')).toHaveText('Reliability n/a')
+    // Offline mint with a null score still shows the block, as "No score yet" (2026-11-19 redesign).
+    await expect(card(page, 'Charlie Mint').locator('.card-reliability-na')).toHaveText('No score yet')
   })
 
-  test('uptime chip reads "<n>% up 24h"', async ({ page }) => {
+  // The "up 24h" chip went with the 2026-11-19 redesign: 30 daily bars and the Uptime 30 d fact instead.
+  test('the card shows 30 daily bars and the Uptime 30 d fact, no "up 24h" chip', async ({ page }) => {
     await page.goto('/?status=all')
-    await expect(card(page, 'Alpha Mint').locator('.card-pill', { hasText: '99% up 24h' })).toBeVisible()
+    const alpha = card(page, 'Alpha Mint')
+    await expect(alpha.locator('.uptime-bars i')).toHaveCount(30)
+    await expect(alpha.locator('.card-facts')).toContainText('Uptime 30 d')
+    await expect(alpha).not.toContainText('up 24h')
   })
 
-  test('Lightning chip: "LN" when bolt11 is on mint + melt, "LN in" for mint-only, none when methods absent', async ({ page }) => {
+  test('Lightning text: "Lightning" when bolt11 is on mint + melt, "Lightning in" for mint-only, none when methods absent', async ({ page }) => {
     // Fixture buildMethods() gives bolt11 on both sides for any mint with units;
     // Charlie has units: null → no methods → no chip.
     const rows = MOCK_KNOWN_MINTS.map(m => {
@@ -61,9 +65,9 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await expect(card(page, 'Alpha Mint').locator('.card-ln')).toHaveText('LN')
-    // mint has bolt11, melt is onchain-only → "LN in"
-    await expect(card(page, 'Bravo Mint').locator('.card-ln')).toHaveText('LN in')
+    await expect(card(page, 'Alpha Mint').locator('.card-ln')).toHaveText('Lightning')
+    // mint has bolt11, melt is onchain-only → "Lightning in"
+    await expect(card(page, 'Bravo Mint').locator('.card-ln')).toHaveText('Lightning in')
     // no method data at all → no chip
     await expect(card(page, 'Charlie Mint').locator('.card-ln')).toHaveCount(0)
     // the chip has no hover text
@@ -119,7 +123,7 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
 
-    await expect(page.getByTestId('dash-latency-note')).toHaveText(/latency from Nuremberg/)
+    await expect(page.getByTestId('dash-latency-note')).toHaveText(/from Nuremberg/)
     await expect(page.locator('.mint-card .latency-source')).toHaveCount(0)
     for (const name of ['Alpha Mint', 'Bravo Mint', 'Charlie Mint', 'Delta Mint']) {
       await expect(card(page, name)).not.toContainText('Nuremberg')
@@ -133,27 +137,24 @@ test.describe('MintCard — copy & reduced badge set', () => {
     // 3 of the 4 mocked mints are online (Alpha, Bravo, Delta; Charlie is
     // offline); all 4 are tracked.
     await page.goto('/?status=all')
+    // Since the 2026-11-19 redesign it is one sentence: "N of M mints answered the last check <time> from Nuremberg."
     const status = page.locator('.dash-status')
-    await expect(status.locator('.dash-status-item').first()).toContainText('3 online mints')
-    await expect(status.locator('.dash-status-item').nth(1)).toContainText('4 tracked mints')
-    await expect(status.getByText(/last checked/)).toBeVisible()
+    await expect(status.locator('.dash-status-item')).toContainText('3 of 4 mints answered the last check')
+    await expect(status.locator('.dash-status-time')).toBeVisible()
   })
 
-  test('grid carries the Reliability-vs-Stars explainer sentence once, above the cards', async ({ page }) => {
+  // The "We score how it runs…" line went with the 2026-11-19 redesign: the page description says what the page is for.
+  test('the page says once what it is for, above the cards', async ({ page }) => {
     await page.goto('/?status=all')
-    const explainer = page.locator('.grid-score-explainer')
-    await expect(explainer).toHaveCount(1)
-    await expect(explainer).toHaveText('We score how it runs. They score how it went. You pick.')
-    // Readable size: ~13–14px, not the 12px muted-caption tier.
-    const fontSize = await explainer.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
-    expect(fontSize).toBeGreaterThanOrEqual(13)
+    await expect(page.locator('.grid-score-explainer')).toHaveCount(0)
+    await expect(page.locator('.page-head-desc')).toContainText('How reliably each Cashu mint runs')
   })
 
   test('known-count is consistent: dash-status "tracked mints" === grid footer "of N"', async ({ page }) => {
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
-    const trackedText = await page.locator('.dash-status-item').nth(1).textContent()
-    const tile = trackedText?.match(/(\d+)\s+tracked mints/)?.[1]
+    const statusText = await page.locator('.dash-status-item').textContent()
+    const tile = statusText?.match(/(\d+) of (\d+) mints/)?.[2]
     const footer = await page.locator('.grid-showing-note').textContent()
     const footerN = footer?.match(/of (\d+)/)?.[1]
     expect(footerN).toBe(tile)
@@ -179,8 +180,8 @@ test.describe('Dashboard list view — reduced columns', () => {
       await expect(page.locator('.mint-list-table').getByText(label, { exact: true })).toHaveCount(0)
     }
 
-    // Kept columns.
-    for (const label of ['Status', 'Uptime 24h', 'Latency', 'Reliability', 'NUTs']) {
+    // Columns since the 2026-11-19 redesign.
+    for (const label of ['Last 30 days', 'Latency', 'Uptime 30 d', 'Reviews', 'Software', 'Reliability']) {
       await expect(page.locator('.mint-list-table th', { hasText: label })).toHaveCount(1)
     }
 

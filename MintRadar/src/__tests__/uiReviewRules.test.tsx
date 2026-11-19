@@ -1,21 +1,10 @@
-// Rules from the 2026-11-10 UI review: the phone list column follows the sort, the Compare picker lists by the shown
+// Rules from the 2026-11-10 UI review (the phone list column rule went with the 2026-11-19 redesign: phones show cards): the Compare picker lists by the shown
 // name with test mints last and the score in the row, and the Audit strip explains its red marks.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import type { KnownMint } from '@/hooks/useKnownMints'
-import { listMobileColumn } from '@/utils/listColumns'
 import { cardsLatencyNote, PROBE_LOCATION } from '@/constants/probeLocation'
 import { MintComparePicker } from '@/components/MintComparePicker'
-
-describe('list view: the phone column is the one the list is sorted by', () => {
-  it('latency, rating (also for "most reviewed"), otherwise the Reliability Score', () => {
-    expect(listMobileColumn('latency')).toBe('latency')
-    expect(listMobileColumn('rating')).toBe('rating')
-    expect(listMobileColumn('reviewCount')).toBe('rating')
-    expect(listMobileColumn('reliability')).toBe('reliability')
-    expect(listMobileColumn('name')).toBe('reliability')
-  })
-})
 
 describe('probe location is said once above the cards', () => {
   it('the note names the probe location', () => {

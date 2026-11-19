@@ -35,7 +35,8 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
     test('Tab, arrow keys and Enter/Space pick mints; focus ring is visible', async ({ page }) => {
       await expect(page.locator('.md-picker-search')).toBeFocused()
       await page.keyboard.press('Tab')
-      const options = page.getByRole('option')
+      // Scoped to the picker: the Dashboard's sort <select> has role="option" items too (2026-11-19 redesign).
+      const options = page.getByRole('listbox', { name: 'Mints to compare' }).getByRole('option')
       await expect(options.nth(0)).toBeFocused()
       await page.keyboard.press('ArrowDown')
       await expect(options.nth(1)).toBeFocused()

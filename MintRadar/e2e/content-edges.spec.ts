@@ -22,7 +22,8 @@ const A = (sel: string, box: 'content' | 'border' = 'content'): Container => ({ 
 const WITHIN = (sel: string): Container => ({ sel, rule: 'within', box: 'border' })
 const BLEED = (sel: string, why: string): Container => ({ sel, rule: 'bleed', why })
 
-const DASH_CHROME = [A('.dash-intro'), A('.dash-status'), A('.dashboard-controls')]
+// Since the 2026-11-19 redesign the status box sits inside the .dash-intro row (it is no longer a full-width row of its own).
+const DASH_CHROME = [A('.dash-intro'), A('.dashboard-controls')]
 
 interface State {
   name: string
@@ -91,7 +92,8 @@ const WATCHLIST = [A('.wl-body'), A('.wl-main-col')]
 const STATES: State[] = [
   { name: 'Dashboard grid', containers: [...DASH_CHROME, A('.mint-grid')],
     setup: async p => { await boot(p); await p.goto('/?status=all'); await expect(p.locator('.mint-card').first()).toBeVisible() } },
-  { name: 'Dashboard list', containers: [...DASH_CHROME, A('.mint-list-table-wrap')],
+  // Desktop only: phones (<=768px) show the cards since the 2026-11-19 redesign.
+  { name: 'Dashboard list', widths: [1920, 1536, 1440, 1280, 1100, 900], containers: [...DASH_CHROME, A('.mint-list-table-wrap')],
     setup: async p => { await boot(p, 'list'); await p.goto('/?status=all'); await expect(p.locator('.mint-list-row').first()).toBeVisible() } },
   { name: 'Dashboard Filters panel open', containers: [...DASH_CHROME, A('.filter-panel', 'border'), A('.mint-grid')],
     setup: async p => { await boot(p); await p.goto('/?status=all'); await p.locator('.filter-btn').click(); await expect(p.locator('.filter-panel')).toBeVisible() } },

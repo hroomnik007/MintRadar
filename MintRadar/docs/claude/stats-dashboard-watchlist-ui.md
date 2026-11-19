@@ -3,7 +3,7 @@
 ## Compare feature — shared picker + mobile layout
 
 > **UI review (2026-11-10), Dashboard, Compare, Stats, Watchlist:**
-> - **List view columns:** Mint · Status · Uptime 24h · Latency · Reliability · **Rating** (new: "★ 4.8 (89)" or "—") · NUTs. On a phone (≤768px) the table shows Mint, a status dot (no header text, `.sr-only-mobile`), Uptime 24h and ONE more column: the one the list is sorted by (`listMobileColumn(sortBy)` in `utils/listColumns.ts`: latency → Latency, rating / most reviewed → Rating, otherwise Reliability). It used to hide the default sort key. **Since 2026-11-14 Rating is always shown on a phone too** (like the cards), next to the sort column (so the default is Uptime 24h · Reliability · Rating; sorted by rating: Uptime 24h · Rating); on a phone the review count "(89)" is hidden (`.rating-count-mobile-hide`), the hostname line is capped at 120px and the cells have 6px side padding so the four columns fit 390px.
+> - **List view columns** (superseded on 2026-11-19 by the phase-3 redesign, see "Mints page head, sort and list view" below; `utils/listColumns.ts` is removed): Mint · Status · Uptime 24h · Latency · Reliability · **Rating** (new: "★ 4.8 (89)" or "—") · NUTs. On a phone (≤768px) the table shows Mint, a status dot (no header text, `.sr-only-mobile`), Uptime 24h and ONE more column: the one the list is sorted by (`listMobileColumn(sortBy)` in `utils/listColumns.ts`: latency → Latency, rating / most reviewed → Rating, otherwise Reliability). It used to hide the default sort key. **Since 2026-11-14 Rating is always shown on a phone too** (like the cards), next to the sort column (so the default is Uptime 24h · Reliability · Rating; sorted by rating: Uptime 24h · Rating); on a phone the review count "(89)" is hidden (`.rating-count-mobile-hide`), the hostname line is capped at 120px and the cells have 6px side padding so the four columns fit 390px.
 > - **Compare picker:** listed by the shown name (case-insensitive, numeric), test mints last, the Reliability Score as a plain number at the right of each row (`.md-picker-score`, hidden label for assistive tech). The caller's order no longer matters.
 > - **Compare "Limits" row** is top-aligned (`.cmp-val[data-row="limits"]`), so mints with a different number of limits can be read across.
 > - **Network health index rows** read "30/30 pts": without the unit the points looked like a count of mints next to "49 mints online".
@@ -563,3 +563,21 @@ The Dashboard button described here was removed the same day by #204 (see "Reset
   that is not online shows its last score and band label in grey (`--text3` on `--bg3`, plus a `.sr-only` " (last measured score)") instead of
   the band colour. Cards were already toned for offline mints.
 - Tests: `e2e/ux-audit-1115-dashboard-compare.spec.ts`, `e2e/compare-best-tag.spec.ts` (latency tag on the browser row).
+
+## Mints page head, sort and list view, 2026-11-19 redesign (phase 3)
+
+- **Head:** the description reads "How reliably each Cashu mint runs, so you can decide where to keep your sats."; the
+  "We score how it runs…" line is gone. The network state is ONE sentence in a box framed like the Filters button
+  (owner, 2026-11-18): "**N of M** mints answered the last check <time> from Nuremberg." (`.dash-status-btn`, latency note
+  `data-testid="dash-latency-note"`). Beside it "Find a mint for me" (copper) and "Inspect a token"; on phones both go under
+  the box as two equal buttons.
+- **Sort:** one `<select class="sort-select">` ("Sort: Reliability Score", Most reviewed, Rating, Latency, Name; each
+  starts in its default direction) plus `.sort-dir-btn` (↓ / ↑, named by `aria-label`, no `title`) that flips the
+  direction. The five sort chips are gone. Its `<option>`s have role "option" too: scope `getByRole('option')` in a spec
+  to its listbox (e.g. the Compare picker, `compare-picker-keyboard.spec.ts`).
+- **List view:** desktop only. Columns Mint (status dot + name + host), Last 30 days (the bars), Latency, Uptime 30 d,
+  Reviews, Software, Reliability (condensed readout); no Status or NUTs column (the status word is read out with the dot,
+  `.mint-list-status`, sr-only). **Phones (<=768px) always show the cards** and hide the view toggle;
+  the stored choice (`mintRadar_viewMode`) is kept for wider screens. `utils/listColumns.ts` (the phone column rule) was
+  removed with the phone list.
+- **Phones:** "Add mint" is the plus alone (accessible name "Add mint"); sort, reset and the plus share one row.

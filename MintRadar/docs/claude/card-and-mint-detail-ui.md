@@ -562,3 +562,26 @@ An unavailable mint (offline or archived, score not pending) keeps its last meas
 ## Uptime 24h 30-day line on one line (2026-11-16)
 
 After #211 widened the Latency column, "30 days 100% · 2 outages" wrapped at 1200px and up. The ≥1200px grid is now `0.85fr 1.55fr 1.1fr 1.1fr 0.75fr 1fr` (Uptime 24h 1.1fr, was 0.95fr; Score, NUTs and rating give the room; Latency keeps 1.55fr for "Your latency: 1387 ms"). The outage note is a `white-space: nowrap` span (`.md-uptime-30d-note`): on phones below ~390px, where the line cannot fit half the strip at the 12px text floor, it moves to the next line whole. Spec: `e2e/mint-detail-uptime-30d-line.spec.ts` (one line at 769-1600px and 390-430px with 2 and 12 outages, Version on one line, nothing clipped; unbroken note at 320-375px).
+
+## Mint card, 2026-11-19 redesign (phase 3)
+
+`MintCard.tsx` (Home and Watchlist), styles in the last block of `Dashboard.css`, approved mockup
+`~/Claude/refs/mintradar-redesign-1118/mints.html`:
+- **Row 1:** icon (36px) | name with the **watch star right after it** (owner, 2026-11-18; it was next to Compare), host
+  line under it | the Reliability Score as a condensed 44px readout in its band colour (>= 70 green, >= 40 amber, below
+  red, muted when offline) and one word under it: High / Moderate / Low (also when offline: the state is said once, in
+  the foot), "No score yet" without a score (the number is then "–").
+- **Badges** (Archived / New, Test mint, Same op) sit in the foot, so a badge never makes one card taller than the next.
+  No Degraded badge: the foot's state word says it (red, bold). The SAT / LN / "up 24h" / "77% up 30d" chips are gone:
+  units and Lightning are text in the foot, uptime is the bars and the Uptime 30 d fact (ochre below the recommendation
+  limit, `data-testid="card-uptime-30d"`).
+- **30 daily bars** (`components/mint/UptimeBars.tsx`, helpers `utils/uptimeBars.ts`): quiet green for a day >= 99.5 %,
+  amber >= 95 %, red below (drawn as tall as the uptime, at least a stub), a faint stub for a day without probes; one
+  entrance animation (off with reduced motion); `role="img"` with a one-sentence summary. Hidden without `uptimeDaily30`.
+  The lower block (bars, facts, foot) is pinned to the card's bottom (`.card-lower`, `margin-top: auto`), and the foot is
+  43px high with or without the Compare button (offline cards have none), so every card of a grid is one height
+  (`e2e/mint-card-units-and-metrics.spec.ts`).
+- **Facts** (`dl.card-facts`): Latency (or "Last seen" for an offline mint), Uptime 30 d, Reviews (★ rating (count),
+  the surge flag, or "None yet").
+- **Foot:** status dot + word (`.card-state-word`; the dot has no `title` any more), badges, units and Lightning
+  ("sat, usd, Lightning"), Compare (an icon button) on the right.

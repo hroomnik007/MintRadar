@@ -52,21 +52,17 @@ for (const width of [320, 340, 360]) {
     await openDashboard(page, width, { loggedIn: false })
     const de = await overflow(page)
     expect(de.sw).toBeLessThanOrEqual(de.cw)
-    const buttons = page.locator('.sort-btn')
-    await expect(buttons).toHaveCount(5)
-    // The active option is scrolled into view inside the segment (the default, "Reliability Score", is the last).
-    const active = await page.locator('.sort-btn.active').boundingBox()
-    expect(active!.x).toBeGreaterThanOrEqual(0)
-    expect(active!.x + active!.width).toBeLessThanOrEqual(width)
-    // Each option can be scrolled to and clicked, and becomes the active one.
-    for (const i of [0, 1, 2, 3, 4]) {
-      const b = buttons.nth(i)
-      await b.scrollIntoViewIfNeeded()
-      const box = await b.boundingBox()
-      expect(box!.x).toBeGreaterThanOrEqual(0)
-      expect(box!.x + box!.width).toBeLessThanOrEqual(width)
-      await b.click()
-      await expect(b).toHaveClass(/active/)
+    // One select and the direction button since the 2026-11-19 redesign: both inside the viewport, every option selectable.
+    const select = page.locator('.sort-select')
+    for (const sel of ['.sort-select', '.sort-dir-btn']) {
+      const box = (await page.locator(sel).boundingBox())!
+      expect(box.x).toBeGreaterThanOrEqual(0)
+      expect(box.x + box.width).toBeLessThanOrEqual(width)
+    }
+    await expect(select.locator('option')).toHaveCount(5)
+    for (const value of ['reliability', 'reviewCount', 'rating', 'latency', 'name']) {
+      await select.selectOption(value)
+      await expect(select).toHaveValue(value)
     }
     const after = await overflow(page)
     expect(after.sw).toBeLessThanOrEqual(after.cw)

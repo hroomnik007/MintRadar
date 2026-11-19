@@ -20,8 +20,7 @@ test.describe('Dashboard', () => {
     // The compact ".dash-status" line reflects the mocked data: 3 of the 4
     // mocked mints are online (Alpha, Bravo, Delta; Charlie is offline).
     const status = page.locator('.dash-status')
-    await expect(status.locator('.dash-status-item').first()).toContainText('3 online mints')
-    await expect(status.locator('.dash-status-item').nth(1)).toContainText('4 tracked mints')
+    await expect(status.locator('.dash-status-item')).toContainText('3 of 4 mints answered the last check')
   })
 
   test('search filters the mint list', async ({ page }) => {
@@ -75,26 +74,24 @@ test.describe('Dashboard', () => {
 
   test('sorting reorders the mints', async ({ page }) => {
     const names = page.locator('.mint-grid .card-name')
-    // The active sort button appends an arrow (e.g. "Name ↑"), so target by class + substring.
-    const sortBtn = (label: string) => page.locator('.sort-btn', { hasText: label })
+    // One select since the 2026-11-19 redesign; the arrow button next to it flips the direction.
+    const sortBy = (value: string) => page.locator('.sort-select').selectOption(value)
 
     // Default sort is now Reliability Score desc: Alpha 92, Delta 78, Bravo 55, Charlie offline → 0.
     await expect(names).toHaveText(['Alpha Mint', 'Delta Mint', 'Bravo Mint', 'Charlie Mint'])
 
-    // Switching to Name resets to ascending; clicking it again toggles to descending.
-    await sortBtn('Name').click()
+    // Switching to Name starts ascending; the direction button flips it to descending.
+    await sortBy('name')
     await expect(names).toHaveText(['Alpha Mint', 'Bravo Mint', 'Charlie Mint', 'Delta Mint'])
-    await sortBtn('Name').click()
+    await page.locator('.sort-dir-btn').click()
     await expect(names).toHaveText(['Delta Mint', 'Charlie Mint', 'Bravo Mint', 'Alpha Mint'])
   })
 
   test('"Most reviewed" sorts by reviewCount desc, with 0/null last', async ({ page }) => {
     const names = page.locator('.mint-grid .card-name')
-    const sortBtn = (label: string) => page.locator('.sort-btn', { hasText: label })
-
     // Fixture reviewCount: Alpha 12, Charlie 4, Delta 3, Bravo 0 — Bravo must
     // sort last regardless of its (null) average rating.
-    await sortBtn('Most reviewed').click()
+    await page.locator('.sort-select').selectOption('reviewCount')
     await expect(names).toHaveText(['Alpha Mint', 'Charlie Mint', 'Delta Mint', 'Bravo Mint'])
   })
 
@@ -122,7 +119,7 @@ test.describe('Dashboard', () => {
     await page.route('**/api/mints/known', r => r.fulfill({ json: rows }))
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
-    await page.locator('.sort-btn', { hasText: 'Rating' }).click()
+    await page.locator('.sort-select').selectOption('rating')
     await expect(page.locator('.mint-grid .card-name')).toHaveText(['Many Mint', 'Three Mint', 'One Mint', 'None Mint'])
     // What the card shows is the real average and the count of all reviews, as before.
     const many = page.locator('.mint-card', { hasText: 'Many Mint' })

@@ -7,7 +7,8 @@ import { resize } from './fixtures/settle'
 // value ("10450 ms" vs "88 ms") must not make some cards wrap the pills onto more lines than others.
 //
 // Regression 2: the pills must never ride over the right-hand `.card-reliability` column
-// (the Reliability number / stars), and `.card-bottom-main` must stay left of that column.
+// (the Reliability number), and the strip stays inside its card. Since the 2026-11-19 redesign the Reliability
+// readout sits in the card's top row and the strip below the card foot (there is no `.card-bottom-main` any more).
 // There is no Unwatch button on the card — the watch star lives in the header.
 
 const LAT = [88, 411, 2336, 10450] // 2..5 digits
@@ -38,8 +39,8 @@ test('pill row is consistent across latency digit counts and never covers Reliab
       const intersects = (a: DOMRect, b: DOMRect) =>
         a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
       return [...document.querySelectorAll('.wl-grid .mint-card')].map(card => {
-        const main = card.querySelector('.card-bottom-main') as HTMLElement
-        const reliability = card.querySelector('.card-reliability') as HTMLElement
+        const strip = card.querySelector('.notify-strip') as HTMLElement
+        const cardBox = card.getBoundingClientRect()
         const reliabilityFig = (card.querySelector('.card-reliability-score') ??
           card.querySelector('.card-reliability-na')) as HTMLElement
         const btns = [...card.querySelectorAll('.notify-strip button')]
@@ -48,7 +49,7 @@ test('pill row is consistent across latency digit counts and never covers Reliab
         return {
           btnRows: tops.size,
           coversReliability: btns.some(b => intersects(b.getBoundingClientRect(), tr)),
-          mainClearsReliability: main.getBoundingClientRect().right <= Math.ceil(reliability.getBoundingClientRect().left) + 1,
+          stripInsideCard: strip.getBoundingClientRect().left >= cardBox.left - 0.5 && strip.getBoundingClientRect().right <= cardBox.right + 0.5,
         }
       })
     })
@@ -57,11 +58,10 @@ test('pill row is consistent across latency digit counts and never covers Reliab
     // Consistency: every card wraps its buttons onto the same number of rows,
     // regardless of its latency-value digit count.
     expect(btnRowCounts.size, `button-row counts at ${w}px: ${JSON.stringify(perCard)}`).toBe(1)
-    // No button's box overlaps the Reliability number, and the main area stays left
-    // of the Reliability column entirely.
+    // No button's box overlaps the Reliability number, and the strip stays inside the card.
     for (const c of perCard) {
       expect(c.coversReliability, `a button covers Reliability at ${w}px: ${JSON.stringify(perCard)}`).toBe(false)
-      expect(c.mainClearsReliability, `main area overruns Reliability column at ${w}px: ${JSON.stringify(perCard)}`).toBe(true)
+      expect(c.stripInsideCard, `notify strip leaves its card at ${w}px: ${JSON.stringify(perCard)}`).toBe(true)
     }
   }
 })

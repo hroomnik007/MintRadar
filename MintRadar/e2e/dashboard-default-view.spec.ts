@@ -45,11 +45,11 @@ test.describe('Dashboard default view', () => {
     await expect(page).toHaveURL(/[?&]testmints=hide/)
   })
 
-  test('Name chip sorts the visible (online) mints by displayName', async ({ page }) => {
+  test('Name sort orders the visible (online) mints by displayName', async ({ page }) => {
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
-    await page.locator('.sort-btn', { hasText: 'Name' }).click()
+    await page.locator('.sort-select').selectOption('name')
     await expect(page.locator('.mint-grid .card-name')).toHaveText([
       'Alpha Mint', 'Bravo Mint', 'Delta Mint',
     ])

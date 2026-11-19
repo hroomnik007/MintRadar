@@ -218,6 +218,7 @@ describe('contract', () => {
         "softwareLatest",
         "tosUrl",
         "units",
+        "uptimeDaily30",
         "uptimePct24h",
         "uptimePct30d",
         "uptimePct30dExact",

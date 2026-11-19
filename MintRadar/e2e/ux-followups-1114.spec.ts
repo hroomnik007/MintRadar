@@ -9,17 +9,18 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page)
 })
 
-test('390px list view: Rating is a column next to Reliability (default sort)', async ({ page }) => {
+// Since the 2026-11-19 redesign the list view is a desktop table (phones show the cards) with these columns.
+test('list view: Reviews is a column, Reliability the last one (default sort)', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('mintRadar_viewMode', 'list'))
-  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setViewportSize({ width: 1024, height: 844 })
   await page.goto('/')
   const header = page.locator('.mint-list-table thead th:visible')
-  await expect(header).toHaveText(['Mint', 'Status', 'Uptime 24h', 'Reliability', 'Rating'])
+  await expect(header).toHaveText(['Mint', 'Last 30 days', 'Latency', 'Uptime 30 d', 'Reviews', 'Software', 'Reliability'])
   const alpha = page.locator('.mint-list-row', { hasText: 'Alpha Mint' })
   await expect(alpha.locator('td.rating-col')).toBeVisible()
   await expect(alpha.locator('td.rating-col')).toContainText('4.2')
   await expect(alpha.locator('td.rating-col [aria-label]')).toHaveAttribute('aria-label', '4.2 out of 5, 12 reviews')
-  // The rows fit the phone: the table does not scroll sideways at 390px.
+  // The rows fit: the table does not scroll sideways at 1024px.
   expect(await page.locator('.mint-list-table-wrap').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
 })
 

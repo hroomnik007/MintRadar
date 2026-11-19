@@ -22,7 +22,7 @@ for (const width of [390, 1440]) {
     const box = await h1.boundingBox()
     expect(box!.height).toBeGreaterThan(20) // not the 1px visually hidden heading it used to be
     const desc = page.locator('.page-head-desc')
-    await expect(desc).toContainText('before you keep sats on it')
+    await expect(desc).toContainText('so you can decide where to keep your sats') // text of the 2026-11-19 redesign
     // The link in the sentence is underlined (not told apart by colour alone) and goes to the first Learn module.
     const link = desc.getByRole('link', { name: 'Start with the basics' })
     expect(await link.evaluate(e => getComputedStyle(e).textDecorationLine)).toContain('underline')

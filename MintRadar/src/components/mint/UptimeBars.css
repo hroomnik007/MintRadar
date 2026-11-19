@@ -1,0 +1,24 @@
+/* 30 daily uptime bars (UptimeBars.tsx). Quiet green for a fine day, full ochre / red for a bad one, a faint stub for a
+   day without probes. The one entrance animation of the page: the bars rise once; none with reduced motion. */
+.uptime-bars {
+  display: grid;
+  grid-template-columns: repeat(30, minmax(0, 1fr));
+  gap: 2px;
+  height: 22px;
+  align-items: end;
+}
+.uptime-bars-wide { height: 40px; gap: 3px; }
+.uptime-bars i {
+  display: block;
+  border-radius: 1.5px;
+  background: color-mix(in srgb, var(--accent) 38%, transparent);
+  transform-origin: bottom;
+  animation: ub-rise 0.5s cubic-bezier(.2, .7, .2, 1) both;
+  animation-delay: calc(var(--d, 0) * 14ms);
+}
+.uptime-bars i.ub-warn { background: var(--amber); }
+.uptime-bars i.ub-down { background: var(--red); }
+.uptime-bars i.ub-none { background: color-mix(in srgb, var(--text3) 14%, transparent); }
+.uptime-scale { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text3); margin-top: 4px; }
+@keyframes ub-rise { from { transform: scaleY(.08); opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { .uptime-bars i { animation: none; } }
