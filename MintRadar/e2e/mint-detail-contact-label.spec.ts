@@ -60,19 +60,19 @@ for (const [width, height] of [[1440, 900], [390, 844], [320, 640]] as const) {
 
 test('the label changes no count, average or filter: chips and list are the same with and without a flag', async ({ page }) => {
   await open(page, 390, 844)
-  const chips = async () => (await page.locator('.reviews-filter-chip').allTextContents()).map(t => t.trim())
+  const chips = async () => (await page.locator('.reviews-filter-chip, .md-rv-toggle').allTextContents()).map(t => t.trim())
   const flagged = await chips()
-  expect(flagged).toEqual(['All · 3', '5★ · 1', 'Critical · 0', 'Hide anon · 3'])
+  expect(flagged).toEqual(['All 3', '5 stars 1', 'Critical 0', 'Hide anonymous (3)'])
   const tile = (await page.locator('.md-sc', { hasText: 'Community rating' }).innerText()).replace(/\s+/g, ' ')
 
   const page2 = await page.context().newPage()
   await open(page2, 390, 844, REVIEWS.map(r => ({ ...r, listedAsContact: false })))
   await expect(page2.locator('.review-contact-label')).toHaveCount(0)
-  expect((await page2.locator('.reviews-filter-chip').allTextContents()).map(t => t.trim())).toEqual(flagged)
+  expect((await page2.locator('.reviews-filter-chip, .md-rv-toggle').allTextContents()).map(t => t.trim())).toEqual(flagged)
   expect((await page2.locator('.md-sc', { hasText: 'Community rating' }).innerText()).replace(/\s+/g, ' ')).toBe(tile)
 
   // a filter that keeps the flagged review keeps its label; one that drops it drops it with the review
-  await page.getByRole('button', { name: /^5★/ }).click()
+  await page.getByRole('button', { name: /^5 stars/ }).click()
   await expect(page.locator('.review-card')).toHaveCount(1)
   await expect(page.locator('.review-contact-label')).toHaveCount(1)
   await page.getByRole('button', { name: /^Critical/ }).click()

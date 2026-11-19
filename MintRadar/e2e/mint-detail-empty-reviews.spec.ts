@@ -36,7 +36,7 @@ test.describe('Empty reviews (no rating and no comment) are omitted', () => {
     await open(page, MIXED)
     await expect(line(page)).toHaveCount(0)
     await expect(cards(page)).toHaveCount(3)
-    await expect(page.locator('.reviews-filter-chip', { hasText: 'All' })).toHaveText('All · 3')
+    await expect(page.locator('.reviews-filter-chip', { hasText: 'All' })).toHaveText('All 3')
   })
 
   test('all-empty set shows no cards and no empty-line', async ({ page }) => {
@@ -48,7 +48,7 @@ test.describe('Empty reviews (no rating and no comment) are omitted', () => {
 
   test('5★ still lists rated-only reviews', async ({ page }) => {
     await open(page, MIXED)
-    await page.locator('.reviews-filter-chip', { hasText: '5★' }).click()
+    await page.locator('.reviews-filter-chip', { hasText: '5 stars' }).click()
     await expect(line(page)).toHaveCount(0)
     await expect(cards(page)).toHaveCount(2)
   })

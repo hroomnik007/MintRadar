@@ -88,6 +88,6 @@ test.describe('Mint Detail: reviewer names from the server profile index', () =>
   })
 
   test('server names count as named for the Hide anon filter', async ({ page }) => {
-    await expect(page.locator('.reviews-filter-chip', { hasText: 'Hide anon' })).toHaveText('Hide anon · 0')
+    await expect(page.locator('.md-rv-toggle')).toHaveText('Hide anonymous (0)')
   })
 })

@@ -631,27 +631,25 @@
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "Add Alpha Mint to watchlist",
-      "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Copy link to this review",
       "Copy reviewer npub",
       "Mint also advertises a .onion URL",
       "MintRadar",
       "Open this review on Nostr"
     ],
-    "triggers": 2
+    "triggers": 1
   },
   "mint-alpha-reviews@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "Add Alpha Mint to watchlist",
-      "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Copy link to this review",
       "Copy reviewer npub",
       "Mint also advertises a .onion URL",
       "MintRadar",
       "Open this review on Nostr"
     ],
-    "triggers": 2
+    "triggers": 1
   },
   "mint-alpha-score-dialog@1440": {
     "texts": [
@@ -882,7 +880,6 @@
   "mint-operator-reviews@1440": {
     "texts": [
       "Add Operator Mint to watchlist",
-      "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Copy link to this review",
       "Copy link to this review",
       "Copy reviewer npub",
@@ -892,12 +889,11 @@
       "Open this review on Nostr",
       "Open this review on Nostr"
     ],
-    "triggers": 2
+    "triggers": 1
   },
   "mint-operator-reviews@390": {
     "texts": [
       "Add Operator Mint to watchlist",
-      "Anyone can create a key, so ratings can be inflated. Treat them as a hint, not proof.",
       "Copy link to this review",
       "Copy link to this review",
       "Copy reviewer npub",
@@ -907,7 +903,7 @@
       "Open this review on Nostr",
       "Open this review on Nostr"
     ],
-    "triggers": 2
+    "triggers": 1
   },
   "mint-test-audit@1440": {
     "texts": [

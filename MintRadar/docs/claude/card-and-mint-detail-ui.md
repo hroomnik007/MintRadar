@@ -679,3 +679,17 @@ Styles in the "phase 4b" block of `MintDetail.css`.
 - **Recent swaps** in its own panel; the Result is text, not a chip: "Succeeded" for cashu.info's OK, any other state in
   the source's words (amber), neutral rows muted. The whole tab is `.md-audit` (one grid column `minmax(0, 1fr)`, so the
   swap table never widens the page).
+
+## Mint Detail Reviews, 2026-11-19 redesign (phase 4f)
+
+`mintDetail/ReviewsTab.tsx`, styles in the "phase 4f" block of `MintDetail.css`.
+- **Summary** (`.md-rv-sum`, left; above the list below 1100px): the average as a readout and stars, "<n> reviews, <n>
+  with a rating", one bar per star 5 to 1 (`summary` prop from MintDetail: the strip's `tileAvgRating` /
+  `tileReviewCount` and the counted ratings, operator reviews not counted), the visible NIP-87 sentence "Reviews are
+  signed Nostr events (NIP-87): you can check who wrote one and that nobody changed it, not that it is true." followed
+  by `REVIEWS_NIP87_TEXT` (it was a tooltip), the operator note, and the full-width copper "Write a review" / "Log in
+  to write a review" button (`.reviews-write-btn`, `data-testid="reviews-login-btn"` logged out).
+- **List** (`.md-rv-list`): one switch "All N / 5 stars N / Critical N" (`.reviews-filter-chip`, `aria-pressed`) and a
+  check box "Hide anonymous (N)" (`.md-rv-toggle`; it was a chip); review rows with stars and date on one line, the
+  comment at 16px, "Rated without a comment." (`.review-no-comment`, not a `.review-comment`) for a rating without
+  text; the pager is "Page N of M" between two arrows (`.reviews-page-of`; `reviewPageList` removed).

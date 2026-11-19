@@ -49,7 +49,8 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   'mint-fee-nuts': same([3, 3]),
   'mint-alpha-audit': same([6, 6]),
   'mint-alpha-audit-nodata': same([2, 2]),
-  'mint-alpha-reviews': same([2, 2]),
+  // -1 (phase 4f): the NIP-87 caveat is visible text in the Reviews summary.
+  'mint-alpha-reviews': same([1, 1]),
   // The Reliability Score dialog opens from "How it is made" at every width since the 2026-11-19 redesign (the state opens
   // it on the History tab); the page's one trigger stays counted behind it.
   'mint-alpha-score-dialog': same([6, 5]),
@@ -59,7 +60,7 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   'mint-new-overview': same([7, 7]), // +1: the "New" badge's ⓘ
   'mint-new-nuts': same([2, 2]),
   'mint-operator-overview': same([6, 6]),
-  'mint-operator-reviews': same([2, 2]),
+  'mint-operator-reviews': same([1, 1]),
   // +1 (2026-10-25): the ⓘ next to "NUT Support" explains the green / grey NUT chips.
   'compare-modal': same([8, 3]),
   // 0 opened: the Submit dialog has no ⓘ of its own; the page's four triggers sit behind its overlay.

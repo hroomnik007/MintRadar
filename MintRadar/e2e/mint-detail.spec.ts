@@ -48,12 +48,10 @@ test.describe('Mint Detail', () => {
     await page.locator('.md-tab', { hasText: 'Reviews' }).click()
     // Relays are stubbed empty and /api/mints/nostr-reviews returns [] → empty state.
     await expect(page.getByText('No Nostr reviews found for this mint yet.')).toBeVisible({ timeout: 15_000 })
-    // The short "Reviews · NIP-87" label is shown even with zero reviews (it sits
-    // above the loading/empty branch); the full sybil-inflation caveat now lives in
-    // its InfoTooltip.
-    await expect(page.locator('.reviews-disclaimer')).toContainText('Reviews · NIP-87')
-    await page.locator('.reviews-disclaimer .info-tooltip').hover()
-    await expect(page.getByRole('tooltip')).toContainText(
+    // The summary's NIP-87 sentence with the sybil-inflation caveat is shown even with zero reviews (visible text since
+    // the 2026-11-19 redesign; it was a tooltip).
+    await expect(page.locator('.reviews-disclaimer').first()).toContainText('signed Nostr events (NIP-87)')
+    await expect(page.locator('.reviews-disclaimer').first()).toContainText(
       /Anyone can create a key, so ratings can be inflated\. Treat them as a hint, not proof\./i
     )
     // No filter chips when there is nothing to filter.

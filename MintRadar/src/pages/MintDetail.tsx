@@ -1501,6 +1501,12 @@ function MintDetailContent({ url }: { url: string }) {
               reviewsPage={reviewsPage}
               reviewsTotalPages={reviewsTotalPages}
               goToReviewsPage={goToReviewsPage}
+              summary={{
+                avg: tileAvgRating,
+                count: tileReviewCount,
+                rated: ratedReviews.length,
+                perStar: [5, 4, 3, 2, 1].map(s => ratedReviews.filter(r => Math.round(r.rating as number) === s).length) as [number, number, number, number, number],
+              }}
             />
           )}
 

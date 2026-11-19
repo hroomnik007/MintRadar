@@ -40,7 +40,7 @@ async function setup(page: Page, width: number) {
 const SMALL_TEXT: Record<number, { date: string }> = { 1440: { date: '12px' }, 390: { date: '12px' } }
 
 for (const width of [1440, 390]) {
-  test(`review comment at ${width}px: 15px, line height 1.55, contrast at least 7:1; the rest of the item unchanged`, async ({ page }) => {
+  test(`review comment at ${width}px: 16px (2026-11-19 redesign), line height 1.55, contrast at least 7:1; the rest of the item unchanged`, async ({ page }) => {
     await setup(page, width)
     const c = page.locator('.review-comment').first()
     await expect(c).toHaveText(SHORT)
@@ -58,7 +58,7 @@ for (const width of [1440, 390]) {
       const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a)
       return { size: cs.fontSize, lh: parseFloat(cs.lineHeight) / parseFloat(cs.fontSize), ratio: (hi! + 0.05) / (lo! + 0.05), wrap: cs.overflowWrap, color: cs.color }
     })
-    expect(r.size).toBe('15px')
+    expect(r.size).toBe('16px')
     expect(r.lh).toBeCloseTo(1.55, 2)
     expect(r.ratio, `contrast ${r.ratio.toFixed(2)}`).toBeGreaterThanOrEqual(7)
     expect(r.wrap).toBe('anywhere')

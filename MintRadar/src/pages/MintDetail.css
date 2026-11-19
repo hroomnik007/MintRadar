@@ -2830,3 +2830,36 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .mint-detail .md-audit .au-dir { padding: 12px 10px 12px 12px; }
   .mint-detail .md-audit .au-dir-label { font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
 }
+
+/* ── 2026-11-19 redesign, phase 4f: Reviews ────────────────────────────────────────────────────────────────────────
+   A summary (average, counts, one bar per star, what a signed review means, the write button) beside the list. */
+.md-rv { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+.md-rv-avg { font-family: var(--font-display); font-size: 64px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; line-height: 1; }
+.md-rv-stars { color: var(--amber); font-size: var(--fs-lg); letter-spacing: 1px; margin-top: 4px; }
+.md-rv-counts { margin: 4px 0 0; font-size: var(--fs-sm); color: var(--text2); }
+.md-rv-hist { display: grid; gap: 6px; margin-top: 14px; }
+.md-rv-hist-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 30px; gap: 10px; align-items: center; font-size: var(--fs-xs); color: var(--text2); }
+.md-rv-meter { height: 8px; border-radius: 4px; background: var(--bg4); overflow: hidden; }
+.md-rv-meter > i { display: block; height: 100%; background: var(--amber); border-radius: 4px; }
+.md-rv-hist-n { text-align: right; color: var(--text); }
+.mint-detail .md-rv-note { margin: 14px 0 0; font-size: var(--fs-xs); color: var(--text2); line-height: 1.5; }
+.mint-detail .md-rv-sum .reviews-write-btn {
+  display: block; width: 100%; margin-top: 16px; min-height: 40px; padding: 9px 14px; border-radius: 8px;
+  background: var(--action); border: 1px solid var(--action); color: #1a1006; font-family: var(--font-body);
+  font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0; cursor: pointer;
+}
+.mint-detail .md-rv-sum .reviews-write-btn:hover { background: color-mix(in srgb, var(--action) 88%, #fff); }
+.md-rv-empty { font-size: var(--fs-sm); color: var(--text3); }
+.mint-detail .md-rv-list .reviews-filter-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.mint-detail .md-rv-list .reviews-filter-group.md-seg .reviews-filter-chip { border: 0; border-radius: 0; padding: 6px 11px; font-size: var(--fs-sm); }
+.mint-detail .md-rv-list .reviews-filter-group.md-seg .reviews-filter-chip.on { background: var(--raised); color: var(--text); }
+.md-rv-toggle { display: inline-flex; gap: 8px; align-items: center; color: var(--text2); font-size: var(--fs-sm); cursor: pointer; min-height: 32px; }
+.md-rv-toggle input { accent-color: var(--action); width: 16px; height: 16px; margin: 0; }
+.mint-detail .md-rv-list .review-comment { font-size: var(--fs-md); max-width: 70ch; }
+.mint-detail .md-rv-list .review-no-comment { margin: 6px 0 0; font-size: var(--fs-sm); color: var(--text3); }
+.mint-detail .md-rv-list .reviews-pagination { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 16px; }
+.reviews-page-of { font-size: var(--fs-sm); color: var(--text2); }
+@media (max-width: 1100px) { .md-rv { grid-template-columns: minmax(0, 1fr); } }
+/* Stars and date on one line, the date in the text face (it was mono under the stars). */
+.mint-detail .md-rv-list .review-meta { flex-direction: row; align-items: baseline; gap: 10px; }
+.mint-detail .md-rv-list .review-date { font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text2); }

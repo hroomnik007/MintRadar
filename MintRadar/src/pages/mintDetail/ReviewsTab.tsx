@@ -1,5 +1,5 @@
-// Mint Detail "Reviews" tab: the NIP-87 review list (filter chips, review cards with copy/open actions, pager).
-// Extracted verbatim from MintDetail.tsx (pure refactor: same DOM, classes, inline styles, aria and tooltips).
+// Mint Detail "Reviews" tab (2026-11-19 redesign, phase 4f): a summary (average, one bar per star, what a signed review
+// means, the write button) beside the NIP-87 review list (filter switch, review cards with copy/open actions, pager).
 // The review queries and relay subscriptions (GET /api/mints/nostr-reviews, useMintReviews, useVerifiedNip05),
 // the filter / page / highlight / copied state, the review deep-link effect and the Write-a-review modal stay in
 // MintDetail and are passed in or opened through setShowReviewModal, so fetch timing, caching, relay
@@ -9,12 +9,11 @@ import { nip19 } from 'nostr-tools'
 import { Copy, Check, ExternalLink, Link2, User } from 'lucide-react'
 import { njumpEventUrl, npubFromPubkey } from '@/utils/nostrLinks'
 import { REVIEW_READ_RELAYS } from '@/core/nostr/relays'
-import { InfoTooltip } from '@/components/InfoTooltip'
 import { REVIEWS_NIP87_TEXT, OPERATOR_REVIEW_NOTE } from '@/utils/tooltipTexts'
 import { showContactLabel, CONTACT_LISTED_LABEL } from '@/utils/reviewUtils'
 import { reviewAvatarColor, avatarTextColor } from '@/utils/avatarColors'
 import { avatarInitial } from '@/utils/npub'
-import { shortNpub, formatReviewDate, starString, reviewPageList, type MergedReviewCandidate } from './reviewFormat'
+import { shortNpub, formatReviewDate, starString, type MergedReviewCandidate } from './reviewFormat'
 
 export type ReviewFilter = 'all' | '5star' | 'critical'
 
@@ -45,6 +44,9 @@ export interface ReviewsTabProps {
   reviewsPage: number
   reviewsTotalPages: number
   goToReviewsPage: (p: number) => void
+  /** The summary beside the list (2026-11-19 redesign): the strip's numbers (operator reviews not counted) and the
+   *  counted ratings per star, 5 first; `rated` 0 while the stored list has not loaded. */
+  summary: { avg: number | null; count: number | null; rated: number; perStar: [number, number, number, number, number] }
 }
 
 export function ReviewsTab({
@@ -53,71 +55,80 @@ export function ReviewsTab({
   reviewFilterFiveStarCount, reviewFilterCriticalCount, hideAnonActive, toggleReviewHideAnon, reviewFilterAnonCount,
   filteredReviews, pagedReviews, highlightedReview, verifiedNip05ByPubkey, operatorKeys,
   contactListed, copiedReviewAction, setCopiedReviewAction, reviewsPage, reviewsTotalPages,
-  goToReviewsPage,
+  goToReviewsPage, summary,
 }: ReviewsTabProps) {
+  const maxStar = Math.max(1, ...summary.perStar)
+  const writeButton = isLoggedIn ? (
+    <button type="button" className="reviews-write-btn" onClick={() => setShowReviewModal(true)}>Write a review</button>
+  ) : (
+    // Logged out: the same place says how to write one and opens the login dialog (AppShell listens).
+    <button type="button" className="reviews-write-btn" data-testid="reviews-login-btn" onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}>
+      Log in to write a review
+    </button>
+  )
+  // 2026-11-19 redesign (phase 4f): the summary (average, counts, one bar per star, what a signed review means and the
+  // write button) beside the list (one filter switch, a "Hide anonymous" check box, the reviews, "Page N of M").
   return (
-            <div className="md-panel">
-              <div className="reviews-header">
-                <div className="md-panel-title" style={{marginBottom:0}}>Reviews</div>
-                {isLoggedIn ? (
-                  <button className="reviews-write-btn" onClick={() => setShowReviewModal(true)}>
-                    Write a review
-                  </button>
-                ) : (
-                  // Logged out: the same place says how to write one and opens the login dialog (AppShell listens).
-                  <button type="button" className="reviews-write-btn" data-testid="reviews-login-btn" onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}>
-                    Log in to write a review
-                  </button>
-                )}
+    <div className="md-rv">
+      <section className="md-panel md-rv-sum" aria-labelledby="md-rv-title">
+        <h2 id="md-rv-title" className="sr-only">Reviews</h2>
+        <div className="md-rv-avg">{summary.avg !== null ? summary.avg.toFixed(1) : '—'}</div>
+        {summary.avg !== null && <div className="md-rv-stars" aria-label={`${summary.avg.toFixed(1)} out of 5`}>{starString(summary.avg)}</div>}
+        <p className="md-rv-counts">
+          {summary.count === null ? 'Loading reviews…'
+            : summary.count === 0 ? 'No reviews yet'
+            : `${summary.count} ${summary.count === 1 ? 'review' : 'reviews'}${summary.rated > 0 ? `, ${summary.rated} with a rating` : ''}`}
+        </p>
+        {summary.rated > 0 && (
+          <div className="md-rv-hist" role="img" aria-label={summary.perStar.map((n, i) => `${5 - i} stars: ${n}`).join(', ')}>
+            {summary.perStar.map((n, i) => (
+              <div key={i} className="md-rv-hist-row">
+                <span>{5 - i} ★</span>
+                <span className="md-rv-meter"><i style={{ width: `${(n / maxStar) * 100}%` }} /></span>
+                <span className="md-rv-hist-n">{n}</span>
               </div>
-              <div className="reviews-disclaimer" style={{display:'flex',alignItems:'center',gap:5}}>
-                <span>Reviews · NIP-87</span>
-                <InfoTooltip
-                  width={260}
-                  label="About NIP-87 reviews"
-                  text={REVIEWS_NIP87_TEXT}
-                />
-              </div>
-              {operatorListedCount > 0 && <div className="reviews-disclaimer">{OPERATOR_REVIEW_NOTE}</div>}
+            ))}
+          </div>
+        )}
+        <p className="reviews-disclaimer md-rv-note">Reviews are signed Nostr events (NIP-87): you can check who wrote one and that nobody changed it, not that it is true. {REVIEWS_NIP87_TEXT}</p>
+        {operatorListedCount > 0 && <p className="reviews-disclaimer md-rv-note">{OPERATOR_REVIEW_NOTE}</p>}
+        {writeButton}
+      </section>
+
+      <section className="md-panel md-rv-list" aria-label="Review list">
               {reviewsLoading ? (
-                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>Loading reviews...</div>
+                <div className="md-rv-empty">Loading reviews...</div>
               ) : mergedReviews.length === 0 ? (
-                <div style={{fontSize:13,color:'var(--text3)',marginTop:8}}>
+                <div className="md-rv-empty">
                   {storedReviewsFailed ? 'Reviews are not available right now.' : 'No Nostr reviews found for this mint yet.'}
                 </div>
               ) : (
-                <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:8}}>
+                <div style={{display:'flex',flexDirection:'column',gap:0}}>
                   <div className="reviews-filter-row">
-                    <div
-                      className="reviews-filter-group"
-                      role="group"
-                      aria-label="Filter reviews by rating"
-                    >
+                    <div className="reviews-filter-group md-seg" role="group" aria-label="Filter reviews by rating">
                       <button
                         type="button"
-                        className={`reviews-filter-chip${activeReviewFilter === 'all' ? ' active' : ''}`}
+                        className={`reviews-filter-chip${activeReviewFilter === 'all' ? ' active on' : ''}`}
                         aria-pressed={activeReviewFilter === 'all'}
                         onClick={() => setReviewFilter('all')}
-                      >All · {reviewCountBase.length}</button>
+                      >All {reviewCountBase.length}</button>
                       <button
                         type="button"
-                        className={`reviews-filter-chip${activeReviewFilter === '5star' ? ' active' : ''}`}
+                        className={`reviews-filter-chip${activeReviewFilter === '5star' ? ' active on' : ''}`}
                         aria-pressed={activeReviewFilter === '5star'}
                         onClick={() => setReviewFilter('5star')}
-                      >5★ · {reviewFilterFiveStarCount}</button>
+                      >5 stars {reviewFilterFiveStarCount}</button>
                       <button
                         type="button"
-                        className={`reviews-filter-chip${activeReviewFilter === 'critical' ? ' active' : ''}`}
+                        className={`reviews-filter-chip${activeReviewFilter === 'critical' ? ' active on' : ''}`}
                         aria-pressed={activeReviewFilter === 'critical'}
                         onClick={() => setReviewFilter('critical')}
-                      >Critical · {reviewFilterCriticalCount}</button>
+                      >Critical {reviewFilterCriticalCount}</button>
                     </div>
-                    <button
-                      type="button"
-                      className={`reviews-filter-chip toggle${hideAnonActive ? ' active' : ''}`}
-                      aria-pressed={hideAnonActive}
-                      onClick={toggleReviewHideAnon}
-                    >Hide anon · {reviewFilterAnonCount}</button>
+                    <label className="md-rv-toggle">
+                      <input type="checkbox" checked={hideAnonActive} onChange={toggleReviewHideAnon} />
+                      Hide anonymous ({reviewFilterAnonCount})
+                    </label>
                   </div>
                   {filteredReviews.length === 0 ? (
                     <div style={{fontSize:13,color:'var(--text3)'}}>No reviews match this filter.</div>
@@ -207,31 +218,23 @@ export function ReviewsTab({
                             </span>
                           </div>
                         </div>
-                        {r.comment && <p className="review-comment">{r.comment}</p>}
+                        {r.comment ? <p className="review-comment">{r.comment}</p>
+                          : r.rating !== null ? <p className="review-no-comment">Rated without a comment.</p> : null}
                       </div>
                     )
                   })}
                   {reviewsTotalPages > 1 && (
                     <nav className="reviews-pagination" aria-label="Reviews pages">
                       <button
+                        type="button"
                         className="reviews-page-btn"
                         disabled={reviewsPage === 1}
                         onClick={() => goToReviewsPage(reviewsPage - 1)}
                         aria-label="Previous page"
                       >‹</button>
-                      {reviewPageList(reviewsPage, reviewsTotalPages).map((p, i) =>
-                        p === '…'
-                          ? <span key={`gap-${i}`} className="reviews-page-ellipsis">…</span>
-                          : (
-                            <button
-                              key={p}
-                              className={`reviews-page-btn${p === reviewsPage ? ' active' : ''}`}
-                              aria-current={p === reviewsPage ? 'page' : undefined}
-                              onClick={() => goToReviewsPage(p)}
-                            >{p}</button>
-                          ),
-                      )}
+                      <span className="reviews-page-of" aria-current="page">Page {reviewsPage} of {reviewsTotalPages}</span>
                       <button
+                        type="button"
                         className="reviews-page-btn"
                         disabled={reviewsPage === reviewsTotalPages}
                         onClick={() => goToReviewsPage(reviewsPage + 1)}
@@ -243,6 +246,7 @@ export function ReviewsTab({
                   )}
                 </div>
               )}
-            </div>
+      </section>
+    </div>
   )
 }

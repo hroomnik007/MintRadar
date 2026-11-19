@@ -76,7 +76,8 @@ test.describe('avatar initials contrast', () => {
     const bgs = new Set<string>()
     let measured = 0
     for (let pageNo = 1; pageNo <= 3; pageNo++) {
-      if (pageNo > 1) await page.locator('.reviews-page-btn', { hasText: new RegExp(`^${pageNo}$`) }).click()
+      // "Page N of M" with arrows since the 2026-11-19 redesign.
+      if (pageNo > 1) await page.getByRole('button', { name: 'Next page' }).click()
       await expect(tiles.first()).toBeVisible()
       for (let i = 0; i < await tiles.count(); i++) {
         const m = await measureEffective(tiles.nth(i))
