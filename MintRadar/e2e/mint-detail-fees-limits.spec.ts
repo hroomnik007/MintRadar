@@ -4,7 +4,7 @@ import { layoutReady, resize } from './fixtures/settle'
 
 type Page = import('@playwright/test').Page
 
-// NUTs tab card "Fees and limits" (first card, before NUT compatibility; it used to be an Overview group; src/components/mint/MintFeesLimits.tsx, src/utils/feesLimits.ts): input fee examples
+// NUTs tab card "Fees and limits" (first card of the side column since the 2026-11-19 redesign, before: before NUT compatibility; it used to be an Overview group; src/components/mint/MintFeesLimits.tsx, src/utils/feesLimits.ts): input fee examples
 // from the keysets the page already has (NUT-02 rule, rounded up) and the limits the mint declares in /v1/info.
 // Mocked endpoints only; nothing is requested from a mint by this group.
 
@@ -139,10 +139,9 @@ test('zero fee and undeclared limits: "No input fee" and "not declared", never a
     known: { mintMethods: [{ method: 'bolt11', unit: 'sat' }], meltMethods: [{ method: 'bolt11', unit: 'sat', min_amount: 0 }] },
   })
   await expect(fees(page).locator('.md-info-value')).toHaveText('No input fee')
-  await expect(limits(page).locator('.md-info-row')).toHaveText([
-    /Deposit \(mint\) · bolt11 · sat\s*min not declared, max not declared/,
-    /Withdrawal \(melt\) · bolt11 · sat\s*min 0, max not declared/,
-  ])
+  // A table since the 2026-11-19 redesign: method | deposit | withdrawal.
+  await expect(limits(page).locator('tbody tr')).toHaveCount(1)
+  await expect(limits(page).locator('tbody tr').first().locator('th, td')).toHaveText(['bolt11 · sat', 'no limits declared', 'from 0'])
 })
 
 test('a keyset that states no input_fee_ppk uses the NUT-02 default 0: "No input fee"', async ({ page }) => {
@@ -153,16 +152,13 @@ test('a keyset that states no input_fee_ppk uses the NUT-02 default 0: "No input
 
 test('declared limits per method and unit, with thousands separators', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
-  await expect(limits(page).locator('.md-info-row')).toHaveText([
-    /Deposit \(mint\) · bolt11 · sat\s*min 1, max 1,000,000/,
-    /Withdrawal \(melt\) · bolt11 · sat\s*min 1, max 500,000/,
-  ])
+  await expect(limits(page).locator('tbody tr').first().locator('th, td')).toHaveText(['bolt11 · sat', '1 to 1,000,000', '1 to 500,000'])
 })
 
 test('no keyset data: "Keyset data not available yet"; the limits still show', async ({ page }) => {
   await open(page, { keysets: null })
   await expect(fees(page)).toContainText('Keyset data not available yet')
-  await expect(limits(page)).toContainText('min 1, max 1,000,000')
+  await expect(limits(page)).toContainText('1 to 1,000,000')
 })
 
 const SENTENCE = 'Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.'
@@ -178,9 +174,9 @@ test('the source line stays under the rows; its time carries the absolute UTC ti
   await expect(group(page)).not.toContainText(/input fee$/im)
   await expect(group(page)).not.toContainText('Declared limits')
   await expect(group(page).locator('.md-fl-group-label')).toHaveCount(0)
-  const border = (loc: ReturnType<typeof fees>) => loc.locator('.md-info-row').last().evaluate(el => getComputedStyle(el).borderBottomWidth)
-  expect(await border(fees(page))).toBe('1px')
-  expect(await border(limits(page))).toBe('0px')
+  // The fee rows end with a divider; the limits table (since the 2026-11-19 redesign) has rules between rows, none below the last.
+  expect(await fees(page).locator('.md-info-row').last().evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe('1px')
+  expect(await limits(page).locator('tbody tr').last().locator('td').first().evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe('0px')
 })
 
 test('the explanatory sentence is not in the card body; it is in the header tooltip, which opens by click and by keyboard', async ({ page }) => {
@@ -212,15 +208,16 @@ test('the explanatory sentence is not in the card body; it is in the header tool
   await expect(btn).toBeFocused()
 })
 
-test('it is the first card of the NUTs tab, before NUT compatibility, and no longer on the Overview; the old "NUT limits" card is gone', async ({ page }) => {
+// Since the 2026-11-19 redesign the NUTs tab is "Supported features" with Fees and limits first in the column beside it.
+test('it heads the side column of the NUTs tab, beside Supported features, and is not on the Overview; the old "NUT limits" card is gone', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
   await expect(group(page)).toBeVisible()
   const titles = await page.locator('.md-panel-title').allInnerTexts()
   const i = titles.findIndex(t => /^Fees and limits$/i.test(t))
-  const j = titles.findIndex(t => /^NUT compatibility$/i.test(t))
-  expect(i).toBeGreaterThanOrEqual(0)
-  expect(j).toBeGreaterThan(i)
-  expect(titles.slice(0, i).filter(t => !/^Keysets$/i.test(t))).toEqual([])
+  const j = titles.findIndex(t => /^Supported features$/i.test(t))
+  expect(j).toBe(0)
+  expect(i).toBe(1)
+  await expect(page.locator('.md-nuts-side > *').first()).toHaveAttribute('data-testid', 'mint-fees-limits')
   expect(titles.some(t => /^NUT limits$/i.test(t))).toBe(false)
   expect(await page.locator('.md-tab').allInnerTexts()).not.toContain('Fees')
   await page.locator('.md-tab', { hasText: /^Overview/ }).click()

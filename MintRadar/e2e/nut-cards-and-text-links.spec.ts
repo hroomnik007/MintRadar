@@ -5,7 +5,7 @@ import { measureEffective } from './fixtures/contrast'
 // 1) Unsupported NUT cards (Mint Detail > NUTs) were dimmed with whole-card opacity .4: the name measured
 //    2.21:1 and the description 2.62:1 (WCAG 1.4.3 needs 4.5:1). They now use muted token colours at full
 //    opacity, and stay visibly different from the supported ones without relying on low contrast alone
-//    (dashed border, muted name, the "–" mark).
+//    (since the 2026-11-19 redesign: rows with a "Not supported" state word in its own colour and a dimmer name).
 // 2) Links inside running text (a paragraph or list item that has other text around the link) carry an
 //    underline as well as their colour (WCAG 1.4.1). Buttons, cards, navigation, footer and table-cell links
 //    are not in-text links and are left alone.
@@ -24,8 +24,9 @@ async function openNuts(page: Page, width: number) {
   await page.addStyleTag({ content: '.nut-card, .nut-card * { transition: none !important; }' })
 }
 
+// Rows of the grouped NUT list since the 2026-11-19 redesign (they were cards with a dashed border for unsupported ones).
 for (const width of [1440, 390]) {
-  test(`unsupported NUT cards: text >= 4.5:1 at full opacity, still visibly dimmer than supported (${width}px)`, async ({ page }) => {
+  test(`unsupported NUT rows: text >= 4.5:1 at full opacity, still visibly dimmer than supported (${width}px)`, async ({ page }) => {
     await openNuts(page, width)
     const cards = page.locator('.nut-card.unsupported')
     const n = await cards.count()
@@ -35,9 +36,9 @@ for (const width of [1440, 390]) {
       for (let i = 0; i < n; i++) {
         const card = cards.nth(i)
         if (hover) await card.hover(); else await page.mouse.move(0, 0)
-        const name = (await card.locator('.nut-name').textContent())!.trim()
-        expect.soft(await card.evaluate(el => getComputedStyle(el).opacity), `${name} card opacity`).toBe('1')
-        for (const [label, sel] of [['name', '.nut-name'], ['description', '.nut-desc'], ['mark', '.nut-check']] as const) {
+        const name = (await card.locator('.nut-tag').textContent())!.trim()
+        expect.soft(await card.evaluate(el => getComputedStyle(el).opacity), `${name} row opacity`).toBe('1')
+        for (const [label, sel] of [['tag', '.nut-tag'], ['name', '.nut-row-name b'], ['description', '.nut-row-name span'], ['state', '.nut-row-state']] as const) {
           const m = await measureEffective(card.locator(sel))
           expect.soft(m.opacity, `${name} ${label} opacity`).toBe(1)
           expect.soft(m.ratio, `${name} ${label}${hover ? ' (hover)' : ''}`).toBeGreaterThanOrEqual(4.5)
@@ -45,22 +46,14 @@ for (const width of [1440, 390]) {
       }
     }
 
-    // Hierarchy: not low contrast alone. Different border style, different name colour, and a "–" instead of a check.
+    // Hierarchy, not low contrast alone: a different state word and colour, and a dimmer name.
     const sup = page.locator('.nut-card.supported').first()
     const uns = cards.first()
-    const style = (c: typeof sup) => c.evaluate(el => ({
-      border: getComputedStyle(el).borderTopStyle,
-      name: getComputedStyle(el.querySelector('.nut-name')!).color,
-      mark: (el.querySelector('.nut-check') as HTMLElement).innerText.trim(),
-    }))
-    const [s, u] = [await style(sup), await style(uns)]
-    expect(u.border).toBe('dashed')
-    expect(s.border).toBe('solid')
-    expect(u.name).not.toBe(s.name)
-    expect(u.mark).toBe('–')
-    expect(s.mark).toBe('✓')
-    // and the unsupported name is still the dimmer of the two (lower contrast than the supported one, but >= 4.5)
-    expect((await measureEffective(uns.locator('.nut-name'))).ratio).toBeLessThan((await measureEffective(sup.locator('.nut-name'))).ratio)
+    await expect(uns.locator('.nut-row-state')).toHaveText('Not supported')
+    await expect(sup.locator('.nut-row-state')).toHaveText('Supported')
+    const color = (c: typeof sup, sel: string) => c.locator(sel).evaluate(el => getComputedStyle(el).color)
+    expect(await color(uns, '.nut-row-state')).not.toBe(await color(sup, '.nut-row-state'))
+    expect((await measureEffective(uns.locator('.nut-row-name b'))).ratio).toBeLessThan((await measureEffective(sup.locator('.nut-row-name b'))).ratio)
   })
 }
 

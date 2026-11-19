@@ -556,28 +556,28 @@
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "<DATE>",
       "<DATE>",
+      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Alpha Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "Mint also advertises a .onion URL",
-      "MintRadar",
-      "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device."
+      "MintRadar"
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "mint-alpha-nuts@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "<DATE>",
       "<DATE>",
+      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Alpha Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "Mint also advertises a .onion URL",
-      "MintRadar",
-      "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device."
+      "MintRadar"
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "mint-alpha-overview@1440": {
     "texts": [
@@ -696,56 +696,56 @@
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "<DATE>",
       "<DATE>",
+      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Alpha Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "Mint also advertises a .onion URL",
       "MintRadar",
-      "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low."
     ],
-    "triggers": 4
+    "triggers": 3
   },
   "mint-fee-nuts@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "<DATE>",
       "<DATE>",
+      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Alpha Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "Mint also advertises a .onion URL",
       "MintRadar",
-      "NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.",
       "Your balance is made of many small coins. The mint charges a small fee per coin used and rounds the total up, so small payments cost relatively more. Fewer, larger coins keep fees low."
     ],
-    "triggers": 4
+    "triggers": 3
   },
   "mint-new-nuts@1440": {
     "texts": [
       "<DATE>",
       "<DATE>",
+      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Newbie Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
-      "Reliability Score capped at 75 for the first 30 days.",
-      "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups."
+      "Reliability Score capped at 75 for the first 30 days."
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "mint-new-nuts@390": {
     "texts": [
       "<DATE>",
       "<DATE>",
+      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Newbie Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
       "MintRadar",
-      "Reliability Score capped at 75 for the first 30 days.",
-      "This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups."
+      "Reliability Score capped at 75 for the first 30 days."
     ],
-    "triggers": 3
+    "triggers": 2
   },
   "mint-new-overview@1440": {
     "texts": [

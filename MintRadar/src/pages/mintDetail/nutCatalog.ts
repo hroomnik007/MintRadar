@@ -45,3 +45,33 @@ export const NUT_DESCRIPTIONS: Record<string, { short: string; desc: string; fea
   'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', features: ['Multi-quote batch', 'Atomic operation', 'Efficiency'], useCase: 'Reduces round-trips when minting from multiple paid invoices at once.' },
   'NUT-30': { short: 'Onchain', desc: 'On-chain Bitcoin as a payment method for mint and melt.', features: ['On-chain Bitcoin', 'Mint & melt method', 'Chain settlement'], useCase: 'Fund or redeem tokens directly with on-chain Bitcoin.' },
 }
+
+/**
+ * The tracked NUTs in groups by what they are for, each with a plain name and one sentence for someone who does not know
+ * the spec (2026-11-19 redesign, phase 4d; approved mockup mint.html#nuts). Covers every entry of TRACKED_NUTS
+ * (nutGroups.test.ts pins that).
+ */
+export const NUT_GROUPS: ReadonlyArray<{ title: string; nuts: ReadonlyArray<{ nut: string; name: string; line: string }> }> = [
+  { title: 'Deposits and payments', nuts: [
+    { nut: 'NUT-04', name: 'Mint tokens', line: 'Deposit bitcoin over Lightning and get ecash.' },
+    { nut: 'NUT-05', name: 'Melt tokens', line: 'Pay a Lightning invoice with your ecash.' },
+    { nut: 'NUT-08', name: 'Overpay refund', line: 'Unused Lightning fee reserve comes back to you.' },
+    { nut: 'NUT-15', name: 'Multi-mint payments', line: 'Pay one invoice with ecash from several mints.' },
+    { nut: 'NUT-29', name: 'Batched minting', line: 'Mint several deposits in one request.' },
+  ] },
+  { title: 'Safety and privacy', nuts: [
+    { nut: 'NUT-07', name: 'Token state', line: 'Check whether a token was already spent before you accept it.' },
+    { nut: 'NUT-12', name: 'DLEQ proofs', line: 'Proof that the mint signed with its published key.' },
+    { nut: 'NUT-20', name: 'Signed mint quotes', line: 'Only your wallet can claim the ecash of your deposit.' },
+  ] },
+  { title: 'Locked tokens', nuts: [
+    { nut: 'NUT-10', name: 'Spending conditions', line: 'Tokens that can be spent only under set conditions.' },
+    { nut: 'NUT-11', name: 'Pay to public key', line: 'Lock tokens to a key, for example a Nostr npub.' },
+    { nut: 'NUT-14', name: 'Hash locks', line: 'Tokens unlocked by a secret, used for swaps and escrow.' },
+  ] },
+  { title: 'Wallet experience', nuts: [
+    { nut: 'NUT-09', name: 'Restore', line: 'Recover your tokens from the wallet seed.' },
+    { nut: 'NUT-17', name: 'Live updates', line: 'Your wallet hears about payments at once instead of asking again and again.' },
+    { nut: 'NUT-19', name: 'Safe retries', line: 'A request that times out can be sent again without paying twice.' },
+  ] },
+]

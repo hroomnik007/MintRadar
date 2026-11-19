@@ -120,3 +120,57 @@ export function limitsSource(fetchedAt: string | null | undefined, now: number):
 export function reservedFeeLines(units: readonly string[] | null | undefined): number {
   return Math.max(1, sortUnits(units).length)
 }
+
+/** One row of the Mint Detail limits table (2026-11-19 redesign): a method and unit with its deposit and withdrawal limits. */
+export interface LimitTableRow {
+  key: string
+  /** "bolt11 · sat", "On-chain · sat" */
+  label: string
+  deposit: string
+  withdrawal: string
+}
+
+/** "1 to 1,000,000", "from 1", "up to 500,000", "no limits declared". */
+function rangeText(m: MethodLike): string {
+  const ok = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0
+  const min = m['min_amount'], max = m['max_amount']
+  if (ok(min) && ok(max)) return `${min.toLocaleString('en-US')} to ${max.toLocaleString('en-US')}`
+  if (ok(min)) return `from ${min.toLocaleString('en-US')}`
+  if (ok(max)) return `up to ${max.toLocaleString('en-US')}`
+  return 'no limits declared'
+}
+
+/**
+ * The declared limits as a table, one row per method and unit (known units first, then by method), deposit (NUT-04) and
+ * withdrawal (NUT-05) side by side; "—" where a side does not offer the method, "Disabled by the mint" for a side the mint
+ * switched off. Same input checks as limitRows (method and unit names from the mint are filtered, never rendered raw).
+ */
+export function limitTable(
+  mintMethods: readonly MethodLike[] | null | undefined,
+  meltMethods: readonly MethodLike[] | null | undefined,
+  disabled: { mint?: boolean; melt?: boolean } = {},
+): LimitTableRow[] {
+  const valid = (list: readonly MethodLike[] | null | undefined) => (list ?? [])
+    .filter(m => typeof m.method === 'string' && METHOD_RE.test(m.method) && typeof m.unit === 'string' && UNIT_RE.test(m.unit))
+  const keyOf = (m: MethodLike) => `${m.method.toLowerCase()}|${m.unit.toLowerCase()}`
+  const dep = new Map(valid(mintMethods).map(m => [keyOf(m), m] as const))
+  const wd = new Map(valid(meltMethods).map(m => [keyOf(m), m] as const))
+  const keys = [...new Set([...dep.keys(), ...wd.keys()])]
+  const rank = new Map(sortUnits(keys.map(k => k.split('|')[1]!)).map((u, i) => [u.toLowerCase(), i] as const))
+  const mOrder = ['bolt11', 'bolt12', 'onchain']
+  const mRank = (m: string) => { const i = mOrder.indexOf(m); return i === -1 ? mOrder.length : i }
+  keys.sort((a, b) => {
+    const [am, au] = a.split('|') as [string, string], [bm, bu] = b.split('|') as [string, string]
+    return (rank.get(au) ?? 0) - (rank.get(bu) ?? 0) || mRank(am) - mRank(bm) || (am < bm ? -1 : am > bm ? 1 : 0)
+  })
+  return keys.map(k => {
+    const [method, unit] = k.split('|') as [string, string]
+    const d = dep.get(k), w = wd.get(k)
+    return {
+      key: k,
+      label: `${method === 'onchain' ? 'On-chain' : method} · ${unit}`,
+      deposit: disabled.mint ? 'Disabled by the mint' : d ? rangeText(d) : '—',
+      withdrawal: disabled.melt ? 'Disabled by the mint' : w ? rangeText(w) : '—',
+    }
+  })
+}

@@ -36,11 +36,12 @@ test('the Overview has no Nutzap-related features panel', async ({ page }) => {
   await expect(note(page)).toHaveCount(0)
 })
 
-test('the NUTs tab has the one muted sentence under the NUT compatibility grid, with no verdict', async ({ page }) => {
+test('the NUTs tab has the one muted sentence under the grouped NUTs, with no verdict', async ({ page }) => {
   await open(page, { '4': {}, '5': {}, '7': {}, '10': {}, '11': {}, '12': {} })
   await expect(note(page)).toHaveText(SENTENCE)
-  await expect(page.locator('.nut-grid + .md-nut-nutzap-note')).toHaveCount(1)
-  await expect(page.locator('.md-panel', { has: page.locator('.nut-grid') })).toContainText(SENTENCE)
+  // The last line of the "Supported features" panel since the 2026-11-19 redesign (the grid became groups).
+  await expect(page.locator('.md-nuts-features > .md-nut-nutzap-note:last-child')).toHaveCount(1)
+  await expect(page.locator('.md-nuts-features')).toContainText(SENTENCE)
   await expect(note(page)).not.toContainText(/ready|safe|recommended|trusted|supported/i)
   // the same sentence whatever the mint declares
   await expect(page.getByText(SENTENCE)).toHaveCount(1)
@@ -70,15 +71,16 @@ for (const w of [320, 390, 768, 1440] as const) {
 test('the four shapes of a NUT entry: supported:false is not supported in the NUT card grid and the modal', async ({ page }) => {
   // 7: supported:false, 10: supported:true, 11: presence-only object with settings, 12: absent, 14: null (declared as nothing)
   await open(page, { '4': {}, '5': {}, '7': { supported: false }, '10': { supported: true }, '11': { disabled: false, methods: [] }, '14': null })
-  const cardOf = (nut: number) => page.locator('.nut-card', { has: page.locator('.nut-name', { hasText: new RegExp(`^NUT-${String(nut).padStart(2, '0')}$`) }) })
+  // Rows of the grouped list since the 2026-11-19 redesign: tag, name, state word.
+  const cardOf = (nut: number) => page.locator('.nut-card', { has: page.locator('.nut-tag', { hasText: new RegExp(`^NUT-${String(nut).padStart(2, '0')}$`) }) })
   await expect(cardOf(7)).toHaveClass(/unsupported/)
-  await expect(cardOf(7).locator('.nut-check')).toHaveText('–')
+  await expect(cardOf(7).locator('.nut-row-state')).toHaveText('Not supported')
   await expect(cardOf(10)).toHaveClass(/\bsupported\b/)
-  await expect(cardOf(10).locator('.nut-check')).toHaveText('✓')
+  await expect(cardOf(10).locator('.nut-row-state')).toHaveText('Supported')
   await expect(cardOf(11)).toHaveClass(/\bsupported\b/)
   await expect(cardOf(12)).toHaveClass(/unsupported/)
   await expect(cardOf(14)).toHaveClass(/unsupported/)
-  await expect(cardOf(14).locator('.nut-check')).toHaveText('–')
+  await expect(cardOf(14).locator('.nut-row-state')).toHaveText('Not supported')
   // The summary line counts the same cards: 4, 5, 10, 11.
   await expect(page.locator('.nut-summary-line strong')).toHaveText('4')
   // The modal agrees with the card.

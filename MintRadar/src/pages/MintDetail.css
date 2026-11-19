@@ -2716,3 +2716,54 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-ev { grid-template-columns: 60px 12px minmax(0, 1fr); }
   .md-ev-kind { grid-column: 3; }
 }
+
+/* ── 2026-11-19 redesign, phase 4d: NUTs ───────────────────────────────────────────────────────────────────────────
+   The tracked NUTs in groups (tag, plain name + one sentence, state), Fees and limits and "What works" beside them. */
+.md-nuts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.md-nuts-side { display: grid; gap: 20px; min-width: 0; }
+.nut-group { padding: 16px 0 6px; border-top: 1px solid var(--border); }
+.nut-group:first-of-type { border-top: 0; padding-top: 2px; }
+.nut-group-title { font-size: var(--fs-sm); font-weight: 600; margin: 0 0 4px; }
+.mint-detail .nut-card.nut-row {
+  display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 12px; align-items: baseline;
+  padding: 9px 6px; margin: 0 -6px; border: 0; border-radius: 6px; background: none; cursor: pointer; min-height: 0;
+}
+.mint-detail .nut-card.nut-row:hover { background: var(--elevated); }
+.mint-detail .nut-card.nut-row:focus-visible { outline: 2px solid var(--action); outline-offset: 1px; }
+.nut-tag {
+  font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text2); white-space: nowrap;
+  border: 1px solid var(--border2); border-radius: 5px; padding: 1px 6px; justify-self: start;
+}
+.nut-row-name { min-width: 0; font-size: var(--fs-sm); }
+.nut-row-name b { font-weight: 600; }
+.nut-row-name span { display: block; color: var(--text2); font-size: var(--fs-xs); margin-top: 1px; }
+.nut-row-state { display: inline-flex; gap: 6px; align-items: center; font-size: var(--fs-xs); white-space: nowrap; }
+.nut-row-state.supported { color: var(--accent); }
+.nut-row-state.nut-disabled { color: color-mix(in srgb, var(--amber) 85%, var(--text)); }
+.nut-row-state.unsupported { color: var(--text3); }
+.mint-detail .md-nut-nutzap-note { margin-top: 14px; font-size: var(--fs-xs); color: var(--text3); }
+.mint-detail .md-nuts-works .md-panel-title { margin-bottom: 8px; }
+.md-works { margin: 0; }
+.md-works dd { margin: 0; }
+.md-works-yes { color: var(--accent); }
+.md-works-no { color: var(--text2); }
+.mint-detail .md-nuts-works .md-panel-hint { margin-top: 10px; font-size: var(--fs-xs); color: var(--text2); }
+@media (max-width: 860px) {
+  .md-nuts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .mint-detail .nut-card.nut-row { grid-template-columns: 64px minmax(0, 1fr); }
+  .nut-row-state { grid-column: 2; }
+}
+.md-limits-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); margin-top: 6px; }
+.md-limits-table th, .md-limits-table td { text-align: left; padding: 9px 12px 9px 0; border-top: 1px solid var(--border); vertical-align: top; }
+.md-limits-table thead th { border-top: 0; padding-top: 4px; font-size: var(--fs-xs); font-weight: 500; color: var(--text2); }
+.md-limits-table th[scope="row"] { font-weight: 400; white-space: nowrap; }
+.md-limits-table .n { text-align: right; padding-right: 0; padding-left: 12px; }
+/* Phones: the method and the ranges wrap inside their cells instead of widening the table. */
+@media (max-width: 480px) {
+  .md-limits-table th[scope="row"] { white-space: normal; }
+  .md-limits-table td { overflow-wrap: anywhere; }
+}
+/* A NUT the mint does not support: the name one step dimmer (still >= 4.5:1), the state word says it. */
+.mint-detail .nut-card.nut-row.unsupported .nut-row-name b { color: var(--text2); font-weight: 500; }

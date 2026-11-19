@@ -4,7 +4,7 @@ import { ChangeDate, PendingTag } from '@/components/mint/ChangeDate'
 import { feeDates } from '@/utils/changeDates'
 import type { MintChangesData } from '@/utils/mintChangeLog'
 import type { FeeKeysetLike } from '@/utils/feeExamples'
-import { feesView, limitRows, limitsSource, reservedFeeLines, LIMITS_NOTE, NO_INPUT_FEE } from '@/utils/feesLimits'
+import { feesView, limitTable, limitsSource, reservedFeeLines, LIMITS_NOTE, NO_INPUT_FEE } from '@/utils/feesLimits'
 import { FEE_PER_COIN_TEXT } from '@/utils/tooltipTexts'
 
 type MethodLike = { method: string; unit: string; [key: string]: unknown }
@@ -28,7 +28,7 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
 }) {
   const [historyOpen, setHistoryOpen] = useState<string | null>(null)
   const fees = feesView(keysets)
-  const limits = limitRows(mintMethods, meltMethods, disabled)
+  const limits = limitTable(mintMethods, meltMethods, disabled)
   const src = limitsSource(fetchedAt, now)
   const reserved = reservedFeeLines(units)
   // With the change data known, every fee row gets a dates line ("since" / "unchanged since"): reserve it too while waiting.
@@ -78,14 +78,26 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
           )
         })}
       </div>
-      <div className="md-info-grid md-info-list" data-testid="mint-limits">
-        {limits.map(r => (
-          <div className="md-info-row" key={r.key}>
-            <span className="md-info-label">{r.label}</span>
-            <span className="md-info-value">{r.value}</span>
-          </div>
-        ))}
-      </div>
+      {/* Limits per payment as a table, method x deposit / withdrawal (2026-11-19 redesign; they were "Deposit (mint) ·
+          bolt11 · sat" rows). The empty and switched-off cases keep their sentence. */}
+      {limits.length === 0 ? (
+        <div className="md-info-grid md-info-list" data-testid="mint-limits">
+          <div className="md-info-row"><span className="md-info-label">Limits</span><span className="md-info-value">no methods declared</span></div>
+        </div>
+      ) : (
+        <table className="md-limits-table" data-testid="mint-limits">
+          <thead><tr><th scope="col">Method</th><th scope="col" className="n">Deposit</th><th scope="col" className="n">Withdrawal</th></tr></thead>
+          <tbody>
+            {limits.map(r => (
+              <tr key={r.key}>
+                <th scope="row">{r.label}</th>
+                <td className="n">{r.deposit}</td>
+                <td className="n">{r.withdrawal}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       <div className="md-fl-note">
         <div>
           {src.text}

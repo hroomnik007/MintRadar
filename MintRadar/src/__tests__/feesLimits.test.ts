@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { feesView, feeUnitLabel, formatFeeRate, limitRows, limitsSource, reservedFeeLines, FEES_NOT_CHECKED, FEES_NO_ACTIVE_KEYSET, NO_INPUT_FEE, LIMIT_NOT_DECLARED, LIMITS_NOTE } from '@/utils/feesLimits'
+import { feesView, feeUnitLabel, formatFeeRate, limitRows, limitTable, limitsSource, reservedFeeLines, FEES_NOT_CHECKED, FEES_NO_ACTIVE_KEYSET, NO_INPUT_FEE, LIMIT_NOT_DECLARED, LIMITS_NOTE } from '@/utils/feesLimits'
 import { feeExamplesOf, inputFeeFor } from '@/utils/feeExamples'
 import { FEE_PER_COIN_TEXT, KEYSET_FEE_TEXT } from '@/utils/tooltipTexts'
 import { feeExamplesOf as beFeeExamplesOf } from '../../backend/src/shared/feeExamples'
@@ -159,5 +159,26 @@ describe('source and note', () => {
   it('reserves one line per listed unit, at least one', () => {
     expect(reservedFeeLines(['sat', 'usd'])).toBe(2)
     expect(reservedFeeLines(null)).toBe(1)
+  })
+})
+
+describe('limitTable (Mint Detail, 2026-11-19 redesign)', () => {
+  it('one row per method and unit, deposit and withdrawal side by side, known methods and units first', () => {
+    const rows = limitTable(
+      [{ method: 'onchain', unit: 'sat', min_amount: 10000, max_amount: 5000000 }, { method: 'bolt11', unit: 'sat', min_amount: 1, max_amount: 1000000 }, { method: 'bolt11', unit: 'usd', min_amount: 1 }],
+      [{ method: 'bolt11', unit: 'sat', min_amount: 1, max_amount: 500000 }],
+    )
+    expect(rows.map(r => [r.label, r.deposit, r.withdrawal])).toEqual([
+      ['bolt11 · sat', '1 to 1,000,000', '1 to 500,000'],
+      ['On-chain · sat', '10,000 to 5,000,000', '—'],
+      ['bolt11 · usd', 'from 1', '—'],
+    ])
+  })
+  it('says which side is switched off, and what is not declared', () => {
+    const rows = limitTable([{ method: 'bolt11', unit: 'sat' }], [{ method: 'bolt11', unit: 'sat', max_amount: 9 }], { melt: true })
+    expect(rows).toEqual([{ key: 'bolt11|sat', label: 'bolt11 · sat', deposit: 'no limits declared', withdrawal: 'Disabled by the mint' }])
+  })
+  it('drops names that are not plain method and unit names', () => {
+    expect(limitTable([{ method: '<img src=x>', unit: 'sat' }, { method: 'bolt11', unit: 'sat;drop' }], null)).toEqual([])
   })
 })

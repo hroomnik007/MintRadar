@@ -44,6 +44,6 @@ test('the header NUT count equals the NUTs tab before and after the live data ar
   await expect(page.getByText('Nutshell/0.16.0').first()).toBeVisible()
   // Live data in: the tab and the header still agree (4 of 14 known NUTs; 11 keys were declared in all).
   await expect(tabSummary).toHaveText('4')
-  await expect(page.locator('.nut-summary-line')).toContainText('4 of 14 known NUTs supported')
+  await expect(page.locator('.nut-summary-line')).toContainText('4 of the 14 NUTs we track')
   await expect(header).toHaveText('4')
 })

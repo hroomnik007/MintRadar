@@ -43,9 +43,10 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   // the phone count everywhere (wide -5), and the Keysets fee chip left the NUTs tab (mint-fee-nuts -1).
   'mint-alpha-overview': same([7, 7]),
   'mint-alpha-history': same([1, 1]),
-  'mint-alpha-nuts': same([3, 3]),
+  // -1 (phase 4d): the backup ⓘ is a visible sentence under "What works with this mint".
+  'mint-alpha-nuts': same([2, 2]),
   // A mint with an input fee (Task B2): the Fees and limits card adds the fee row's ⓘ.
-  'mint-fee-nuts': same([4, 4]),
+  'mint-fee-nuts': same([3, 3]),
   'mint-alpha-audit': same([6, 6]),
   'mint-alpha-audit-nodata': same([2, 2]),
   'mint-alpha-reviews': same([2, 2]),
@@ -56,7 +57,7 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   'mint-test-overview': same([6, 6]),
   'mint-test-audit': same([2, 2]),
   'mint-new-overview': same([7, 7]), // +1: the "New" badge's ⓘ
-  'mint-new-nuts': same([3, 3]),
+  'mint-new-nuts': same([2, 2]),
   'mint-operator-overview': same([6, 6]),
   'mint-operator-reviews': same([2, 2]),
   // +1 (2026-10-25): the ⓘ next to "NUT Support" explains the green / grey NUT chips.
