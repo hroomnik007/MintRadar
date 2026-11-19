@@ -74,16 +74,18 @@ test.describe('Dashboard', () => {
 
   test('sorting reorders the mints', async ({ page }) => {
     const names = page.locator('.mint-grid .card-name')
-    // One select since the 2026-11-19 redesign; the arrow button next to it flips the direction.
+    // One select since the 2026-11-19 redesign; each option has its own direction (no direction button since the
+    // mockup alignment), a ?dir= in the URL still applies.
     const sortBy = (value: string) => page.locator('.sort-select').selectOption(value)
 
     // Default sort is now Reliability Score desc: Alpha 92, Delta 78, Bravo 55, Charlie offline → 0.
     await expect(names).toHaveText(['Alpha Mint', 'Delta Mint', 'Bravo Mint', 'Charlie Mint'])
 
-    // Switching to Name starts ascending; the direction button flips it to descending.
+    // Name sorts A to Z; a shared link with dir=desc reverses it.
     await sortBy('name')
     await expect(names).toHaveText(['Alpha Mint', 'Bravo Mint', 'Charlie Mint', 'Delta Mint'])
-    await page.locator('.sort-dir-btn').click()
+    await expect(page.locator('.sort-dir-btn')).toHaveCount(0)
+    await page.goto('/?status=all&sort=name&dir=desc')
     await expect(names).toHaveText(['Delta Mint', 'Charlie Mint', 'Bravo Mint', 'Alpha Mint'])
   })
 

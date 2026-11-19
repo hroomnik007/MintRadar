@@ -94,7 +94,7 @@ const IcChevronDown = () => (
   <svg className="sort-select-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
 )
 // The sort options of the select, in reading order (Reliability Score is the default).
-const SORT_LABELS = [['reliability', 'Reliability Score'], ['reviewCount', 'Most reviewed'], ['rating', 'Rating'], ['latency', 'Latency'], ['name', 'Name']] as const
+const SORT_LABELS = [['reliability', 'Reliability'], ['reviewCount', 'Most reviewed'], ['rating', 'Rating'], ['latency', 'Latency'], ['name', 'Name']] as const
 const IcList = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <line x1="5" y1="4" x2="14" y2="4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
@@ -1343,7 +1343,7 @@ export default function Dashboard() {
               ref={searchInputRef}
               className="search-input"
               type="text"
-              placeholder="Search mints"
+              placeholder="Search mints by name or URL"
               value={search}
               onChange={e => commitFilters({ search: e.target.value }, { replace: true })}
               onFocus={() => setSearchFocused(true)}
@@ -1364,8 +1364,9 @@ export default function Dashboard() {
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
           </button>
         </div>
-        {/* One select instead of five chips (2026-11-19 redesign): the controls take one row; the arrow button next to it
-            flips the direction (each option starts in its own default direction). */}
+        {/* One select instead of five chips (2026-11-19 redesign): the controls take one row. Each option sorts in its
+            own direction (score, reviews and rating high first, latency low first, name A to Z); there is no direction
+            button since the mockup alignment (owner, 2026-11-19). A ?sortDir= in a shared link still applies. */}
         <div className="sort-control">
           <label className="sort-select-wrap">
             <span className="sr-only">Sort by</span>
@@ -1378,14 +1379,6 @@ export default function Dashboard() {
             </select>
             <IcChevronDown />
           </label>
-          <button
-            type="button"
-            className="sort-dir-btn"
-            aria-label={sortDir === 'asc' ? 'Sort ascending, switch to descending' : 'Sort descending, switch to ascending'}
-            onClick={() => commitFilters({ sortDir: sortDir === 'asc' ? 'desc' : 'asc' })}
-          >
-            <span aria-hidden="true">{sortDir === 'asc' ? '↑' : '↓'}</span>
-          </button>
         </div>
         <div className="view-toggle">
           <button type="button" className={`view-toggle-btn${viewMode === 'cards' ? ' active' : ''}`} onClick={() => handleViewMode('cards')} title="Card view" aria-label="Card view" aria-pressed={viewMode === 'cards'}>
@@ -1395,18 +1388,20 @@ export default function Dashboard() {
             <IcList />
           </button>
         </div>
-        <button
-          type="button"
-          className="reset-filters-btn"
-          aria-label="Reset to defaults"
-          data-testid="reset-to-defaults"
-          disabled={atDefaultView}
-          onClick={resetToDefaults}
-        >
-          <IcClearFilters />
-        </button>
-        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={openSubmit} aria-label="Add mint">
-          <IcPlus /> <span className="submit-btn-label">Add mint</span>
+        {/* Only when something differs from the default view (it was a disabled icon button all the time). */}
+        {!atDefaultView && (
+          <button
+            type="button"
+            className="reset-filters-btn"
+            aria-label="Reset to defaults"
+            data-testid="reset-to-defaults"
+            onClick={resetToDefaults}
+          >
+            <IcClearFilters />
+          </button>
+        )}
+        <button type="button" className="submit-btn" ref={submitBtnRef} onClick={openSubmit} aria-label="Add a mint">
+          <IcPlus /> <span className="submit-btn-label">Add a mint</span>
         </button>
       </div>
 

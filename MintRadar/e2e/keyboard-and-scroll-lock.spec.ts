@@ -39,7 +39,7 @@ test('the page behind an open dialog does not scroll, and scrolls again after it
   await page.setViewportSize({ width: 1280, height: 500 })
   await page.goto('/')
   await expect(page.locator('.mint-card').first()).toBeVisible()
-  await page.getByRole('button', { name: 'Add mint' }).first().click()
+  await page.getByRole('button', { name: 'Add a mint' }).first().click()
   await expect(page.getByRole('dialog')).toBeVisible()
   const locked = await page.evaluate(() => getComputedStyle(document.documentElement).overflow)
   expect(locked).toBe('hidden')

@@ -2860,3 +2860,36 @@
 .card-foot .card-pill, .card-foot .card-reliability-badge { font-size: var(--fs-xs); line-height: 1.3; padding: 1px 6px; border-radius: 4px; }
 /* The foot is as tall as the Compare button with or without it (offline cards have none), so every card is one height. */
 .mint-card .card-foot { min-height: 43px; box-sizing: border-box; }
+
+/* ── Mockup alignment, 2026-11-19 (owner: "the buttons as in the design") ──────────────────────────────────────────
+   mints.html: one 40 px row of quiet outlined controls on the page background (no filled boxes): search, Filters,
+   the sort select, the view switch (copper line under the chosen view) and "Add a mint" (neutral, not copper). */
+.dashboard-controls { gap: 8px; }
+.dashboard-controls .search-input {
+  height: 40px; background: transparent; border: 1px solid var(--border-strong); border-radius: 8px;
+  font-size: var(--fs-sm); color: var(--text);
+}
+.dashboard-controls .search-input::placeholder { color: var(--text3); }
+.dashboard-controls .search-input:hover { border-color: var(--text3); }
+.dashboard-controls .search-shortcut { border-color: var(--border-strong); color: var(--text3); }
+.dashboard-controls .filter-btn,
+.dashboard-controls .submit-btn,
+.dashboard-controls .reset-filters-btn {
+  height: 40px; padding: 0 14px; gap: 8px;
+  background: transparent; border: 1px solid var(--border-strong); border-radius: 8px;
+  color: var(--text); font: 500 var(--fs-sm) var(--font-body);
+}
+.dashboard-controls .reset-filters-btn { width: 40px; padding: 0; color: var(--text2); }
+.dashboard-controls .filter-btn:hover,
+.dashboard-controls .submit-btn:hover,
+.dashboard-controls .reset-filters-btn:hover { border-color: var(--text3); background: transparent; color: var(--text); }
+.dashboard-controls .filter-btn.active { background: var(--elevated); border-color: var(--text3); }
+.dashboard-controls .sort-select { height: 40px; background: transparent; border-color: var(--border-strong); }
+.dashboard-controls .sort-select:hover { border-color: var(--text3); }
+.dashboard-controls .view-toggle { gap: 0; padding: 0; background: transparent; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+.dashboard-controls .view-toggle-btn { width: 38px; height: 38px; padding: 0; border: 0; border-radius: 0; color: var(--text2); }
+.dashboard-controls .view-toggle-btn + .view-toggle-btn { border-left: 1px solid var(--border); }
+.dashboard-controls .view-toggle-btn.active { background: var(--elevated); border-color: var(--border); color: var(--text); box-shadow: inset 0 -2px 0 var(--action); }
+/* The network sentence is framed, not filled (mockup .pulse), and the controls sit a step below it. */
+.dash-intro .dash-status-btn { background: transparent; border-color: var(--border-strong); min-height: 40px; }
+.dashboard-controls { margin-top: 22px; }

@@ -52,9 +52,10 @@ for (const width of [320, 340, 360]) {
     await openDashboard(page, width, { loggedIn: false })
     const de = await overflow(page)
     expect(de.sw).toBeLessThanOrEqual(de.cw)
-    // One select and the direction button since the 2026-11-19 redesign: both inside the viewport, every option selectable.
+    // One select since the 2026-11-19 redesign (no direction button since the mockup alignment): inside the viewport,
+    // every option selectable.
     const select = page.locator('.sort-select')
-    for (const sel of ['.sort-select', '.sort-dir-btn']) {
+    for (const sel of ['.sort-select']) {
       const box = (await page.locator(sel).boundingBox())!
       expect(box.x).toBeGreaterThanOrEqual(0)
       expect(box.x + box.width).toBeLessThanOrEqual(width)

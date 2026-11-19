@@ -136,11 +136,13 @@ test('no results: names the query, "Clear search" restores the list, Add mint op
   await expect(page.getByRole('dialog')).toBeVisible()
 })
 
-test('"Reset to defaults" is disabled on the default view and clears search, sort, filters and URL params', async ({ page }) => {
+test('"Reset to defaults" shows only off the default view and clears search, sort, filters and URL params', async ({ page }) => {
   const btn = page.getByRole('button', { name: 'Reset to defaults' })
   await page.goto('/')
   await expect(page.locator('.mint-card').first()).toBeVisible()
-  await expect(btn).toBeDisabled()
+  // Hidden on the default view since the 2026-11-19 mockup alignment (it was a disabled icon button).
+  await expect(btn).toHaveCount(0)
+  await page.goto('/?q=alpha')
   await expect(btn).not.toHaveAttribute('title')
   await expect(btn.locator('svg')).toBeVisible()
 
@@ -149,7 +151,7 @@ test('"Reset to defaults" is disabled on the default view and clears search, sor
   await btn.click()
   expect(new URL(page.url()).search).toBe('')
   await expect(page).not.toHaveURL(/[?&](q|sort|dir|reliability|method|compare)=/)
-  await expect(btn).toBeDisabled()
+  await expect(btn).toHaveCount(0)
 })
 
 test("the Filters panel's Reset still clears only the filters, not the search", async ({ page }) => {

@@ -16,7 +16,7 @@ async function openBulkTab(page: import('@playwright/test').Page) {
   await installApiMocks(page)
   await page.goto('/')
   await expect(page.locator('.dashboard')).toBeVisible()
-  await page.locator('.submit-btn', { hasText: 'Add mint' }).click()
+  await page.locator('.submit-btn', { hasText: 'Add a mint' }).click()
   await page.locator('.submit-tab-btn', { hasText: 'Bulk' }).click()
 }
 
@@ -101,7 +101,7 @@ test('reopening the modal after a 429 clears the banner', async ({ page }) => {
   await expect(page.locator('.submit-result.error', { hasText: 'Rate limit reached' })).toBeVisible()
 
   await page.locator('.submit-ok-btn', { hasText: 'Close' }).click()
-  await page.locator('.submit-btn', { hasText: 'Add mint' }).click()
+  await page.locator('.submit-btn', { hasText: 'Add a mint' }).click()
   await page.locator('.submit-tab-btn', { hasText: 'Bulk' }).click()
 
   await expect(page.locator('.submit-result.error', { hasText: 'Rate limit reached' })).toHaveCount(0)

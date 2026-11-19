@@ -132,8 +132,8 @@ for (const phone of PHONES) {
       await layoutReady(page)
       const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
       expect(sw).toBeLessThanOrEqual(cw)
-      const boxes = await page.locator('.sort-select, .sort-dir-btn').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { left: r.left, right: r.right } }))
-      expect(boxes).toHaveLength(2)
+      const boxes = await page.locator('.sort-select').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { left: r.left, right: r.right } }))
+      expect(boxes).toHaveLength(1)
       for (const b of boxes) {
         expect(b.left).toBeGreaterThanOrEqual(0)
         expect(b.right).toBeLessThanOrEqual(phone.width)

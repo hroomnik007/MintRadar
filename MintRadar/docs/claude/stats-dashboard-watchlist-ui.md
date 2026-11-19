@@ -71,6 +71,15 @@
 - `ComparisonModal` also renders a Community Rating row (★ badge, "—" fallback when no reviews)
   and a shield-badge Reliability Score (see "Reliability Score vs Community Rating" above) — added 2026-09-03.
 
+## Mints toolbar, 2026-11-19 mockup alignment (owner: "the buttons as in the design")
+
+`mints.html`: one row of 40 px outlined controls on the page background (block at the end of `Dashboard.css`):
+search "Search mints by name or URL", Filters, the select "Sort: Reliability" (option label shortened from "Reliability
+Score"), the view switch (frame, copper line under the chosen view), "Add a mint" (neutral; was copper "Add mint").
+**No direction button any more:** each sort option has its own direction (`DEFAULT_SORT_DIRS`); `?dir=` in a link still
+applies. **"Reset to defaults"** shows only off the default view (it was a disabled icon button). The network sentence box
+is framed, not filled.
+
 ## Watchlist, 2026-11-19 redesign (phase 6d): current layout, supersedes the card grid described below
 
 Approved mockup `~/Claude/refs/mintradar-redesign-1118/watchlist.html`; styles in the "phase 6d" blocks of `Watchlist.css`.

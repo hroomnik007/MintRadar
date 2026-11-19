@@ -29,14 +29,23 @@ test('search input is a visibly-bounded rounded control', async ({ page }) => {
       inputBg: norm(input.backgroundColor),
       barBg: norm(bar.backgroundColor),
       filterBtnBg: norm(filterBtn.backgroundColor),
+      inputBorder: norm(input.borderTopColor),
+      inputBorderW: input.borderTopWidth,
+      filterBtnBorder: norm(filterBtn.borderTopColor),
       inputRadius: input.borderTopLeftRadius,
+      filterBtnRadius: filterBtn.borderTopLeftRadius,
       tokenRadius,
     }
   })
 
-  expect(r.inputBg).not.toBe(r.barBg)          // must contrast with the bar
-  expect(r.inputBg).toBe(r.filterBtnBg)         // same fill as its row neighbours
-  expect(r.inputRadius).toBe(r.tokenRadius)     // corner radius is the shared --radius-m
+  // Since the 2026-11-19 mockup alignment the controls are outlined, not filled: the shape is drawn by a 1px frame in
+  // the same colour as the Filters button beside it.
+  expect(r.inputBg).toBe(r.filterBtnBg)         // same (transparent) fill as its row neighbours
+  expect(r.inputBorderW).toBe('1px')
+  expect(r.inputBorder).not.toBe('rgba(0,0,0,0)')
+  expect(r.inputBorder).toBe(r.filterBtnBorder)
+  expect(r.inputRadius).toBe(r.filterBtnRadius) // one control radius (8px) for the whole row
+  expect(r.tokenRadius).not.toBe('')
 })
 
 for (const width of [320, 360, 390, 430]) {
