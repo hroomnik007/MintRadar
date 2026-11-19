@@ -3,7 +3,8 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fix
 import { layoutReady, resize } from './fixtures/settle'
 import { CLIENT_LATENCY_RESULT_MS } from '../src/constants/probeLocation'
 
-// Mint Detail tweaks (2026-11-15): "Details ›" under the strip's Reliability Score only in the mobile panel layout,
+// Mint Detail tweaks (2026-11-15): "Details ›" under the strip's Reliability Score only in the mobile panel layout (since the
+// 2026-11-19 redesign: "How it is made" at every width),
 // "Show my latency" turns into "Your latency: N ms" in place (the strip keeps its height), and the NIP-87 row drops
 // "stored when first seen" (found) and "checked {time}" (not found).
 
@@ -23,26 +24,18 @@ async function open(page: Page, width: number, known?: Record<string, unknown>) 
   await layoutReady(page)
 }
 
-for (const width of [1440, 1024, 769]) {
-  test(`${width}px: the strip's Reliability Score tile has no "Details ›" row`, async ({ page }) => {
+// Since the 2026-11-19 redesign the score tile has one "How it is made" link at every width (the "Details ›" row of the
+// phone panel and the donut tile are gone); mint-detail-summary-score.spec.ts opens the dialog with it.
+for (const width of [1440, 1024, 769, 700, 390]) {
+  test(`${width}px: the strip's Reliability Score tile reads "How it is made"`, async ({ page }) => {
     await open(page, width)
     const tile = page.getByTestId('md-summary-score')
-    await expect(tile).toBeVisible()
-    await expect(tile.locator('.md-sc-score-link')).toBeHidden()
     await expect(tile).toContainText('High Reliability')
+    await expect(tile.locator('.md-sc-score-link')).toBeVisible()
+    await expect(tile.locator('.md-sc-score-link')).toHaveText('How it is made')
+    await expect(page.locator('.md-sc-reliability')).toHaveCount(0)
   })
 }
-
-test('700px (mobile panel layout): the Reliability Score tile keeps "Details ›"', async ({ page }) => {
-  await open(page, 700)
-  await expect(page.getByTestId('md-summary-score').locator('.md-sc-score-link')).toBeVisible()
-  await expect(page.getByTestId('md-summary-score').locator('.md-sc-score-link')).toHaveText('Details ›')
-})
-
-test('390px: the compact Reliability tile keeps "Details ›"', async ({ page }) => {
-  await open(page, 390)
-  await expect(page.locator('.md-sc-reliability .md-sc-reliability-link')).toBeVisible()
-})
 
 for (const width of [1440, 1200, 1024, 769, 390, 320]) {
   test(`${width}px: "Show my latency" becomes "Your latency: N ms" in the same button, the strip does not grow`, async ({ page }) => {

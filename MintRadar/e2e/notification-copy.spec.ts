@@ -68,7 +68,7 @@ test.describe('Notification copy matches the opt-in behaviour', () => {
     await mockRelays(page)
     await installApiMocks(page)
     await page.goto(`/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`)
-    await page.locator('.md-watch-star-hero').click()
+    await page.locator('.md-dh-star').click()
     // (this modal has no dialog role)
     const dialog = page.locator('.rv-modal', { hasText: 'Watch this mint' })
     await expect(dialog).toBeVisible()

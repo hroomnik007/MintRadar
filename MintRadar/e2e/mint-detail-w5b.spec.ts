@@ -78,7 +78,7 @@ test.describe('W5b A: source line under every score row', () => {
 
   test('320 px: lines wrap inside the panel without clipping', async ({ page }) => {
     await open(page, ALPHA, {}, { width: 320, height: 640 })
-    await page.locator('.md-sc-reliability').click()
+    await page.locator('.md-sc-score-link').click()
     const lines = page.locator('.rb-modal .rb-row-source')
     await expect(lines).toHaveCount(5)
     for (let i = 0; i < 5; i++) {
@@ -114,7 +114,7 @@ test.describe('W5b B: Limited data', () => {
 
   test('the label is also in the breakdown dialog on a phone', async ({ page }) => {
     await open(page, ALPHA, { auditCzTotal: 4, auditCzBlamed: 0 }, { width: 390, height: 844 })
-    await page.locator('.md-sc-reliability').click()
+    await page.locator('.md-sc-score-link').click()
     await expect(page.locator('.rb-modal').getByRole('button', { name: 'Limited data' })).toBeVisible()
   })
 })

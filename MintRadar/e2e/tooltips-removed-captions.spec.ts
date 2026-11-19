@@ -69,7 +69,7 @@ for (const width of [1440, 768, 390, 320]) {
     await expect(tile.locator('.md-sc-label')).toHaveText('Latency')
     await expect(triggers(tile.locator('.md-sc-label'))).toHaveCount(0)
     await expect(tile.locator('.md-sc-sub')).toContainText(latencyCaption())
-    await expect(tile.locator('.md-sc-sub')).toContainText(`server · ${PROBE_LOCATION}`)
+    await expect(tile.locator('.md-sc-sub')).toContainText(`From ${PROBE_LOCATION}`)
     await expect(tile.locator('.latency-test-btn')).toHaveText('Show my latency')
     // no ⓘ on the tile at all: the one beside the button was removed on 2026-11-08 (it repeated the button's label)
     await expect(triggers(tile)).toHaveCount(0)

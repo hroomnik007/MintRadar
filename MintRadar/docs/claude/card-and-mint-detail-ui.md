@@ -585,3 +585,26 @@ After #211 widened the Latency column, "30 days 100% · 2 outages" wrapped at 12
   the surge flag, or "None yet").
 - **Foot:** status dot + word (`.card-state-word`; the dot has no `title` any more), badges, units and Lightning
   ("sat, usd, Lightning"), Compare (an icon button) on the right.
+
+## Mint Detail header, strip and 30 days, 2026-11-19 redesign (phase 4a)
+
+Approved mockup `~/Claude/refs/mintradar-redesign-1118/mint.html`; styles in the "phase 4a" block at the end of
+`MintDetail.css` (scoped to `.md-dh`, `.md-strip`, `.md-trace`; the legacy header and strip rules were removed, 126 of them).
+- **Header (`.md-header.md-dh`):** Back (text link look) on its own row; icon fixed 64px (48px on phones; it was sized from
+  the name block with `useElementHeight`, which is removed); name, state word and the **watch star right after them**
+  (owner, 2026-11-18; `.md-dh-star`, it was `.md-watch-star-hero` in the top-right corner), New / Test mint badges; the
+  shareable URL and "First seen" under it; Mint QR, Open in Cashu.me, Compare at the page's right edge (under the name on
+  phones, "Cashu.me" there). DOM and Tab order: Back, star, URL, actions.
+- **Strip (`.md-summary.md-strip`):** five figures in one frame with thin rules: Reliability Score (the condensed readout, the
+  sentence "<band>. Operational health, not solvency." and a "How it is made" button that opens the breakdown dialog, at
+  every width; the sentence keeps its shape while the score is pending, so the tile does not grow when it arrives),
+  Latency ("From Nuremberg", `latencyCaption()`, and the "Show my latency" button), Uptime 24h, Community rating, Software
+  (`.md-sc-software`: "<n> NUTs" with the count in `.md-sc-nut-count`, the version, Outdated, "<n> disabled" in
+  `.md-sc-nut-disabled`). The phone donut tile (`.md-sc-reliability`) and the separate Version and NUTs tiles are gone.
+  Phones: the score spans the first row (number left, words right), then 2 x 2. Every figure has one line box (`height:
+  1.1em`) so "—" and "50 ms" are the same height.
+- **Last 30 days (`.md-trace`):** the 30 daily bars wide (`UptimeBars variant="wide"`, same data as the cards), the 30-day
+  figure as "<pct>% uptime, <n> outages" beside the heading (`data-testid="md-uptime-30d"`; it was in the Uptime tile), a
+  date scale (29 days ago … Today). Hidden without `uptimeDaily30`.
+- **Tabs:** on phones (<=768px) the five tabs are equal grid columns, no sideways scroll (owner, 2026-11-18); 13px below 375px.
+- The Overview sidebar (gauge, breakdown, units, keysets) is unchanged in 4a; phase 4b replaces it.

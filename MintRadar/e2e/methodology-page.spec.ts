@@ -111,7 +111,7 @@ test.describe('Methodology page', () => {
   test('the score breakdown modal has one "How the score is computed" link, and it opens this page', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto(`/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`)
-    await page.locator('.md-sc.md-sc-reliability').click()
+    await page.locator('.md-sc-score-link').click()
     const dialog = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
     await expect(dialog).toBeVisible()
     const link = dialog.getByRole('link', { name: 'How the score is computed' })

@@ -244,8 +244,8 @@ describe('NHI subtitle and the average-uptime caption (they replaced two tooltip
 describe('Latency caption (Mint Detail)', () => {
   it('says where the number was measured, from PROBE_LOCATION, and the button keeps its label', () => {
     expect(CLIENT_LATENCY_BUTTON_LABEL).toBe('Show my latency')
-    expect(latencyCaption()).toBe(`server · ${PROBE_LOCATION}`)
-    expect(latencyCaption('Helsinki')).toBe('server · Helsinki')
+    expect(latencyCaption()).toBe(`From ${PROBE_LOCATION}`)
+    expect(latencyCaption('Helsinki')).toBe('From Helsinki')
   })
 
   it('MintDetail renders the caption and the button label from the constants, and has no Latency tooltip', () => {

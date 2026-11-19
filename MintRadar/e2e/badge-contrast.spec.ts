@@ -100,7 +100,7 @@ for (const w of [1440, 390]) {
       await page.route('**/api/mints/version-history**', r => r.fulfill({ json: { history: [], latestGlobalVersion: 'nutshell/0.20' } }))
       const all: BadgeRecord[] = []
       await page.goto(`/mint/${encodeURIComponent(MOCK_MINTS[0]!.url)}`)
-      await expect(page.locator('.md-sc', { has: page.locator('.md-sc-sub', { hasText: 'software' }) }).getByText('Outdated')).toBeVisible()
+      await expect(page.locator('.md-sc-software').getByText('Outdated')).toBeVisible()
       all.push(...(await scan(page)))
       await page.goto('/?status=all')
       await expect(page.locator('.mint-card')).toHaveCount(4)

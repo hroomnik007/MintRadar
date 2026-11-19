@@ -6,6 +6,7 @@ import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-route
 import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
+import { UptimeBars } from '@/components/mint/UptimeBars'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
 import { ChangeDate, PendingTag } from '@/components/mint/ChangeDate'
@@ -63,7 +64,6 @@ import { useNow } from '@/hooks/useNow'
 import { mintDetailMeta, MINT_NOT_FOUND_TITLE } from '@/utils/pageMeta'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { CLIENT_LATENCY_BUTTON_LABEL, CLIENT_LATENCY_RESULT_MS, latencyCaption } from '@/constants/probeLocation'
-import { useElementHeight } from '@/hooks/useElementHeight'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, uptimeTileText, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { readContactChecks, scoreContactKindCounts } from '@/utils/contactChecks'
@@ -88,9 +88,7 @@ import './MintDetail.css'
 const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m => ({ default: m.ComparisonModal })))
 import {
   Copy, Check, Info, AlertTriangle,
-  Shield,
-  Clock, GitBranch, Layers, Zap, QrCode,
-  Star,
+  Zap, QrCode,
   ArrowUpRight, User,
 } from 'lucide-react'
 
@@ -400,36 +398,8 @@ function MintDetailContent({ url }: { url: string }) {
   const [highlightedReview, setHighlightedReview] = useState<string | null>(null)
 
 
-  // Avatar height tracks .md-namebox's actual rendered height (name/URL/First
-  // seen/Announced-on-Nostr lines) so a 3-line mint (no Nostr announcement)
-  // doesn't leave empty space below a still-4-line-tall avatar, and a 4-line
-  // one doesn't overflow past a still-3-line-tall avatar. Falls back to the
-  // old fixed 80/40px until the first ResizeObserver measurement lands.
-  // Clamped to the same fixed column width .md-avatar-id's CSS grid reserves
-  // for the avatar (--md-avatar-col) — that column is deliberately NOT sized
-  // from the avatar's own rendered width, precisely so this clamp can't feed
-  // back into .md-namebox's available width and self-amplify (verified this
-  // was a real runaway-growth bug before the grid+clamp fix: on a 390px
-  // mobile viewport, a 4-line mint with a Nostr announcement spiralled the
-  // avatar past 300px, since a taller avatar narrowed namebox, which wrapped
-  // more, which grew the measured height further). Keep in sync with
-  // .md-avatar-id's --md-avatar-col value (112px) and its mobile override.
-  //
-  // Mobile's cap is 40 — i.e. unchanged from the old fixed size, growth
-  // disabled entirely. Verified empirically (not a guess): even the 3-line
-  // baseline's natural, unwrapped height is ~66px on a 390px phone, already
-  // taller than 40, and mobile text already sits right at its own wrap
-  // threshold (confirmed this wraps identically on the pre-this-feature
-  // code at 375px — a pre-existing, unrelated condition). Any cap above 40
-  // (tried up to 56) measurably wrapped "First seen by MintRadar <Mon YYYY>"
-  // onto a second line at common widths (375–414px) that fit on one line
-  // today. So there is no cap value that both (a) lets the avatar grow past
-  // 40 and (b) doesn't risk new wrapping on real mobile widths — 40 is the
-  // only safe choice, and it reproduces the original mobile layout exactly.
+  // The header icon is a fixed 64px (48px on phones) since the 2026-11-19 redesign; it was sized from the name block.
   const isMobile = useIsMobile()
-  const AVATAR_COL_CAP = isMobile ? 40 : 72
-  const [nameboxRef, nameboxHeight] = useElementHeight<HTMLDivElement>()
-  const avatarSize = Math.min(nameboxHeight ?? (isMobile ? 40 : 72), AVATAR_COL_CAP)
 
   const [showQr, setShowQr] = useState(false)
   const [showReliabilityBreakdown, setShowReliabilityBreakdown] = useState(false)
@@ -1119,327 +1089,259 @@ function MintDetailContent({ url }: { url: string }) {
 
   return (
     <div className="mint-detail">
-      <div className="md-header">
-        <div className="md-hdr-left">
-          <button className="md-back md-back-compact" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
-          {/* Right after Back in the DOM (Tab: Back, then the star); the top-right corner is CSS: absolute against .md-header. */}
-          {isLoggedIn
-            ? (
-              <button
-                type="button"
-                className={`md-watch-star md-watch-star-hero${isWatching ? ' on' : ''}`}
-                aria-label={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
-                aria-pressed={isWatching}
-                title={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
-                onClick={toggleWatch}
-              >
-                <IcStar filled={isWatching} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="md-watch-star md-watch-star-hero"
-                aria-label={`Add ${displayName} to watchlist`}
-                aria-pressed={false}
-                title={`Add ${displayName} to watchlist`}
-                onClick={() => setShowWatchLoginModal(true)}
-              >
-                <IcStar filled={false} />
-              </button>
-            )
-          }
-          <div className="md-avatar-id">
-            <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={avatarSize} radius={16} className="md-hdr-favicon" />
-            <div className="md-namebox" ref={nameboxRef}>
-              {/* The h1 holds only the name: with the status and badges inside it, a screen reader
-                  read the heading as "21MintOnline". The flex row and its look stay on the outer .md-name. */}
-              <div className="md-name" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                <h1 className="md-name-h1" {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</h1>
-                <span className={`md-status-inline ${status === 'online' ? '' : status === 'archived' ? 'offline archived' : status === 'degraded' ? 'offline degraded' : 'offline'}`} data-status={status}>
-                  <span className={`status-dot ${isOnline ? '' : 'offline'}`} />
-                  <span>{statusLabel}</span>
-                </span>
-                {isNew && (
-                  <InfoTooltip text={newMintBadgeText()} width={240}><span className="md-age-badge-inline" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>New</span></InfoTooltip>
-                )}
-                {isTestMint(url) && (
-                  <InfoTooltip text={TEST_MINT_TEXT}>
-                    <span style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'var(--amber)',background:'var(--amber-soft)',border:'0.5px solid var(--amber-soft-strong)',borderRadius:5,padding:'3px 9px',flexShrink:0}}>
-                      Test mint
-                    </span>
-                  </InfoTooltip>
-                )}
-              </div>
-              <button
-                type="button"
-                className={`md-url md-url-copy ${copiedLink ? 'copied' : ''}`}
-                onClick={() => {
-                  const naddr = mintAnnounceNaddr(knownMint?.nostrAnnouncePubkey, knownMint?.nostrAnnounceD)
-                  const shareLink = naddr
-                    ? `${window.location.origin}/mint/nostr/${naddr}`
-                    : window.location.href
-                  void navigator.clipboard.writeText(shareLink)
-                  setCopiedLink(true)
-                  setTimeout(() => setCopiedLink(false), 2000)
-                }}
-              >
-                <span>
-                  {showTor && (
-                    <span className="md-url-tor" title={trackedIsOnion ? 'Tor hidden service — reachable only over the Tor network' : 'Mint also advertises a .onion URL'}>Tor</span>
-                  )}
-                  {(() => {
-                    // The scheme is hidden on phones (CSS) so a typical URL fits one line; it stays in the DOM.
-                    const m = /^(https?:\/\/)(.*)$/.exec(url)
-                    const rest = m ? m[2]! : url
-                    return (
-                      <>
-                        {m && <span className="md-url-scheme">{m[1]}</span>}
-                        {rest.split(/(?<=\/)/).map((part, i) => <Fragment key={i}>{part}<wbr /></Fragment>)}
-                      </>
-                    )
-                  })()}
-                </span>
-                {copiedLink ? <span className="md-url-copied-label">Link copied</span> : <ArrowUpRight size={12} />}
-              </button>
-              {firstSeen && (
-                <div className="md-first-seen" style={{fontSize:12,fontFamily:'var(--font-mono)',color:'var(--text-faint)',marginTop:4}}>{firstSeen}</div>
-              )}
-              <div className="md-announce-row">
-        <div className="md-hdr-actions">
-        <div className="md-hdr-center">
-          {!isOnline && knownMint?.lastError && (
-            <span className="md-hdr-error" style={{display:'inline-flex',alignItems:'center',gap:4}}>
-              <span
-                className="md-error-badge"
-                style={{fontSize:12,color:'color-mix(in srgb, var(--red) 75%, var(--text))',fontFamily:'var(--font-mono)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
-              >
-                {knownMint.lastError}
+      {/* Header, 2026-11-19 redesign (phase 4): icon | name, state and the watch star right after them (owner, 2026-11-18),
+          the shareable URL and "first seen" under it | the actions on the right (under the name on phones). */}
+      <div className="md-header md-dh">
+        <button className="md-back md-back-compact" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+        <div className="md-dh-main">
+          <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={isMobile ? 48 : 64} radius={isMobile ? 12 : 14} className="md-hdr-favicon" />
+          <div className="md-namebox">
+            <div className="md-name md-dh-title">
+              <h1 className="md-name-h1" {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</h1>
+              <span className={`md-status-inline ${status === 'online' ? '' : status === 'archived' ? 'offline archived' : status === 'degraded' ? 'offline degraded' : 'offline'}`} data-status={status}>
+                <span className={`status-dot ${isOnline ? '' : 'offline'}`} />
+                <span>{statusLabel}</span>
               </span>
-              {httpErrorTooltip(knownMint.lastError) ? (
-                <InfoTooltip iconSize={11} width={200} about={knownMint.lastError} text={httpErrorTooltip(knownMint.lastError) ?? ''} />
-              ) : (
-                // No explanation for this error: the icon stays (as before) but is not a control that opens nothing.
-                <Info size={11} color="#6b7280" style={{cursor:'help'}} aria-hidden="true" />
+              {isLoggedIn
+                ? (
+                  <button
+                    type="button"
+                    className={`md-watch-star md-dh-star${isWatching ? ' on' : ''}`}
+                    aria-label={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
+                    aria-pressed={isWatching}
+                    title={isWatching ? `Remove ${displayName} from watchlist` : `Add ${displayName} to watchlist`}
+                    onClick={toggleWatch}
+                  >
+                    <IcStar filled={isWatching} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="md-watch-star md-dh-star"
+                    aria-label={`Add ${displayName} to watchlist`}
+                    aria-pressed={false}
+                    title={`Add ${displayName} to watchlist`}
+                    onClick={() => setShowWatchLoginModal(true)}
+                  >
+                    <IcStar filled={false} />
+                  </button>
+                )
+              }
+              {isNew && (
+                <InfoTooltip text={newMintBadgeText()} width={240}><span className="md-age-badge-inline md-dh-badge">New</span></InfoTooltip>
               )}
-            </span>
-          )}
-          {/* Not for an archived mint: it is no longer probed and was offline for a long time, so adding it to a wallet is
-              a dead end. "Open in Cashu.me" went first (2026-10-25); Mint QR (its dialog is "Add … to wallet") followed
-              (2026-10-27). The URL itself stays in the header. */}
-          {!isArchived && (
-          <>
-          <button className="md-quick-btn" onClick={() => setShowQr(true)}>
-            <QrCode size={12} /> Mint QR
-          </button>
-          {/* Nor for a mint that switched minting or melting off (NUT-04/05 `disabled: true`): Cashu.me
-              only; Mint QR stays for it (the URL is still a fact). */}
-          {!walletActionsOff && (
-          <a
-            className="md-quick-btn"
-            href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span aria-hidden="true">↗</span>
-            <span className="md-qb-full">Open in Cashu.me</span>
-            <span className="md-qb-short">Cashu.me</span>
-          </a>
-          )}
-          </>
-          )}
-        </div>
-        <div className="md-hdr-right">
-          <button
-            className="md-compare-btn"
-            onClick={() => setShowComparePicker(true)}
-          >
-            <span aria-hidden="true">⇆</span>
-            <span className="md-compare-label">Compare</span>
-          </button>
-        </div>
-        </div>
-              </div>
+              {isTestMint(url) && (
+                <InfoTooltip text={TEST_MINT_TEXT}>
+                  <span className="md-dh-badge">
+                    Test mint
+                  </span>
+                </InfoTooltip>
+              )}
+            </div>
+            <button
+              type="button"
+              className={`md-url md-url-copy ${copiedLink ? 'copied' : ''}`}
+              onClick={() => {
+                const naddr = mintAnnounceNaddr(knownMint?.nostrAnnouncePubkey, knownMint?.nostrAnnounceD)
+                const shareLink = naddr
+                  ? `${window.location.origin}/mint/nostr/${naddr}`
+                  : window.location.href
+                void navigator.clipboard.writeText(shareLink)
+                setCopiedLink(true)
+                setTimeout(() => setCopiedLink(false), 2000)
+              }}
+            >
+              <span>
+                {showTor && (
+                  <span className="md-url-tor" title={trackedIsOnion ? 'Tor hidden service — reachable only over the Tor network' : 'Mint also advertises a .onion URL'}>Tor</span>
+                )}
+                {(() => {
+                  // The scheme is hidden on phones (CSS) so a typical URL fits one line; it stays in the DOM.
+                  const m = /^(https?:\/\/)(.*)$/.exec(url)
+                  const rest = m ? m[2]! : url
+                  return (
+                    <>
+                      {m && <span className="md-url-scheme">{m[1]}</span>}
+                      {rest.split(/(?<=\/)/).map((part, i) => <Fragment key={i}>{part}<wbr /></Fragment>)}
+                    </>
+                  )
+                })()}
+              </span>
+              {copiedLink ? <span className="md-url-copied-label">Link copied</span> : <ArrowUpRight size={12} />}
+            </button>
+            {firstSeen && (
+              <div className="md-first-seen">{firstSeen}</div>
+            )}
+          </div>
+          <div className="md-hdr-actions">
+            <div className="md-hdr-center">
+              {!isOnline && knownMint?.lastError && (
+                <span className="md-hdr-error" style={{display:'inline-flex',alignItems:'center',gap:4}}>
+                  <span
+                    className="md-error-badge"
+                    style={{fontSize:12,color:'color-mix(in srgb, var(--red) 75%, var(--text))',fontFamily:'var(--font-mono)',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:5,padding:'2px 7px',whiteSpace:'nowrap'}}
+                  >
+                    {knownMint.lastError}
+                  </span>
+                  {httpErrorTooltip(knownMint.lastError) ? (
+                    <InfoTooltip iconSize={11} width={200} about={knownMint.lastError} text={httpErrorTooltip(knownMint.lastError) ?? ''} />
+                  ) : (
+                    // No explanation for this error: the icon stays (as before) but is not a control that opens nothing.
+                    <Info size={11} color="#6b7280" style={{cursor:'help'}} aria-hidden="true" />
+                  )}
+                </span>
+              )}
+              {/* Not for an archived mint: it is no longer probed and was offline for a long time, so adding it to a wallet is
+                  a dead end. "Open in Cashu.me" went first (2026-10-25); Mint QR (its dialog is "Add … to wallet") followed
+                  (2026-10-27). The URL itself stays in the header. */}
+              {!isArchived && (
+              <>
+              <button className="md-quick-btn" onClick={() => setShowQr(true)}>
+                <QrCode size={12} /> Mint QR
+              </button>
+              {/* Nor for a mint that switched minting or melting off (NUT-04/05 `disabled: true`): Cashu.me
+                  only; Mint QR stays for it (the URL is still a fact). */}
+              {!walletActionsOff && (
+              <a
+                className="md-quick-btn"
+                href={`https://wallet.cashu.me/?mint=${encodeURIComponent(url)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span aria-hidden="true">↗</span>
+                <span className="md-qb-full">Open in Cashu.me</span>
+                <span className="md-qb-short">Cashu.me</span>
+              </a>
+              )}
+              </>
+              )}
+            </div>
+            <div className="md-hdr-right">
+              <button
+                className="md-compare-btn"
+                onClick={() => setShowComparePicker(true)}
+              >
+                <span aria-hidden="true">⇆</span>
+                <span className="md-compare-label">Compare</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="md-summary">
-        {/* Reliability Score as the first figure of the strip, above 640px (2026-11-14). The phone layout has its own compact
-            tile with the donut at the end of the strip (.md-sc-reliability below); the full breakdown card stays in .md-right.
-            Same target as the card's "Details ›": the breakdown dialog. */}
-        <div
-          className="md-sc md-sc-score"
-          data-testid="md-summary-score"
-          role="button"
-          tabIndex={0}
-          onClick={() => setShowReliabilityBreakdown(true)}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowReliabilityBreakdown(true) } }}
-        >
-          <div className="md-sc-icon green"><Shield size={14} /></div>
-          <div style={{flex:1}}>
-            <div className="md-sc-label">Reliability Score</div>
-            <div className="md-sc-value" style={{color: scorePending ? 'var(--text-faint)' : badgeInfo.color}} {...scoreA11y}>{scoreText}</div>
-            {/* Two fixed lines (label, link): the placeholder's "Not available yet" and a score's label take the same height,
-                so the strip does not move when the score arrives. */}
-            <div className="md-sc-sub">{tsInfo.label}</div>
-            <div className="md-sc-sub md-sc-score-link">Details ›</div>
+      {/* Five figures, 2026-11-19 redesign (phase 4): the score first at every width (the phone donut tile is gone);
+          Software joins the version and the NUT count. Phones: the score spans the first row, then 2 x 2. */}
+      <div className="md-summary md-strip">
+        <div className="md-sc md-sc-score" data-testid="md-summary-score">
+          <div className="md-sc-value md-strip-readout" style={{color: scorePending ? 'var(--text-faint)' : scoreTone(badgeInfo.color)}} {...scoreA11y}>{scoreText}</div>
+          <div className="md-sc-label">Reliability Score</div>
+          <div className="md-sc-sub">
+            {/* The same sentence while the score is pending ("Not available yet. …"), so the tile keeps its height when it arrives. */}
+            <span>{`${tsInfo.label}. Operational health, not solvency.`}{badgeLastNote}</span>
+            <button type="button" className="md-strip-link md-sc-score-link" onClick={() => setShowReliabilityBreakdown(true)}>How it is made</button>
           </div>
         </div>
-        <div className="md-sc">
-          <div className="md-sc-icon orange"><Clock size={14} /></div>
-          <div style={{flex:1}}>
-            <div className="md-sc-label" style={{display:'flex',alignItems:'center',gap:4}}>
-              Latency
-            </div>
-            <div className="md-sc-value">{latency !== null ? `${latency} ms` : '—'}</div>
-            <div className="md-sc-sub">
-              <span>{latencyCaption()}</span>
-              <span style={{display:'inline-flex',alignItems:'center',gap:4}}>
-                <button
-                  onClick={() => { void testClientLatency() }}
-                  disabled={testingLatency}
-                  className="latency-test-btn"
-                >
-                  {testingLatency && <span className="latency-spinner" />}
-                  {/* The result replaces the label in the same button (same spot, same height, the strip does not grow);
-                      a click measures again. */}
-                  {clientLatency === null ? CLIENT_LATENCY_BUTTON_LABEL
-                    : typeof clientLatency === 'number' ? `Your latency: ${clientLatency} ms`
-                    : clientLatency.startsWith('Unreachable') ? <>Unreachable<span className="sr-only">{clientLatency.slice('Unreachable'.length)}</span></>
-                    : clientLatency}
-                </button>
-              </span>
-            </div>
-            {/* Desktop strip: ends the first row (value + button) whatever the width of the value, so the label never climbs into it when the value is the short "—" of a mint without latency. */}
-            <span className="md-sc-latency-break" aria-hidden="true" />
-          </div>
-        </div>
-        <div className="md-sc">
-          <div className="md-sc-icon orange"><Shield size={14} /></div>
-          <div style={{flex:1}}>
-            <div className="md-sc-label">Uptime 24h</div>
-            <div className="md-sc-value" style={{color: uptimeColor(uptimeTile.pct)}}>{uptimeTile.value}</div>
-            <div className="md-sc-sub" data-testid="md-uptime-24h-checks">{uptimeTile.sub}</div>
-            {typeof knownMint?.uptimePct30d === 'number' && (
-              <div className="md-sc-sub" data-testid="md-uptime-30d">
-                30 days <span style={{ color: uptime30dColor(knownMint.uptimePct30d), fontFamily: 'var(--font-mono-data)' }}>{knownMint.uptimePct30d}%</span>
-                {/* The percentage is a whole number: a short outage rounds to 100 %, so the count is said next to it. */}
-                {uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount) && (
-                  <span className="md-uptime-30d-note">{uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount)}</span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="md-sc">
-          <div className="md-sc-icon gray"><GitBranch size={14} /></div>
-          <div style={{flex:1}}>
-            <div className="md-sc-label">Version</div>
-            <div className="md-sc-value sm" style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-              <span>{version ?? '—'}</span>
-              {isOutdated && (
-                <span className="md-outdated-pill" style={{fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,color:'color-mix(in srgb, var(--red) 75%, var(--text))',background:'var(--red-soft)',border:'0.5px solid var(--red-soft-strong)',borderRadius:4,padding:'1px 5px'}}>Outdated</span>
-              )}
-            </div>
-            <div className="md-sc-sub">software</div>
-          </div>
-        </div>
-        <div className="md-sc">
-          <div className="md-sc-icon green"><Layers size={14} /></div>
-          <div style={{flex:1}}>
-            <div className="md-sc-label">NUTs</div>
-            <div className="md-sc-value green">{nutCount}</div>
-            <div className="md-sc-sub">{disabledNuts.length > 0 ? `supported · ${disabledNuts.length} disabled` : 'supported'}</div>
-          </div>
-        </div>
-        <div className="md-sc">
-          <div className="md-sc-icon orange"><Star size={14} /></div>
-          <div style={{flex:1}}>
-            <div className="md-sc-label" style={{display:'flex',alignItems:'center',gap:4}}>
-              Community rating
-              {knownMint?.reviewSurge && (
-                <InfoTooltip
-                  className="review-surge-flag"
-                  tone="warn"
-                  width={210}
-                  iconSize={11}
-                  label="Recent review surge"
-                  text={reviewSurgeText()}
-                />
-              )}
-              {tileOperatorExcluded > 0 && (
-                <InfoTooltip
-                  className="operator-excluded-info"
-                  width={220}
-                  iconSize={11}
-                  label="Operator reviews not counted"
-                  text={operatorExcludedNote}
-                />
-              )}
-            </div>
-            {tileReviewCount === null ? (
-              <div className="md-sc-value sm" style={{color:'var(--text-faint)'}} aria-label="Loading reviews">…</div>
-            ) : tileReviewCount === 0 ? (
-              <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
-            ) : (
-              <>
-                {tileAvgRating !== null ? (
-                  <div
-                    className="md-sc-value"
-                    style={{display:'flex',alignItems:'baseline',flexWrap:'wrap',gap:'2px 6px',opacity: tileReviewCount < MIN_MEANINGFUL_REVIEWS ? 0.6 : 1}}
-                  >
-                    <span className="md-sc-rating-num" style={{color:'var(--text)'}}>{tileAvgRating}</span>
-                    <span className="md-sc-stars" aria-label={`${tileAvgRating} out of 5`}>{starString(tileAvgRating)}</span>
-                  </div>
-                ) : (
-                  <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>Unrated</div>
-                )}
-                <div className="md-sc-sub">
-                  {tileReviewCount} review{tileReviewCount !== 1 ? 's' : ''}
-                  {tileReviewCount < MIN_MEANINGFUL_REVIEWS ? ' · too few to be reliable' : ''}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-        {/* Compact Reliability Score — mobile only (≤640px). Fills the empty cell next
-            to Community rating; the full breakdown card in .md-right is hidden
-            on mobile since its Uptime/NUTs/Latency rows duplicate the tiles
-            above. Same target as the full card's "Details ›". */}
-        <div
-          className="md-sc md-sc-reliability"
-          role="button"
-          tabIndex={0}
-          onClick={() => setShowReliabilityBreakdown(true)}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowReliabilityBreakdown(true) } }}
-        >
-          <div className="md-sc-reliability-donut">
-            <svg viewBox="0 0 72 72" aria-hidden="true">
-              <circle cx="36" cy="36" r="27" fill="none" stroke="var(--bg4)" strokeWidth="8" />
-              <circle cx="36" cy="36" r="27" fill="none" stroke={scoreTone('var(--green-bright)')} strokeWidth="8"
-                strokeDasharray={reliabilityDonut.dashArray}
-                strokeOpacity={scorePending ? 0 : 1}
-                strokeDashoffset={reliabilityDonut.dashOffset}
-                strokeLinecap="round"
-                transform="rotate(-90 36 36)" />
-            </svg>
-            <span className="md-sc-reliability-num" {...scoreA11y}>{scoreText}</span>
-          </div>
-          <div className="md-sc-reliability-meta">
-            <div className="md-sc-label">Reliability</div>
-            <span
-              className="md-sc-reliability-badge"
-              data-testid="md-sc-reliability-badge"
-             
-              style={{ color: badgeInfo.color, background: badgeInfo.bg, border: `0.5px solid ${badgeInfo.border}` }}
+        <div className="md-sc md-sc-latency">
+          <div className="md-sc-value">{latency !== null ? <>{latency}<span className="md-strip-unit"> ms</span></> : '—'}</div>
+          <div className="md-sc-label">Latency</div>
+          <div className="md-sc-sub">
+            <span>{latencyCaption()}</span>
+            <button
+              type="button"
+              onClick={() => { void testClientLatency() }}
+              disabled={testingLatency}
+              className="latency-test-btn"
             >
-              {tsInfo.label}{badgeLastNote}
-            </span>
-            <span className="md-sc-reliability-link">Details ›</span>
+              {testingLatency && <span className="latency-spinner" />}
+              {/* The result replaces the label in the same button (same spot, same height, the strip does not grow);
+                  a click measures again. */}
+              {clientLatency === null ? CLIENT_LATENCY_BUTTON_LABEL
+                : typeof clientLatency === 'number' ? `Your latency: ${clientLatency} ms`
+                : clientLatency.startsWith('Unreachable') ? <>Unreachable<span className="sr-only">{clientLatency.slice('Unreachable'.length)}</span></>
+                : clientLatency}
+            </button>
+          </div>
+        </div>
+        <div className="md-sc md-sc-uptime">
+          <div className="md-sc-value" style={{color: uptimeColor(uptimeTile.pct)}}>{uptimeTile.value}</div>
+          <div className="md-sc-label">Uptime 24h</div>
+          <div className="md-sc-sub" data-testid="md-uptime-24h-checks">{uptimeTile.sub}</div>
+        </div>
+        <div className="md-sc md-sc-rating">
+          {tileReviewCount === null ? (
+            <div className="md-sc-value sm" style={{color:'var(--text-faint)'}} aria-label="Loading reviews">…</div>
+          ) : tileReviewCount === 0 ? (
+            <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>No reviews yet</div>
+          ) : tileAvgRating !== null ? (
+            <div className="md-sc-value" style={{opacity: tileReviewCount < MIN_MEANINGFUL_REVIEWS ? 0.6 : 1}}>
+              <span className="md-sc-rating-num">{tileAvgRating}</span>{' '}
+              <span className="md-sc-stars" aria-label={`${tileAvgRating} out of 5`}>{starString(tileAvgRating)}</span>
+            </div>
+          ) : (
+            <div className="md-sc-value sm" style={{color:'var(--text-faint)'}}>Unrated</div>
+          )}
+          <div className="md-sc-label md-strip-label-row">
+            Community rating
+            {knownMint?.reviewSurge && (
+              <InfoTooltip
+                className="review-surge-flag"
+                tone="warn"
+                width={210}
+                iconSize={11}
+                label="Recent review surge"
+                text={reviewSurgeText()}
+              />
+            )}
+            {tileOperatorExcluded > 0 && (
+              <InfoTooltip
+                className="operator-excluded-info"
+                width={220}
+                iconSize={11}
+                label="Operator reviews not counted"
+                text={operatorExcludedNote}
+              />
+            )}
+          </div>
+          {tileReviewCount !== null && tileReviewCount > 0 && (
+            <div className="md-sc-sub">
+              {tileReviewCount} review{tileReviewCount !== 1 ? 's' : ''}
+              {tileReviewCount < MIN_MEANINGFUL_REVIEWS ? ', too few to be reliable' : ''}
+            </div>
+          )}
+        </div>
+        <div className="md-sc md-sc-software">
+          <div className="md-sc-value"><span className="md-sc-nut-count">{nutCount}</span><span className="md-strip-unit"> NUTs</span></div>
+          <div className="md-sc-label">Software</div>
+          <div className="md-sc-sub">
+            <span className="md-strip-code">{version ?? 'Version unknown'}</span>
+            {isOutdated && <span className="md-outdated-pill">Outdated</span>}
+            {disabledNuts.length > 0 && <span className="md-sc-nut-disabled">{disabledNuts.length} disabled</span>}
           </div>
         </div>
       </div>
+
+      {/* The 30 daily bars, wide (2026-11-19 redesign, phase 4): the same data as the mint cards (/api/mints/known
+          uptimeDaily30). The 30-day figure that sat in the Uptime tile is the sentence beside the heading. */}
+      {knownMint?.uptimeDaily30 && (
+        <section className="md-trace" aria-labelledby="md-trace-h">
+          <div className="md-trace-head">
+            <h2 id="md-trace-h" className="md-trace-title">Last 30 days</h2>
+            {typeof knownMint.uptimePct30d === 'number' && (
+              <span className="md-trace-note" data-testid="md-uptime-30d">
+                <span style={{ color: uptime30dColor(knownMint.uptimePct30d) }}>{knownMint.uptimePct30d}%</span> uptime
+                {uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount) && (
+                  <span className="md-uptime-30d-note">{uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount).replace(/^ · /, ', ')}</span>
+                )}
+              </span>
+            )}
+          </div>
+          <UptimeBars days={knownMint.uptimeDaily30} variant="wide" />
+          <div className="uptime-scale" aria-hidden="true">
+            <span>{new Date(now - 29 * 86_400_000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
+            <span>Today</span>
+          </div>
+        </section>
+      )}
 
       {/* Tabs (WAI-ARIA tabs pattern): one tab stop, Left/Right/Home/End move and activate, the panel is labelled by its tab. */}
       <div className="md-tabs" role="tablist" aria-label="Mint details">

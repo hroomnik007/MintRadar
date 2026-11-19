@@ -50,7 +50,8 @@ const tiles = (page: Page) => page.locator('.md-summary .md-sc:not(.md-sc-score)
   .map(e => {
     const r = e.getBoundingClientRect()
     const dy = (sel: string) => { const x = e.querySelector(sel); return x ? Math.round(x.getBoundingClientRect().top - r.top) : null }
-    return { top: Math.round(r.top), h: Math.round(r.height), value: dy('.md-sc-value'), label: dy('.md-sc-label'), sub: dy('.md-sc-sub') }
+    // top unrounded: the header above can differ by a fraction of a pixel (an offline mint's error badge); the offsets below are rounded.
+    return { top: r.top, h: Math.round(r.height), value: dy('.md-sc-value'), label: dy('.md-sc-label'), sub: dy('.md-sc-sub') }
   }))
 
 for (const [width, height] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const) {
@@ -67,7 +68,7 @@ for (const [width, height] of [[1440, 900], [768, 1024], [390, 844], [320, 640]]
       expect(gone[0]).toMatchObject({ h: online[0]!.h, value: online[0]!.value, label: online[0]!.label, sub: online[0]!.sub })
       expect(gone.map(t => t.h)).toEqual(online.map(t => t.h))
       // The strip's own rows keep their place: the tiles start on the lines they have for an online mint.
-      expect(gone.map(t => t.top - gone[0]!.top)).toEqual(online.map(t => t.top - online[0]!.top))
+      expect(gone.map(t => Math.round(t.top - gone[0]!.top))).toEqual(online.map(t => Math.round(t.top - online[0]!.top)))
       if (width >= 1200) {
         // One row of tiles: value tops and label tops are the same lines as the neighbours' (the label of Latency is on row 2).
         const labelTops = gone.slice(0, 5).map(t => t.label)

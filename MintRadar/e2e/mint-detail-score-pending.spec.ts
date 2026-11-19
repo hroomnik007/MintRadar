@@ -58,7 +58,8 @@ const badge = (page: Page) => page.locator('.md-reliability-panel .reliability-b
 const uptimeScore = (page: Page) => page.locator('.md-reliability-panel .rb-row-score').first()
 // Top and height of the boxes that hold the score: the placeholder must take exactly the space the number takes.
 const BOXES_DESKTOP = ['.md-reliability-panel .reliability-wrap', '.md-reliability-panel .gauge-wrap', '.md-reliability-panel .reliability-badges', '.md-reliability-panel .rb-scope-note']
-const BOXES_PHONE = ['.md-sc-reliability', '.md-sc-reliability-donut', '.md-sc-reliability-meta']
+// Phones: the strip's score tile (the donut tile went with the 2026-11-19 redesign).
+const BOXES_PHONE = ['.md-sc-score', '.md-sc-score .md-sc-value', '.md-sc-score .md-sc-sub']
 const boxes = (page: Page, selectors: string[]): Promise<number[][]> =>
   page.evaluate(sels => sels.map(sel => { const r = document.querySelector(sel)!.getBoundingClientRect(); return [r.y, r.height].map(v => Math.round(v * 10) / 10) }), selectors)
 const shiftTotal = (page: Page): Promise<number> =>
@@ -95,14 +96,14 @@ test.describe('Mint Detail score without a stored score', () => {
     await expect(uptimeScore(page)).toHaveText('40/40')
   })
 
-  test('(1) 390px: the compact tile and the breakdown dialog show the placeholder, then 71', async ({ page }) => {
+  test('(1) 390px: the score tile and the breakdown dialog show the placeholder, then 71', async ({ page }) => {
     const m = await open(page, { stored: null, history: 'held', size: [390, 844] })
     await m.reached
-    const tile = page.locator('.md-sc-reliability-num')
+    const tile = page.getByTestId('md-summary-score').locator('.md-sc-value')
     await expect(tile).toHaveText(PLACEHOLDER)
     await expect(tile).toHaveAttribute('aria-label', 'Score not available yet')
-    await expect(page.locator('.md-sc-reliability-badge')).toHaveText('Not available yet')
-    await page.locator('.md-sc-reliability').click()
+    await expect(page.getByTestId('md-summary-score').locator('.md-sc-sub')).toContainText('Not available yet')
+    await page.locator('.md-sc-score-link').click()
     const dialog = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
     await expect(dialog.locator('.rb-hero-score')).toHaveText(PLACEHOLDER)
     await expect(dialog.locator('.rb-row-score').first()).toHaveText(`${PLACEHOLDER}/40`)
@@ -145,7 +146,7 @@ test.describe('Mint Detail score without a stored score', () => {
     test(`(4) ${size[0]}x${size[1]}: layout shift from the placeholder to the score is at most ${SHIFT_LIMIT}`, async ({ page }) => {
       const m = await open(page, { stored: null, history: 'held', size: [...size] })
       await m.reached
-      const num = size[0] >= 1024 ? gaugeNum(page) : page.locator('.md-sc-reliability-num')
+      const num = size[0] >= 1024 ? gaugeNum(page) : page.getByTestId('md-summary-score').locator('.md-sc-value')
       await expect(num).toHaveText(PLACEHOLDER)
       await layoutReady(page)
       const selectors = size[0] >= 1024 ? BOXES_DESKTOP : BOXES_PHONE

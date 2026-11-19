@@ -31,7 +31,7 @@ async function openBreakdownModal(page: Page) {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
   await expect(page.locator('.md-tabs')).toBeVisible()
-  await page.locator('.md-sc.md-sc-reliability').click()
+  await page.locator('.md-sc-score-link').click()
   const title = page.getByText('Reliability Score Breakdown')
   await expect(title).toBeVisible()
   return title

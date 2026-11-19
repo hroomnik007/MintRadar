@@ -446,8 +446,10 @@ const heroGlyphWidths = (page: Page) => page.evaluate(() =>
 const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
   // 420: re-recorded 2026-10-20 after the 12px phone text floor (the buttons were 11px: 79.66 wide).
   // Both re-recorded 2026-11-18 for MintRadar Sans (DM Sans before): 420 84.66 → 85.33 wide, 1440 93/156/103 → 95/157/104.
-  420: [{ left: 79, width: 85.33, height: 28 }, { left: 170.33, width: 85.34, height: 28 }, { left: 261.67, width: 85.33, height: 28 }],
-  1440: [{ left: 901, width: 95, height: 31 }, { left: 1004, width: 157, height: 31 }, { left: 1169, width: 104, height: 31 }],
+  // Re-recorded 2026-11-19 for the phase-4 header: the actions span the page width under the name on phones and sit at the
+  // page's right edge on desktop (they were inside the old boxed header).
+  420: [{ left: 14, width: 125.33, height: 28 }, { left: 147.33, width: 125.34, height: 28 }, { left: 280.67, width: 125.33, height: 28 }],
+  1440: [{ left: 972, width: 95, height: 31 }, { left: 1075, width: 157, height: 31 }, { left: 1240, width: 104, height: 31 }],
 }
 // Expected boxes for this machine's glyph widths. 420 (≤640px): three equal flex thirds that fill the row (see below). 1440: buttons are content-sized and right-aligned,
 // so a button grows by its own glyph difference and moves left by the growth of itself and every button after it.
@@ -665,7 +667,7 @@ for (const width of [1440, 768, 390, 320]) {
       const header = document.querySelector('.md-header')!.getBoundingClientRect()
       const hit = (r: DOMRect) => Math.min(b.right, r.right) - Math.max(b.left, r.left) > 1 && Math.min(b.bottom, r.bottom) - Math.max(b.top, r.top) > 1
       const others: string[] = []
-      for (const sel of ['.md-hdr-favicon', '.md-name', '.md-status-inline', '.md-url', '.md-first-seen', '.md-back', '.md-watch-star-hero', '.md-quick-btn', '.md-compare-btn']) {
+      for (const sel of ['.md-hdr-favicon', '.md-name', '.md-status-inline', '.md-url', '.md-first-seen', '.md-back', '.md-dh-star', '.md-quick-btn', '.md-compare-btn']) {
         for (const el of document.querySelectorAll(sel)) {
           const r = el.getBoundingClientRect()
           if (r.width > 0 && r.height > 0 && hit(r)) others.push(`${sel} [${Math.round(r.left)}-${Math.round(r.right)} x ${Math.round(r.top)}-${Math.round(r.bottom)}]`)

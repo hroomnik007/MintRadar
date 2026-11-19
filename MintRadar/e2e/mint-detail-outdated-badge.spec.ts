@@ -11,7 +11,7 @@ const ALPHA = MOCK_MINTS[0]!.url
 const detailPath = `/mint/${encodeURIComponent(ALPHA)}`
 
 function versionStat(page: Page) {
-  return page.locator('.md-sc', { has: page.locator('.md-sc-sub', { hasText: 'software' }) })
+  return page.locator('.md-sc-software') // the Software tile since the 2026-11-19 redesign
 }
 
 async function gotoWith(page: Page, version: string, softwareLatest: { major: number; minor: number } | null) {

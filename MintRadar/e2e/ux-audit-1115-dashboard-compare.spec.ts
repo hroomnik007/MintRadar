@@ -130,9 +130,10 @@ test('Mint Detail: a mint that is not online shows its last score badge in grey,
   await page.route('**/api/mint/probe**', r => r.fulfill({ json: { url: ALPHA, online: false, latencyMs: null, info: null, keysets: null, checkedAt: new Date().toISOString(), error: 'Mint unreachable' } }))
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
-  const badge = page.getByTestId('md-sc-reliability-badge')
+  // Since the 2026-11-19 redesign: the strip's score number (the phone donut tile and its badge are gone).
+  const badge = page.getByTestId('md-summary-score').locator('.md-sc-value')
   await expect(badge).toBeVisible()
-  await expect(badge.locator('.sr-only')).toHaveText(' (last measured score)')
+  await expect(page.getByTestId('md-summary-score').locator('.sr-only')).toHaveText(' (last measured score)')
   const c = await badge.evaluate(el => {
     const p = document.createElement('span'); p.style.color = 'var(--text3)'; document.body.append(p)
     const t3 = getComputedStyle(p).color; p.remove(); return { color: getComputedStyle(el).color, t3 }

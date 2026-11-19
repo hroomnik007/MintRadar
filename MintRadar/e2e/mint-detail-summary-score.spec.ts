@@ -2,8 +2,8 @@ import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
 import { layoutReady, resize } from './fixtures/settle'
 
-// Mint Detail (2026-11-14): the Reliability Score is the first figure of the strip above 640px, as the phone already
-// had it; the phone keeps its compact donut tile.
+// Mint Detail (2026-11-14): the Reliability Score is the first figure of the strip. Since the 2026-11-19 redesign it is at
+// every width (phones: across the first row); the phone's donut tile is gone and "How it is made" opens the breakdown.
 
 const ALPHA = MOCK_MINTS[0]!.url // Alpha Mint, Reliability 92
 
@@ -21,7 +21,7 @@ async function open(page: Page, width: number, height = 900) {
   await layoutReady(page)
 }
 
-for (const width of [1440, 1200, 1024, 900, 769]) {
+for (const width of [1440, 1200, 1024, 900, 769, 390, 320]) {
   test(`${width}px: the score is the first tile of the strip, one row of figures does not break a value`, async ({ page }) => {
     await open(page, width)
     const tile = page.getByTestId('md-summary-score')
@@ -30,10 +30,10 @@ for (const width of [1440, 1200, 1024, 900, 769]) {
     await expect(tile.locator('.md-sc-value')).toHaveText('92')
     await expect(tile).toContainText('Reliability Score')
     await expect(tile).toContainText('High Reliability')
-    await expect(page.locator('.md-sc.md-sc-reliability')).toBeHidden()
+    await expect(page.locator('.md-sc-reliability')).toHaveCount(0)
     // No tile is wider than its cell and the page does not scroll sideways.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    const version = page.locator('.md-summary .md-sc-value.sm span').first()
+    const version = page.locator('.md-sc-software .md-strip-code')
     // One line: shorter than two lines of its own font size ("Nutshell/0.16.0" used to break inside the word at 900-1199px).
     const oneLine = await version.evaluate(el => el.getBoundingClientRect().height < parseFloat(getComputedStyle(el).fontSize) * 2)
     expect(oneLine).toBe(true)
@@ -50,22 +50,18 @@ for (const width of [1440, 1200, 1024, 900, 769]) {
   })
 }
 
-test('1440px: the tile opens the breakdown dialog (click and keyboard)', async ({ page }) => {
-  await open(page, 1440)
-  const tile = page.getByTestId('md-summary-score')
-  await tile.click()
-  const dialog = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
-  await expect(dialog).toBeVisible()
-  await expect(dialog.locator('.rb-hero-score')).toHaveText('92')
-  await dialog.getByRole('button', { name: 'Close' }).click()
-  await expect(dialog).toHaveCount(0)
-  await tile.focus()
-  await page.keyboard.press('Enter')
-  await expect(dialog).toBeVisible()
-})
-
-test('390px: the desktop tile is hidden, the compact donut tile shows the score', async ({ page }) => {
-  await open(page, 390, 844)
-  await expect(page.getByTestId('md-summary-score')).toBeHidden()
-  await expect(page.locator('.md-sc-reliability-num')).toHaveText('92')
-})
+for (const width of [1440, 390]) {
+  test(`${width}px: "How it is made" opens the breakdown dialog (click and keyboard)`, async ({ page }) => {
+    await open(page, width, width < 769 ? 844 : 900)
+    const link = page.getByTestId('md-summary-score').getByRole('button', { name: 'How it is made' })
+    await link.click()
+    const dialog = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.locator('.rb-hero-score')).toHaveText('92')
+    await dialog.getByRole('button', { name: 'Close' }).click()
+    await expect(dialog).toHaveCount(0)
+    await link.focus()
+    await page.keyboard.press('Enter')
+    await expect(dialog).toBeVisible()
+  })
+}

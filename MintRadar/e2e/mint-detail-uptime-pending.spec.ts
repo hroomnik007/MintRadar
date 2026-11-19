@@ -103,8 +103,8 @@ test.describe('Mint Detail Uptime row with a stored score and a missing 24 h his
   test('(2) 390px: the breakdown dialog shows the placeholder, then the real value', async ({ page }) => {
     const m = await open(page, { history: 'held', uptimePct: 97, size: [390, 844] })
     await m.reached
-    await expect(page.locator('.md-sc-reliability-num')).toHaveText('88')
-    await page.locator('.md-sc-reliability').click()
+    await expect(page.getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText('88')
+    await page.locator('.md-sc-score-link').click()
     const dialog = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
     await expect(dialog.locator('.rb-row-display').first()).toHaveText(PLACEHOLDER)
     await expect(dialog.locator('.rb-row-display').first()).toHaveAttribute('aria-label', 'Uptime not available yet')
@@ -159,7 +159,7 @@ test.describe('Mint Detail Uptime row with a stored score and a missing 24 h his
     test(`(5) ${size[0]}x${size[1]}: layout shift when the value replaces the placeholder is at most ${SHIFT_LIMIT}`, async ({ page }) => {
       const m = await open(page, { history: 'held', uptimePct: 97, size: [...size] })
       await m.reached
-      if (size[0] < 1024) await page.locator('.md-sc-reliability').click()
+      if (size[0] < 1024) await page.locator('.md-sc-score-link').click()
       const row = size[0] >= 1024 ? display(page) : page.getByRole('dialog', { name: 'Reliability Score Breakdown' }).locator('.rb-row-display').first()
       await expect(row).toHaveText(PLACEHOLDER)
       await layoutReady(page)

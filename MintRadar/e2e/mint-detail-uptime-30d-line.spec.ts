@@ -2,7 +2,8 @@ import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
 import { layoutReady, resize } from './fixtures/settle'
 
-// Mint Detail, Uptime 24h tile (2026-11-16): the 30-day line "30 days 100% · N outages" stays on one line on desktop and on
+// Mint Detail, 30-day line (2026-11-16; since the 2026-11-19 redesign "100% uptime, N outages" beside the "Last 30 days"
+// heading above the daily bars, it was in the Uptime 24h tile): it stays on one line on desktop and on
 // usual phones. After the latency column was widened (#211) it wrapped at 1200px and up ("· 2 outages" on its own line).
 // On the narrowest phones (below ~390px) it cannot fit half the strip at the 12px text floor; there the note moves to the
 // next line whole, never broken inside.
@@ -29,11 +30,11 @@ const lines = (page: Page, sel: string) => page.locator(sel).first().evaluate(e 
 
 for (const outages of [2, 12]) {
   for (const width of [769, 900, 1024, 1199, 1200, 1250, 1280, 1366, 1440, 1600, 390, 414, 430]) {
-    test(`${width}px, ${outages} outages: "30 days 100% · ${outages} outages" is one line`, async ({ page }) => {
+    test(`${width}px, ${outages} outages: "100% uptime, ${outages} outages" is one line`, async ({ page }) => {
       await open(page, width, outages)
       expect(await lines(page, '[data-testid="md-uptime-30d"]')).toBe(1)
       // The other figures keep their own rules: Version on one line, nothing clipped in the strip.
-      const version = page.locator('.md-summary .md-sc-value.sm span').first()
+      const version = page.locator('.md-sc-software .md-strip-code')
       expect(await version.evaluate(el => el.getBoundingClientRect().height < parseFloat(getComputedStyle(el).fontSize) * 2)).toBe(true)
       const clipped = await page.locator('.md-summary *').evaluateAll(els => els.filter(e => e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 1).length)
       expect(clipped).toBe(0)

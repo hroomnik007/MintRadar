@@ -89,15 +89,16 @@ describe('no rendered Reliability Score contains a percent sign', () => {
     expect(baseElement.textContent).not.toMatch(/(92|78)%/)
   })
 
-  it('Mint Detail: the ring, the page meta and the summary tile', async () => {
+  // The strip's score tile since the 2026-11-19 redesign (the phone donut tile it read before is gone).
+  it('Mint Detail: the score tile and the page meta', async () => {
     const { container } = render(wrap(<MintDetail />, `/mint/${encodeURIComponent(MINT_URL)}`, '/mint/:url'))
-    const ring = await waitFor(() => {
-      const el = container.querySelector('.md-sc-reliability-num')
+    const tile = await waitFor(() => {
+      const el = container.querySelector('[data-testid="md-summary-score"]')
       expect(el).not.toBeNull()
       return el as HTMLElement
     })
-    expect(ring.textContent).toBe('92')
-    expect(container.querySelector('.md-sc-reliability')?.textContent ?? '').not.toContain('%')
+    expect(tile.querySelector('.md-sc-value')?.textContent).toBe('92')
+    expect(tile.textContent ?? '').not.toContain('%')
     const description = document.querySelector('meta[property="og:description"]')?.getAttribute('content') ?? ''
     expect(description).toContain('Reliability Score of 92/100')
     expect(description).not.toMatch(/92\s*%/)

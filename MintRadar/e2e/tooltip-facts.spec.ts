@@ -51,5 +51,5 @@ test('Mint Detail Latency tile: the caption names the probe location and the but
   expect(label).toBe('Show my latency')
   const tile = page.locator('.md-sc').filter({ has: page.locator('.latency-test-btn') })
   await expect(tile.locator('.md-sc-sub')).toContainText(latencyCaption())
-  await expect(tile.locator('.md-sc-sub')).toContainText('server · Nuremberg')
+  await expect(tile.locator('.md-sc-sub')).toContainText('From Nuremberg')
 })

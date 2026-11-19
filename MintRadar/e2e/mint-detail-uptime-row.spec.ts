@@ -130,7 +130,7 @@ async function openRows(browser: Browser, width: number) {
     await expect(panel).toBeVisible()
     return { ctx, page, scope: panel, dialog: null }
   }
-  await page.locator('.md-sc-reliability').tap()
+  await page.locator('.md-sc-score-link').tap()
   const dialog = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
   await expect(dialog).toBeVisible()
   await layoutReady(page)

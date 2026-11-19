@@ -9,7 +9,8 @@ const DELTA = 'https://delta.mint.example'
 type Nuts = Record<string, unknown>
 const off = (n: Nuts, keys: string[]): Nuts => ({ ...n, ...Object.fromEntries(keys.map(k => [k, { methods: [], disabled: true }])) })
 
-const nutTileOf = (page: Page) => page.locator('.md-sc', { has: page.locator('.md-sc-label', { hasText: /^NUTs$/ }) })
+// The Software tile carries the NUT count since the 2026-11-19 redesign (it was a NUTs tile).
+const nutTileOf = (page: Page) => page.locator('.md-sc-software')
 
 async function setup(page: Page, keys: string[]) {
   await mockRelays(page)
@@ -32,7 +33,7 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
       await setup(page, ['4', '5'])
       await page.goto('/mint/delta.mint.example')
       const nutTile = nutTileOf(page)
-      await expect(nutTile.locator('.md-sc-sub')).toHaveText('supported · 2 disabled')
+      await expect(nutTile.locator('.md-sc-nut-disabled')).toHaveText('2 disabled')
       await expect(page.getByRole('link', { name: /Cashu\.me/ })).toHaveCount(0)
       await expect(page.locator('.md-quick-btn', { hasText: 'Mint QR' })).toBeVisible()
 
@@ -53,27 +54,27 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
     test('score breakdown: the NUT row counts offered NUTs only and names the disabled ones', async ({ page }) => {
       await setup(page, ['4', '5'])
       await page.goto('/mint/delta.mint.example')
-      if (vp.width < 600) await page.locator('.md-sc-reliability').click()
+      if (vp.width < 600) await page.locator('.md-sc-score-link').click()
       const row = page.locator(vp.width < 600 ? '.rb-modal .rb-row' : '.rb-row', { hasText: 'NUT Support' }).first()
       // The probe declares 13 tracked NUTs; 4 and 5 are switched off, so 11 count: round(11 / 14 * 15) = 12 points.
       await expect(row.locator('.rb-row-display')).toHaveText('11 / 14 NUTs · 2 disabled')
       await expect(row.locator('.rb-row-score')).toHaveText('12/15')
-      await expect(nutTileOf(page).locator('.md-sc-value')).toHaveText('11')
+      await expect(nutTileOf(page).locator('.md-sc-nut-count')).toHaveText('11')
     })
 
     test('only melting switched off: Cashu.me hidden as well, 1 disabled', async ({ page }) => {
       await setup(page, ['5'])
       await page.goto('/mint/delta.mint.example')
-      await expect(nutTileOf(page).locator('.md-sc-sub')).toHaveText('supported · 1 disabled')
+      await expect(nutTileOf(page).locator('.md-sc-nut-disabled')).toHaveText('1 disabled')
       await expect(page.getByRole('link', { name: /Cashu\.me/ })).toHaveCount(0)
     })
 
     test('a mint with nothing switched off keeps Cashu.me and the plain count', async ({ page }) => {
       await setup(page, [])
       await page.goto('/mint/delta.mint.example')
-      await expect(nutTileOf(page).locator('.md-sc-sub')).toHaveText('supported')
+      await expect(nutTileOf(page).locator('.md-sc-nut-disabled')).toHaveCount(0)
       await expect(page.getByRole('link', { name: /Cashu\.me/ })).toBeVisible()
-      if (vp.width < 600) await page.locator('.md-sc-reliability').click()
+      if (vp.width < 600) await page.locator('.md-sc-score-link').click()
       await expect(page.locator(vp.width < 600 ? '.rb-modal .rb-row' : '.rb-row', { hasText: 'NUT Support' }).first().locator('.rb-row-display')).toHaveText('13 / 14 NUTs')
     })
   })

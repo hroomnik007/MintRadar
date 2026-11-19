@@ -38,16 +38,6 @@
   gap: 16px;
 }
 
-/* Watch star, relocated to the top-right corner of the hero section — level
-   with the mint name / Online status row. Absolutely positioned against
-   .md-header so it stays put regardless of the header's flex (desktop) or
-   grid (mobile) layout mode. */
-.md-watch-star-hero {
-  position: absolute;
-  top: 4px;
-  right: 20px;
-}
-
 .md-back {
   color: var(--text-dim);
   font-size: 12px;
@@ -68,29 +58,6 @@
 }
 
 .md-back-label { display: inline; }
-
-/* Compact desktop-only variant for the hero Back button — sits on its own row
-   above the avatar/name block (see .md-hdr-left below) instead of beside it,
-   so it stays the same pill style just smaller. Mobile's own .md-back rule
-   (icon-only circle) overrides this fully, since it's declared later in the
-   file at the same specificity. */
-.md-back-compact {
-  padding: 3px 10px;
-  font-size: 12px;
-}
-
-.md-hdr-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  /* 6px -> 4px -> 3px (2026-09-27) — same passes as the .md-header
-     padding-top trim above: this is the gap between the Back row and the
-     avatar/name row, part of the same "space above the title" the
-     padding-top change alone wasn't enough to fix. */
-  gap: 3px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
 
 /* No outer frame: Online status + Mint QR + Open in Cashu.me sit loose in the
    row, the same way Compare (.md-hdr-right) does. The buttons keep their own
@@ -114,33 +81,6 @@
   flex-shrink: 0;
 }
 
-/* Wraps .md-hdr-center + .md-hdr-right into one flex item so the button row
-   moves as a single group. margin-left: auto pushes it to the header's right
-   edge (like the old space-between); margin-right pulls it back toward the
-   text block by a percentage of the header's own width, so the shift scales
-   proportionally at any desktop viewport instead of a fixed pixel amount. */
-.md-announce-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  margin-top: 4px;
-  width: 100%;
-  min-width: 0;
-}
-.md-announce-label {
-  margin-top: 0 !important;
-  flex: 1 1 auto;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* NIP-87 line: wraps (it is longer than the old "Announced on Nostr · Mon YYYY"); the key-match sentence on its own line. */
-.md-announce-nip87 { white-space: normal; overflow-wrap: anywhere; }
-.md-announce-key { display: block; }
-
 .md-hdr-actions {
   display: flex;
   align-items: center;
@@ -152,14 +92,6 @@
 /* Desktop: actions sit at the right of the hero card again, not on the
    Announced line. Mobile keeps the shared row. */
 @media (min-width: 769px) {
-  .md-announce-row {
-    display: block;
-    width: auto;
-  }
-  .md-announce-label {
-    overflow: visible;
-    text-overflow: unset;
-  }
   .md-header .md-hdr-actions {
     position: absolute;
     right: 20px;
@@ -167,53 +99,6 @@
     margin: 0;
   }
 }
-
-/* A CSS grid, not flex, for exactly one reason: the avatar column width
-   (--md-avatar-col) must stay FIXED regardless of the avatar's own actual
-   rendered size, so .md-namebox's available width — and therefore its own
-   wrap/height — never depends on the avatar. Avatar height is computed in
-   MintDetail.tsx from .md-namebox's rendered height (useElementHeight), so
-   if avatar width fed back into namebox's width, a taller measurement would
-   narrow namebox, which can wrap its text onto extra lines, which grows the
-   measured height further, growing the avatar more — an unbounded feedback
-   loop (verified: on a 390px mobile viewport, a 4-line mint with a Nostr
-   announcement spiralled the avatar to over 300px). The fixed grid column
-   (sized generously above the tallest realistic 4-line content, see
-   --md-avatar-col below and its mobile override) breaks that loop: avatar
-   can freely grow/shrink inside its cell without ever changing namebox's
-   width. MintDetail.tsx additionally clamps its computed size to the same
-   --md-avatar-col value so the (square) avatar never overflows its cell. */
-.md-avatar-id {
-  --md-avatar-col: 112px;
-  display: grid;
-  grid-template-columns: var(--md-avatar-col) 1fr;
-  align-items: start;
-  gap: 16px;
-  flex: 1;
-  min-width: 0;
-  /* Keeps the avatar/name block at its original horizontal position now that
-     Back moved onto its own row above (desktop only) — this offset matches
-     the space Back + its old row gap used to occupy beside it. */
-  margin-left: 80px;
-}
-
-/* Square avatar sized off .md-namebox's actual rendered height (via
-   useElementHeight + MintFavicon's `size` prop in MintDetail.tsx, clamped to
-   --md-avatar-col — see .md-avatar-id above), not a fixed 80px — a mint with
-   no "Announced on Nostr" line (3 text rows instead of 4) used to leave
-   empty space below a still-80px avatar, and conversely a 4-line mint could
-   overflow past its bottom edge. justify-self/align-self: start stop the
-   grid from stretching the avatar to fill its (deliberately oversized) cell
-   — its own inline width/height (from MintFavicon's `size` prop) stay
-   authoritative. */
-.md-hdr-favicon {
-  flex-shrink: 0;
-  justify-self: start;
-  align-self: start;
-}
-
-.md-namebox { flex: 1; min-width: 0; }
-.md-name { font-size: 31px; font-weight: 600; color: var(--text); line-height: 1.15; overflow-wrap: anywhere; margin: 0; letter-spacing: normal; }
 .md-url  { font-size: 13px; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
 
 /* The mint URL under the name doubles as a "share this mint" affordance —
@@ -296,14 +181,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* Archived: muted, not red — the listing is retired, not a fresh outage (2026-10-25). */
 .md-status-inline.archived { color: var(--text2); }
 .md-status-inline.archived .status-dot { background: var(--text3); }
-/* The h1 is only the mint name inside the .md-name row (2026-10-25); it takes the row's type so nothing moves. */
-.md-name-h1 { font: inherit; color: inherit; letter-spacing: inherit; line-height: inherit; margin: 0; min-width: 0; overflow-wrap: anywhere; }
-
-.md-sc-latency-break { display: none; }
-/* Compact Reliability Score tile — only shown inside .md-summary at ≤640px.
-   Needs .md-sc.md-sc-reliability (not bare .md-sc-reliability) to outrank the later
-   `.md-sc { display: flex }` rule. */
-.md-sc.md-sc-reliability { display: none; }
 
 /* The header-row buttons (Mint QR, Open in Cashu.me, Watch, Compare)
    share ONE recipe — identical size, padding, weight and tonal-outline style. They are
@@ -358,10 +235,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .md-watch-star:hover { color: var(--amber); border-color: var(--border2); }
 .md-watch-star.on { color: var(--amber); }
 
-/* Full label on desktop; the shorter "Cashu.me" is swapped in at ≤640px so the
-   button fits one line in the 2-column mobile action grid. */
-.md-qb-short { display: none; }
-
 .latency-test-btn {
   background: var(--action-soft);
   border: 1px solid var(--copper-soft-strong);
@@ -380,75 +253,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 .latency-test-btn:disabled { cursor: wait; }
 /* The measured result ("Your latency: 312 ms") replaces the label in the same button: one line, so the button keeps its height. */
 .latency-test-btn { white-space: nowrap; }
-
-/* ── Summary Strip ──────────────────────────────────────────── */
-.md-summary {
-  display: flex;
-  /* The five tiles have an unshrinkable minimum (a rated Community-rating tile
-     is ~224px alone, the row needs ~845-865px); without wrap the row pushed the
-     page sideways at 769-864px. Wraps only where it would overflow; ≤768px is a grid. */
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.md-sc {
-  flex: 1;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-m);
-  padding: 9px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.md-sc-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.md-sc-icon.orange { background: var(--amber-soft); color: var(--amber); }
-.md-sc-icon.gray   { background: rgba(139, 148, 158, 0.1); color: var(--text-faint); }
-.md-sc-icon.green  { background: var(--green-soft);  color: var(--green-bright); }
-
-.md-sc-label {
-  font-size: 12px;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-bottom: 4px;
-  font-family: var(--font-mono);
-  font-weight: 500;
-}
-
-.md-sc-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
-  line-height: 1;
-  font-family: var(--font-mono-data);
-  letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
-}
-
-.md-sc-value.orange { color: var(--amber); }
-.md-sc-value.green  { color: var(--green-bright); }
-.md-sc-value.sm     { font-size: 13px; padding-top: 2px; letter-spacing: 0; font-weight: 600; }
-/* inherits the 20px .md-sc-value size (15px on mobile) so it matches the sibling
-   metric cards — only colour/spacing differ */
-.md-sc-stars        { color: var(--yellow); letter-spacing: 2px; font-family: var(--font-mono); }
-/* The rating number and the star row never break inside themselves (`.md-sc-value` has overflow-wrap: anywhere,
-   which split "4.7" into "4." / "7" in the narrow desktop cell); when both do not fit, the stars move below. */
-.md-sc-rating-num,
-.md-sc-stars        { white-space: nowrap; overflow-wrap: normal; }
-.md-sc-sub { font-size: 12px; color: var(--text-faint); margin-top: 3px; font-family: var(--font-mono); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 /* ── Tab Navigation ─────────────────────────────────────────── */
 .md-tabs {
@@ -1349,49 +1153,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-/* Landscape phones / small tablets: keep compact tiles, not desktop-sized cards. */
-@media (max-width: 1024px) {
-  .md-summary {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 6px;
-    padding: 8px var(--page-pad);
-  }
-  .md-sc {
-    padding: 6px 8px;
-    gap: 6px;
-    min-width: 0;
-    overflow: hidden;
-  }
-  .md-sc > div { min-width: 0; overflow: hidden; }
-  .md-sc-icon { display: none; }
-  .md-sc-label {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .md-sc-value { font-size: 16px; min-width: 0; flex-wrap: wrap; }
-  .md-sc-stars { letter-spacing: 0; font-size: 13px; }
-}
 
 @media (max-width: 768px) {
   .md-info-grid { grid-template-columns: 1fr; gap: 0; }
-  .md-summary {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    padding: 8px var(--page-pad);
-  }
-  .md-sc {
-    padding: 7px 8px;
-    gap: 6px;
-    min-width: 0;
-  }
-  .md-sc-icon { display: none; }
-  .md-sc-value { font-size: 15px; font-weight: 600; }
-  .md-sc-value.sm { font-size: 13px; }
-  .md-sc-label { font-size: 12px; }
-  .md-sc-sub { font-size: 12px; }
   .latency-test-btn {
     font-size: 12px !important;
     padding: 3px 6px !important;
@@ -1422,31 +1186,10 @@ button.md-url-copy.copied > svg { opacity: 1; }
     flex-direction: column;
     align-items: stretch;
   }
-  /* Back moves onto its own compact row above the avatar (mobile mirror of
-     the desktop Prompt-17 layout) instead of sitting inline, vertically
-     centered, beside it — that inline placement forced .md-hdr-left's
-     flex-direction:column (inherited from the desktop base rule below 768px,
-     since this block never overrode it) to also apply align-items:center,
-     which centered the whole column horizontally: the small Back button
-     floated near mid-width instead of hugging the left edge. flex-start +
-     a small gap fixes that and shrinks the freed vertical space, so the
-     avatar/name block sits closer to the top of the card. */
-  .md-hdr-left {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    flex-wrap: nowrap;
-    /* 6px -> 4px (2026-09-27) — same whitespace-reduction pass as the
-       .md-header padding-top trim above. */
-    gap: 4px;
-    /* Reserve room so the name/status row never runs under the star, which is
-       absolutely positioned in the header's top-right corner on mobile too. */
-    padding-right: 44px;
-  }
+  
   .md-hdr-center { flex-wrap: wrap; justify-content: flex-start; }
   .md-hdr-right { flex-wrap: wrap; }
   .md-hdr-actions { margin-left: 0; margin-right: 0; }
-  .md-watch-star-hero { top: 8px; right: 14px; }
   /* Icon-only circle button (2026-09-27, revised same day) — the text pill
      was already near the minimum comfortable chrome size, so shrinking its
      padding/font further wasn't the right direction; dropping the visible
@@ -1481,19 +1224,12 @@ button.md-url-copy.copied > svg { opacity: 1; }
     inset: -9px; /* from the padding box (1px border): 26 + 18 = 44 */
   }
   .md-back-label { display: none; }
-  /* Mobile keeps the original fixed 40px avatar column — deliberately no
-     growth headroom here. Verified empirically: even a few px more (tried up
-     to 56) measurably wraps "First seen by MintRadar <Mon YYYY>" onto a
-     second line on common phone widths that fit it on one line today. See
-     the long comment on AVATAR_COL_CAP in MintDetail.tsx for the full
-     reasoning; keep this value in sync with it. */
-  .md-avatar-id { --md-avatar-col: 40px; flex: 1 1 auto; min-width: 0; gap: 10px; margin-left: 0; }
+  
   /* Content-width pill, not a full-width stretch — this rule used to force
      flex:1 1 100%, artificially widening a short string like "HTTP 502" to
      fill the whole row and shoving the (i) icon out toward the row's right
      edge, which is what made its tooltip overflow off-screen. */
   .md-error-badge { flex: 0 1 auto; max-width: 100%; }
-  .md-name { font-size: 19px; }
   .md-url  { font-size: 12px; }
   /* No fixed-px .md-hdr-favicon override here anymore — the avatar's `size`
      prop is computed in MintDetail.tsx from .md-namebox's own (smaller,
@@ -1524,7 +1260,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
     gap: 8px;
     align-items: start;
   }
-  .md-hdr-left { grid-column: 1 / -1; }
 
   .md-hdr-actions {
     grid-column: 1 / -1;
@@ -1562,9 +1297,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
     text-overflow: ellipsis;
   }
 
-  .md-qb-full { display: none; }
-  .md-qb-short { display: inline; }
-
   /* Compare regains its icon + "Compare" text label here — it now sits in a
      single row next to two other text-labelled buttons, unlike the Dashboard
      mint card's icon-only Compare button (a different component/class,
@@ -1575,50 +1307,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
      the full breakdown card in .md-right is redundant on mobile (its
      Uptime/NUTs/Latency rows repeat the metric tiles above). */
   .md-reliability-panel { display: none; }
-  .md-sc.md-sc-reliability {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-  }
-  .md-sc-reliability-donut {
-    position: relative;
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-  }
-  .md-sc-reliability-donut svg { width: 100%; height: 100%; display: block; }
-  .md-sc-reliability-num {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--green-bright);
-    font-family: var(--font-mono-data);
-    letter-spacing: -0.02em;
-  }
-  .md-sc-reliability-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-  }
-  .md-sc-reliability-badge {
-    align-self: flex-start;
-    font-size: 12px;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    border-radius: 4px;
-    padding: 1px 6px;
-  }
-  .md-sc-reliability-link {
-    font-size: 12px;
-    font-family: var(--font-mono);
-    color: var(--action);
-  }
 }
 
 /* Fallback for extremely narrow screens where the 3-button hero action row
@@ -1670,7 +1358,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
 /* Match the navbar + Dashboard content gutter, which drops to 14px at ≤600px. */
 @media (max-width: 600px) {
   .md-header { margin: 10px 14px 0; }
-  .md-summary { padding: 8px 14px; }
   .md-tabs { padding: 0 14px; }
   .md-body { padding: 12px 14px; }
 }
@@ -1732,8 +1419,6 @@ button.md-url-copy.copied > svg { opacity: 1; }
    at the original cell size so "98 / 100 · 98% ok" fits inside its box. */
 @media (max-width: 900px) {
   .audit-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-  .md-qb-full { display: none; }
-  .md-qb-short { display: inline; }
 }
 
 /* ── Audit swap outcome bar + Recent swaps table (2026-09-12) ──────────── */
@@ -2142,15 +1827,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
     letter-spacing: 0;
   }
   .md-back:hover { background: none; color: var(--text); }
-  .md-back-compact { padding: 4px 0 8px; font-size: 13px; }
-  .md-avatar-id { --md-avatar-col: 72px; margin-left: 0; gap: 18px; }
-  .md-name { font-size: 24px; letter-spacing: -0.02em; }
   .md-status-inline { background: var(--green-soft); border-radius: 999px; padding: 2px 10px; }
   .md-status-inline.offline { background: rgba(0, 0, 0, 0.22); }
   .md-url { margin-top: 4px; }
-  .md-first-seen { font-family: var(--font-body) !important; font-size: 13px !important; color: var(--text3) !important; }
   .md-header .md-hdr-actions { top: 50%; bottom: auto; right: 70px; transform: translateY(-50%); }
-  .md-watch-star-hero { top: 50%; right: 20px; transform: translateY(-50%); width: 34px; height: 34px; }
   .md-quick-btn, .md-compare-btn {
     background: transparent;
     border: 1px solid var(--border2);
@@ -2162,53 +1842,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   }
   .md-quick-btn:hover, .md-compare-btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
   .latency-test-btn { background: transparent; border-color: var(--copper-soft-strong); font-family: var(--font-body); font-size: 12.5px; }
-
-  /* Figure strip: one bordered panel with dividers instead of five tiles with icon wells. */
-  .md-summary {
-    gap: 0;
-    margin: 16px var(--page-pad) 0;
-    padding: 16px 0;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--surface);
-    flex-wrap: nowrap;
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  .md-sc {
-    background: none;
-    border: 0;
-    border-left: 1px solid var(--border);
-    border-radius: 0;
-    padding: 0 20px;
-    min-width: 0;
-    overflow: visible;
-    align-items: flex-start;
-  }
-  .md-sc:first-child { border-left: 0; }
-  .md-sc > div { min-width: 0; overflow: visible; display: flex; flex-direction: column; }
-  .md-sc-icon { display: none; }
-  .md-sc-value { order: 1; font-size: 26px; line-height: 1.15; letter-spacing: -0.03em; }
-  .md-sc-value.sm { font-size: 17px; padding-top: 6px; }
-  .md-sc-label {
-    order: 2;
-    font-size: 13px;
-    color: var(--text2);
-    text-transform: none;
-    letter-spacing: 0;
-    font-family: var(--font-body);
-    font-weight: 400;
-    margin: 2px 0 0;
-    white-space: normal;
-  }
-  .md-sc-sub { order: 3; font-size: 12px; color: var(--text3); font-family: var(--font-body); margin-top: 2px; }
-  /* Stars at the 26px figure size are ~140px wide and do not fit next to the number in a ~146px cell. */
-  .md-sc-stars { font-size: 0.6em; letter-spacing: 1px; }
-}
-
-/* Figure strip: the icon wells are child divs of .md-sc, so they need a child selector to win over `.md-sc > div`. */
-@media (min-width: 769px) {
-  .md-sc > .md-sc-icon { display: none; }
+  
 }
 
 /* Rows: sans labels, mono only for values; hairline dividers, no boxed cards. The copy buttons stay (Public key, Email, Nostr, Keysets). */
@@ -2274,9 +1908,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 
 /* Table headers and mobile tile labels in the same voice (sentence case, sans). */
 .md-vh-table th { text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 12.5px; font-weight: 400; }
-@media (max-width: 768px) {
-  .md-sc-label { text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 12px; font-weight: 400; }
-}
 
 /* Mobile contacts: label and copy button on one row, the value below at full width. */
 @media (max-width: 640px) {
@@ -2400,16 +2031,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .reviews-write-btn { font-family: var(--font-body); font-size: 13px; letter-spacing: 0; background: transparent; border-color: var(--copper-soft-strong); }
 .reviews-write-btn:hover { background: var(--action-soft); }
 
-/* Latency tile: the "Show my latency" button sits in the tile's top-right corner on wide screens,
-   so it no longer makes this tile (and the whole strip) taller than the others. */
-@media (min-width: 1200px) {
-  /* Latency gets the widest column so the value (up to "1387 ms") and the button fit side by side. */
-  /* 2026-11-15: wider again (1.25fr before) so "Your latency: 1387 ms", which replaces the button, stays on the button's line.
-     2026-11-16: Uptime 24h 1.1fr (was 0.95fr) so "30 days 100% · 12 outages" stays on one line; Score, NUTs and rating give
-     the room (measured 1200-1600px: no wrap, no clipped text, Version on one line; e2e/mint-detail-uptime-30d-line.spec.ts). */
-  .md-summary { grid-template-columns: 0.85fr 1.55fr 1.1fr 1.1fr 0.75fr 1fr; }
-}
-
 @media (max-width: 768px) {
   .md-hist-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .md-hist-fig { padding: 0 10px; }
@@ -2430,7 +2051,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-limit-card + .md-limit-card { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
 }
 
-
 /* ═══ Round 3: shorter figure strip, header buttons, tabs, modals ═══════════════ */
 
 /* Header buttons: outlined, sans (desktop and mobile). Sizes stay with the existing responsive rules. */
@@ -2442,45 +2062,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   letter-spacing: 0;
 }
 .md-quick-btn:hover, .md-compare-btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
-.md-first-seen { font-family: var(--font-body) !important; font-size: 13px !important; color: var(--text3) !important; }
-
-@media (min-width: 769px) {
-  /* Strip is two rows tall: value (+ the latency button) on the first, label and note on the second. */
-  .md-summary { padding: 14px 0; }
-  .md-sc > div { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 0; }
-  .md-sc-value { flex: 1 1 100%; order: 1; }
-  .md-sc-label { order: 2; margin: 2px 0 0; }
-  .md-sc-sub { order: 3; margin-top: 2px; }
-  .md-sc > div > div:not([class]) { order: 5; flex-basis: 100%; }
-  /* Latency tile: value and "Show my latency" share the first row; its note joins the label on the second. */
-  .md-sc:has(.latency-test-btn) .md-sc-value { flex: 0 0 auto; }
-  .md-sc:has(.latency-test-btn) .md-sc-sub { display: contents; }
-  .md-sc:has(.latency-test-btn) .md-sc-sub > span:last-child { order: 2; align-self: center; flex: 1 0 58%; }
-  .md-sc:has(.latency-test-btn) .md-sc-sub > span:first-child { order: 4; font-size: 12px; color: var(--text3); font-family: var(--font-body); }
-  .md-sc:has(.latency-test-btn) .md-sc-label { order: 3; }
-  /* A row break after the button (same order, later in the DOM): without it the label of a tile whose value is "—" (offline, degraded, archived: no latency) fits into the first row. */
-  .md-sc:has(.latency-test-btn) .md-sc-latency-break { display: block; order: 2; flex: 0 0 100%; height: 0; }
-}
 
 /* Mobile: figures sit in one bordered panel with hairline dividers (no boxed tiles). */
 @media (max-width: 768px) {
-  .md-summary {
-    gap: 0;
-    padding: 0;
-    margin: 12px var(--page-pad) 0;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--surface);
-    overflow: hidden;
-  }
-  .md-sc { background: none; border: 0; border-radius: 0; padding: 12px 14px; }
-  .md-sc:nth-child(even) { border-left: 1px solid var(--border); }
-  .md-sc:nth-child(n+3) { border-top: 1px solid var(--border); }
   .latency-test-btn { background: transparent; font-family: var(--font-body); font-size: 12.5px !important; }
-}
-/* 12px text floor (2026-11-18): "30 days 100% · 12 outages" needs ~159px; at 390px the half cell had 152px with 14px sides. */
-@media (max-width: 413px) {
-  .md-sc { padding-inline: 10px; }
 }
 
 /* Mobile tabs: five equal tabs that fit the screen instead of scrolling off the edge. */
@@ -2557,21 +2142,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .rv-btn-submit { font-size: 14px; padding: 9px 18px; }
 .rv-permanence-note { font-size: 12px; }
 
-
-/* Round 4: mobile type — notes and the reliability badge in DM Sans, the scheme hidden in the header URL. */
-@media (max-width: 768px) {
-  .md-sc-sub { font-family: var(--font-body); font-size: 12px; color: var(--text3); }
-  /* "Moderate Reliability" is wider than the column beside the donut: it wraps inside it ("Moderate" / "Reliability") instead of being clipped. */
-  .md-sc-reliability-badge { font-family: var(--font-body); font-size: 12px; font-weight: 500; border-radius: 12px; padding: 1px 7px; white-space: normal; max-width: 100%; line-height: 1.3; }
-  /* MintRadar Sans is wider than DM Sans: "Not available yet" needed 117px beside the donut (112px at 390px) and wrapped,
-     so the tile shrank when the score arrived. The width axis at 90 % keeps it on one line (2026-11-18). */
-  .md-sc-reliability-badge { font-stretch: 90%; }
-  .md-sc-reliability-link { font-family: var(--font-body); font-size: 12px; }
-}
-/* 320-360px: the column beside the donut is only ~62-82px; narrower tile padding and gap give "Reliability" room to fit on one line. */
-@media (max-width: 360px) {
-  .md-sc.md-sc-reliability { padding-inline: 8px; gap: 8px; }
-}
 @media (max-width: 640px) {
   .md-url-scheme { display: none; }
 }
@@ -2630,8 +2200,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 }
 
 /* Tooltip hit areas next to neighbouring controls (see InfoTooltip.css: --tt-hit-t/r/b/l). */
-/* The New / Test mint chips in the title wrap onto a line right above the URL button on narrow screens. */
-.md-namebox .info-tooltip--chip { --tt-hit-t: 4px; --tt-hit-b: 2px; }
 
 /* One-line captions that replaced tooltips (2026-10-14): the Keysets hint under its title, and "Capped at 75" under the score of a new mint. */
 .md-panel-hint { margin: -8px 0 12px; font-size: 12.5px; line-height: 1.45; color: var(--text3); }
@@ -2645,8 +2213,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-url { font-size: 12px; }
   .md-quick-btn,
   .md-compare-btn { font-size: 12px; }
-  .md-sc-reliability-num { font-size: 12px; }
-  .md-sc-reliability-badge { font-size: 12px; }
   .unit-badge { font-size: 12px; }
   .review-author-npub,
   .review-date,
@@ -2995,36 +2561,159 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .au-dir-value { font-size: 18px; }
 }
 
-/* Reliability Score in the figure strip above 640px (first tile); the phone keeps its compact donut tile instead. */
-.md-sc.md-sc-score { cursor: pointer; }
-.md-sc.md-sc-score:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
-/* The label ("High Reliability" / "Not available yet") and "Details ›" each take a full row, so a short label and a long
-   one give the tile the same height (no layout shift when the score arrives). */
-.md-sc-score .md-sc-sub { display: block; flex: 0 0 100%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.md-sc-sub.md-sc-score-link { color: var(--action); }
-/* Desktop strip (769px and up): the whole tile opens the breakdown, so "Details ›" is not shown; it stays in the mobile panel
-   layout. Hidden with visibility, not display: its row still holds the strip's height, so the strip does not shrink and grow
-   back while other tiles load (the Uptime 24h sub line wraps while "loading checks…"; mint-detail-score-pending.spec.ts (4)). */
-@media (min-width: 769px) {
-  .md-sc-sub.md-sc-score-link { visibility: hidden; }
-}
-@media (max-width: 640px) {
-  .md-sc.md-sc-score { display: none; }
-}
-/* 769-1199px: six figures do not fit one row ("Nutshell/0.16.0" broke inside the word), so the strip is 3 x 2. */
-@media (min-width: 769px) and (max-width: 1199px) {
-  /* The middle column (Latency, then Version) a little wider: room for "Your latency: 1387 ms" in the button's place. */
-  .md-summary { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr); row-gap: 16px; }
-  .md-sc:nth-child(3n+1) { border-left: 0; }
-}
-
 /* Narrow phones (below 375px): "Your latency: 1387 ms" in the latency button fits its half of the strip on one line
    (the 12px phone text floor stays: tighter button and tile padding instead of a smaller font). */
 @media (max-width: 374px) {
-  .md-sc:has(.latency-test-btn) { padding-left: 10px; padding-right: 8px; }
   .latency-test-btn { font-size: 12px !important; padding: 3px !important; letter-spacing: -0.01em; }
 }
 
 /* Uptime 24h tile, 30-day line: the outage note (" · 2 outages") is one unit, so on the narrowest phones (below ~390px, where
    the line cannot fit half the strip at the 12px text floor) it moves to the next line whole instead of breaking inside. */
 .md-uptime-30d-note { white-space: nowrap; }
+
+/* ── 2026-11-19 redesign, phase 4a: header, five-figure strip, 30 days ─────────────────────────────────────────────
+   Approved mockup ~/Claude/refs/mintradar-redesign-1118/mint.html. Scoped to .md-dh / .md-strip / .md-trace so the
+   legacy header and strip rules above (several media layers) cannot reach in. */
+.mint-detail .md-header.md-dh {
+  display: block;
+  position: static;
+  margin: 14px var(--page-pad) 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.mint-detail .md-dh .md-back {
+  display: inline-flex; align-items: center; gap: 4px; width: auto; height: auto; min-height: 32px;
+  padding: 4px 0; margin: 0 0 10px; border: 0; border-radius: 0; background: none;
+  font-family: var(--font-body); font-size: var(--fs-sm); color: var(--text2); letter-spacing: 0;
+}
+.mint-detail .md-dh .md-back::before { content: none; }
+.mint-detail .md-dh .md-back:hover { color: var(--action); background: none; }
+.mint-detail .md-dh .md-back-label { display: inline; }
+.md-dh-main {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 4px 18px;
+  align-items: start;
+}
+.md-dh-main .md-hdr-favicon { grid-row: 1 / span 2; }
+.mint-detail .md-dh .md-namebox { min-width: 0; }
+.mint-detail .md-dh .md-dh-title {
+  display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap;
+  font-size: inherit; line-height: 1.15; margin: 0;
+}
+.mint-detail .md-dh .md-name-h1 {
+  font-size: var(--fs-xl); font-weight: 650; line-height: 1.15; letter-spacing: -0.01em;
+  margin: 0; overflow-wrap: anywhere; min-width: 0;
+}
+.mint-detail .md-dh .md-status-inline { font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 500; letter-spacing: 0; padding: 0; background: none; border: 0; }
+.mint-detail .md-dh .md-dh-star { width: 36px; height: 36px; flex: none; }
+.md-dh-badge {
+  font-size: var(--fs-xs); font-weight: 600; line-height: 1.3; padding: 2px 8px; border-radius: 5px; flex: none;
+  color: color-mix(in srgb, var(--amber) 80%, var(--text)); background: var(--amber-soft); border: 1px solid var(--amber-soft-strong);
+}
+.mint-detail .md-dh .md-url { font-size: var(--fs-sm); color: var(--text2); margin-top: 6px; }
+.mint-detail .md-dh .md-first-seen { font-size: var(--fs-xs); color: var(--text3); margin-top: 4px; font-family: var(--font-body); }
+.mint-detail .md-dh .md-hdr-actions {
+  position: static; margin: 0; grid-column: 3; grid-row: 1 / span 2; max-width: none;
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center;
+}
+.mint-detail .md-dh .md-hdr-center, .mint-detail .md-dh .md-hdr-right { display: contents; }
+
+/* Five figures in one frame, thin rules between them. */
+.mint-detail .md-summary.md-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 22px var(--page-pad) 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg2);
+}
+.mint-detail .md-strip .md-sc {
+  display: grid; align-content: start; gap: 3px; min-width: 0;
+  padding: 16px 20px; margin: 0;
+  background: none; border: 0; border-left: 1px solid var(--border); border-radius: 0; box-shadow: none;
+}
+.mint-detail .md-strip .md-sc:first-child { border-left: 0; }
+.mint-detail .md-strip .md-sc-value {
+  font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 640; line-height: 1.1;
+  letter-spacing: -0.01em; color: var(--text); white-space: nowrap; padding: 0;
+}
+.mint-detail .md-strip .md-sc-value.sm { font-size: var(--fs-md); font-weight: 600; white-space: normal; padding-top: 6px; }
+.mint-detail .md-strip .md-strip-readout { font-size: var(--fs-readout); font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; line-height: 1; }
+.md-strip-unit { font-size: var(--fs-md); font-weight: 500; font-stretch: 100%; color: var(--text2); letter-spacing: 0; }
+.mint-detail .md-strip .md-sc-label {
+  font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 500; color: var(--text);
+  text-transform: none; letter-spacing: 0; display: flex; align-items: center; gap: 4px; margin: 0;
+}
+.mint-detail .md-strip .md-sc-sub {
+  font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text2); margin: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; white-space: normal;
+}
+.mint-detail .md-strip .md-sc-sub > span { min-width: 0; }
+.md-strip-code { font-family: var(--font-mono); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.md-strip-link {
+  all: unset; cursor: pointer; color: var(--action); text-decoration: underline; text-underline-offset: 3px;
+  font-size: var(--fs-xs);
+}
+.md-strip-link:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: 2px; }
+.mint-detail .md-strip .md-sc-stars { color: var(--amber); font-family: var(--font-body); font-size: var(--fs-sm); letter-spacing: 1px; vertical-align: 3px; }
+.mint-detail .md-strip .md-sc-rating-num { color: var(--text); }
+.mint-detail .md-strip .md-outdated-pill {
+  font-size: var(--fs-xs); font-weight: 600; line-height: 1.3; padding: 1px 6px; border-radius: 4px;
+  color: color-mix(in srgb, var(--red) 75%, var(--text)); background: var(--red-soft); border: 1px solid var(--red-soft-strong);
+}
+.mint-detail .md-strip .latency-test-btn { font-family: var(--font-body); font-size: var(--fs-xs); padding: 3px 9px; min-height: 26px; }
+
+.md-trace {
+  margin: 16px var(--page-pad) 0;
+  padding: 16px 20px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--bg2);
+}
+.md-trace-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.md-trace-title { font-size: var(--fs-md); font-weight: 600; margin: 0; }
+.md-trace-note { font-size: var(--fs-xs); color: var(--text2); }
+.md-trace .uptime-scale { margin-top: 6px; }
+
+.mint-detail .md-tabs { margin: 22px var(--page-pad) 0; padding: 0; }
+
+@media (max-width: 1100px) {
+  .mint-detail .md-summary.md-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mint-detail .md-strip .md-sc:nth-child(4) { border-left: 0; }
+  .mint-detail .md-strip .md-sc:nth-child(n+4) { border-top: 1px solid var(--border); }
+}
+@media (max-width: 768px) {
+  .md-dh-main { grid-template-columns: 48px minmax(0, 1fr); gap: 4px 14px; }
+  .mint-detail .md-dh .md-name-h1 { font-size: 24px; }
+  .mint-detail .md-dh .md-hdr-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; margin-top: 12px; }
+  .mint-detail .md-summary.md-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
+  .mint-detail .md-strip .md-sc { padding: 14px 16px; border-left: 0; border-top: 1px solid var(--border); }
+  .mint-detail .md-strip .md-sc:nth-child(2n+1) { border-left: 1px solid var(--border); }
+  /* The score spans the first row: number, then its words beside it. */
+  .mint-detail .md-strip .md-sc-score {
+    grid-column: 1 / -1; border-top: 0; border-left: 0;
+    grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: center;
+  }
+  .mint-detail .md-strip .md-sc-score .md-strip-readout { grid-row: 1 / span 2; }
+  .mint-detail .md-strip .md-sc-score .md-sc-label, .mint-detail .md-strip .md-sc-score .md-sc-sub { grid-column: 2; }
+  .md-trace { padding: 14px 16px 12px; }
+  /* Five tabs side by side, no sideways scroll (owner, 2026-11-18). */
+  .mint-detail .md-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; overflow: visible; }
+  .mint-detail .md-tabs .md-tab { padding: 12px 2px; text-align: center; font-size: var(--fs-sm); white-space: nowrap; min-width: 0; }
+}
+@media (max-width: 374px) {
+  .mint-detail .md-tabs .md-tab { font-size: 13px; letter-spacing: -0.01em; }
+}
+/* "Open in Cashu.me" reads "Cashu.me" on phones, so the three actions fit one row. */
+.md-qb-short { display: none; }
+@media (max-width: 640px) {
+  .md-qb-full { display: none; }
+  .md-qb-short { display: inline; }
+}
+/* One line box for every figure ("—" for an offline mint and "50 ms" with its smaller unit are the same height). */
+.mint-detail .md-strip .md-sc-value:not(.sm):not(.md-strip-readout) { height: 1.1em; }
+.mint-detail .md-strip .md-strip-unit { line-height: 1; }

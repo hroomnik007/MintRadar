@@ -72,7 +72,7 @@ test('Watchlist: every star and compare button is named after its mint, and the 
 
 test('Mint Detail: the header star is named after the mint and flips Add/Remove', async ({ page }) => {
   await page.goto(`/mint/${encodeURIComponent(KNOWN[0]!.url)}`)
-  const star = page.locator('.md-watch-star-hero')
+  const star = page.locator('.md-dh-star')
   await expect(star).toBeVisible()
   await expect(star).toHaveAccessibleName('Add Alpha Mint to watchlist')
   await expect(star).toHaveAttribute('title', 'Add Alpha Mint to watchlist')

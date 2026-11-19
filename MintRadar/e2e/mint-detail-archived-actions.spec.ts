@@ -31,7 +31,7 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
     test('archived: no Mint QR, Cashu.me or Outdated; Archived and history stay', async ({ page }) => {
       await open(page, true)
       await expect(page.locator('.md-status-inline.archived')).toHaveText(/Archived/)
-      await expect(page.locator('.md-sc-value', { hasText: 'Nutshell/0.15.0' })).toBeVisible()
+      await expect(page.locator('.md-sc-software .md-strip-code', { hasText: 'Nutshell/0.15.0' })).toBeVisible()
       await expect(page.getByRole('button', { name: /Mint QR/ })).toHaveCount(0)
       await expect(page.getByRole('link', { name: /Cashu\.me/ })).toHaveCount(0)
       await expect(page.locator('.md-outdated-pill')).toHaveCount(0)

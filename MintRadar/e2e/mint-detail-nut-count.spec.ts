@@ -33,7 +33,7 @@ test('the header NUT count equals the NUTs tab before and after the live data ar
   await page.goto(`/mint/${encodeURIComponent(ALPHA)}`)
   await reached
 
-  const header = page.locator('.md-summary .md-sc-value.green')
+  const header = page.locator('.md-summary .md-sc-nut-count')
   const tabSummary = page.locator('.nut-summary-line strong')
   await expect(header).toHaveText('4')
   await page.locator('.md-tab', { hasText: 'NUTs' }).click()

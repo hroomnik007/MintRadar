@@ -29,7 +29,7 @@ const ORIGINS: Origin[] = [
     name: 'Dashboard', url: '/?status=all', ready: '.mint-card',
     watchTrigger: p => p.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('.card-star'),
   },
-  { name: 'Mint Detail', url: DETAIL, ready: '.md-tabs', watchTrigger: p => p.locator('.md-watch-star-hero').first() },
+  { name: 'Mint Detail', url: DETAIL, ready: '.md-tabs', watchTrigger: p => p.locator('.md-dh-star').first() },
   { name: 'Watchlist', url: '/watchlist', ready: '.wl-login-gate' },
   { name: 'Stats', url: '/stats', ready: '.stats-panel' },
 ]
