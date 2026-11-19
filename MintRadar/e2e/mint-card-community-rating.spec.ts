@@ -44,15 +44,15 @@ test.describe('MintCard — Community Rating badge', () => {
     await expect(reliability.locator('.card-reliability-score')).toHaveText('92')
   })
 
-  test('badge is shared with the Watchlist card', async ({ page }) => {
+  test('the Watchlist row shows the score, not the rating (2026-11-19 mockup alignment)', async ({ page }) => {
     await loginAs(page)
     await page.goto('/?status=all')
     await card(page, 'Alpha Mint').getByRole('button', { name: /^Add .+ to watchlist$/ }).click()
     await page.getByRole('link', { name: 'Watchlist' }).click()
 
-    await expect(page.locator('.wl-grid .mint-card')).toHaveCount(1)
-    await expect(
-      page.locator('.wl-grid .mint-card').locator('.card-reliability-rating', { hasText: '4.2(12)' })
-    ).toBeVisible()
+    const row = page.locator('.wl-grid .mint-card')
+    await expect(row).toHaveCount(1)
+    await expect(row.locator('.card-reliability-score')).toHaveText('92')
+    await expect(row.locator('.card-reliability-rating')).toHaveCount(0)
   })
 })

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
-  ALPHA, BRAVO, NAME, mockNotifyApi, openWatchlist, card, down, up, flags, subscribeCalls, unsubscribeCalls,
+  ALPHA, BRAVO, NAME, mockNotifyApi, openWatchlist, card, alerts, flags, subscribeCalls, unsubscribeCalls,
 } from './fixtures/watchlistNotify'
 import { flush } from './fixtures/settle'
 
@@ -31,10 +31,10 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
   test('a pill turned on and then off again (confirmed off): removal sends nothing', async ({ page }) => {
     const api = await mockNotifyApi(page)
     await openWatchlist(page)
-    await down(page, ALPHA).click()
-    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'true')
-    await down(page, ALPHA).click()
-    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
+    await alerts(page, ALPHA).click()
+    await expect(alerts(page, ALPHA)).toHaveAttribute('aria-checked', 'true')
+    await alerts(page, ALPHA).click()
+    await expect(alerts(page, ALPHA)).toHaveAttribute('aria-checked', 'false')
     const before = api.calls.length // subscribe + unsubscribe from the toggles
     await star(page, ALPHA).click()
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
@@ -45,7 +45,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
   test('a legacy local flag that was never confirmed may have a server row: one unsubscribe', async ({ page }) => {
     const api = await mockNotifyApi(page)
     await openWatchlist(page, { seed: [{ url: ALPHA, down: true, up: true, confirmed: false }] })
-    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false') // shown as off...
+    await expect(alerts(page, ALPHA)).toHaveAttribute('aria-checked', 'false') // shown as off...
     await star(page, ALPHA).click()
     await expect.poll(() => unsubscribeCalls(api).length).toBe(1) // ...but the old login sync may have subscribed it
   })
@@ -99,8 +99,7 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     await dashStar.click()
     await page.getByRole('link', { name: 'Watchlist' }).click()
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(4)
-    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
-    await expect(up(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
+    await expect(alerts(page, ALPHA)).toHaveAttribute('aria-checked', 'false')
     expect(await flags(page, ALPHA)).toEqual({ down: false, up: false, confirmed: false })
     await flush(page)
     expect(subscribeCalls(api)).toHaveLength(0)
@@ -121,8 +120,8 @@ test.describe('Watchlist — removing a mint cancels its notifications', () => {
     const api = await mockNotifyApi(page)
     await openWatchlist(page)
     api.mode = 'gate'
-    await down(page, ALPHA).click()
-    await expect(down(page, ALPHA)).toBeDisabled()
+    await alerts(page, ALPHA).click()
+    await expect(alerts(page, ALPHA)).toBeDisabled()
     await star(page, ALPHA).click()
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(3)
     await flush(page)

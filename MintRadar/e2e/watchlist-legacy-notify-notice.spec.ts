@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs } from './fixtures/mocks'
 import {
-  KNOWN, ALPHA, BRAVO, CHARLIE, NAME, mockNotifyApi, openWatchlist, card, down, up, flags,
+  KNOWN, ALPHA, BRAVO, CHARLIE, NAME, mockNotifyApi, openWatchlist, card, alerts, flags,
 } from './fixtures/watchlistNotify'
 import { flush, layoutReady, resize } from './fixtures/settle'
 
@@ -24,7 +24,7 @@ test.describe('Watchlist — notice about notifications that were switched off',
     expect(n.y + n.height).toBeLessThanOrEqual((await page.locator('.wl-notify-explainer').boundingBox())!.y + 1)
     expect(n.y + n.height).toBeLessThanOrEqual((await page.locator('.wl-grid').boundingBox())!.y + 1)
     // the legacy mint shows as off
-    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
+    await expect(alerts(page, ALPHA)).toHaveAttribute('aria-checked', 'false')
     await flush(page)
     expect(api.calls).toHaveLength(0) // showing it asks for no signature and sends nothing
   })
@@ -35,7 +35,7 @@ test.describe('Watchlist — notice about notifications that were switched off',
     await notice(page).getByRole('button', { name: 'Dismiss' }).click()
     await expect(notice(page)).toHaveCount(0)
     await page.reload()
-    await expect(page.locator('.wl-grid .notify-strip')).toHaveCount(4)
+    await expect(page.locator('.wl-grid .wl-switch')).toHaveCount(4)
     await expect(notice(page)).toHaveCount(0)
     expect(await flags(page, ALPHA)).toEqual({ down: true, up: true, confirmed: false }) // data untouched
     expect(api.calls).toHaveLength(0)
@@ -56,7 +56,7 @@ test.describe('Watchlist — notice about notifications that were switched off',
   test('no legacy flags: no notice (new rows, and confirmed rows)', async ({ page }) => {
     await mockNotifyApi(page)
     await openWatchlist(page, { seed: [{ url: BRAVO, down: true, up: false, confirmed: true }] })
-    await expect(page.locator('.wl-grid .notify-strip')).toHaveCount(4)
+    await expect(page.locator('.wl-grid .wl-switch')).toHaveCount(4)
     await expect(notice(page)).toHaveCount(0)
   })
 
@@ -72,12 +72,10 @@ test.describe('Watchlist — notice about notifications that were switched off',
     await page.getByRole('link', { name: 'Watchlist' }).click()
     await expect(page.locator('.wl-grid .mint-card')).toHaveCount(1)
     await expect(notice(page)).toHaveCount(0)
-    await down(page, ALPHA).click()
-    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'true')
-    await up(page, ALPHA).click()
-    await expect(up(page, ALPHA)).toHaveAttribute('aria-pressed', 'true')
-    await down(page, ALPHA).click()
-    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'false')
+    await alerts(page, ALPHA).click()
+    await expect(alerts(page, ALPHA)).toHaveAttribute('aria-checked', 'true')
+    await alerts(page, ALPHA).click()
+    await expect(alerts(page, ALPHA)).toHaveAttribute('aria-checked', 'false')
     await expect(notice(page)).toHaveCount(0)
   })
 
@@ -88,15 +86,15 @@ test.describe('Watchlist — notice about notifications that were switched off',
       { url: CHARLIE, down: true, up: false, confirmed: false },
     ] })
     await expect(notice(page)).toBeVisible()
-    await down(page, ALPHA).click()
-    await expect(down(page, ALPHA)).toHaveAttribute('aria-pressed', 'true')
+    await alerts(page, ALPHA).click()
+    await expect(alerts(page, ALPHA)).toHaveAttribute('aria-checked', 'true')
     await expect(notice(page)).toBeVisible() // Charlie is still a legacy mint
-    await up(page, CHARLIE).click() // any confirmed toggle on that mint confirms its row
-    await expect(up(page, CHARLIE)).toHaveAttribute('aria-pressed', 'true')
+    await alerts(page, CHARLIE).click() // any confirmed toggle on that mint confirms its row
+    await expect(alerts(page, CHARLIE)).toHaveAttribute('aria-checked', 'true')
     await expect(notice(page)).toHaveCount(0)
     // and it does not come back after a reload (nothing was dismissed, there is simply nothing to warn about)
     await page.reload()
-    await expect(page.locator('.wl-grid .notify-strip')).toHaveCount(4)
+    await expect(page.locator('.wl-grid .wl-switch')).toHaveCount(4)
     await expect(notice(page)).toHaveCount(0)
   })
 

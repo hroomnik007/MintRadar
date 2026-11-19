@@ -652,61 +652,129 @@
   .watchlist-page .wl-login-gate { grid-template-columns: minmax(0, 1fr); gap: 16px; }
 }
 
-/* ── 2026-11-19 redesign, phase 6d: watched mints as rows ───────────────────────────────────────────────────────────
-   Approved mockup watchlist.html ("Your mints"): one panel, one row per mint with the icon, the name (watch star right
-   after it), the 30 daily bars, the latency and the score; status, units and Compare under it, then the alerts. The
-   card's own markup is unchanged (MintCard is shared with the Mints page): its wrappers are flattened with
-   display: contents and the parts placed on a grid here. The mockup's single "Alerts" switch was NOT copied: the server
-   keeps five separate alerts (down, up, mint/melt, outdated version, lost NUT-04/05), so NotifyStrip stays as it is. */
+/* ── Watched mints as rows, 2026-11-19 mockup alignment (watchlist.html "Your mints") ──────────────────────────────
+   One panel; its head ("Your mints", the summary, Add a mint) and the alerts explainer, then one row per mint
+   (WatchlistRow): icon | name and star, host | 30 daily bars | latency | score | Alerts switch, More alerts | Compare.
+   "More alerts" opens under the row, full width. Phones: icon | name | score, the alerts on the next line. */
 .watchlist-page .wl-grid {
-  display: block; padding: 4px 20px; margin: 12px 0 16px;
+  display: block; padding: 18px 20px 6px; margin: 16px 0;
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
 }
-.watchlist-page .wl-grid .mint-card {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1.4fr) minmax(120px, 200px) auto 64px;
-  grid-template-areas: "ico name bars lat score" ". foot foot foot foot" ". notify notify notify notify";
-  gap: 6px 16px; align-items: center;
-  padding: 14px 0; background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0;
+.wl-panel-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.wl-panel-add { flex: none; }
+.wl-panel-title { margin: 0; font-size: var(--fs-md); font-weight: 620; color: var(--text); }
+.watchlist-page .wl-grid .wl-summary { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--text2); }
+.wl-panel-add {
+  height: 36px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: transparent;
+  color: var(--text); font: 500 var(--fs-sm) var(--font-body); cursor: pointer; white-space: nowrap;
 }
-.watchlist-page .wl-grid .mint-card:first-child { border-top: 0; }
-.watchlist-page .wl-grid .mint-card:hover { border-color: var(--border); background: transparent; }
-.watchlist-page .wl-grid .mint-card:hover .card-name { color: var(--action-ink); }
-.watchlist-page .wl-grid .card-link::after { border-radius: 0; }
-.watchlist-page .wl-grid .card-top,
-.watchlist-page .wl-grid .card-name-row,
-.watchlist-page .wl-grid .card-lower { display: contents; }
-.watchlist-page .wl-grid .card-name-row > :first-child { grid-area: ico; }
-.watchlist-page .wl-grid .card-id { grid-area: name; }
-.watchlist-page .wl-grid .card-trace { grid-area: bars; gap: 4px; }
-.watchlist-page .wl-grid .card-facts { grid-area: lat; grid-template-columns: auto auto; justify-content: start; gap: 4px 20px; }
-/* The 30-day uptime is the bars beside it; latency and reviews stay. */
-.watchlist-page .wl-grid .card-facts > div:not(.latency-block):not(.card-fact-reviews) { display: none; }
-.watchlist-page .wl-grid .card-fact-reviews { justify-items: start; text-align: left; }
-.watchlist-page .wl-grid .card-reliability { grid-area: score; justify-self: end; align-items: flex-end; }
-.watchlist-page .wl-grid .card-foot { grid-area: foot; padding-top: 0; border-top: 0; }
-.watchlist-page .wl-grid .notify-strip { grid-area: notify; margin-top: 0; padding-top: 0; border-top: 0; }
-.watchlist-page .wl-grid .skeleton-card { margin: 12px 0; }
-@media (max-width: 760px) {
-  .watchlist-page .wl-grid { padding: 4px 16px; }
-  .watchlist-page .wl-grid .mint-card {
+.wl-panel-add:hover { border-color: var(--text3); }
+.watchlist-page .wl-grid .wl-notify-explainer { margin: 8px 0 6px; font-size: var(--fs-xs); color: var(--text3); }
+
+.watchlist-page .wl-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1.4fr) 150px 96px 56px auto 32px;
+  grid-template-areas: "ico id bars lat score al cmp" "more more more more more more more" "msg msg msg msg msg msg msg";
+  gap: 0 16px; align-items: center;
+  padding: 12px 0; margin: 0;
+  background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0; box-shadow: none;
+}
+.watchlist-page .wl-row:hover { background: transparent; border-color: var(--border); }
+.watchlist-page .wl-row:hover .card-name { color: var(--action-ink); }
+.watchlist-page .wl-row .card-link::after { border-radius: 0; }
+.wl-row-ico { grid-area: ico; }
+.wl-row-id { grid-area: id; min-width: 0; }
+.watchlist-page .wl-row .card-name-line { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.watchlist-page .wl-row .card-name { font-size: var(--fs-md); font-weight: 600; color: var(--text); }
+.watchlist-page .wl-row .card-star { position: relative; z-index: 1; width: 28px; height: 28px; border: 0; border-radius: 8px; color: var(--amber); background: transparent; }
+.watchlist-page .wl-row .card-star:hover { background: var(--action-soft); }
+.wl-row-host { margin-top: 2px; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-row-state { font-family: var(--font-body); color: color-mix(in srgb, var(--red) 70%, var(--text)); }
+.wl-row-state-degraded { color: color-mix(in srgb, var(--amber) 80%, var(--text)); }
+.wl-row-bars { grid-area: bars; display: grid; gap: 4px; min-width: 0; }
+.wl-row-bars .uptime-bars { height: 16px; }
+.wl-row-k { display: block; font-size: var(--fs-xs); color: var(--text2); }
+.wl-row-lat { grid-area: lat; display: grid; gap: 2px; min-width: 0; }
+.wl-row-v { font-size: var(--fs-md); font-weight: 560; color: var(--text); white-space: nowrap; }
+.wl-row-v small { font-size: var(--fs-xs); color: var(--text2); font-weight: 400; }
+.wl-row-v-muted { font-size: var(--fs-xs); font-weight: 400; color: var(--text3); white-space: normal; }
+.watchlist-page .wl-row .wl-row-score { grid-area: score; justify-self: end; margin: 0; display: block; }
+.watchlist-page .wl-row .card-reliability-score {
+  font-family: var(--font-display); font-size: 32px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; line-height: 1;
+}
+.wl-tier-high .card-reliability-score { color: var(--green-bright); }
+.wl-tier-mod .card-reliability-score { color: var(--amber); }
+.wl-tier-low .card-reliability-score { color: var(--red); }
+.wl-tier-off .card-reliability-score, .wl-tier-none .card-reliability-score { color: var(--text3); }
+.wl-row-alerts, .watchlist-page .wl-row .notify-strip { display: contents; }
+.watchlist-page .wl-row .notify-strip-row { grid-area: al; display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
+.watchlist-page .wl-row .notify-more-pills { grid-area: more; position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0 2px 52px; margin: 0; }
+.watchlist-page .wl-row .notify-more-note { flex-basis: 100%; margin: 4px 0 0; font-size: var(--fs-xs); color: var(--text3); }
+.watchlist-page .wl-row .notify-strip-msg { grid-area: msg; position: relative; z-index: 1; padding-left: 52px; font-size: var(--fs-xs); color: color-mix(in srgb, var(--red) 75%, var(--text)); }
+.watchlist-page .wl-row .notify-strip-msg:empty { display: none; }
+.watchlist-page .wl-row .card-compare-btn { grid-area: cmp; position: relative; z-index: 1; margin: 0; width: 32px; height: 32px; border: 0; border-radius: 8px; color: var(--text3); background: transparent; display: grid; place-items: center; }
+.watchlist-page .wl-row .card-compare-btn:hover { color: var(--action); background: var(--action-soft); }
+
+/* The switch of the mockup: copper when on; a spinner while the server has not answered. */
+.wl-switch {
+  position: relative; flex: none; width: 34px; height: 20px; padding: 0; border: 0; border-radius: 999px;
+  background: var(--border-strong); cursor: pointer;
+}
+.wl-switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--text2); transition: transform .15s ease;
+}
+.wl-switch[aria-checked="true"] { background: var(--action); }
+.wl-switch[aria-checked="true"]::after { transform: translateX(14px); background: #1b0f08; }
+.wl-switch:disabled { cursor: progress; opacity: .7; }
+.wl-switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+.wl-switch .notify-spinner { position: absolute; inset: 0; margin: auto; }
+/* 44 px touch target without a bigger switch. */
+.wl-switch::before { content: ''; position: absolute; inset: -12px -6px; }
+@media (prefers-reduced-motion: reduce) { .wl-switch::after { transition: none; } }
+.wl-switch-label { font-size: var(--fs-xs); color: var(--text2); }
+.watchlist-page .wl-row .notify-more-toggle {
+  display: inline-flex; align-items: center; gap: 2px; margin: 0 0 0 6px; padding: 4px 2px; border: 0; background: none;
+  color: var(--text3); font: 400 var(--fs-xs) var(--font-body); cursor: pointer; white-space: nowrap;
+}
+.watchlist-page .wl-row .notify-more-toggle:hover { color: var(--action); }
+.watchlist-page .wl-row .notify-more-toggle[aria-expanded="true"] .notify-more-chevron { transform: rotate(180deg); }
+.watchlist-page .wl-row .notify-more-chevron { transition: transform .15s ease; }
+.watchlist-page .wl-row .notify-pill.on { background: var(--action-soft); border-color: var(--action); color: var(--action-ink); }
+
+@media (max-width: 900px) {
+  .watchlist-page .wl-row {
+    grid-template-columns: 36px minmax(0, 1fr) 96px 48px;
+    grid-template-areas: "ico id lat score" ". al al cmp" "more more more more" "msg msg msg msg";
+  }
+  .watchlist-page .wl-row .notify-strip-row, .watchlist-page .wl-row .card-compare-btn { margin-top: 8px; }
+  .wl-row-bars { display: none; }
+}
+@media (max-width: 560px) {
+  .watchlist-page .wl-grid { padding: 14px 12px 4px; }
+  .watchlist-page .wl-row {
     grid-template-columns: 36px minmax(0, 1fr) auto;
-    grid-template-areas: "ico name score" "foot foot foot" "notify notify notify";
+    grid-template-areas: "ico id score" ". al cmp" "more more more" "msg msg msg";
     column-gap: 12px;
   }
-  .watchlist-page .wl-grid .card-trace,
-  .watchlist-page .wl-grid .card-facts { display: none; }
+  .wl-row-lat { display: none; }
+  .watchlist-page .wl-row .notify-more-pills, .watchlist-page .wl-row .notify-strip-msg { padding-left: 0; }
 }
-@media (max-width: 400px) {
-  /* 320 px: the label and both pills must fit one line inside the panel (they ran 7 px over). */
-  .watchlist-page .wl-grid { padding: 4px 10px; }
-  .watchlist-page .wl-grid .notify-strip-label { letter-spacing: 0; }
+
+/* "Recommended by follows" in the same language as the panel above (sentence case in the text face, the NIP tag in
+   the outlined mono style of the other tags; it was all caps mono with a copper tag), 2026-11-19 mockup alignment. */
+.watchlist-page .wl-rec-panel { background: var(--surface); border-radius: 12px; }
+.watchlist-page .wl-rec-panel-title {
+  font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text);
 }
-/* In a row the alerts sit together (label, the two pills, "More alerts"), not stretched to the row's two ends. */
-@media (min-width: 761px) {
-  .watchlist-page .wl-grid .notify-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
-  .watchlist-page .wl-grid .notify-strip-label { margin-right: 4px; }
-  .watchlist-page .wl-grid .notify-more-toggle { margin-top: 0; }
-  .watchlist-page .wl-grid .notify-more-pills, .watchlist-page .wl-grid .notify-strip-msg { flex-basis: 100%; }
-  .watchlist-page .wl-grid .notify-strip-msg:empty { display: none; }
+.watchlist-page .wl-rec-panel-badge {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text2);
+  font: 500 var(--fs-xs) var(--font-mono); letter-spacing: 0;
 }
+.watchlist-page .wl-rec-slim-text { font-family: var(--font-body); color: var(--text2); }
+.watchlist-page .wl-rec-watch-btn {
+  height: 32px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: transparent;
+  color: var(--text); font: 500 var(--fs-xs) var(--font-body);
+}
+.watchlist-page .wl-rec-watch-btn:hover { border-color: var(--text3); }

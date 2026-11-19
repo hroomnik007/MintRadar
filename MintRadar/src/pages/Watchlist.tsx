@@ -14,19 +14,17 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { MintCard } from '@/components/mint/MintCard'
+import { WatchlistRow } from '@/components/mint/WatchlistRow'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
-import { displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { watchlistNotifyExplainer } from '@/utils/tooltipTexts'
 import { showWatchlistCount } from '@/utils/watchlistCount'
 import { watchlistSummary, watchlistSummaryText } from '@/utils/watchlistSummary'
 import { useLegacyNotifyNotice, LEGACY_NOTIFY_NOTICE_TEXT } from '@/hooks/useLegacyNotifyNotice'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import './Watchlist.css'
-// Preloads the alerts strip MintCard loads lazily (it shows only here), so the cards don't render it a beat late.
-import '@/components/mint/NotifyStrip'
 import { pluralize } from '@/utils/plural'
 
 // Same lazy-loading rationale as Dashboard.tsx — Recharts only loads once a
@@ -212,7 +210,6 @@ export default function Watchlist() {
 
   const { data: knownMintsData, isLoading: knownLoading, isError: knownError, refetch: refetchKnown } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
-  const pubkeyGroups = useMemo(() => groupMintsByPubkey(knownMintsData ?? []), [knownMintsData])
   const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
 
   // Compare feature — same ?compare=url1,url2[,url3,url4] URL persistence as
@@ -366,9 +363,17 @@ export default function Watchlist() {
                   </button>
                 </div>
               )}
-              <p className="wl-summary"><span data-testid="wl-summary">{watchlistSummaryText(watchlistSummary(orderedMints, knownMintsData ?? []))}</span><span data-testid="wl-latency-note"> · {cardsLatencyNote()}</span></p>
-              <p className="wl-notify-explainer">{watchlistNotifyExplainer()}</p>
               <div className="wl-grid">
+                {/* One panel, one row per mint (2026-11-19 mockup alignment): the head says what the list is and how
+                    the alerts arrive. */}
+                <div className="wl-panel-h">
+                  <div>
+                    <h2 className="wl-panel-title">Your mints</h2>
+                    <p className="wl-summary"><span data-testid="wl-summary">{watchlistSummaryText(watchlistSummary(orderedMints, knownMintsData ?? []))}</span><span data-testid="wl-latency-note"> · {cardsLatencyNote()}</span></p>
+                  </div>
+                  <button type="button" className="wl-panel-add" onClick={() => navigate('/')}>Add a mint</button>
+                </div>
+                <p className="wl-notify-explainer">{watchlistNotifyExplainer()}</p>
                 {orderedMints.slice(0, visibleCount).map(url => {
                   const mint = knownMintsMap.get(url) ?? {
                     url, name: null, iconUrl: null, degraded: false, online: null,
@@ -376,12 +381,10 @@ export default function Watchlist() {
                     descriptionLong: null, nutsLimits: null,
                   }
                   return (
-                  <MintCard
+                  <WatchlistRow
                     key={url}
                     mint={mint}
-                    showNotifyToggles
                     onCompare={openComparePicker}
-                    sameOperatorUrls={sameOperatorUrls(mint, pubkeyGroups)}
                     duplicateDisplayNames={duplicateDisplayNames}
                   />
                   )

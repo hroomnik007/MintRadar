@@ -229,11 +229,23 @@ export function setNotifyFlag(
   userReadRelays: string[] | null | undefined,
   dmRelays?: string[] | null,
 ): Promise<NotifyResult> {
+  return setNotifyFlags(mintUrl, { [field]: next }, userReadRelays, dmRelays)
+}
+
+// Several flags in ONE request and one signature: the Watchlist "Alerts" switch turns "goes down" and "goes up" on or
+// off together (2026-11-19 mockup alignment). Same rules as setNotifyFlag: target from the confirmed state at run time,
+// written locally only after the server answered ok, all five off → unsubscribe.
+export function setNotifyFlags(
+  mintUrl: string,
+  changes: Partial<Record<NotifyField, boolean>>,
+  userReadRelays: string[] | null | undefined,
+  dmRelays?: string[] | null,
+): Promise<NotifyResult> {
   bumpMutation(mintUrl)
   return runExclusive(mintUrl, async (): Promise<NotifyResult> => {
     const entry = await db.watchlist.get(mintUrl)
     if (!entry) return { ok: false, reason: 'rejected' } // removed meanwhile
-    const target: NotifyFlags = { ...confirmedFlags(entry), [field]: next }
+    const target: NotifyFlags = { ...confirmedFlags(entry), ...changes }
     const result = anyOn(target)
       ? await subscribeToServer({ mintUrl, ...target, relays: resolveNotificationRelays(userReadRelays, dmRelays) })
       : await unsubscribeFromServer(mintUrl)

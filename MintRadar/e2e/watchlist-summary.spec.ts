@@ -69,7 +69,8 @@ for (const [w, h] of [[1440, 900], [390, 844]] as const) {
     await expect(summary(page)).toHaveText(MIXED_TEXT)
     const s = (await summary(page).boundingBox())!
     const e = (await page.locator('.wl-notify-explainer').boundingBox())!
-    const g = (await page.locator('.wl-grid').boundingBox())!
+    // In the panel head since the 2026-11-19 mockup alignment: the line, then the explainer, then the first row.
+    const g = (await page.locator('.wl-grid .mint-card').first().boundingBox())!
     expect(s.y + s.height).toBeLessThanOrEqual(e.y + 1)
     expect(e.y + e.height).toBeLessThanOrEqual(g.y + 1)
     // Muted, no link, no tooltip, no live region, text floor.

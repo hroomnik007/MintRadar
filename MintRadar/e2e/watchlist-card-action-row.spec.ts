@@ -39,7 +39,7 @@ test('pill row is consistent across latency digit counts and never covers Reliab
       const intersects = (a: DOMRect, b: DOMRect) =>
         a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
       return [...document.querySelectorAll('.wl-grid .mint-card')].map(card => {
-        const strip = card.querySelector('.notify-strip') as HTMLElement
+        const strip = card.querySelector('.notify-strip-row') as HTMLElement
         const cardBox = card.getBoundingClientRect()
         const reliabilityFig = (card.querySelector('.card-reliability-score') ??
           card.querySelector('.card-reliability-na')) as HTMLElement

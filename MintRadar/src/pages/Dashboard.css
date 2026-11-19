@@ -2871,7 +2871,7 @@
 }
 .dashboard-controls .search-input::placeholder { color: var(--text3); }
 .dashboard-controls .search-input:hover { border-color: var(--text3); }
-.dashboard-controls .search-shortcut { border-color: var(--border-strong); color: var(--text3); }
+.dashboard-controls .search-shortcut { border-color: var(--border-strong); color: var(--text2); }
 .dashboard-controls .filter-btn,
 .dashboard-controls .submit-btn,
 .dashboard-controls .reset-filters-btn {

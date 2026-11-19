@@ -2,6 +2,7 @@ import { expect, type Page, type Route } from '@playwright/test'
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { nip19 } from 'nostr-tools'
 import { installApiMocks, MOCK_KNOWN_MINTS } from './mocks'
+import { flush } from './settle'
 
 // Shared setup for the Watchlist notification specs: a logged-in user (real key) whose kind:10003 watchlist
 // holds the mock mints, a mocked /api/notifications/* with per-mint behaviours, and IndexedDB flag seeding.
@@ -84,9 +85,16 @@ export async function openWatchlist(page: Page, opts: { urls?: string[]; seed?: 
   await installApiMocks(page)
   await page.route('**/api/mints/known', r => r.fulfill({ json: KNOWN }))
   await page.setViewportSize(size)
+  // The login-time restore (/list) and the refresh after it must be over before flags are seeded: a confirmed seed
+  // written earlier would be re-subscribed by that refresh and show up as an extra request.
+  const restored = page.waitForRequest(r => r.url().includes('/api/notifications/list'))
   await page.goto('/watchlist')
   await expect(page.locator('.wl-grid .mint-card')).toHaveCount(urls.length)
-  await expect(page.locator('.wl-grid .notify-strip')).toHaveCount(urls.length)
+  await expect(page.locator('.wl-grid .wl-switch')).toHaveCount(urls.length)
+  await restored
+  await flush(page)
+  await page.waitForTimeout(400)
+  await flush(page)
   await seedFlags(page, seed)
 }
 
@@ -99,16 +107,20 @@ export async function seedFlags(page: Page, seed: Seed[]) {
       await db.watchlist.update(r.url, { notifyOnDown: r.down, notifyOnUp: r.up, ...(r.confirmed ? { notifyConfirmedAt: new Date() } : {}) })
     }
   }, seed)
-  // The write is only done when the pills show it (the card re-renders from IndexedDB asynchronously).
+  // The write is only done when the switch shows it (the row re-renders from IndexedDB asynchronously).
   for (const r of seed.filter(r => r.confirmed)) {
-    await expect(down(page, r.url)).toHaveAttribute('aria-pressed', String(r.down))
-    await expect(up(page, r.url)).toHaveAttribute('aria-pressed', String(r.up))
+    await expect(alerts(page, r.url)).toHaveAttribute('aria-checked', String(r.down || r.up))
   }
 }
 
 export const card = (page: Page, url: string) => page.locator('.wl-grid .mint-card', { has: page.locator('.card-name', { hasText: NAME[url]! }) })
-export const down = (page: Page, url: string) => card(page, url).getByRole('button', { name: `Notify when ${NAME[url]} goes down` })
-export const up = (page: Page, url: string) => card(page, url).getByRole('button', { name: `Notify when ${NAME[url]} goes up` })
+/** The row's Alerts switch: "goes down" and "goes up" together (2026-11-19 mockup alignment; they were two pills). */
+export const alerts = (page: Page, url: string) => card(page, url).getByRole('switch', { name: new RegExp(`^Alerts for ${NAME[url]}`) })
+/** Opens the row's "More alerts" (idempotent). */
+export const openMore = async (page: Page, url: string) => {
+  const t = card(page, url).getByRole('button', { name: /More alerts/ })
+  if ((await t.getAttribute('aria-expanded')) !== 'true') await t.click()
+}
 export const msg = (page: Page, url: string) => card(page, url).locator('.notify-strip-msg')
 export const flags = (page: Page, url: string) => page.evaluate(async (u) => {
   const path = '/src/db/index.ts'

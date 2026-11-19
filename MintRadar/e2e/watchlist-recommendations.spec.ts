@@ -159,8 +159,8 @@ test.describe('Watchlist — recommendations section', () => {
         const page = await context.newPage()
         await open(page, { ...opts, width })
         await expect(opts.recs ? page.locator('.wl-rec-row') : slim(page)).toBeVisible()
-        // The notify pills arrive with an async IndexedDB read and change the card height — wait for them.
-        await expect(page.locator('.wl-grid .notify-pill')).toHaveCount(6)
+        // The alerts arrive with an async IndexedDB read and change the row height — wait for them.
+        await expect(page.locator('.wl-grid .wl-switch')).toHaveCount(3)
         const layout = await cardLayout(page)
         await page.close()
         return layout
