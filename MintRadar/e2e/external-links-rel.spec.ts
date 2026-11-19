@@ -36,7 +36,7 @@ test.describe('external links rel', () => {
   test('Tools with a decoded token (redeem links)', async ({ page }) => {
     await page.goto('/tools')
     await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21, 8]))
-    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await page.getByRole('button', { name: 'Inspect token' }).click()
     await expect(page.locator('.token-result-grid')).toBeVisible()
     await expect(page.locator('a.token-action-btn[target="_blank"]').first()).toBeVisible()
     await expectSafeBlankLinks(page, 'tools')

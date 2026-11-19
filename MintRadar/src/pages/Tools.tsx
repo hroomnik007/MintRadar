@@ -343,19 +343,21 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
         rows={3}
         spellCheck={false}
       />
-      <div className="token-note">Decoded in your browser; MintRadar's servers never see your token. Checking contacts the mint named in it.</div>
-
-      <button
-        type="button"
-        className="tool-btn-primary inspect-token-btn"
-        onClick={() => void handleInspectAndVerify()}
-        disabled={!cleanToken || phase !== 'idle'}
-      >
-        {phase === 'inspecting' ? <><Search size={14} aria-hidden="true" /> Inspecting…</>
-          : phase === 'verifying' ? <><ShieldCheck size={14} aria-hidden="true" /> Verifying with mint…</>
-          : 'Inspect & Verify Token'}
-      </button>
-      {!cleanToken && <div className="token-hint">Paste a token first</div>}
+      {/* 2026-11-19 redesign (phase 6c): the solid copper action with what to do beside it, the privacy line under it. */}
+      <div className="tool-act">
+        <button
+          type="button"
+          className="tool-btn-primary inspect-token-btn"
+          onClick={() => void handleInspectAndVerify()}
+          disabled={!cleanToken || phase !== 'idle'}
+        >
+          {phase === 'inspecting' ? <><Search size={14} aria-hidden="true" /> Inspecting…</>
+            : phase === 'verifying' ? <><ShieldCheck size={14} aria-hidden="true" /> Verifying with mint…</>
+            : 'Inspect token'}
+        </button>
+        {!cleanToken && <span className="token-hint">Paste a token first.</span>}
+      </div>
+      <p className="token-note tool-private"><Lock size={14} aria-hidden="true" /><span>Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.</span></p>
 
       {parseError && inspected && (
         <div className="token-error">{parseError}</div>
@@ -685,10 +687,11 @@ function formatLimits(limits: UnitLimits | null, unit: string): string | null {
 // rate); sat is the reference, the rest are ballpark equivalents. A unit not listed
 // here gets no threshold hint rather than a wrong one.
 const SIZE_HINTS: Record<string, [string, string, string]> = {
-  sat: ['< 10k sats', '10k–100k sats', '> 100k sats'],
-  msat: ['< ~10M msat', '~10M–100M msat', '> ~100M msat'],
-  eur: ['< ~€10', '~€10–100', '> ~€100'],
-  usd: ['< ~$10', '~$10–100', '> ~$100'],
+  // In words (2026-11-19 redesign; they were "< 10k sats" in the mono face).
+  sat: ['under 10,000 sat', '10,000 to 100,000 sat', 'over 100,000 sat'],
+  msat: ['under about 10 million msat', 'about 10 to 100 million msat', 'over about 100 million msat'],
+  eur: ['under about €10', 'about €10 to €100', 'over about €100'],
+  usd: ['under about $10', 'about $10 to $100', 'over about $100'],
 }
 
 // Basic checks are always shown; advanced ones sit behind a disclosure. Purely
@@ -874,13 +877,12 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
         <div className="tool-subtitle">Answer a few quick questions to find the best mints for you.</div>
       </div>
 
+      {/* "Step N of 2" and a copper bar (2026-11-19 redesign; they were numbered circles). */}
       <div className="wizard-steps">
-        {[1, 2].map(n => (
-          <div key={n} className={`wizard-step-dot${step >= n ? ' active' : ''}${step > n ? ' done' : ''}`}>
-            {step > n ? '✓' : n}
-          </div>
-        ))}
-        <div className="wizard-step-line" />
+        <span className="wizard-step-text">Step {step} of 2</span>
+        <div className="wizard-step-bar" role="progressbar" aria-label="Progress" aria-valuemin={1} aria-valuemax={2} aria-valuenow={step}>
+          <i style={{ width: `${(step / 2) * 100}%` }} />
+        </div>
       </div>
 
       {step === 1 && (

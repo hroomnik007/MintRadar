@@ -404,3 +404,20 @@ Deterministic order: `rankWizardRecs` (`wizardPick.ts`) breaks a tie of the fina
   shadow, opacity 1) instead of faded green; the height does not change when it becomes enabled.
 - Tests: `e2e/ux-audit-1115-tools.spec.ts`, `cashuToken.test.ts` (unspentConfidence / unknownKeysetIds),
   `wizardPick.test.ts` (reasonMentionsLatency).
+
+## Tools, 2026-11-19 redesign (phase 6c)
+
+Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in the "phase 6c" block of `Tools.css`.
+- **Token inspector:** the solid copper action reads **"Inspect token"** (it was "Inspect & Verify Token"; the
+  "Inspecting…" / "Verifying with mint…" phases are unchanged) at its own width at the card's left edge, with "Paste a token
+  first." beside it while the field is empty (`.tool-act`). The privacy sentence is its own row with a lock (`.tool-private`):
+  "Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it."
+- **Payment request inspector:** the same lock row ("Decoded in your browser. Nothing you paste here is sent anywhere.") and
+  "Paste a payment request first." in the text face.
+- **Best mint wizard:** "Step N of 2" over a copper progress bar (`.wizard-step-bar`, `role="progressbar"`; the numbered
+  circles are gone); the amounts in words ("under 10,000 sat", "10,000 to 100,000 sat", "over 100,000 sat", and "under about
+  $10" etc. for the other units); a chosen answer is copper (`--action`), not the green of a mint state. The "Add to wallet"
+  button of the mockup's result was NOT added: the whole result row is already a link to the mint, and a button inside it
+  would nest interactive controls.
+- `e2e/payment-request.spec.ts` ("decoding sends nothing") ignores same-origin `/fonts/*.woff2` requests: the mono face of
+  the result may load only then, and a static font file carries nothing that was pasted.

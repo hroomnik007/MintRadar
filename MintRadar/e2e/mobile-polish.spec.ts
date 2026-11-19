@@ -100,7 +100,7 @@ for (const phone of PHONES) {
       await loadRoute(page, AUDIT_ROUTES.find(r => r.id === 'tools')!)
       // A test mint: its chip is part of the result and carries its own size.
       await page.locator('.token-input').fill(makeCashuToken('https://testnut.cashu.space', [21], 'sat', 'a memo'))
-      await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+      await page.getByRole('button', { name: 'Inspect token' }).click()
       await expect(page.locator('.token-result-grid')).toBeVisible()
       await expect(page.locator('.token-verify-result').first()).toBeVisible()
       await expect(page.locator('.token-test-mint-badge')).toBeVisible()

@@ -211,11 +211,11 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await installTooltipMocks(page)
       await page.goto('/tools')
       await page.locator('textarea').first().fill(makeCashuTokenV4(TEST_MINT, [8, 4, 2, 1]))
-      const inspect = page.getByRole('button', { name: /Inspect & Verify Token|Inspecting|Verifying with mint/ })
+      const inspect = page.getByRole('button', { name: /Inspect token|Inspecting|Verifying with mint/ })
       await inspect.click()
       // The result (and the tooltips in it) only exists once the inspection answered and the verification step ended.
       await expect(page.locator('.token-result-grid')).toBeVisible()
-      await expect(inspect).toHaveText('Inspect & Verify Token')
+      await expect(inspect).toHaveText('Inspect token')
       await expect(inspect).toBeEnabled()
       await settle(page)
       return true

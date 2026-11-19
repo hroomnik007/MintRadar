@@ -44,7 +44,7 @@ async function gatedMint(page: Page, fx: DleqMintFixture, mode: 'gate' | 'fail')
 
 const inspect = async (page: Page, token: string) => {
   await page.locator('.token-input').fill(token)
-  await page.getByRole('button', { name: /Inspect & Verify Token/ }).click()
+  await page.getByRole('button', { name: /Inspect token/ }).click()
 }
 
 test('Decode and Verify are two labelled parts, Decode first; Decode holds what the token contains', async ({ page }) => {
@@ -161,10 +161,10 @@ test('keyboard order: textarea, Inspect, the Signature check help, the Mint fee 
   await serveMintInPage(page, fx)
   await open(page)
   await page.locator('.token-input').fill(fx.token)
-  await page.getByRole('button', { name: /Inspect & Verify Token/ }).focus()
+  await page.getByRole('button', { name: /Inspect token/ }).focus()
   await page.keyboard.press('Enter')
   await expect(verify(page)).toContainText('Verified.', { timeout: 15_000 })
-  await page.getByRole('button', { name: /Inspect & Verify Token/ }).focus()
+  await page.getByRole('button', { name: /Inspect token/ }).focus()
   const names: string[] = []
   for (let i = 0; i < 6; i++) {
     await page.keyboard.press('Tab')

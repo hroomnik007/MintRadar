@@ -112,7 +112,7 @@ for (const w of [1440, 390]) {
       all.push(...(await scan(page)))
       await page.goto('/tools')
       await page.locator('.token-input').fill(makeCashuToken('https://testnut.cashu.space', [21]))
-      await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+      await page.getByRole('button', { name: 'Inspect token' }).click()
       await expect(page.locator('.token-test-mint-badge')).toBeVisible()
       all.push(...(await scan(page)))
       assertAll(all, 'outdated/token')

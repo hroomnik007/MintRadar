@@ -14,7 +14,7 @@ async function inspect(page: Page, token: string) {
   await resize(page, 1280, 900)
   await page.goto('/tools')
   await page.locator('.token-input').fill(token)
-  await page.getByRole('button', { name: /Inspect & Verify Token/ }).click()
+  await page.getByRole('button', { name: /Inspect token/ }).click()
   await expect(page.getByTestId('token-verify-part').locator('.token-verify-result').first()).not.toContainText('Verifying', { timeout: 15_000 })
 }
 

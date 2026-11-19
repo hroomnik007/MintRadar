@@ -258,19 +258,6 @@ a.token-action-btn:focus {
   display: flex; align-items: center; gap: 8px;
   position: relative; padding: 4px 0;
 }
-.wizard-step-line {
-  position: absolute; left: 0; right: 0; top: 50%;
-  height: 1px; background: var(--border); z-index: 0;
-}
-.wizard-step-dot {
-  width: 26px; height: 26px; border-radius: 50%;
-  background: var(--bg3); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-family: var(--font-mono); font-weight: 600;
-  color: var(--text3); z-index: 1; position: relative; flex-shrink: 0;
-}
-.wizard-step-dot.active { background: var(--bg2); border-color: var(--accent); color: var(--accent); }
-.wizard-step-dot.done { background: var(--green-soft); border-color: var(--accent); color: var(--accent); }
 
 .wizard-step-body { display: flex; flex-direction: column; gap: 10px; }
 .wizard-q {
@@ -537,7 +524,6 @@ a.token-action-btn:focus {
 /* Phone text floor (2026-10-20): no HTML text below 12px at <=767px (docs/claude/mobile-and-tooltips.md). */
 @media (max-width: 767px) {
   .wizard-opt-sub { font-size: 12px; }
-  .wizard-step-dot { font-size: 12px; }
   /* Token inspector result (W7a follow-up): labels, sub lines, details row, memo/keyset/condition rows, section label. */
   .trc-label, .trc-sub, .tdr-label, .token-details-row, .token-memo-row, .token-section-label, .token-keyset-id { font-size: 12px; }
   .token-test-mint-badge { font-size: 12px !important; } /* the chip carries its size inline */
@@ -586,3 +572,22 @@ a.token-action-btn:focus {
 .token-keyset-meta { color: var(--text3); }
 .tks-active { color: var(--green-bright); }
 .tks-inactive, .tks-unknown { color: var(--copper); }
+
+/* ── 2026-11-19 redesign, phase 6c ─────────────────────────────────────────────────────────────────────────────────
+   Approved mockup tools.html: the solid copper action at its own width with what to do beside it, the privacy line as
+   its own row with a lock, "Step N of 2" with a copper bar, the amounts in words. */
+.tool-act { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tool-act .tool-btn-primary { width: auto; padding: 9px 18px; font-size: var(--fs-sm); font-weight: 600; min-height: 38px; }
+.tool-act .token-hint { text-align: left; font-size: var(--fs-sm); color: var(--text2); }
+.tool-private { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: var(--fs-xs) !important; color: var(--text2) !important; line-height: 1.5; }
+.tool-private svg { flex: none; margin-top: 2px; color: var(--text3); }
+.pr-hint { text-align: left !important; font-size: var(--fs-sm) !important; color: var(--text2) !important; }
+.wizard-steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 4px 0 6px; }
+.wizard-step-text { font-size: var(--fs-sm); color: var(--text2); }
+.wizard-step-bar { height: 4px; border-radius: 2px; background: var(--bg4); overflow: hidden; }
+.wizard-step-bar > i { display: block; height: 100%; background: var(--action); border-radius: 2px; transition: width .2s ease; }
+@media (prefers-reduced-motion: reduce) { .wizard-step-bar > i { transition: none; } }
+.wizard-opt-sub { font-family: var(--font-body) !important; font-size: var(--fs-sm) !important; color: var(--text2) !important; }
+/* A chosen answer is an interactive selection: copper, not the green of a mint's state. */
+.wizard-opt.active { border-color: var(--action); background: var(--action-soft); }
+.wizard-unit-opt.active { color: var(--action-ink) !important; background: var(--action-soft) !important; }

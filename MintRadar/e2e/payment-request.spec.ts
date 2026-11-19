@@ -317,7 +317,9 @@ test('decoding sends nothing: no request carries the pasted string, no /api call
   await input(page).fill(text)
   await expect(result(page)).toBeVisible()
   await flush(page)
-  const own = seen.filter(r => !r.url.endsWith('/__e2e_barrier__'))
+  // A same-origin font file can load with the result (the mono face it uses may not be on the page yet): a static asset
+  // carries nothing of what was pasted (the needles below still check every request it could).
+  const own = seen.filter(r => !r.url.endsWith('/__e2e_barrier__') && !/\/fonts\/[\w.-]+\.woff2$/.test(new URL(r.url).pathname))
   expect(own.filter(r => r.url.includes('/api/'))).toEqual([])
   const needles = [text, text.slice(5, 60), 'private-marker-9137', encodeURIComponent(text)]
   for (const r of own) for (const n of needles) {
@@ -382,7 +384,9 @@ test.describe('bitcoin: links with a creq parameter (BIP-321)', () => {
       await expect(page.getByTestId('pr-result').or(errorBox(page))).toBeVisible()
     }
     await flush(page)
-    const own = seen.filter(r => !r.url.endsWith('/__e2e_barrier__'))
+    // A same-origin font file can load with the result (the mono face it uses may not be on the page yet): a static asset
+  // carries nothing of what was pasted (the needles below still check every request it could).
+  const own = seen.filter(r => !r.url.endsWith('/__e2e_barrier__') && !/\/fonts\/[\w.-]+\.woff2$/.test(new URL(r.url).pathname))
     expect(own).toEqual([])
   })
 })

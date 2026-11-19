@@ -21,7 +21,7 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
     await page.reload()
     await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
     await page.locator('.token-input').fill(token)
-    await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+    await page.getByRole('button', { name: 'Inspect token' }).click()
     await expect(page.getByTestId('token-verify-source')).toBeVisible({ timeout: 15_000 })
     await page.getByRole('button', { name: /Check if spent/ }).click()
     return page.locator('.token-spent .token-verify-result')
@@ -66,7 +66,7 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
 
 test('disabled primary buttons are neutral grey, not faded green, and keep their height when enabled', async ({ page }) => {
   await openTools(page)
-  const btn = page.getByRole('button', { name: 'Inspect & Verify Token' })
+  const btn = page.getByRole('button', { name: 'Inspect token' })
   await expect(btn).toBeDisabled()
   const off = await btn.evaluate(el => { const cs = getComputedStyle(el); return { op: cs.opacity, bg: cs.backgroundColor, h: el.getBoundingClientRect().height } })
   expect(off.op).toBe('1')

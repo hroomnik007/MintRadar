@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Lock } from 'lucide-react'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { IcShield } from '@/components/mint/IcShield'
@@ -118,10 +119,10 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
         spellCheck={false}
         autoComplete="off"
       />
-      <div className="pr-note">Decoded in your browser; nothing you paste here is sent anywhere.</div>
+      {parsed.ok === false && parsed.reason === 'empty' && <div className="pr-hint">Paste a payment request first.</div>}
+      <p className="pr-note tool-private"><Lock size={14} aria-hidden="true" /><span>Decoded in your browser. Nothing you paste here is sent anywhere.</span></p>
       {parsed.ok && parsed.link && <div className="pr-note" data-testid="pr-link-note">{bitcoinLinkNote(parsed.link)}</div>}
 
-      {parsed.ok === false && parsed.reason === 'empty' && <div className="pr-hint">Paste a payment request first</div>}
       {parsed.ok === false && parsed.reason !== 'empty' && (
         <div className="pr-error" role="status" data-testid="pr-error">{parsed.message}</div>
       )}

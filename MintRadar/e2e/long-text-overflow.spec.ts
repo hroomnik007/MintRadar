@@ -248,7 +248,7 @@ for (const width of WIDTHS) {
         const { url } = await mount(page, CASES[key]!, { width })
         await page.goto('/tools')
         await page.locator('.token-input').fill(makeCashuToken(url, [21, 8]))
-        await page.getByRole('button', { name: 'Inspect & Verify Token' }).click()
+        await page.getByRole('button', { name: 'Inspect token' }).click()
         await expect(page.locator('.token-result-grid')).toBeVisible()
         await expectNoOverflow(page, `tools-inspect/${key}`)
         await page.reload()
