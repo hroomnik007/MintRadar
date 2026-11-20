@@ -30,7 +30,7 @@ export const LEARN_MODULES: LearnModuleMeta[] = [
   {
     id: 'how-to-choose-a-mint',
     title: 'How to choose a Cashu mint',
-    summary: 'What to check before you trust a mint (uptime, NUT support, operator transparency) and how the Reliability Score combines those signals.',
+    summary: 'What to check before you pick a mint (uptime, NUT support, operator transparency) and how the Reliability Score combines those signals.',
     order: 3,
     readingMinutes: 6,
   },

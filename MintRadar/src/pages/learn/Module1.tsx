@@ -39,7 +39,7 @@ export default function Module1() {
         <li>But you hold <strong>bearer tokens</strong>, like physical cash: whoever has the token can spend it, and the mint does not track who owns what.</li>
       </ul>
       <p>
-        This trade-off is the whole point of Cashu: you get cash-like privacy and instant transfers in exchange for trusting a mint operator with your funds.
+        This trade-off is the whole point of Cashu: you get cash-like privacy and instant transfers in exchange for leaving your funds with a mint operator.
       </p>
 
       <KeyTakeaway>

@@ -540,7 +540,7 @@ export function AppShell() {
                   <div className="nostr-nsec-wrap">
                     <div className="nostr-advanced-warn">
                       <TriangleAlert size={13} strokeWidth={2} aria-hidden="true" />
-                      <span>Pasting a private key into a browser is risky. Prefer a NIP-07 extension or a remote signer, and only use this on a device you trust.</span>
+                      <span>Pasting a private key into a browser is risky. Prefer a NIP-07 extension or a remote signer, and only use this on a device you control.</span>
                     </div>
                     <input
                       className="nostr-nsec-input"

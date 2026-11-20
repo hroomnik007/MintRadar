@@ -121,7 +121,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | Mint field | Type | Notes |
 |---|---|---|
 | `url` | string | Normalised mint URL (see above). |
-| `name` | string \| null | The cleaned display name the website uses; `null` means show the hostname (also for mints on MintRadar's hidden-names list). Untrusted text: render as plain text. |
+| `name` | string \| null | The cleaned display name the website uses; `null` means show the hostname (also for mints on MintRadar's hidden-names list). External text: render as plain text. |
 | `status` | `"online"` \| `"offline"` \| `"degraded"` \| `"archived"` | `online`: the latest probe succeeded. `offline`: the latest probe failed (or the mint was never probed). `degraded`: the latest probe failed and either the mint has at least 4 probes in the last 24 hours and none of them succeeded, or that failed probe is more than 24 hours old. `archived`: the latest probe failed and the last successful probe was more than 30 days ago (checked first; a mint that never had a successful probe is not archived). The website uses the same rule (shared code), so it shows the same state: `degraded` reads "Degraded" there. |
 | `score` | integer 0–100 \| null | The stored Reliability Score (operational health: uptime 40, audit 25, NUTs 15, software version 15, contact 5). `null` until the first probe. |
 | `scoreStale` | boolean | `true` when `status` is not `online` (offline, degraded or archived), `false` when it is online. The `score` of a mint that is not online is the **last measured one**: the mint is not reachable now, so the score says nothing about the present. Derived from `status` only; the score value is not changed. Always present, also in the default list. (Added 2026-10-21.) |
@@ -131,7 +131,7 @@ Order: `score` descending (`null` last), then `uptime7dPct` descending (`null` l
 | `units` | string[] \| null | Units the mint lists (`sat`, `usd`, `eur`, …); `null` when unknown. `units` and the `unit=` filter list the units for which the mint declares a payment method (NUT-04/05); units that appear only in keysets (`include=keysets`) are not included, so a mint with no declared methods has `units: null`. |
 | `nuts` | string[] \| null | NUT numbers the mint advertises (ascending, as strings); a NUT whose `/v1/info` entry has `"supported": false` is **not** counted as supported and is not listed (since methodology 4, 2026-10-21); `null` when unknown. |
 | `mintDisabled`, `meltDisabled` | boolean \| null | `true` when the mint lists NUT-04 (minting) / NUT-05 (melting) in its `/v1/info` with `"disabled": true`: it does not issue new ecash / does not pay out right now. `false` when the NUT is listed without it or not listed; `null` when the mint's NUTs are unknown. The NUT itself stays in `nuts` (it is declared), so `nuts` and the `nuts=` filter are unchanged; check these two before you offer a mint for deposits or withdrawals. On every object, the default list included. (Added 2026-10-27.) |
-| `software` | string \| null | The mint's own version string (`Nutshell/0.21.0`); untrusted text, at most 100 characters. |
+| `software` | string \| null | The mint's own version string (`Nutshell/0.21.0`); external text, at most 100 characters. |
 | `outdated` | boolean \| null | `true`: two or more minor versions behind the newest stable release of that software family. `false`: not outdated. `null`: unknown software, no or unreadable version, or no reference release. |
 | `isTest` | boolean | On MintRadar's manual test-mint list. Test mints are never recommended. |
 | `audit` | object \| null | cashu.info's 7-day window: `swaps7d` (all swaps), `attributedFailures` (failures cashu.info attributes to this mint, never more than `swaps7d`), `fetchedAt` (ISO 8601). `null` when no data is stored. The Reliability Score takes the worse result of this window and of the long window (`auditLong`); a window with fewer than 10 swaps is not used, and data older than 168 hours scores neutral. |
@@ -570,7 +570,7 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 | `swaps[].at` | string (ISO) | When the swap happened. |
 | `swaps[].status` | string | `success`, `failed`, `pending`, or any other short lowercase token the source sends (`^[a-z][a-z_-]{0,29}$`). |
 | `swaps[].stage` | string \| null | Same token format, e.g. `melt`, `mint`, `limits`, `balance`; `null` when the source sends none. |
-| `swaps[].error` | string \| null | **Untrusted text**, at most 300 characters. |
+| `swaps[].error` | string \| null | **External text**, at most 300 characters. |
 | `swaps[].amount` / `fee` / `durationMs` | number \| null | `amount` and `fee` are in sat — an assumption: the feed has no unit field, but cashu.info's methodology page states every limit and amount in sat and its error strings read "need 25 sat, have 20 sat". |
 | `swaps[].direction` | `"from"` \| `"to"` | `from` when this mint is the source, `to` when it is the destination. A swap that matches this mint on both sides is returned once, as `from`. |
 | `swaps[].otherMintUrl` / `otherMintName` | string \| null | The counterpart of the swap: the destination for `from`, the source for `to` (name at most 100 characters). |
@@ -581,7 +581,7 @@ Which swaps are returned: with `direction=from` the swaps whose source is this m
 
 `stats7d` is **counted by MintRadar** over the swaps it stored with `at` in the last 7 days where `from_url` or `to_url` matches the mint (URL or alias) — it is not a figure published by cashu.info. A swap where this mint is the source (`from`) is a **melt**, where it is the destination (`to`) a **mint**; a swap matching on both sides is counted once, as a melt. `paid` = status `success`, `failed` = status `failed`, anything else is `pending` (excluded from paid/failed); `paid + failed + pending` over both directions equals `swapsCounted`. `amountPaid` / `feesPaid` are sums over paid swaps (a null fee counts as 0), `avgDurationMsPaid` is the mean `durationMs` of paid swaps that have one (else `null`).
 
-`detail` is **published by cashu.info** (`GET /api/v1/mints/{id}`), validated and stored by a 30-minute job; every field is optional and a malformed field is simply absent. Numbers are non-negative; counts are integers. Strings are untrusted text (sanitised: NFC, no control / zero-width / bidi characters, whitespace collapsed, capped). It never contains an IP address, the onion address, score, reviews, TLS, step timings, latency or Frankfurt data.
+`detail` is **published by cashu.info** (`GET /api/v1/mints/{id}`), validated and stored by a 30-minute job; every field is optional and a malformed field is simply absent. Numbers are non-negative; counts are integers. Strings are external text (sanitised: NFC, no control / zero-width / bidi characters, whitespace collapsed, capped). It never contains an IP address, the onion address, score, reviews, TLS, step timings, latency or Frankfurt data.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -669,7 +669,7 @@ NIP-87 kind:38000 reviews for a single mint, read from the database (`mint_revie
 
 `listedAsContact` (boolean, added 2026-10-21, on every item) is `true` when the author's key is one of the Nostr contacts the mint itself lists in its `/v1/info` (hex, `npub`, `nprofile`, optional `nostr:` prefix; at most the first three Nostr entries are read) **and** the review is not excluded from the counts. A review is excluded only when its key is both a listed Nostr contact and the author of the mint's NIP-87 announcement, so a key that is only listed as a contact is counted and is flagged here. A mint writes its contact list itself, so the flag is a fact about what the mint lists, not about who wrote the review; the website shows it as the neutral label "Key listed as this mint's contact". It never changes a count, an average or a score, and no contact value is returned.
 
-`authorName` and `authorNip05` are optional and present only when the server has found the author's public Nostr profile (kind 0, from a profile indexer). `authorName` is the profile's `display_name`, else its `name`; `authorNip05` is the profile's **unverified** NIP-05 claim. Both are untrusted display text (cleaned, `authorName` at most 48 characters, `authorNip05` at most 100): render as plain text, never as verified, and never use them for a rating or any score.
+`authorName` and `authorNip05` are optional and present only when the server has found the author's public Nostr profile (kind 0, from a profile indexer). `authorName` is the profile's `display_name`, else its `name`; `authorNip05` is the profile's **unverified** NIP-05 claim. Both are external display text (cleaned, `authorName` at most 48 characters, `authorNip05` at most 100): render as plain text, never as verified, and never use them for a rating or any score.
 
 ---
 

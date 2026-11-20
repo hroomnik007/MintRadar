@@ -82,7 +82,7 @@ export default function Wallets() {
       )}
 
       <div className="wallets-footnote">
-        Listing a wallet here is not an endorsement. Always verify you trust a wallet before putting funds in it.
+        Listing a wallet here is not an endorsement. Always check a wallet yourself before putting funds in it.
       </div>
     </div>
   )
