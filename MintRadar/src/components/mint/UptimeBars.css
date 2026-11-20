@@ -22,3 +22,30 @@
 .uptime-scale { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--text3); margin-top: 4px; }
 @keyframes ub-rise { from { transform: scaleY(.08); opacity: .4; } }
 @media (prefers-reduced-motion: reduce) { .uptime-bars i { animation: none; } }
+
+/* Mint Detail hover readout of one day (UptimeBars `readouts`): mouse only, above the bars, pinned to the panel edge
+   near either end. The hovered bar lifts a little; the others stay as they are. */
+.uptime-bars.has-readouts { position: relative; cursor: default; }
+.uptime-bars i.is-hover { outline: 1px solid color-mix(in srgb, var(--text) 60%, transparent); outline-offset: 1px; }
+/* One line, in the height of the heading row above the bars, so it never leaves the panel. */
+.ub-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: var(--x);
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--elevated);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.ub-tip-start { left: 0; transform: none; }
+.ub-tip-end { left: auto; right: 0; transform: none; }
+.ub-tip-date { font-size: var(--fs-xs); color: var(--text3); }
+.ub-tip-text { font-size: var(--fs-xs); color: var(--text); font-variant-numeric: tabular-nums; }

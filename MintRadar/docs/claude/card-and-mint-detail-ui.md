@@ -606,6 +606,13 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/mint.html`; styles in the
 - **Last 30 days (`.md-trace`):** the 30 daily bars wide (`UptimeBars variant="wide"`, same data as the cards), the 30-day
   figure as "<pct>% uptime, <n> outages" beside the heading (`data-testid="md-uptime-30d"`; it was in the Uptime tile), a
   date scale (29 days ago … Today). Hidden without `uptimeDaily30`.
+  **Day readout (owner, 2026-11-20):** with a mouse, hovering a bar shows one line above it, "18 Nov  97.9% uptime, down
+  30 min" (`uptimeDayReadouts()` in `utils/uptimeBars.ts`: the day's uptime from `uptimeDaily30`, the time down from the
+  /api/mints/outages list cut at midnight UTC, "in N outages" when several, ", still down" for an ongoing one; "No checks
+  this day" for a null day; the last bar is "Today, <date>"). The day is picked from the x position, so gaps count. Pinned
+  to the panel edge for the first and last three bars; the hovered bar gets an outline. Mouse only (`pointerType`), not on
+  the cards (they are links) and not on touch; `aria-hidden`, the summary sentence stays the accessible name.
+  Spec: `e2e/mint-detail-day-readout.spec.ts`.
 - **Tabs:** on phones (<=768px) the five tabs are equal grid columns, no sideways scroll (owner, 2026-11-18); 13px below 375px.
 - The Overview sidebar (gauge, breakdown, units, keysets) is unchanged in 4a; phase 4b replaces it.
 

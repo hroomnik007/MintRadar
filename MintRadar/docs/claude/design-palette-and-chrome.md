@@ -440,7 +440,7 @@ The compact Reliability tile on Mint Detail (<= 640px, `.md-sc-reliability`) put
 
 ### Unsupported NUT cards and links in running text (2026-10-14)
 
-**Unsupported NUT cards** (Mint Detail > NUTs, `.nut-card.unsupported`) were `opacity: .4` on the whole card, which dropped the name to 2.21:1 and the description to 2.62:1 (against the panel `#17251f`) — the "no whole-card opacity" rule above, applied to this component too. Now: full opacity; `border-style: dashed`; name and description in `--text3` (6.7:1 on the panel, 6.3:1 on hover); the "–" mark stays `--text3`. Supported cards keep the green name (7.8:1), `--text2` description (9.1:1) and "✓", so "unsupported" is dimmer by colour, border style and mark, not by low contrast alone. No palette token changed. Guard: `e2e/nut-cards-and-text-links.spec.ts` measures effective colours (`fixtures/contrast.ts`), normal and hover, at 1440 and 390px.
+**Unsupported NUT cards** (Mint Detail > NUTs, `.nut-card.unsupported`) were `opacity: .4` on the whole card, which dropped the name to 2.21:1 and the description to 2.62:1 (against the panel, then `#17251f`; since 2026-11-20 `#132019`, which only raises the contrast) — the "no whole-card opacity" rule above, applied to this component too. Now: full opacity; `border-style: dashed`; name and description in `--text3` (6.7:1 on the panel, 6.3:1 on hover); the "–" mark stays `--text3`. Supported cards keep the green name (7.8:1), `--text2` description (9.1:1) and "✓", so "unsupported" is dimmer by colour, border style and mark, not by low contrast alone. No palette token changed. Guard: `e2e/nut-cards-and-text-links.spec.ts` measures effective colours (`fixtures/contrast.ts`), normal and hover, at 1440 and 390px.
 
 **Links in running text are underlined** (WCAG 1.4.1: colour alone was 1.16:1 against the text, axe `link-in-text-block`). Rule: a link inside a paragraph, list item or `blockquote` that has other text around it gets `text-decoration: underline` with `text-underline-offset: 3px` (`.about-text a` on /about, /methodology, /for-wallets already did; added `.learn-content p a` / `li a` and the "Back to Learn" link of the not-found module in `LearnModule.css`). Left alone on purpose: navigation, buttons (`.learn-cta-btn`), cards, the footer, `.learn-back-link` / Previous / Next and links in table cells — they are clearly links by layout. A new prose link on a text page needs no extra class; a new CTA must not sit inside a `p`.
 
@@ -500,6 +500,12 @@ phase by phase. Phase 1 is fonts and tokens only; layouts are later phases.
 - **Test gotcha:** with `font-variant-numeric: tabular-nums` on `body`, `getComputedStyle(el).font` is `""` (the shorthand
   cannot express it). A probe that copies `font: cs.font` measures in the default font; copy the longhands
   (`long-text-overflow.spec.ts` does).
+
+## Panel colour as in the mockup (2026-11-20)
+
+`--surface` (every panel and the mint cards) went from `#17251f` to the approved mockup's `#132019` (owner: the mockup's
+slightly darker panels look better). Only text contrast rises. The QR code of the signer login draws on the panel colour
+(`AppShell.tsx` `bgColor`, pinned in `e2e/login.spec.ts`) and moved with it. `--elevated` / `--raised` are unchanged.
 
 ## Redesign phase 2: shared chrome (2026-11-18)
 

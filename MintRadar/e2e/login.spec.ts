@@ -54,7 +54,7 @@ test('remote-signer: QR appears automatically on selection (no extra click)', as
   await expect(page.locator('button', { hasText: /Show pairing QR/i })).toHaveCount(0)
 
   const fills = await page.$$eval('.nostr-qr-wrap svg path', ps => ps.map(p => p.getAttribute('fill')))
-  expect(fills).toEqual(expect.arrayContaining(['#17251f', '#f2f7f4']))
+  expect(fills).toEqual(expect.arrayContaining(['#132019', '#f2f7f4']))
   await expect(page.locator('.nostr-qr-caption')).toContainText(/signer app/i)
   await expect(page.locator('.nostr-remote-status')).toContainText(/waiting for your signer/i)
   await expect(page.locator('.nostr-remote-divider')).toContainText(/paste the connection link/i)

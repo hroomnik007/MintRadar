@@ -7,6 +7,7 @@ import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } f
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { UptimeBars } from '@/components/mint/UptimeBars'
+import { uptimeDayReadouts } from '@/utils/uptimeBars'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
 import { ChangeDate, PendingTag } from '@/components/mint/ChangeDate'
@@ -1341,7 +1342,7 @@ function MintDetailContent({ url }: { url: string }) {
               </span>
             )}
           </div>
-          <UptimeBars days={knownMint.uptimeDaily30} variant="wide" />
+          <UptimeBars days={knownMint.uptimeDaily30} variant="wide" readouts={uptimeDayReadouts(knownMint.uptimeDaily30, outagesData?.outages, now)} />
           <div className="uptime-scale" aria-hidden="true">
             <span>{new Date(now - 29 * 86_400_000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
             <span>Today</span>

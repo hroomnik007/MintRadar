@@ -571,9 +571,9 @@ export function AppShell() {
                   <div className="nostr-remote-wrap">
                     {qrUri && (
                       <div className="nostr-qr-wrap">
-                        {/* #17251f === var(--surface); qrcode.react renders bgColor as an
+                        {/* #132019 === var(--surface); qrcode.react renders bgColor as an
                             SVG fill attribute, where CSS custom properties don't resolve */}
-                        <QRCodeSVG value={qrUri} size={192} bgColor="#17251f" fgColor="#f2f7f4" role="img" aria-label="QR code to scan with your signer app" />
+                        <QRCodeSVG value={qrUri} size={192} bgColor="#132019" fgColor="#f2f7f4" role="img" aria-label="QR code to scan with your signer app" />
                       </div>
                     )}
                     <div className="nostr-qr-caption">
