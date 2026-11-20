@@ -22,7 +22,7 @@ test.describe('Stats breakdown-row tooltips state what is computed', () => {
   })
 
   test('breakdown rows: each row tooltip matches the row it explains', async ({ page }) => {
-    const rows = page.locator('.stats-nhi-panel').getByText(/^(Online mints|Avg\. Reliability Score|Advanced feature adoption)$/)
+    const rows = page.locator('.stats-nhi-panel').getByText(/^(Online mints|Average Reliability Score|Advanced feature adoption)$/)
     await expect(rows).toHaveCount(3)
 
     await rows.nth(0).locator('xpath=..').locator('svg').hover()
