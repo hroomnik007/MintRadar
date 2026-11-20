@@ -222,15 +222,15 @@ describe('Stats.tsx wires the generated texts', () => {
     expect(stats).toContain('advancedAdoptionPercent(data.nutAdoption, undefined, knownMintsData)')
     expect(stats).toContain('nhiScore({')
     expect(stats).toContain('weight: NHI_WEIGHTS.advanced')
-    expect(stats).toContain('{avgUptimeCaption()}')
+    expect(stats).toContain('{avgUptimeLeftOutText()}')
     expect(stats).toContain('{nhiSubtitle()}')
   })
 })
 
 describe('NHI subtitle and the average-uptime caption (they replaced two tooltips)', () => {
-  it('the subtitle is one short sentence (the "Show details" link says how to open the breakdown)', () => {
-    expect(NHI_SUBTITLE).toBe('Weighted from five factors.')
-    expect(nhiSubtitle()).toBe('Weighted from five factors.')
+  it('the subtitle is short: the factor count and the refresh (mockup alignment 2026-11-19)', () => {
+    expect(NHI_SUBTITLE).toBe('Five factors, weighted.')
+    expect(nhiSubtitle()).toBe('Five factors, weighted.')
   })
 
   it('the caption is built from DEGRADED_AFTER_HOURS, stays within 32 characters and follows the constant', () => {

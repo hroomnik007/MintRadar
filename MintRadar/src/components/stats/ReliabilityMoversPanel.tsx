@@ -101,7 +101,7 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
     <div className="stats-panel stats-movers-panel">
       <div className="stats-panel-head">
         <div>
-          <div className="stats-panel-title">Reliability Score movers</div>
+          <div className="stats-panel-title">Score movers</div>
           <div className="stats-panel-desc">Test mints are not included.</div>
         </div>
         <div className="stats-tab-toggle">

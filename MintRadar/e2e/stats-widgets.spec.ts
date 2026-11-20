@@ -37,7 +37,7 @@ test('Uptime tab list excludes test mints; Reliability tab also excludes them (a
   // Reliability tab: also excludes it, as of the 2026-09-19 audit run-3 fix that
   // closed this gap (top5ByReliability previously had no test-mint exclusion at
   // all, unlike top5ByUptime and the backend's own top5ByReliabilityScore).
-  await widget.getByRole('button', { name: 'Reliability', exact: true }).click()
+  await widget.getByRole('button', { name: 'Score', exact: true }).click()
   await expect(widget.locator('.stats-top5-row', { hasText: 'Testnut' })).toHaveCount(0)
 })
 
@@ -53,7 +53,7 @@ test('Uptime and Reliability tabs leave out an "online" mint whose newest probe 
   const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
   await expect(widget.locator('.stats-top5-row', { hasText: 'Yankee Mint' })).toBeVisible()
   await expect(widget.locator('.stats-top5-row', { hasText: 'Zulu Mint' })).toHaveCount(0)
-  await widget.getByRole('button', { name: 'Reliability', exact: true }).click()
+  await widget.getByRole('button', { name: 'Score', exact: true }).click()
   await expect(widget.locator('.stats-top5-row', { hasText: 'Yankee Mint' })).toBeVisible()
   await expect(widget.locator('.stats-top5-row', { hasText: 'Zulu Mint' })).toHaveCount(0)
 })
@@ -87,10 +87,11 @@ test('Uptime tab (after a click) is labeled 7D and ranks by uptimePct7d, not upt
 
   const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
   // The panel opens on Reliability (default since 2026-10-07); Uptime is one click away.
-  await expect(widget).toContainText('Top by Reliability Score')
+  // "Most reliable" with the ranking in its line since the 2026-11-19 mockup alignment.
+  await expect(widget).toContainText('Top five by Reliability Score.')
   await widget.getByRole('button', { name: 'Uptime', exact: true }).click()
-  await expect(widget).toContainText('Top uptime')
-  await expect(widget).not.toContainText('Top uptime · 24H')
+  await expect(widget).toContainText('Top five by 7-day uptime.')
+  await expect(widget).not.toContainText('· 24H')
 
   const firstRow = widget.locator('.stats-top5-row').first()
   await expect(firstRow).toContainText('Alpha Mint')
@@ -108,7 +109,7 @@ test('Geographic Distribution buckets CDN / cloud / anycast labels into one row'
   ])
   await page.goto('/stats')
 
-  const geo = page.locator('.stats-panel', { hasText: 'Geographic Distribution' })
+  const geo = page.locator('.stats-geo-panel')
   const cdnRow = geo.locator('.dist-row', { hasText: 'CDN / anycast' })
   await expect(cdnRow).toHaveCount(1)
   await expect(cdnRow.locator('.dist-count')).toHaveText('3')
@@ -130,7 +131,7 @@ test('Geographic distribution: description, CDN / anycast as the last cell of th
   await knownMints(page, locs.map((serverLocation, i) => ({ ...base, url: `https://g${i}.example`, name: `G${i}`, online: true, serverLocation })))
   await page.goto('/stats')
 
-  const geo = page.locator('.stats-panel', { hasText: 'Geographic Distribution' })
+  const geo = page.locator('.stats-geo-panel')
   await expect(geo.locator('.stats-panel-desc')).toHaveText('City from the IP address, not where the operator is.')
   const cdn = geo.locator('.stats-geo-cdn')
   await expect(cdn).toHaveCount(1)
@@ -257,7 +258,7 @@ test('Geographic distribution at 320 px: no city name breaks inside a word', asy
   await knownMints(page, locs.map((serverLocation, i) => ({ ...base, url: `https://g${i}.example`, name: `G${i}`, online: true, serverLocation })))
   await page.goto('/stats')
 
-  const geo = page.locator('.stats-panel', { hasText: 'Geographic Distribution' })
+  const geo = page.locator('.stats-geo-panel')
   const labels = geo.locator('.stats-geo-cols .dist-label-city')
   await expect(labels.first()).toBeVisible()
   const broken = await labels.evaluateAll(els => els.flatMap(el => {
@@ -293,7 +294,7 @@ for (const width of [1280, 390]) {
     await resize(page, width, width < 769 ? 844 : 1600)
     await page.goto('/stats')
     const widget = page.locator('.stats-panel').filter({ has: page.getByRole('button', { name: 'Uptime', exact: true }) })
-    for (const tab of ['Reliability', 'Uptime']) {
+    for (const tab of ['Score', 'Uptime']) {
       await widget.getByRole('button', { name: tab, exact: true }).click()
       const rows = widget.locator('.stats-top5-row')
       await expect(rows).toHaveCount(2)

@@ -41,7 +41,8 @@ test('learn and wallets share the header recipe', async ({ page }) => {
 test('the wallets grid is one column on a phone', async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
-  await page.setViewportSize({ width: 680, height: 900 })
+  // A phone (390 px). Since the 2026-11-19 mockup alignment the cards are 300 px minimum, so 680 px holds two columns.
+  await page.setViewportSize({ width: 390, height: 900 })
   await page.goto('/wallets')
   await page.waitForSelector('.wallet-card')
   const walletCols = await css(page, '.wallets-grid', 'grid-template-columns')

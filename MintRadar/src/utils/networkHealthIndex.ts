@@ -128,9 +128,13 @@ export function nhiScore(p: NhiParts, w: NhiWeights = NHI_WEIGHTS): number {
 
 /** Subtitle under the "Network health index" header. */
 export function nhiBaseSubtitle(w: NhiWeights = NHI_WEIGHTS): string {
-  return `Weighted from ${numberWord(Object.keys(w).length)} factors.`
+  // Mockup alignment 2026-11-19: "Five factors, weighted." (Stats adds NHI_REFRESH_TEXT beside it from 768 px.)
+  const n = numberWord(Object.keys(w).length)
+  return `${n.charAt(0).toUpperCase()}${n.slice(1)} factors, weighted.`
 }
 export const NHI_SUBTITLE = nhiBaseSubtitle()
+/** The second sentence of the index subtitle; shown from 768 px only, so the phone panel keeps its measured height. */
+export const NHI_REFRESH_TEXT = 'Updated every 5 minutes.'
 export function nhiSubtitle(w: NhiWeights = NHI_WEIGHTS): string {
   return nhiBaseSubtitle(w)
 }
@@ -162,6 +166,12 @@ export function nhiAdvancedRowText(features: readonly AdvancedNut[] = ADVANCED_N
   const methods = features.filter(f => f.method !== undefined).map(f => f.label)
   const how = methods.length > 0 ? ` ${methods.join(' and ')} ${methods.length === 1 ? 'is' : 'are'} read from mint and melt methods.` : ''
   return `Average share of online mints offering each of: ${features.map(f => f.label).join(', ')}.${how} A feature no mint offers counts as 0%.`
+}
+
+/** The "network right now" panel line (mockup alignment 2026-11-19): which mints the average uptime leaves out. The
+ *  tile under it then names only its window ("last 24 h"). */
+export function avgUptimeLeftOutText(hours: number = DEGRADED_AFTER_HOURS): string {
+  return `Mints offline for more than ${hours} h are left out of uptime.`
 }
 
 /** Caption of the "average uptime" tile on the Stats page: which mints are averaged (the others are left out). */

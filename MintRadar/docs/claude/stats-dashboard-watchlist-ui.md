@@ -651,3 +651,16 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/stats.html` (phone: `mobi
 `wallets.html`: four columns from 300 px (4 + 4 + 1 at 1440 px, as the mockup), platform tags as outlined code tags, the
 filter as the shared segmented control, the link arrow ↗ (lucide ArrowUpRight); "Run your own mint" is one panel
 (Nutshell first, then cdk-mintd) with the mockup's short lines; the Cashu.me, Linky and Zeus blurbs as in the mockup.
+
+## Stats, 2026-11-19 mockup alignment
+
+`stats.html`: "Five factors, weighted." with "Updated every 5 minutes." beside it from 768 px (`NHI_REFRESH_TEXT`, hidden
+on phones so the index panel keeps its measured height); "Average Reliability Score"; "The network right now" says
+"Mints offline for more than 24 h are left out of uptime." (`avgUptimeLeftOutText`) and the uptime tile "last 24 h";
+"Most reliable" with "Top five by Reliability Score." / "Top five by 7-day uptime." and the switch "Uptime | Score";
+"Mints by implementation. Open one to see its versions." with the names as copper links (no chevron); "How many of the
+N online mints support each feature." with the NUT numbers as outlined code tags; "Where the servers are"; "Score
+movers"; "Network score over time" ("Copper lines mark methodology versions."). All switches are the shared segmented
+control. The geography list is NOT collapsed into "And N more cities with one mint each" (the mockup's line): the
+"View others" dialog lists only the cities past the top ten, so the hidden single-mint cities would be lost. Phone board
+heights re-measured in `stats-layout-shift.spec.ts` (390: 3514, 320: 3687).

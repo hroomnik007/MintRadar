@@ -45,7 +45,7 @@ describe('texts equal the literals they replaced (current values)', () => {
   })
   it('hidden mints note and the Network Health Index texts', () => {
     expect(T.hiddenMintsText(3, DEGRADED_AFTER_HOURS)).toBe('3 mints hidden (offline 24h+)')
-    expect(nhiBaseSubtitle()).toBe('Weighted from five factors.')
+    expect(nhiBaseSubtitle()).toBe('Five factors, weighted.')
     expect(nhiFormulaText()).toContain('Tracking history (share of mints tracked 1 month+) stands in for churn rate')
   })
 })
@@ -74,8 +74,8 @@ describe('each text follows its constant', () => {
   it('hidden mints note', () => { expect(T.hiddenMintsText(2, 48)).toBe('2 mints hidden (offline 48h+)') })
   it('NHI subtitle counts the weights, the formula names the Fresh threshold', () => {
     const six = { ...NHI_WEIGHTS, extra: 0 } as unknown as typeof NHI_WEIGHTS
-    expect(nhiBaseSubtitle(six)).toBe('Weighted from six factors.')
-    expect(nhiSubtitle(six)).toBe('Weighted from six factors.')
+    expect(nhiBaseSubtitle(six)).toBe('Six factors, weighted.')
+    expect(nhiSubtitle(six)).toBe('Six factors, weighted.')
     expect(nhiFormulaText(NHI_WEIGHTS, 2)).toContain('mints tracked 2 months+)')
   })
   it('"Fresh" ends at FRESH_MINT_MONTHS', () => {

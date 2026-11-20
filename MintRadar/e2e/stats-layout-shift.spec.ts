@@ -23,8 +23,9 @@ const LOADED: Record<number, { head: number; board: number; nhi: number; stack: 
   1440: { head: 93.6, board: 1424.6, nhi: 330.7, stack: 722.7 },
   1024: { head: 93.6, board: 2125.8, nhi: 330.7, stack: 722.7 },
   768: { head: 93.6, board: 1858.5, nhi: 336.0, stack: 637.5, boardMin: 1908.5 },
-  390: { head: 104.8, board: 3532.5, nhi: 441.0, stack: 632.5 },
-  320: { head: 104.8, board: 3657.5, nhi: 441.0, stack: 695.0 },
+  // Phones re-measured 2026-11-20 for the mockup alignment (panel lines changed length): board -18.5 at 390, +29.5 at 320.
+  390: { head: 104.8, board: 3514.0, nhi: 441.0, stack: 632.5 },
+  320: { head: 104.8, board: 3687.0, nhi: 441.0, stack: 695.0 },
 }
 
 // The REAL height of the movers note (px) by the number of changes it lists, as [from width, to width, height] ranges,

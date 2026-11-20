@@ -30,7 +30,7 @@ import { LoadError } from '@/components/LoadError'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
 import {
   NHI_WEIGHTS, advancedAdoptionPercent, nhiScore, nhiSubtitle,
-  nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeCaption,
+  nhiOnlineRowText, nhiReliabilityRowText, nhiAdvancedRowText, avgUptimeLeftOutText, NHI_REFRESH_TEXT,
 } from '@/utils/networkHealthIndex'
 import { pluralize } from '@/utils/plural'
 import './Stats.css'
@@ -826,7 +826,7 @@ export default function Stats() {
           weight: NHI_WEIGHTS.online,
           tooltip: nhiOnlineRowText(onlinePts),
         },
-        { label: 'Avg. Reliability Score', value: avgReliability, weight: NHI_WEIGHTS.reliability, tooltip: nhiReliabilityRowText() },
+        { label: 'Average Reliability Score', value: avgReliability, weight: NHI_WEIGHTS.reliability, tooltip: nhiReliabilityRowText() },
         { label: 'Software diversity', value: diversity, weight: NHI_WEIGHTS.diversity, tooltip: 'How evenly mints are spread across different software - heavy reliance on one implementation scores lower.' },
         { label: 'Advanced feature adoption', value: advancedAdoption, weight: NHI_WEIGHTS.advanced, tooltip: nhiAdvancedRowText() },
         { label: 'Tracking history', value: stability, weight: NHI_WEIGHTS.stability, tooltip: TRACKING_HISTORY_TEXT },
@@ -879,7 +879,7 @@ export default function Stats() {
                   <div className="stats-panel-title nhi-title-row">
                     Network health
                   </div>
-                  <div className="stats-panel-desc">{nhiSubtitle()}</div>
+                  <div className="stats-panel-desc">{nhiSubtitle()}<span className="nhi-refresh"> {NHI_REFRESH_TEXT}</span></div>
                 </div>
               </div>
               <div className="nhi-fill">
@@ -913,7 +913,7 @@ export default function Stats() {
           <div className="stats-panel-head">
             <div>
               <div className="stats-panel-title">The network right now</div>
-              <div className="stats-panel-desc">Refreshed every 5 minutes.</div>
+              <div className="stats-panel-desc">{avgUptimeLeftOutText()}</div>
             </div>
           </div>
           <div className="stats-metrics">
@@ -925,7 +925,7 @@ export default function Stats() {
             <div className="stat-card">
               <div className="stat-figure"><span className="stat-value" style={{color: avgUptime24h != null ? uptimeColor(avgUptime24h) : undefined}}>{avgUptime24h != null ? `${avgUptime24h}%` : '—'}</span></div>
               <div className="stat-label">average uptime</div>
-              <span className="stat-note">{avgUptimeCaption()}</span>
+              <span className="stat-note">last 24 h</span>
             </div>
             <div className="stat-card">
               <div className="stat-figure">
@@ -974,10 +974,10 @@ export default function Stats() {
           <div className="stats-panel-head">
             <div>
               <div className="stats-panel-title">
-                {reliableTab === 'reliable' ? 'Top uptime' : 'Top by Reliability Score'}
+                Most reliable
               </div>
               <div className="stats-panel-desc">
-                {reliableTab === 'reliable' ? 'Mints with the best 7-day uptime.' : 'Mints with the best combined score.'}
+                {reliableTab === 'reliable' ? 'Top five by 7-day uptime.' : 'Top five by Reliability Score.'}
               </div>
             </div>
             <div className="stats-tab-toggle">
@@ -986,7 +986,7 @@ export default function Stats() {
                   "Reliable"/"Reliability" pair read as near-duplicates rather than two
                   distinct metrics. */}
               <button type="button" className={`stats-tab-btn${reliableTab === 'reliable' ? ' active' : ''}`} onClick={() => setReliableTab('reliable')}>Uptime</button>
-              <button type="button" className={`stats-tab-btn${reliableTab === 'reliability' ? ' active' : ''}`} onClick={() => setReliableTab('reliability')}>Reliability</button>
+              <button type="button" className={`stats-tab-btn${reliableTab === 'reliability' ? ' active' : ''}`} onClick={() => setReliableTab('reliability')}>Score</button>
             </div>
           </div>
           <div className="stats-top5-list">
@@ -1040,7 +1040,7 @@ export default function Stats() {
             <div className="stats-panel-head">
               <div>
                 <div className="stats-panel-title">Software in use</div>
-                <div className="stats-panel-desc">Mints by implementation. Click for versions.</div>
+                <div className="stats-panel-desc">Mints by implementation. Open one to see its versions.</div>
               </div>
             </div>
             <div className="stats-sw-fill">
@@ -1081,7 +1081,7 @@ export default function Stats() {
           <div className="stats-panel-head">
             <div>
               <div className="stats-panel-title">NUT coverage</div>
-              <div className="stats-panel-desc">Mints that support each protocol feature. Click a row to list them.</div>
+              <div className="stats-panel-desc">How many of the {data.onlineMints} online mints support each feature.</div>
             </div>
           </div>
           <div className="stats-nut-rows-grid">
@@ -1122,7 +1122,7 @@ export default function Stats() {
         <div className="stats-panel stats-geo-panel">
           <div className="stats-panel-head">
             <div>
-              <div className="stats-panel-title">Geographic distribution</div>
+              <div className="stats-panel-title">Where the servers are</div>
               <div className="stats-panel-desc">City from the IP address, not where the operator is.</div>
             </div>
           </div>
@@ -1197,8 +1197,8 @@ export default function Stats() {
         <div className="stats-panel stats-trend-panel">
           <div className="stats-panel-head">
             <div>
-              <div className="stats-panel-title">Reliability Score trend</div>
-              <div className="stats-panel-desc">Network-wide average of all mints' Reliability Score.</div>
+              <div className="stats-panel-title">Network score over time</div>
+              <div className="stats-panel-desc">Average Reliability Score of all mints. Copper lines mark methodology versions.</div>
             </div>
             <div className="stats-tab-toggle">
               <button type="button" className={`stats-tab-btn${trendDays === 30 ? ' active' : ''}`} onClick={() => setTrendDays(30)}>30d</button>

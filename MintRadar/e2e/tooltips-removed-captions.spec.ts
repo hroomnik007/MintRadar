@@ -25,14 +25,16 @@ for (const width of [1440, 768, 390, 320]) {
     const tile = page.locator('.stat-card').filter({ hasText: 'average uptime' })
     await expect(tile).toHaveCount(1)
     await expect(triggers(tile)).toHaveCount(0)
-    await expect(tile.locator('.stat-note')).toHaveText(avgUptimeCaption())
-    await expect(tile.locator('.stat-note')).toHaveText(`excludes mints offline ${DEGRADED_AFTER_HOURS}h+`)
+    // The tile names its window; the panel line says who is left out (2026-11-19 mockup alignment).
+    await expect(tile.locator('.stat-note')).toHaveText('last 24 h')
+    await expect(page.locator('.stats-panel', { hasText: 'The network right now' }).locator('.stats-panel-desc')).toHaveText(`Mints offline for more than ${DEGRADED_AFTER_HOURS} h are left out of uptime.`)
     expect(avgUptimeCaption().length).toBeLessThanOrEqual(32)
 
     const head = page.locator('.stats-nhi-panel .stats-panel-head')
     await expect(triggers(head)).toHaveCount(0)
-    await expect(head.locator('.stats-panel-desc')).toHaveText(nhiSubtitle())
-    await expect(head.locator('.stats-panel-desc')).toHaveText('Weighted from five factors.')
+    // "Five factors, weighted." and, from 768 px, "Updated every 5 minutes." (2026-11-19 mockup alignment).
+    await expect(head.locator('.stats-panel-desc')).toHaveText(`${nhiSubtitle()} Updated every 5 minutes.`)
+    await expect(head.locator('.nhi-refresh')).toBeVisible({ visible: width >= 768 })
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   })

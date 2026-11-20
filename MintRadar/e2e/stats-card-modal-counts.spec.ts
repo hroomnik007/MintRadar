@@ -78,5 +78,5 @@ test('Geographic distribution: the modal of a place lists the online mints the c
 test('the Software in use hint says what a click does', async ({ page }) => {
   await open(page)
   const panel = page.locator('.stats-sw-panel')
-  await expect(panel.locator('.stats-panel-desc')).toHaveText('Mints by implementation. Click for versions.')
+  await expect(panel.locator('.stats-panel-desc')).toHaveText('Mints by implementation. Open one to see its versions.')
 })
