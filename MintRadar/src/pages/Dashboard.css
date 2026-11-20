@@ -2893,3 +2893,28 @@
 /* The network sentence is framed, not filled (mockup .pulse), and the controls sit a step below it. */
 .dash-intro .dash-status-btn { background: transparent; border-color: var(--border-strong); min-height: 40px; }
 .dashboard-controls { margin-top: 22px; }
+
+/* The open sort list in the site's own style, not the system menu (owner, 2026-11-19): the customizable select
+   (appearance: base-select, Chromium 135+). The control stays a native <select> (keyboard, screen readers, the
+   specs' selectOption); a browser without it keeps the system list. */
+@supports (appearance: base-select) {
+  .dashboard-controls .sort-select,
+  .dashboard-controls .sort-select::picker(select) { appearance: base-select; }
+  .dashboard-controls .sort-select { display: flex; align-items: center; }
+  .dashboard-controls .sort-select::picker-icon { display: none; }
+  .dashboard-controls .sort-select::picker(select) {
+    margin-top: 6px; padding: 4px; min-width: anchor-size(width);
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+  }
+  .dashboard-controls .sort-select option {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 6px; background: transparent; color: var(--text2);
+    font: 500 var(--fs-sm) var(--font-body); cursor: pointer;
+  }
+  .dashboard-controls .sort-select option:hover,
+  .dashboard-controls .sort-select option:focus-visible { background: var(--elevated); color: var(--text); outline: none; }
+  .dashboard-controls .sort-select option:checked { color: var(--text); background: var(--elevated); box-shadow: inset 2px 0 0 var(--action); }
+  .dashboard-controls .sort-select option::checkmark { content: none; display: none; }
+}

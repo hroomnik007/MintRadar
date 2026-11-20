@@ -286,7 +286,9 @@ export function cooldownUnit(minutes: number): string {
 /** Explainer above the Watchlist cards. */
 export function watchlistNotifyExplainer(cooldownMinutes: number = UPDOWN_COOLDOWN_MINUTES, dailyCap: number = DM_DAILY_CAP): string {
   const every = cooldownMinutes === 60 ? 'an hour' : `per ${cooldownUnit(cooldownMinutes)}`
-  return `Optional Nostr DMs: one when a watched mint goes down, one when it's back (max once ${every} each, ${dailyCap} a day in total). With any alert on, you also get key and fee changes. Needs a Nostr client with private messages.`
+  // Matches the Alerts switch and "More alerts" (2026-11-19) and the server's rules (backend notificationLimits.ts:
+  // UPDOWN_COOLDOWN_MINUTES, DM_DAILY_CAP per DM_CAP_WINDOW_HOURS; key and fee change DMs go to anyone with an alert on).
+  return `Optional Nostr DMs. Alerts: one when a watched mint goes down, one when it's back (at most once ${every} each); “More alerts” adds three more. With any alert on you also hear when its public key or input fee changes. At most ${dailyCap} DMs in 24 hours; needs a Nostr client that shows private messages.`
 }
 /** Notice after a failed unsubscribe on removing a watched mint. */
 export function notifyStopNotice(name: string, days: number = NOTIFICATION_RETENTION_DAYS): string {

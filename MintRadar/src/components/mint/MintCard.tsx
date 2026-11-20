@@ -1,5 +1,5 @@
 import { reviewSurgeText, sameOperatorText, TEST_MINT_TEXT } from '@/utils/tooltipTexts'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { IcClose } from '@/components/IcClose'
 import { Link } from 'react-router-dom'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
@@ -19,9 +19,10 @@ import { mintStatus } from '@/utils/mintStatus'
 import { isTestMint } from '@/constants/testMints'
 import { sortUnits } from '@/utils/sortUnits'
 
-// MintCard is on the home page, so what pulls in Dexie and the relay code (unwatch with its subscription cancel) is
-// loaded on use, not with the card (src/core/nostr/lazy.ts). The Watchlist has its own row (WatchlistRow) since the
-// 2026-11-19 mockup alignment.
+// MintCard is on the home page, so what pulls in Dexie and the relay code (the Watchlist alerts, unwatch with its
+// subscription cancel) is loaded on use, not with the card (src/core/nostr/lazy.ts). The Watchlist page imports the
+// alerts statically, so they are ready by the time its cards render.
+const WatchAlerts = lazy(() => import('@/components/mint/NotifyStrip').then(m => ({ default: m.WatchAlerts })))
 const removeWatchedMint = (url: string, name: string) =>
   import('@/core/nostr/removeWatchedMint').then(m => m.removeWatchedMint(url, name))
 
@@ -29,15 +30,18 @@ function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
-// The mint card of the Mints page (the Watchlist shows WatchlistRow).
+// The mint card of the Mints page and the Watchlist (there with its alerts).
 export function MintCard({
   mint,
   onCompare,
+  showAlerts,
   sameOperatorUrls,
   duplicateDisplayNames,
 }: {
   mint: KnownMint
   onCompare?: (url: string) => void
+  /** Watchlist: the Alerts switch and "More alerts" at the bottom of the card. */
+  showAlerts?: boolean
   // Other tracked mint URLs sharing this mint's /v1/info pubkey — see
   // groupMintsByPubkey() in mintFormatting.ts. Renders a "Same operator" badge
   // in the pill row; cards are never merged, only labeled.
@@ -268,6 +272,11 @@ export function MintCard({
       </div>
       </div>
 
+      {showAlerts && (
+        <Suspense fallback={null}>
+          <WatchAlerts mintUrl={mint.url} name={displayName} />
+        </Suspense>
+      )}
     </div>
       {showWatchLoginModal && (
         <div

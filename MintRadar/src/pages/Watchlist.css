@@ -652,68 +652,15 @@
   .watchlist-page .wl-login-gate { grid-template-columns: minmax(0, 1fr); gap: 16px; }
 }
 
-/* ── Watched mints as rows, 2026-11-19 mockup alignment (watchlist.html "Your mints") ──────────────────────────────
-   One panel; its head ("Your mints", the summary, Add a mint) and the alerts explainer, then one row per mint
-   (WatchlistRow): icon | name and star, host | 30 daily bars | latency | score | Alerts switch, More alerts | Compare.
-   "More alerts" opens under the row, full width. Phones: icon | name | score, the alerts on the next line. */
-.watchlist-page .wl-grid {
-  display: block; padding: 18px 20px 6px; margin: 16px 0;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-}
-.wl-panel-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.wl-panel-add { flex: none; }
-.wl-panel-title { margin: 0; font-size: var(--fs-md); font-weight: 620; color: var(--text); }
-.watchlist-page .wl-grid .wl-summary { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--text2); }
-.wl-panel-add {
-  height: 36px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: transparent;
-  color: var(--text); font: 500 var(--fs-sm) var(--font-body); cursor: pointer; white-space: nowrap;
-}
-.wl-panel-add:hover { border-color: var(--text3); }
-.watchlist-page .wl-grid .wl-notify-explainer { margin: 8px 0 6px; font-size: var(--fs-xs); color: var(--text3); }
-
-.watchlist-page .wl-row {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1.4fr) 150px 96px 56px auto 32px;
-  grid-template-areas: "ico id bars lat score al cmp" "more more more more more more more" "msg msg msg msg msg msg msg";
-  gap: 0 16px; align-items: center;
-  padding: 12px 0; margin: 0;
-  background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0; box-shadow: none;
-}
-.watchlist-page .wl-row:hover { background: transparent; border-color: var(--border); }
-.watchlist-page .wl-row:hover .card-name { color: var(--action-ink); }
-.watchlist-page .wl-row .card-link::after { border-radius: 0; }
-.wl-row-ico { grid-area: ico; }
-.wl-row-id { grid-area: id; min-width: 0; }
-.watchlist-page .wl-row .card-name-line { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.watchlist-page .wl-row .card-name { font-size: var(--fs-md); font-weight: 600; color: var(--text); }
-.watchlist-page .wl-row .card-star { position: relative; z-index: 1; width: 28px; height: 28px; border: 0; border-radius: 8px; color: var(--amber); background: transparent; }
-.watchlist-page .wl-row .card-star:hover { background: var(--action-soft); }
-.wl-row-host { margin-top: 2px; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wl-row-state { font-family: var(--font-body); color: color-mix(in srgb, var(--red) 70%, var(--text)); }
-.wl-row-state-degraded { color: color-mix(in srgb, var(--amber) 80%, var(--text)); }
-.wl-row-bars { grid-area: bars; display: grid; gap: 4px; min-width: 0; }
-.wl-row-bars .uptime-bars { height: 16px; }
-.wl-row-k { display: block; font-size: var(--fs-xs); color: var(--text2); }
-.wl-row-lat { grid-area: lat; display: grid; gap: 2px; min-width: 0; }
-.wl-row-v { font-size: var(--fs-md); font-weight: 560; color: var(--text); white-space: nowrap; }
-.wl-row-v small { font-size: var(--fs-xs); color: var(--text2); font-weight: 400; }
-.wl-row-v-muted { font-size: var(--fs-xs); font-weight: 400; color: var(--text3); white-space: normal; }
-.watchlist-page .wl-row .wl-row-score { grid-area: score; justify-self: end; margin: 0; display: block; }
-.watchlist-page .wl-row .card-reliability-score {
-  font-family: var(--font-display); font-size: 32px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; line-height: 1;
-}
-.wl-tier-high .card-reliability-score { color: var(--green-bright); }
-.wl-tier-mod .card-reliability-score { color: var(--amber); }
-.wl-tier-low .card-reliability-score { color: var(--red); }
-.wl-tier-off .card-reliability-score, .wl-tier-none .card-reliability-score { color: var(--text3); }
-.wl-row-alerts, .watchlist-page .wl-row .notify-strip { display: contents; }
-.watchlist-page .wl-row .notify-strip-row { grid-area: al; display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
-.watchlist-page .wl-row .notify-more-pills { grid-area: more; position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0 2px 52px; margin: 0; }
-.watchlist-page .wl-row .notify-more-note { flex-basis: 100%; margin: 4px 0 0; font-size: var(--fs-xs); color: var(--text3); }
-.watchlist-page .wl-row .notify-strip-msg { grid-area: msg; position: relative; z-index: 1; padding-left: 52px; font-size: var(--fs-xs); color: color-mix(in srgb, var(--red) 75%, var(--text)); }
-.watchlist-page .wl-row .notify-strip-msg:empty { display: none; }
-.watchlist-page .wl-row .card-compare-btn { grid-area: cmp; position: relative; z-index: 1; margin: 0; width: 32px; height: 32px; border: 0; border-radius: 8px; color: var(--text3); background: transparent; display: grid; place-items: center; }
-.watchlist-page .wl-row .card-compare-btn:hover { color: var(--action); background: var(--action-soft); }
+/* ── Watched mints as cards with their alerts (owner, 2026-11-19: the rows did not read as clickable) ─────────────────
+   The Mints page card; under its foot the Alerts switch, "More alerts" and the message (WatchAlerts). */
+.watchlist-page .mint-card .notify-strip { display: block; margin-top: 2px; padding-top: 10px; border-top: 1px solid var(--border); position: relative; z-index: 1; }
+.watchlist-page .mint-card .notify-strip-row { display: flex; align-items: center; gap: 8px; }
+.watchlist-page .mint-card .notify-more-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.watchlist-page .mint-card .notify-more-note { flex-basis: 100%; margin: 4px 0 0; font-size: var(--fs-xs); color: var(--text3); }
+.watchlist-page .mint-card .notify-strip-msg { margin-top: 6px; font-size: var(--fs-xs); color: color-mix(in srgb, var(--red) 75%, var(--text)); }
+.watchlist-page .mint-card .notify-strip-msg:empty { display: none; }
+.watchlist-page .mint-card .notify-pill.on { background: var(--action-soft); border-color: var(--action); color: var(--action-ink); }
 
 /* The switch of the mockup: copper when on; a spinner while the server has not answered. */
 .wl-switch {
@@ -733,33 +680,15 @@
 .wl-switch::before { content: ''; position: absolute; inset: -12px -6px; }
 @media (prefers-reduced-motion: reduce) { .wl-switch::after { transition: none; } }
 .wl-switch-label { font-size: var(--fs-xs); color: var(--text2); }
-.watchlist-page .wl-row .notify-more-toggle {
+.watchlist-page .mint-card .notify-more-toggle {
   display: inline-flex; align-items: center; gap: 2px; margin: 0 0 0 6px; padding: 4px 2px; border: 0; background: none;
   color: var(--text3); font: 400 var(--fs-xs) var(--font-body); cursor: pointer; white-space: nowrap;
 }
-.watchlist-page .wl-row .notify-more-toggle:hover { color: var(--action); }
-.watchlist-page .wl-row .notify-more-toggle[aria-expanded="true"] .notify-more-chevron { transform: rotate(180deg); }
-.watchlist-page .wl-row .notify-more-chevron { transition: transform .15s ease; }
-.watchlist-page .wl-row .notify-pill.on { background: var(--action-soft); border-color: var(--action); color: var(--action-ink); }
+.watchlist-page .mint-card .notify-more-toggle:hover { color: var(--action); }
+.watchlist-page .mint-card .notify-more-toggle[aria-expanded="true"] .notify-more-chevron { transform: rotate(180deg); }
+.watchlist-page .mint-card .notify-more-chevron { transition: transform .15s ease; }
+.watchlist-page .mint-card .notify-pill.on { background: var(--action-soft); border-color: var(--action); color: var(--action-ink); }
 
-@media (max-width: 900px) {
-  .watchlist-page .wl-row {
-    grid-template-columns: 36px minmax(0, 1fr) 96px 48px;
-    grid-template-areas: "ico id lat score" ". al al cmp" "more more more more" "msg msg msg msg";
-  }
-  .watchlist-page .wl-row .notify-strip-row, .watchlist-page .wl-row .card-compare-btn { margin-top: 8px; }
-  .wl-row-bars { display: none; }
-}
-@media (max-width: 560px) {
-  .watchlist-page .wl-grid { padding: 14px 12px 4px; }
-  .watchlist-page .wl-row {
-    grid-template-columns: 36px minmax(0, 1fr) auto;
-    grid-template-areas: "ico id score" ". al cmp" "more more more" "msg msg msg";
-    column-gap: 12px;
-  }
-  .wl-row-lat { display: none; }
-  .watchlist-page .wl-row .notify-more-pills, .watchlist-page .wl-row .notify-strip-msg { padding-left: 0; }
-}
 
 /* "Recommended by follows" in the same language as the panel above (sentence case in the text face, the NIP tag in
    the outlined mono style of the other tags; it was all caps mono with a copper tag), 2026-11-19 mockup alignment. */

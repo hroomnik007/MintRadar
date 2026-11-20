@@ -76,7 +76,8 @@
 `mints.html`: one row of 40 px outlined controls on the page background (block at the end of `Dashboard.css`):
 search "Search mints by name or URL", Filters, the select "Sort: Reliability" (option label shortened from "Reliability
 Score"), the view switch (frame, copper line under the chosen view), "Add a mint" (neutral; was copper "Add mint").
-**No direction button any more:** each sort option has its own direction (`DEFAULT_SORT_DIRS`); `?dir=` in a link still
+The open list is styled like the site with the customizable select (`appearance: base-select`, Chromium 135+; other
+browsers keep the system list), still a native `<select>`. **No direction button any more:** each sort option has its own direction (`DEFAULT_SORT_DIRS`); `?dir=` in a link still
 applies. **"Reset to defaults"** shows only off the default view (it was a disabled icon button). The network sentence box
 is framed, not filled.
 
@@ -88,15 +89,16 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/watchlist.html`; styles i
   the solid copper **"Log in with Nostr"** (it was green "Login via Nostr") with "Browse mints without logging in" beside
   it, then "What is Nostr?". Right panel: three points with an icon each (star, bell, key). The "Watch this mint" dialogs
   (MintCard, Mint Detail) say "Log in with Nostr" too; the navbar button keeps its accessible name "Login via Nostr".
-- **Logged in (owner: "it does not look good, design it better", 2026-11-19):** `.wl-grid` is ONE framed panel: a
-  head ("Your mints", the summary line, "Add a mint" → Mints) and the alerts explainer, then one row per mint from
-  `src/components/mint/WatchlistRow.tsx` (no longer MintCard): icon | name + watch star, host (a non-online state is named
-  after it) | 30 daily bars | latency | the score | Alerts switch, "More alerts" | Compare. Below 900 px the bars go; below
-  560 px the latency too (icon | name | score, the alerts on the next line). Ratings are not shown in the rows.
-- **Alerts (owner's choice of 2026-11-19):** one switch per row (`WatchAlerts` in `NotifyStrip.tsx`, `role="switch"`,
+- **Logged in:** the Mints page cards (`MintCard` with `showAlerts`) in the usual grid, the summary line and the DM
+  explainer above them. A one-panel row layout (WatchlistRow) shipped briefly on 2026-11-19 and was reverted the same
+  evening: the owner found the rows did not read as clickable. No "Add a mint" button.
+- **Explainer** (`watchlistNotifyExplainer`), checked against the server (backend `notificationLimits.ts`,
+  `nostrService.ts`): goes down / comes back at most once an hour each, "More alerts" adds three more, anyone with an
+  alert on also gets the public key and input fee change DMs, at most 40 DMs per 24-hour window.
+- **Alerts (owner's choice of 2026-11-19):** one switch per card (`WatchAlerts` in `NotifyStrip.tsx`, under the card foot, `role="switch"`,
   copper when on) turns "goes down" AND "goes up" on or off together in ONE request
   (`setNotifyFlags` in `notificationSubscription.ts`, one signature); it shows on when either is on. "More alerts" opens the
-  other three (mint/melt issues, outdated version, lost NUT-04/05) as pills under the row and says "(N on)". Same rules as
+  other three (mint/melt issues, outdated version, lost NUT-04/05) as pills under it and says "(N on)". Same rules as
   before: on only after the server confirmed, one request per mint at a time, the message under the row. Specs:
   `watchlist-notify-toggles.spec.ts` (rewritten for the switch); the fixture `openWatchlist` waits for the login-time
   restore and refresh before seeding flags.

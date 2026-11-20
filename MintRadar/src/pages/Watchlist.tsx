@@ -14,11 +14,13 @@ import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useAuthStore } from '@/stores/auth.store'
-import { WatchlistRow } from '@/components/mint/WatchlistRow'
+import { MintCard } from '@/components/mint/MintCard'
+// The alerts MintCard loads lazily show only here: preload them so the cards don't render them a beat late.
+import '@/components/mint/NotifyStrip'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
-import { displayName as mintDisplayName, computeDuplicateMintNames } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { watchlistNotifyExplainer } from '@/utils/tooltipTexts'
 import { showWatchlistCount } from '@/utils/watchlistCount'
 import { watchlistSummary, watchlistSummaryText } from '@/utils/watchlistSummary'
@@ -210,6 +212,7 @@ export default function Watchlist() {
 
   const { data: knownMintsData, isLoading: knownLoading, isError: knownError, refetch: refetchKnown } = useKnownMints()
   const knownMintsMap = useMemo(() => new Map(knownMintsData?.map(m => [m.url, m]) ?? []), [knownMintsData])
+  const pubkeyGroups = useMemo(() => groupMintsByPubkey(knownMintsData ?? []), [knownMintsData])
   const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMintsData ?? []), [knownMintsData])
 
   // Compare feature — same ?compare=url1,url2[,url3,url4] URL persistence as
@@ -363,17 +366,10 @@ export default function Watchlist() {
                   </button>
                 </div>
               )}
+              <p className="wl-summary"><span data-testid="wl-summary">{watchlistSummaryText(watchlistSummary(orderedMints, knownMintsData ?? []))}</span><span data-testid="wl-latency-note"> · {cardsLatencyNote()}</span></p>
+              <p className="wl-notify-explainer">{watchlistNotifyExplainer()}</p>
+              {/* Cards like the Mints page (owner, 2026-11-19: rows did not read as clickable), each with its alerts. */}
               <div className="wl-grid">
-                {/* One panel, one row per mint (2026-11-19 mockup alignment): the head says what the list is and how
-                    the alerts arrive. */}
-                <div className="wl-panel-h">
-                  <div>
-                    <h2 className="wl-panel-title">Your mints</h2>
-                    <p className="wl-summary"><span data-testid="wl-summary">{watchlistSummaryText(watchlistSummary(orderedMints, knownMintsData ?? []))}</span><span data-testid="wl-latency-note"> · {cardsLatencyNote()}</span></p>
-                  </div>
-                  <button type="button" className="wl-panel-add" onClick={() => navigate('/')}>Add a mint</button>
-                </div>
-                <p className="wl-notify-explainer">{watchlistNotifyExplainer()}</p>
                 {orderedMints.slice(0, visibleCount).map(url => {
                   const mint = knownMintsMap.get(url) ?? {
                     url, name: null, iconUrl: null, degraded: false, online: null,
@@ -381,10 +377,12 @@ export default function Watchlist() {
                     descriptionLong: null, nutsLimits: null,
                   }
                   return (
-                  <WatchlistRow
+                  <MintCard
                     key={url}
                     mint={mint}
+                    showAlerts
                     onCompare={openComparePicker}
+                    sameOperatorUrls={sameOperatorUrls(mint, pubkeyGroups)}
                     duplicateDisplayNames={duplicateDisplayNames}
                   />
                   )
