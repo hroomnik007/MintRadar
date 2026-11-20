@@ -29,7 +29,16 @@ for (const width of [1440, 1200, 1024, 900, 769, 390, 320]) {
     await expect(page.locator('.md-summary > .md-sc').first()).toHaveAttribute('data-testid', 'md-summary-score')
     await expect(tile.locator('.md-sc-value')).toHaveText('92')
     await expect(tile).toContainText('Reliability Score')
-    await expect(tile).toContainText('High Reliability')
+    // The band word alone (owner, 2026-11-19): "High. Operational health, not solvency." on one line from 1280 px.
+    await expect(tile).toContainText('High. Operational health, not solvency.')
+    await expect(tile).not.toContainText('High Reliability')
+    if (width >= 1280) {
+      const lines = await tile.locator('.md-sc-sub > span').first().evaluate(el => {
+        const r = document.createRange(); r.selectNodeContents(el)
+        return new Set([...r.getClientRects()].map(x => Math.round(x.top))).size
+      })
+      expect(lines, 'the score sentence on one line').toBe(1)
+    }
     await expect(page.locator('.md-sc-reliability')).toHaveCount(0)
     // No tile is wider than its cell and the page does not scroll sideways.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

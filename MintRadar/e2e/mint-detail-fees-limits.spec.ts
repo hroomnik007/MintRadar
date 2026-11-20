@@ -141,7 +141,7 @@ test('zero fee and undeclared limits: "No input fee" and "not declared", never a
   await expect(fees(page).locator('.md-info-value')).toHaveText('No input fee')
   // A table since the 2026-11-19 redesign: method | deposit | withdrawal.
   await expect(limits(page).locator('tbody tr')).toHaveCount(1)
-  await expect(limits(page).locator('tbody tr').first().locator('th, td')).toHaveText(['bolt11 · sat', 'no limits declared', 'from 0'])
+  await expect(limits(page).locator('tbody tr').first().locator('th, td')).toHaveText(['Lightning', 'no limits declared', 'from 0'])
 })
 
 test('a keyset that states no input_fee_ppk uses the NUT-02 default 0: "No input fee"', async ({ page }) => {
@@ -152,7 +152,7 @@ test('a keyset that states no input_fee_ppk uses the NUT-02 default 0: "No input
 
 test('declared limits per method and unit, with thousands separators', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
-  await expect(limits(page).locator('tbody tr').first().locator('th, td')).toHaveText(['bolt11 · sat', '1 to 1,000,000', '1 to 500,000'])
+  await expect(limits(page).locator('tbody tr').first().locator('th, td')).toHaveText(['Lightning', '1 to 1,000,000', '1 to 500,000'])
 })
 
 test('no keyset data: "Keyset data not available yet"; the limits still show', async ({ page }) => {

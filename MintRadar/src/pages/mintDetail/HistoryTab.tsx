@@ -23,6 +23,17 @@ function formatOutageStart(iso: string): string {
 }
 
 export type ChartInterval = '24h' | '7d' | '30d' | '90d'
+
+/** The period switch in words (2026-11-19 mockup alignment; it read "24h", "7d"…). */
+const PERIOD_LABELS: Record<ChartInterval, string> = { '24h': '24 h', '7d': '7 days', '30d': '30 days', '90d': '90 days' }
+
+/** "Lowest 97, highest 98" (or "98 the whole period") from the chart's score points; null without any. */
+function scoreRangeSentence(points: ReadonlyArray<{ reliability: number | null }>): string | null {
+  const v = points.map(p => p.reliability).filter((x): x is number => typeof x === 'number')
+  if (v.length === 0) return null
+  const lo = Math.round(Math.min(...v)), hi = Math.round(Math.max(...v))
+  return lo === hi ? `${hi} the whole period` : `Lowest ${lo}, highest ${hi}`
+}
 export type ChartMetric = 'latency' | 'uptime' | 'reliability'
 
 export interface HistoryTabProps {
@@ -69,7 +80,7 @@ export function HistoryTab({
             onClick={() => onChartInterval(iv)}
             className={chartInterval === iv ? 'on' : ''}
             aria-pressed={chartInterval === iv}
-          >{iv}</button>
+          >{PERIOD_LABELS[iv]}</button>
         ))}
       </div>
     </div>
@@ -94,8 +105,8 @@ export function HistoryTab({
         <div className="md-hist-fig-value" style={{ color: chartAvgReliability !== null ? reliabilityScoreInfo(chartAvgReliability).color : 'var(--text3)' }}>
           {chartAvgReliability !== null ? String(chartAvgReliability) : '—'}
         </div>
-        <div className="md-hist-fig-label">Average reliability</div>
-        {chartAvgReliability !== null && <div className="md-hist-fig-delta">{reliabilityScoreInfo(chartAvgReliability).label}</div>}
+        <div className="md-hist-fig-label">Average Reliability Score</div>
+        {chartAvgReliability !== null && <div className="md-hist-fig-delta">{scoreRangeSentence(histLineData) ?? reliabilityScoreInfo(chartAvgReliability).label}</div>}
       </div>
       <div className="md-hist-fig" data-testid="outage-tile-count">
         <div className="md-hist-fig-value" style={ongoing ? { color: 'var(--red)' } : undefined}>{count !== null ? String(count) : '—'}</div>

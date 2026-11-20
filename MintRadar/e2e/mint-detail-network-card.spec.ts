@@ -21,9 +21,9 @@ test('measured mint: plain title and the rows, no source tag, works without any 
   await open(page, withNetwork({ ipAddress: IP }))
   await expect(card(page)).toBeVisible()
   await expect(card(page).locator('.md-panel-title')).toHaveText(/^network$/i)
-  await expect(card(page).locator('.md-info-label')).toHaveText(['IP', 'Network', 'Registered in', 'Tor'])
-  await expect(value(page, 'IP')).toHaveText(IP)
-  await expect(value(page, 'Network')).toHaveText('AS14061 DigitalOcean')
+  await expect(card(page).locator('.md-info-label')).toHaveText(['IP address', 'Hosting network', 'Registered in', 'Tor'])
+  await expect(value(page, 'IP address')).toHaveText(IP)
+  await expect(value(page, 'Hosting network')).toHaveText('AS14061 DigitalOcean')
   await expect(value(page, 'Registered in')).toHaveText('United States')
   await expect(value(page, 'Tor')).toHaveText('No onion address')
   await expect(card(page).getByText('TLS')).toHaveCount(0)
@@ -40,8 +40,9 @@ test('the card sits between Mint info and the rest, and Mint info keeps its rows
   expect(i).toBeGreaterThan(0)
   expect(titles[i - 1]).toMatch(/Mint info/i)
   const mintInfo = page.locator('.md-panel', { has: page.locator('.md-panel-title', { hasText: /^Mint info$/i }) })
-  await expect(mintInfo.locator('.md-info-label').first()).toHaveText('Name')
-  await expect(mintInfo.getByText('Discovered', { exact: true })).toBeVisible()
+  // The heading carries the name (2026-11-19 mockup alignment): Mint info starts with the version, then "Found through".
+  await expect(mintInfo.locator('.md-info-label').first()).toHaveText('Version')
+  await expect(mintInfo.getByText('Found through', { exact: true })).toBeVisible()
   // label left, value right, hairline divider (both info cards share the recipe)
   for (const row of [mintInfo.locator('.md-info-row').first(), card(page).locator('.md-info-row').first()]) {
     const m = await row.evaluate(r => {
@@ -67,22 +68,22 @@ test('the registration row says what it is and carries the caveat as an info too
 test.describe('IP row', () => {
   test('no address yet: the row is hidden', async ({ page }) => {
     await open(page, withNetwork())
-    await expect(rowOf(page, 'IP')).toHaveCount(0)
-    await expect(card(page).locator('.md-info-label')).toHaveText(['Network', 'Registered in', 'Tor'])
+    await expect(rowOf(page, 'IP address')).toHaveCount(0)
+    await expect(card(page).locator('.md-info-label')).toHaveText(['Hosting network', 'Registered in', 'Tor'])
   })
   test('offline mint without an address: the IP row says Offline', async ({ page }) => {
     await open(page, { alpha: { ...NO_8333, online: false }, cz: NOT_COVERED })
-    await expect(value(page, 'IP')).toHaveText('Offline')
+    await expect(value(page, 'IP address')).toHaveText('Offline')
   })
   test('hostile address is dropped, not printed', async ({ page }) => {
     await open(page, withNetwork({ ipAddress: XSS }))
-    await expect(rowOf(page, 'IP')).toHaveCount(0)
+    await expect(rowOf(page, 'IP address')).toHaveCount(0)
   })
   test('a mint with only an address shows the IP row alone', async ({ page }) => {
     await open(page, { alpha: { ...NO_8333, ipAddress: IP }, cz: NOT_COVERED })
     await expect(card(page)).toBeVisible()
-    await expect(card(page).locator('.md-info-label')).toHaveText(['IP'])
-    await expect(value(page, 'IP')).toHaveText(IP)
+    await expect(card(page).locator('.md-info-label')).toHaveText(['IP address'])
+    await expect(value(page, 'IP address')).toHaveText(IP)
   })
 })
 
@@ -99,7 +100,7 @@ test('nothing measured yet: the card is not rendered', async ({ page }) => {
 
 test('hostile network strings are shown as text: no element, no dialog, no request', async ({ page }) => {
   const h = await open(page, withNetwork({ netOrg: XSS, netCountry: XSS }))
-  await expect(value(page, 'Network')).toHaveText(`AS14061 ${XSS}`)
+  await expect(value(page, 'Hosting network')).toHaveText(`AS14061 ${XSS}`)
   await expect(rowOf(page, 'Registered in')).toHaveCount(0) // not a country code: the row is hidden, nothing printed
   await expect(card(page).locator('img')).toHaveCount(0)
   await expect(page.locator('[onerror], img[src="x"]')).toHaveCount(0)
@@ -121,7 +122,7 @@ test.describe('390px viewport', () => {
   test('a long network name is capped and nothing overflows sideways', async ({ page }) => {
     await open(page, withNetwork({ netOrg: 'W'.repeat(120) }))
     await expect(card(page)).toBeVisible()
-    expect(Array.from(((await value(page, 'Network').innerText()).replace(/^AS14061 /, ''))).length).toBeLessThanOrEqual(48)
+    expect(Array.from(((await value(page, 'Hosting network').innerText()).replace(/^AS14061 /, ''))).length).toBeLessThanOrEqual(48)
     const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, client: document.documentElement.clientWidth, right: document.querySelector('[data-testid="mint-network-card"]')!.getBoundingClientRect().right }))
     expect(m.doc).toBeLessThanOrEqual(m.client)
     expect(m.right).toBeLessThanOrEqual(390 + 1)

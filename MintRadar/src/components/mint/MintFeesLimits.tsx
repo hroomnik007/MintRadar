@@ -29,6 +29,7 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
   const [historyOpen, setHistoryOpen] = useState<string | null>(null)
   const fees = feesView(keysets)
   const limits = limitTable(mintMethods, meltMethods, disabled)
+  const limitUnits = [...new Set(limits.map(r => r.key.split('|')[1]!))]
   const src = limitsSource(fetchedAt, now)
   const reserved = reservedFeeLines(units)
   // With the change data known, every fee row gets a dates line ("since" / "unchanged since"): reserve it too while waiting.
@@ -36,9 +37,34 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
   return (
     <div className="md-panel md-fees-limits" data-testid="mint-fees-limits">
       <div className="md-fl-head">
-        <div className="md-panel-title">Fees and limits</div>
+        <div>
+          <div className="md-panel-title">Fees and limits</div>
+          {/* What the numbers are, under the title (2026-11-19 mockup alignment): one unit is named here, not on every row. */}
+          {limits.length > 0 && <p className="md-panel-sub">Per payment{limitUnits.length === 1 ? `, in ${limitUnits[0]}` : ''}.</p>}
+        </div>
         <InfoTooltip iconSize={12} width={240} about="Fees and limits" text={LIMITS_NOTE} />
       </div>
+      {/* Limits per payment as a table, method x deposit / withdrawal (2026-11-19 redesign; they were "Deposit (mint) ·
+          bolt11 · sat" rows). The empty and switched-off cases keep their sentence. */}
+      {limits.length === 0 ? (
+        <div className="md-info-grid md-info-list" data-testid="mint-limits">
+          <div className="md-info-row"><span className="md-info-label">Limits</span><span className="md-info-value">no methods declared</span></div>
+        </div>
+      ) : (
+        <table className="md-limits-table" data-testid="mint-limits">
+          <thead><tr><th scope="col">Method</th><th scope="col" className="n">Deposit</th><th scope="col" className="n">Withdrawal</th></tr></thead>
+          <tbody>
+            {limits.map(r => (
+              <tr key={r.key}>
+                <th scope="row">{r.label}</th>
+                <td className="n">{r.deposit}</td>
+                <td className="n">{r.withdrawal}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {/* The input fee under the limits (2026-11-19 mockup alignment; it headed the card). */}
       <div className="md-info-grid md-info-list md-fl-fees" style={keysetsPending ? { minHeight: `calc(${reserved} * (var(--md-fl-row-h)${datesLine ? ' + var(--md-fl-date-h)' : ''}))` } : undefined} data-testid="mint-fees">
         {keysetsPending ? (
           <div className="md-info-row"><span className="md-info-label">Checking keysets…</span></div>
@@ -78,26 +104,6 @@ export function MintFeesLimits({ keysets, keysetsPending, units, mintMethods, me
           )
         })}
       </div>
-      {/* Limits per payment as a table, method x deposit / withdrawal (2026-11-19 redesign; they were "Deposit (mint) ·
-          bolt11 · sat" rows). The empty and switched-off cases keep their sentence. */}
-      {limits.length === 0 ? (
-        <div className="md-info-grid md-info-list" data-testid="mint-limits">
-          <div className="md-info-row"><span className="md-info-label">Limits</span><span className="md-info-value">no methods declared</span></div>
-        </div>
-      ) : (
-        <table className="md-limits-table" data-testid="mint-limits">
-          <thead><tr><th scope="col">Method</th><th scope="col" className="n">Deposit</th><th scope="col" className="n">Withdrawal</th></tr></thead>
-          <tbody>
-            {limits.map(r => (
-              <tr key={r.key}>
-                <th scope="row">{r.label}</th>
-                <td className="n">{r.deposit}</td>
-                <td className="n">{r.withdrawal}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
       <div className="md-fl-note">
         <div>
           {src.text}

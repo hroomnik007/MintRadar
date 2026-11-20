@@ -91,7 +91,7 @@ const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m
 import {
   Copy, Check, Info,
   Zap, QrCode,
-  ArrowUpRight, User,
+  ArrowUpRight, User, ChevronLeft, ArrowLeftRight,
 } from 'lucide-react'
 
 // Short label for the "Signing with" row — mirrors AppShell's navbar profile
@@ -160,6 +160,14 @@ function ReliabilityBreakdownRow({ label, display, displayLabel, score, max, col
   )
 }
 
+/** A payment method as a reader says it, in the Units and methods table (2026-11-19 mockup alignment): bolt11 is a
+ *  Lightning invoice, so "Lightning"; bolt12 keeps its name; "On-chain". Other methods as the mint names them. */
+function methodPlainText(method: string): string {
+  if (method === 'bolt11') return 'Lightning'
+  if (method === 'bolt12') return 'Lightning (BOLT12)'
+  return methodDisplayText(method)
+}
+
 const MINT_TABS = ['overview', 'history', 'nuts', 'audit', 'reviews'] as const
 type MintTab = typeof MINT_TABS[number]
 const MINT_TAB_LABELS: Record<MintTab, string> = { overview: 'Overview', history: 'History', nuts: 'NUTs', audit: 'Audit', reviews: 'Reviews' }
@@ -217,7 +225,6 @@ function httpErrorTooltip(lastError: string): string | undefined {
 
 
 function MintDetailContent({ url }: { url: string }) {
-  const navigate = useNavigate()
   const now = useNow()
   const { data, isLoading, isError: probeError, refetch: refetchProbe } = useMintProbe(url)
   // Confirmed changes, values seen once and keyset seen dates: dates next to the keysets, fees and mint info (no panel of their own).
@@ -668,7 +675,7 @@ function MintDetailContent({ url }: { url: string }) {
     return (
       <div className="mint-detail">
         <div className="md-header">
-          <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+          <Link className="md-back" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
         </div>
       </div>
     )
@@ -1026,11 +1033,11 @@ function MintDetailContent({ url }: { url: string }) {
         {!keysets || keysets.length === 0 ? (
           <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Keyset data not available.</div>
         ) : (
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+          <div className="md-keyset-list">
             {shownKeysets?.map(ks => (
-              <div key={ks.id} className="md-keyset-row" style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                <div style={{display:'flex',alignItems:'center',gap:6,minWidth:0,flex:'1 1 100%'}}>
-                  <span style={{fontSize:13,color:'var(--text)',fontFamily:'var(--font-mono)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{ks.id.slice(0, 8)}…{ks.id.slice(-8)}</span>
+              <div key={ks.id} className="md-keyset-row">
+                <div className="md-keyset-idline">
+                  <span className="md-keyset-id">{ks.id.slice(0, 8)}…{ks.id.slice(-8)}</span>
                   <button
                     onClick={() => {
                       void navigator.clipboard.writeText(ks.id)
@@ -1048,19 +1055,13 @@ function MintDetailContent({ url }: { url: string }) {
                   >
                     {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
                   </button>
+                  {/* On the id line, outlined (2026-11-19 mockup alignment). */}
+                  <span className={`md-keyset-meta md-keyset-state${ks.active ? ' is-active' : ''}`}>{ks.active ? 'Active' : 'Inactive'}</span>
                 </div>
-                <span className="md-keyset-meta" style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{ks.unit}</span>
+                <span className="md-keyset-meta md-keyset-unit">{ks.unit}</span>
                 {typeof ks.input_fee_ppk === 'number' && (
-                  <InfoTooltip text={KEYSET_FEE_TEXT} width={200} className="md-keyset-fee-tip"><span className="md-keyset-meta" style={{fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
+                  <InfoTooltip text={KEYSET_FEE_TEXT} width={200} className="md-keyset-fee-tip"><span className="md-keyset-meta">{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
                 )}
-                <span className="md-keyset-meta" style={{
-                  fontSize:12,fontFamily:'var(--font-mono)',fontWeight:600,borderRadius:5,padding:'2px 7px',marginLeft:'auto',
-                  color: ks.active ? 'var(--accent)' : 'var(--text3)',
-                  background: ks.active ? 'var(--green-soft)' : 'var(--bg4)',
-                  border: `0.5px solid ${ks.active ? 'var(--green-soft-strong)' : 'var(--border)'}`,
-                }}>
-                  {ks.active ? 'Active' : 'Inactive'}
-                </span>
                 {(() => {
                   const d = keysetDates(ks.id, ks.active, mintChanges, now)
                   const p = keysetPending(ks.id, mintChanges, now)
@@ -1093,7 +1094,8 @@ function MintDetailContent({ url }: { url: string }) {
       {/* Header, 2026-11-19 redesign (phase 4): icon | name, state and the watch star right after them (owner, 2026-11-18),
           the shareable URL and "first seen" under it | the actions on the right (under the name on phones). */}
       <div className="md-header md-dh">
-        <button className="md-back md-back-compact" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+        {/* "All mints" to the list (mockup alignment 2026-11-19; it was "← Back" through the browser history). */}
+        <Link className="md-back md-back-compact" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
         <div className="md-dh-main">
           <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={isMobile ? 48 : 64} radius={isMobile ? 12 : 14} className="md-hdr-favicon" />
           <div className="md-namebox">
@@ -1168,7 +1170,7 @@ function MintDetailContent({ url }: { url: string }) {
                   )
                 })()}
               </span>
-              {copiedLink ? <span className="md-url-copied-label">Link copied</span> : <ArrowUpRight size={12} />}
+              {copiedLink ? <span className="md-url-copied-label">Link copied</span> : <Copy size={14} aria-label="Copy link" />}
             </button>
             {firstSeen && (
               <div className="md-first-seen">{firstSeen}</div>
@@ -1198,7 +1200,7 @@ function MintDetailContent({ url }: { url: string }) {
               {!isArchived && (
               <>
               <button className="md-quick-btn" onClick={() => setShowQr(true)}>
-                <QrCode size={12} /> Mint QR
+                <QrCode size={16} aria-hidden="true" /> Mint QR
               </button>
               {/* Nor for a mint that switched minting or melting off (NUT-04/05 `disabled: true`): Cashu.me
                   only; Mint QR stays for it (the URL is still a fact). */}
@@ -1209,7 +1211,7 @@ function MintDetailContent({ url }: { url: string }) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span aria-hidden="true">↗</span>
+                <ArrowUpRight size={16} aria-hidden="true" />
                 <span className="md-qb-full">Open in Cashu.me</span>
                 <span className="md-qb-short">Cashu.me</span>
               </a>
@@ -1222,7 +1224,7 @@ function MintDetailContent({ url }: { url: string }) {
                 className="md-compare-btn"
                 onClick={() => setShowComparePicker(true)}
               >
-                <span aria-hidden="true">⇆</span>
+                <ArrowLeftRight size={16} aria-hidden="true" />
                 <span className="md-compare-label">Compare</span>
               </button>
             </div>
@@ -1237,8 +1239,11 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-sc-value md-strip-readout" style={{color: scorePending ? 'var(--text-faint)' : scoreTone(badgeInfo.color)}} {...scoreA11y}>{scoreText}</div>
           <div className="md-sc-label">Reliability Score</div>
           <div className="md-sc-sub">
-            {/* The same sentence while the score is pending ("Not available yet. …"), so the tile keeps its height when it arrives. */}
-            <span>{`${tsInfo.label}. Operational health, not solvency.`}{badgeLastNote}</span>
+            {/* The same sentence while the score is pending ("Pending. …", one line like "High. …"), so the tile keeps its
+                height when it arrives. */}
+            {/* The band word alone ("High", owner 2026-11-19): "Reliability Score" is the label right above it, and the
+                sentence fits one line, so the strip is lower. */}
+            <span>{`${scorePending ? 'Pending' : tsInfo.label.replace(/ Reliability$/, '')}. Operational health, not solvency.`}{badgeLastNote}</span>
             <button type="button" className="md-strip-link md-sc-score-link" onClick={() => setShowReliabilityBreakdown(true)}>How it is made</button>
           </div>
         </div>
@@ -1379,6 +1384,7 @@ function MintDetailContent({ url }: { url: string }) {
 
           {activeTab === 'overview' && (
             <OverviewTab
+              headingName={displayName}
               url={url}
               now={now}
               knownMint={knownMint}
@@ -1543,14 +1549,14 @@ function MintDetailContent({ url }: { url: string }) {
               {/* One row per unit: what you can deposit with (NUT-04) and withdraw with (NUT-05), as the mint declares it. */}
               <table className="md-methods-table">
                 <thead>
-                  <tr><th scope="col">Unit</th><th scope="col">Deposit</th><th scope="col">Withdraw</th></tr>
+                  <tr><th scope="col">Unit</th><th scope="col">Mint (deposit)</th><th scope="col">Melt (withdraw)</th></tr>
                 </thead>
                 <tbody>
                   {sortUnits(knownMint.units).map(unit => {
                     const cell = (list: typeof knownMint.mintMethods, off: boolean) => {
                       const c = methodsCell((list ?? []).filter(m => m.unit === unit), off)
                       return c.state === 'list'
-                        ? <span className="md-methods-list">{c.text.split(', ').map(methodDisplayText).join(', ')}</span>
+                        ? <span className="md-methods-list">{c.text.split(', ').map(methodPlainText).join(', ')}</span>
                         : <span className={`md-methods-${c.state}`}>{c.text}</span>
                     }
                     return (
@@ -1893,7 +1899,7 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
     <div className="mint-detail">
       {/* Only Back: no card around it (an empty bordered box read as a header that failed to load). */}
       <div className="md-header md-header-bare">
-        <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+        <Link className="md-back" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
       </div>
       <div className="md-not-tracked">
         <h1 className="md-not-tracked-title">Not a tracked mint</h1>
@@ -1928,13 +1934,12 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
 
 // A slug that does not decode has no mint page to point a canonical at.
 function MintInvalidUrl() {
-  const navigate = useNavigate()
   // Own title (it kept the previous page's title), no canonical link, noindex: the same tags as the 404 page.
   useDocumentMeta(MINT_NOT_FOUND_TITLE, undefined, { noindex: true, notFound: true })
   return (
     <div className="mint-detail">
       <div className="md-header md-header-bare">
-        <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+        <Link className="md-back" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
       </div>
       <h1 style={{ color: 'var(--red)', padding: '24px', fontSize: '14px', fontWeight: 400 }}>Invalid mint URL.</h1>
     </div>
@@ -1944,7 +1949,6 @@ function MintInvalidUrl() {
 export default function MintDetail() {
   const params = useParams<{ url: string }>()
   const rawUrl = params['url']
-  const navigate = useNavigate()
   const { hash } = useLocation()
   const { data: knownMintsData, isError: knownError, refetch: refetchKnown } = useKnownMints()
 
@@ -1959,7 +1963,7 @@ export default function MintDetail() {
     return (
       <div className="mint-detail mint-detail-pending">
         <div className="md-header">
-          <button className="md-back" aria-label="Back" onClick={() => navigate(-1)}><span className="md-back-arrow">←</span><span className="md-back-label">Back</span></button>
+          <Link className="md-back" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
         </div>
         <h1 className="sr-only">Mint details</h1>
         {knownError ? <LoadError message={MINT_LIST_ERROR} onRetry={() => void refetchKnown()} /> : <LoadingNote />}

@@ -163,12 +163,16 @@ export function limitTable(
     const [am, au] = a.split('|') as [string, string], [bm, bu] = b.split('|') as [string, string]
     return (rank.get(au) ?? 0) - (rank.get(bu) ?? 0) || mRank(am) - mRank(bm) || (am < bm ? -1 : am > bm ? 1 : 0)
   })
+  // The method in words ("Lightning" for bolt11, 2026-11-19 mockup alignment); the unit only when there is more than one
+  // (the card's line under its title names a single unit).
+  const multiUnit = new Set(keys.map(k => k.split('|')[1])).size > 1
+  const word = (m: string) => m === 'bolt11' ? 'Lightning' : m === 'bolt12' ? 'Lightning (BOLT12)' : m === 'onchain' ? 'On-chain' : m
   return keys.map(k => {
     const [method, unit] = k.split('|') as [string, string]
     const d = dep.get(k), w = wd.get(k)
     return {
       key: k,
-      label: `${method === 'onchain' ? 'On-chain' : method} · ${unit}`,
+      label: multiUnit ? `${word(method)} · ${unit}` : word(method),
       deposit: disabled.mint ? 'Disabled by the mint' : d ? rangeText(d) : '—',
       withdrawal: disabled.melt ? 'Disabled by the mint' : w ? rangeText(w) : '—',
     }

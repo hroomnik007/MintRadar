@@ -17,19 +17,20 @@ async function open(page: Page, loggedIn: boolean) {
 
 for (const vp of VIEWPORTS) {
   for (const loggedIn of [false, true]) {
-    test(`${vp.width}px, ${loggedIn ? 'logged in' : 'logged out'}: Tab visits Back, then the star; the star follows the name and state`, async ({ page }) => {
+    test(`${vp.width}px, ${loggedIn ? 'logged in' : 'logged out'}: Tab visits All mints, then the star; the star follows the name and state`, async ({ page }) => {
       await page.setViewportSize(vp)
       await open(page, loggedIn)
 
       const header = page.locator('.md-header')
-      const back = header.getByRole('button', { name: 'Back' })
+      // "All mints", a link to the list since the 2026-11-19 mockup alignment (it was a "Back" button).
+      const back = header.getByRole('link', { name: 'All mints' })
       const star = header.locator('.md-dh-star')
       await expect(back).toBeVisible()
       await expect(star).toBeVisible()
 
       // Back is the header's first control (the header has no padding to click into since the redesign); the next Tab stop is the star.
-      const first = await header.evaluate(h => h.querySelector('button, a, [tabindex]')?.getAttribute('aria-label'))
-      expect(first).toBe('Back')
+      const first = await header.evaluate(h => h.querySelector('button, a, [tabindex]')?.textContent?.trim())
+      expect(first).toBe('All mints')
       await back.focus()
       await expect(back).toBeFocused()
       await page.keyboard.press('Tab')

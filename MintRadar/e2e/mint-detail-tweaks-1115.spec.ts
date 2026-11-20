@@ -30,7 +30,7 @@ for (const width of [1440, 1024, 769, 700, 390]) {
   test(`${width}px: the strip's Reliability Score tile reads "How it is made"`, async ({ page }) => {
     await open(page, width)
     const tile = page.getByTestId('md-summary-score')
-    await expect(tile).toContainText('High Reliability')
+    await expect(tile).toContainText('High. Operational health, not solvency.')
     await expect(tile.locator('.md-sc-score-link')).toBeVisible()
     await expect(tile.locator('.md-sc-score-link')).toHaveText('How it is made')
     await expect(page.locator('.md-sc-reliability')).toHaveCount(0)

@@ -300,8 +300,8 @@ test.describe('W5b D: Signed health record', () => {
     expect(await value.getAttribute('title')).toBeNull()
     const m = await page.evaluate(() => {
       const cs = (el: Element) => getComputedStyle(el)
-      // A plain-text row: Version is code (mono) since the 2026-11-19 redesign, Name is the text face like this row.
-      const ver = [...document.querySelectorAll('.md-info-row')].find(r => r.querySelector('.md-info-label')?.textContent === 'Name')!
+      // A plain-text row: Version is code (mono) since the 2026-11-19 redesign, Found through is the text face like this row.
+      const ver = [...document.querySelectorAll('.md-info-row')].find(r => r.querySelector('.md-info-label')?.textContent === 'Found through')!
       const hr = document.querySelector('.md-hr-row')!
       const c = (r: Element) => { const l = r.querySelector('.md-info-label')!, v = r.querySelector('.md-info-value')!; return { lf: cs(l).fontSize, lfam: cs(l).fontFamily, vf: cs(v).fontSize, vfam: cs(v).fontFamily, vcol: cs(v).color, lcol: cs(l).color, pad: cs(r).padding, ta: cs(v).textAlign } }
       const l = hr.querySelector('.md-info-label')!.getBoundingClientRect(), v = hr.querySelector('.md-info-value')!.getBoundingClientRect()

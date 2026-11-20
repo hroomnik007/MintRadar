@@ -188,7 +188,7 @@ test.describe('swap list filter', () => {
     expect(Math.abs((await top()) - before)).toBeLessThanOrEqual(0.5)
   })
 
-  test('phone: every filter button is 28 px tall with a 44 px touch target', async ({ page }) => {
+  test('phone: every filter button is 36 px tall (the shared segmented control) with a 44 px touch target', async ({ page }) => {
     await resize(page, 390, 844)
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps: swaps() })))
     await layoutReady(page)
@@ -198,7 +198,7 @@ test.describe('swap list filter', () => {
         const pseudo = getComputedStyle(el, '::before')
         return { h: box.height, pseudoH: parseFloat(pseudo.height), pseudoContent: pseudo.content }
       })
-      expect(r.h).toBe(28)
+      expect(r.h).toBe(36)
       expect(r.pseudoContent).toBe('""')
       expect(r.pseudoH).toBeGreaterThanOrEqual(44)
     }

@@ -64,6 +64,8 @@ export interface OverviewTabProps {
   nut4Disabled: boolean
   nut5Disabled: boolean
   name: string | undefined
+  /** The name the page heading shows (Mint info repeats the mint's own name only when it differs). */
+  headingName: string
   version: string | undefined
   mintTime: number | undefined
   pubkey: string | undefined
@@ -86,7 +88,7 @@ export function OverviewTab({
   url, now, knownMint, data, probeLoading, probeError, refetchProbe,
   unavailableInfo, lastErrorText, scoreText, supportsBackupRestore, unavailableContacts,
   motd, description, descriptionLong, infoLastSeenAt, motdDatesLine, descriptionDates, nameDates, nip87Line, pubkeyDates,
-  nut4Disabled, nut5Disabled, name, version, mintTime, pubkey, healthRecord, tosUrl, urls,
+  nut4Disabled, nut5Disabled, name, headingName, version, mintTime, pubkey, healthRecord, tosUrl, urls,
   email, twitter, nostr, operatorNip05, contactsAreLastSeen, lastContactsAt, contactSource,
   copiedContact, setCopiedContact,
 }: OverviewTabProps) {
@@ -140,19 +142,13 @@ export function OverviewTab({
                 {motdDatesLine}
               </div>
             )}
+            {/* The mint's own words without labels (2026-11-19 mockup alignment): the short description as the lede, the
+                long one muted under it. */}
             {description && (
-              <div className="md-info-row md-desc-row">
-                <span className="md-info-label">Description</span>
-                <span className="md-info-value" title={descriptionDates?.title}>{description}</span>
-              </div>
+              <p className="md-about-lede" title={descriptionDates?.title}>{description}</p>
             )}
             {descriptionLong && (
-              <div className="md-info-row md-desc-row">
-                <span className="md-info-label">Full description</span>
-                <span className="md-info-value">
-                  {descriptionLong}
-                </span>
-              </div>
+              <p className="md-about-more">{descriptionLong}</p>
             )}
           </div>
         )}
@@ -193,30 +189,29 @@ export function OverviewTab({
           </div>
         )}
         <div className="md-info-grid md-info-list">
-          <div className="md-info-row">
-            <span className="md-info-label">Name</span>
-            <span className="md-info-value" title={nameDates?.title}>{name ?? '—'}</span>
-          </div>
+          {/* The name is the page heading; it stays here only when the mint's own name differs from what the heading shows. */}
+          {name && name !== headingName && (
+            <div className="md-info-row">
+              <span className="md-info-label">Name</span>
+              <span className="md-info-value" title={nameDates?.title}>{name}</span>
+            </div>
+          )}
           <div className="md-info-row">
             <span className="md-info-label">Version</span>
             <span className="md-info-value md-info-code">{version ?? '—'}</span>
           </div>
-          <div className="md-info-row">
-            <span className="md-info-label">Discovered</span>
-            <span className="md-info-value">NIP-87</span>
+          {/* "Found through" (2026-11-19 mockup alignment): how MintRadar found the mint and its announcement in one row
+              (they were "Discovered" and "Nostr announcement"). */}
+          <div className="md-info-row md-info-row-nip87">
+            <span className="md-info-label">Found through</span>
+            <span className="md-info-value">{nip87Line ?? 'NIP-87'}</span>
           </div>
-          {nip87Line && (
-            <div className="md-info-row md-info-row-nip87">
-              <span className="md-info-label">Nostr announcement</span>
-              <span className="md-info-value">{nip87Line}</span>
-            </div>
-          )}
           {mintTime && (
             <div className="md-info-row">
               <span className="md-info-label">Server time</span>
               <span className="md-info-value" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 {formatTime(new Date(mintTime * 1000))}
-                {(() => { const d = clockDriftLabel(mintTime); return <span className="md-clock-drift" style={{fontSize:12,fontFamily:'var(--font-mono)',color:d.color}} title="Mint clock vs this browser">{d.label}</span> })()}
+                {(() => { const d = clockDriftLabel(mintTime); return <span className="md-clock-drift" style={d.label === 'in sync' ? undefined : { color: d.color }} title="Mint clock vs this browser">{d.label === 'in sync' ? 'in sync with ours' : `${d.label} from ours`}</span> })()}
               </span>
             </div>
           )}
@@ -288,16 +283,15 @@ export function OverviewTab({
           </div>
           {tosUrl && (tosUrl.startsWith('https://') || tosUrl.startsWith('http://')) && (
             <div className="md-info-row">
-              <span className="md-info-label">Terms of Service</span>
+              <span className="md-info-label">Terms of service</span>
               <a
                 href={tosUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="md-info-value"
-                style={{color:'var(--action)', textDecoration:'none'}}
                 onClick={e => e.stopPropagation()}
               >
-                View ToS ↗
+                Read the terms
               </a>
             </div>
           )}

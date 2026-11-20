@@ -1067,13 +1067,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 
 @media (max-width: 768px) {
   .md-info-grid { grid-template-columns: 1fr; gap: 0; }
-  .latency-test-btn {
-    font-size: 12px !important;
-    padding: 3px 6px !important;
-    border-radius: 4px !important;
-    width: 100%;
-    box-sizing: border-box;
-  }
+  /* The latency reading is a text link in the strip since the 2026-11-19 mockup alignment (it was a full-width pill). */
 
   .md-body {
     grid-template-columns: 1fr;
@@ -1259,6 +1253,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
 @media (max-width: 419.98px) {
   .md-quick-btn > svg,
   .md-quick-btn > span[aria-hidden="true"],
+  .md-compare-btn > svg,
   .md-compare-btn > span[aria-hidden="true"] { display: none; }
 }
 
@@ -2863,3 +2858,175 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* Stars and date on one line, the date in the text face (it was mono under the stars). */
 .mint-detail .md-rv-list .review-meta { flex-direction: row; align-items: baseline; gap: 10px; }
 .mint-detail .md-rv-list .review-date { font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text2); }
+
+/* ── Mockup alignment, 2026-11-19 (owner: "the buttons as in the design"), mint.html header and strip ───────────────
+   Quiet outlined 36 px buttons with 16 px icons (they were small copper mono pills), "‹ All mints" as a plain link, the
+   watch star as an outlined icon button, the URL without its scheme and with a copy icon; in the strip the whole value
+   ("117 ms", "14 NUTs") in one size, the latency reading as a link. */
+.mint-detail .md-back {
+  display: inline-flex; align-items: center; gap: 4px; padding: 0; margin: 0;
+  background: none; border: 0; border-radius: 4px; color: var(--text2);
+  font: 400 var(--fs-sm) var(--font-body); letter-spacing: 0; text-decoration: none;
+}
+.mint-detail .md-back:hover { color: var(--action); background: none; }
+.mint-detail .md-back .md-back-label { display: inline; }
+.mint-detail .md-back::before { content: none; }
+.mint-detail .md-quick-btn,
+.mint-detail .md-compare-btn {
+  height: 36px; padding: 0 14px; gap: 8px;
+  background: transparent; border: 1px solid var(--border-strong); border-radius: 8px;
+  color: var(--text); font: 500 var(--fs-sm) var(--font-body); letter-spacing: 0; line-height: 1;
+}
+.mint-detail .md-quick-btn:hover,
+.mint-detail .md-compare-btn:hover { background: transparent; border-color: var(--text3); color: var(--text); }
+.mint-detail .md-quick-btn > svg, .mint-detail .md-compare-btn > svg { flex: none; }
+.mint-detail .md-dh .md-dh-star {
+  display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 8px;
+  background: transparent; color: var(--text);
+}
+.mint-detail .md-dh .md-dh-star:hover { border-color: var(--text3); background: transparent; }
+.mint-detail .md-dh .md-dh-star.on { color: var(--amber); }
+.mint-detail .md-dh .md-url { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.mint-detail .md-dh .md-url-scheme { display: none; }
+.mint-detail button.md-url-copy > svg { opacity: 1; color: var(--text3); }
+.mint-detail button.md-url-copy:hover > svg { color: var(--action); }
+.mint-detail .md-dh .md-first-seen { font-size: var(--fs-sm); }
+.mint-detail .md-strip .md-sc-value:not(.md-strip-readout) .md-strip-unit { font-size: inherit; font-weight: inherit; color: inherit; }
+.mint-detail .md-strip .latency-test-btn {
+  display: inline; padding: 0; margin: 0; border: 0; border-radius: 0; background: none;
+  color: var(--action); font: inherit; text-decoration: underline; text-underline-offset: 3px; white-space: normal;
+}
+.mint-detail .md-strip .latency-test-btn:hover { color: var(--action-ink); background: none; }
+.mint-detail .md-strip .md-sc-latency .md-sc-sub { display: block; }
+.mint-detail .md-strip .md-sc-latency .md-sc-sub > span::after { content: ' '; }
+
+/* ── Mockup alignment, 2026-11-19: Overview (mint.html "Overview") ─────────────────────────────────────────────────
+   The operator message as one ochre line with a left rule, the mint's words without labels, quieter info rows, the
+   score parts as "40 of 40" with a faint "of", outlined unit and keyset tags, flat keyset rows. */
+.mint-detail .md-mint-alert {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; margin: 0 0 12px;
+  background: var(--amber-soft); border: 0; border-left: 3px solid var(--amber); border-radius: 8px;
+}
+.mint-detail .md-mint-alert-body { display: block; }
+.mint-detail .md-mint-alert-title { display: inline; font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 600; color: var(--text); letter-spacing: 0; text-transform: none; }
+.mint-detail .md-mint-alert-title::after { content: ': '; }
+.mint-detail .md-mint-alert-title:not(:first-child) { display: block; margin-top: 8px; }
+.mint-detail .md-mint-alert-title:not(:first-child)::after, .mint-detail .md-mint-alert:not(.md-mint-alert--inline) .md-mint-alert-title:has(+ .md-mint-alert-text:not(:empty)) ~ .md-mint-alert-title::after { content: none; }
+.mint-detail .md-mint-alert-text { display: inline; font-size: var(--fs-sm); color: var(--text); }
+.md-about-lede { margin: 0; font-size: var(--fs-md); line-height: 1.5; color: var(--text); max-width: 68ch; }
+.md-about-more { margin: 8px 0 0; font-size: var(--fs-sm); line-height: 1.55; color: var(--text2); max-width: 68ch; }
+.mint-detail .md-info-row .md-info-label { color: var(--text2); font-family: var(--font-body); font-size: var(--fs-sm); }
+.mint-detail .md-info-row .md-info-value { font-size: var(--fs-sm); }
+.mint-detail .md-clock-drift { font: inherit; color: inherit; }
+.mint-detail .md-info-row a.md-info-value { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
+.mint-detail .md-hr-view { border-color: var(--border-strong); background: transparent; color: var(--text); }
+.mint-detail .md-hr-view:hover { border-color: var(--text3); }
+
+.mint-detail .md-reliability-panel .rb-row-label { font-weight: 560; }
+.mint-detail .md-reliability-panel .rb-row-display { font-size: var(--fs-xs); color: var(--text3); }
+.mint-detail .md-reliability-panel .rb-row-score { font-size: var(--fs-sm); }
+
+.mint-detail .md-methods-table th[scope="col"] { color: var(--text2); font-size: var(--fs-xs); font-weight: 500; border-top: 0; padding-top: 0; }
+.mint-detail .unit-badge {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text2);
+  font: 500 var(--fs-xs) var(--font-mono); letter-spacing: 0;
+}
+
+.mint-detail .md-keyset-list { display: grid; }
+.mint-detail .md-keyset-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+.mint-detail .md-keyset-row:first-child { border-top: 0; padding-top: 4px; }
+.mint-detail .md-keyset-idline { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 100%; }
+.mint-detail .md-keyset-id { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.mint-detail .md-keyset-meta { font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text2); }
+.mint-detail .md-keyset-unit { text-transform: none; }
+.mint-detail .md-keyset-state {
+  margin-left: auto; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
+  border: 1px solid var(--border-strong); color: var(--text3); font: 500 var(--fs-xs) var(--font-mono);
+}
+.mint-detail .md-keyset-state.is-active { color: var(--green-bright); border-color: color-mix(in srgb, var(--green-bright) 35%, transparent); }
+.mint-detail .md-keysets-toggle { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
+.mint-detail .md-keyset-row .md-keyset-dates { flex: 1 1 100%; }
+.mint-detail .md-keyset-row .md-chg-date { font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text2); letter-spacing: 0; }
+
+/* ── Mockup alignment, 2026-11-19: the segmented controls (period, metric, review filter) ───────────────────────────
+   mint.html .seg: a 1px frame, 36 px options with hairline separators; the chosen one is a step lighter with a copper
+   line under it (it was a filled grey pill). */
+.mint-detail .md-seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; background: transparent; padding: 0; gap: 0; }
+.mint-detail .md-seg button,
+.mint-detail .md-rv-list .reviews-filter-group.md-seg .reviews-filter-chip {
+  height: 36px; padding: 0 14px; margin: 0; border: 0; border-left: 1px solid var(--border); border-radius: 0;
+  background: transparent; color: var(--text2); font: 500 var(--fs-sm) var(--font-body); letter-spacing: 0; white-space: nowrap;
+}
+.mint-detail .md-seg button:first-child,
+.mint-detail .md-rv-list .reviews-filter-group.md-seg .reviews-filter-chip:first-child { border-left: 0; }
+.mint-detail .md-seg button.on,
+.mint-detail .md-rv-list .reviews-filter-group.md-seg .reviews-filter-chip.on {
+  background: var(--elevated); color: var(--text); box-shadow: inset 0 -2px 0 var(--action);
+}
+.mint-detail .md-seg button:hover:not(.on) { color: var(--text); }
+.mint-detail .md-hist-chart .recharts-text { font-family: var(--font-body); }
+
+/* ── Mockup alignment, 2026-11-19: Audit (mint.html "Audit") ───────────────────────────────────────────────────────
+   The four figures as readouts ("9 of 9" with a small "of") without the mini bars, swaps per day with the count and
+   the weekday under each bar in the text face, the swap filter as the shared segmented control beside its heading. */
+.mint-detail .md-audit .au-dir-value { font-family: var(--font-display); font-size: 36px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; line-height: 1; }
+.mint-detail .md-audit .au-dir-value small { font-family: var(--font-body); font-size: var(--fs-md); font-weight: 500; font-stretch: 100%; color: var(--text2); letter-spacing: 0; margin-left: 2px; }
+.mint-detail .md-audit .au-dir-value.au-dir-nodata { font-size: var(--fs-md); font-weight: 500; font-stretch: 100%; color: var(--text3); }
+.mint-detail .md-audit .au-dir-label { order: 2; font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 500; color: var(--text); text-transform: none; letter-spacing: 0; }
+.mint-detail .md-audit .au-dir-value { order: 1; }
+.mint-detail .md-audit .au-dir-sub { order: 3; font-size: var(--fs-xs); color: var(--text2); }
+.mint-detail .md-audit .au-dir { gap: 4px; }
+.mint-detail .md-audit .au-mini { display: none; }
+.mint-detail .md-audit .au-days-title { font-family: var(--font-body); font-size: var(--fs-md); font-weight: 620; color: var(--text); margin-bottom: 14px; }
+.mint-detail .md-audit .au-days-title span { display: block; margin: 2px 0 0; font-size: var(--fs-xs); font-weight: 400; color: var(--text2); }
+.mint-detail .md-audit .au-day-col { order: 1; height: 96px; border-bottom: 0; }
+.mint-detail .md-audit .au-day-count { order: 2; font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.mint-detail .md-audit .au-day-label { order: 3; font-family: var(--font-body); font-size: var(--fs-xs); color: var(--text3); }
+.mint-detail .md-audit .au-legend-small { font-family: var(--font-body); }
+.mint-detail .md-audit .au-chips { height: 36px; }
+.mint-detail .md-audit .au-chips::after { border-color: var(--border-strong); }
+.mint-detail .md-audit .au-chip {
+  height: 36px; padding: 0 14px; background: transparent; border: 0; border-left: 1px solid var(--border); border-radius: 0;
+  color: var(--text2); font: 500 var(--fs-sm) var(--font-body); box-shadow: none;
+}
+.mint-detail .md-audit .au-chip:first-child { border-left: 0; }
+.mint-detail .md-audit .au-chip[aria-pressed="true"] { background: var(--elevated); color: var(--text); box-shadow: inset 0 -2px 0 var(--action); background-image: none; }
+.mint-detail .md-audit .au-chip-n, .mint-detail .md-audit .au-chip[aria-pressed="true"] .au-chip-n { color: var(--text3); font-family: var(--font-body); }
+@media (min-width: 861px) {
+  .mint-detail .md-audit-swaps { position: relative; }
+  .mint-detail .md-audit-swaps .au-chips-wrap { position: absolute; top: 12px; right: 20px; margin: 0; padding: 0; }
+  .mint-detail .md-audit-swaps > .md-panel-title { min-height: 36px; display: flex; align-items: center; }
+}
+.mint-detail .md-audit .audit-swaps-show-all-btn { color: var(--action); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; font: 400 var(--fs-sm) var(--font-body); }
+
+/* ── Mockup alignment, 2026-11-19: Reviews (mint.html "Reviews") ───────────────────────────────────────────────────
+   Name and npub on one line, stars and date at the right, the text in the reading size, the three actions under it at
+   the left, the pager as two outlined 36 px buttons around "Page N of M". */
+.mint-detail .review-card { padding: 16px 0; }
+.mint-detail .review-author-npub { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text3); }
+.mint-detail .review-comment { font-size: var(--fs-md); line-height: 1.5; max-width: 70ch; margin: 6px 0 0 48px; }
+.mint-detail .review-no-comment { margin: 6px 0 0 48px; }
+.mint-detail .review-actions { display: flex; gap: 2px; margin: 6px 0 0 42px; }
+.mint-detail .review-action-btn { width: 30px; height: 30px; display: inline-grid; place-items: center; border-radius: 8px; color: var(--text3); }
+.mint-detail .review-action-btn:hover { color: var(--action); background: var(--action-soft); }
+.mint-detail .reviews-pagination { gap: 10px; }
+.mint-detail .reviews-page-btn {
+  width: 36px; height: 36px; display: inline-grid; place-items: center; padding: 0;
+  border: 1px solid var(--border-strong); border-radius: 8px; background: transparent; color: var(--text);
+}
+.mint-detail .reviews-page-btn:hover:not(:disabled) { border-color: var(--text3); }
+.mint-detail .reviews-page-btn:disabled { opacity: .45; }
+@media (max-width: 560px) {
+  .mint-detail .review-comment, .mint-detail .review-no-comment { margin-left: 0; }
+  .mint-detail .review-actions { margin-left: -6px; }
+}
+.mint-detail .md-fee-dates .md-chg-date, .mint-detail .md-info-dates .md-chg-date { font-family: var(--font-body); letter-spacing: 0; }
+.mint-detail .md-fl-head { align-items: flex-start; }
+/* The latency link on its own line, one line long: the result ("Your latency: 1100 ms") replaces it without moving it
+   or growing the strip. Long words of a mint's description wrap inside the panel. */
+.mint-detail .md-strip .md-sc-latency .md-sc-sub > span { display: block; }
+.mint-detail .md-strip .md-sc-latency .md-sc-sub > span::after { content: none; }
+.mint-detail .md-strip .latency-test-btn { display: inline-block; white-space: nowrap; }
+.md-about-lede, .md-about-more { overflow-wrap: anywhere; }
+.mint-detail .md-keyset-row .md-keyset-expiry--soon { color: var(--amber); }

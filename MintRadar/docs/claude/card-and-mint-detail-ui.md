@@ -711,3 +711,31 @@ Supersedes "Learn index cards" above. `Learn.tsx` / `Learn.css`, `LearnModule.ts
 - **Article:** 17px, line height 1.62, column at most 68ch (16px on phones), "Module N of 5, M minutes" above the title,
   "← All modules" (it was "← Back to Learn"), "Previous, module N" / "Next, module N" in the footer, and the Key takeaway
   in sentence case with a 20px sentence (`KeyTakeaway.css`).
+
+## Mint Detail, 2026-11-19 mockup alignment (owner: "not everything looks like the design; the buttons as in the design")
+
+Blocks "Mockup alignment, 2026-11-19" at the end of `MintDetail.css`; `mint.html` of the approved mockups.
+- **Header:** "‹ All mints" is a link to `/` (it was "← Back" through the history); the three actions are 36 px outlined
+  buttons with 16 px lucide icons (Mint QR, Open in Cashu.me, Compare; icons hidden below 420 px as before); the watch
+  star is an outlined 36 px icon button; the URL shows without its scheme with a copy icon (the click still copies the
+  share link); `firstSeenLabel` reads "First seen by MintRadar in June 2026" (full month).
+- **Strip:** the score sentence uses the band word alone, "High. Operational health, not solvency." (owner; one line from 1280 px; while pending "Pending. …", same length so nothing moves); the whole value in one size ("50 ms", "11 NUTs"); "Show my latency" is a text link on its own line (the
+  result replaces it in place).
+- **Overview:** the operator message is one ochre line with a left rule ("Message from the operator: …"); the
+  descriptions have no labels (`.md-about-lede`, `.md-about-more`); Mint info drops "Name" unless the mint's own name
+  differs from the heading, and "Discovered" + "Nostr announcement" are one row "Found through"; Server time reads "in
+  sync with ours"; ToS "Read the terms"; Network rows "IP address", "Hosting network"; Units and methods headers
+  "Mint (deposit)" / "Melt (withdraw)" and methods in words (`methodPlainText`: bolt11 → Lightning); keyset rows are flat
+  with an outlined Active / Inactive tag on the id line.
+- **History:** period "24 h / 7 days / 30 days / 90 days"; the score figure is "Average Reliability Score" with "Lowest N,
+  highest M" from the chart points; axis ticks "60 ms" in the text face.
+- **Segmented controls** (period, metric, review filter, audit swap filter): a frame, 36 px options, the chosen one a
+  step lighter with a copper line under it.
+- **NUTs:** "Fees and limits" says "Per payment, in sat." under its title; `limitTable` labels methods in words and adds
+  the unit only when there are several; the input fee rows sit under the limits table.
+- **Audit:** readout figures without the mini bars, swaps per day with the count and weekday under each bar, the swap
+  filter beside "Recent swaps" (desktop).
+- **Reviews:** the three actions under the text at the left; the pager is two outlined 36 px buttons.
+- Not changed on purpose: the Audit "Audit stats · via cashu.info · synced" header (40+ spec checks), "View on Nostr" as
+  a 32 px button (its geometry is pinned in `changeDates.test.tsx`), the score part rows' wording (shared with the "How it
+  is made" dialog), the coloured review avatars (the palette is a tested feature).

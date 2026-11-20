@@ -417,72 +417,25 @@ for (const width of [340, 360, 375, 412, 414, 428]) {
   }
 }
 
-// The ↗ (Cashu.me) and ⇆ (Compare) icons are text glyphs outside the bundled MintRadar Sans subsets, so they render in
-// the OS fallback font (DejaVu Sans on Linux, another font on macOS) and their advance differs by 1–2px between
-// machines. The boxes below were recorded with the glyph widths in HERO_GLYPHS_RECORDED; the test measures the
-// glyphs on the machine it runs on and shifts the expected boxes by exactly that difference, using the row's own
-// layout rule, so the 0.05px tolerance stays and nothing else about the boxes is relaxed.
-const HERO_GLYPHS_RECORDED: Record<number, [cashu: number, compare: number]> = {
-  420: [9, 12],
-  1440: [10, 13],
-}
-// Natural (unshrunk) advance of each decorative glyph icon at its own computed font, measured in a hidden probe.
-// Font longhands, not `font: cs.font`: with body's font-variant-numeric: tabular-nums (2026-11-18) the computed `font`
-// shorthand is "" (it cannot express that), so a probe given it measured in the default font.
-const heroGlyphWidths = (page: Page) => page.evaluate(() =>
-  [...document.querySelectorAll('.md-quick-btn > span[aria-hidden="true"], .md-compare-btn > span[aria-hidden="true"]')].map(icon => {
-    const cs = getComputedStyle(icon)
-    const probe = document.createElement('span')
-    Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', fontFamily: cs.fontFamily, fontSize: cs.fontSize,
-      fontWeight: cs.fontWeight, fontStyle: cs.fontStyle, fontStretch: cs.fontStretch, fontVariantNumeric: cs.fontVariantNumeric, letterSpacing: cs.letterSpacing })
-    probe.textContent = icon.textContent
-    document.body.appendChild(probe)
-    const w = probe.getBoundingClientRect().width
-    probe.remove()
-    return w
-  }))
-// Boxes recorded from the code BEFORE the text-only change (x, width, height; the fixture's plain mint).
-const HERO_BOXES: Record<number, { left: number; width: number; height: number }[]> = {
-  // 420: re-recorded 2026-10-20 after the 12px phone text floor (the buttons were 11px: 79.66 wide).
-  // Both re-recorded 2026-11-18 for MintRadar Sans (DM Sans before): 420 84.66 → 85.33 wide, 1440 93/156/103 → 95/157/104.
-  // Re-recorded 2026-11-19 for the phase-4 header: the actions span the page width under the name on phones and sit at the
-  // page's right edge on desktop (they were inside the old boxed header).
-  420: [{ left: 14, width: 125.33, height: 28 }, { left: 147.33, width: 125.34, height: 28 }, { left: 280.67, width: 125.33, height: 28 }],
-  1440: [{ left: 972, width: 95, height: 31 }, { left: 1075, width: 157, height: 31 }, { left: 1240, width: 104, height: 31 }],
-}
-// Expected boxes for this machine's glyph widths. 420 (≤640px): three equal flex thirds that fill the row (see below). 1440: buttons are content-sized and right-aligned,
-// so a button grows by its own glyph difference and moves left by the growth of itself and every button after it.
-const expectedHeroBoxes = (width: number, glyphs: number[]) => {
-  const [rc, rk] = HERO_GLYPHS_RECORDED[width]!
-  const d = [0, glyphs[0]! - rc, glyphs[1]! - rk]
-  const rec = HERO_BOXES[width]!
-  // 420 (<=640px): since the 2026-11-18 type change the three equal thirds (flex: 1 1 0) fill the actions row, which is as
-  // wide as the name box, so the glyph widths no longer move them (CI's fallback glyphs are 10.06px, here 9/12px).
-  if (width <= 640) return rec
-  return rec.map((b, i) => ({ ...b, left: b.left - d.slice(i).reduce((a, x) => a + x, 0), width: b.width + d[i]! }))
-}
+// Since the 2026-11-19 mockup alignment the hero buttons are 36 px outlined buttons with 16 px icons (they were recorded
+// pixel boxes of 28 px copper pills): all three equally tall, side by side without overlap, inside the action group.
 for (const width of [420, 1440]) {
-  test(`Mint Detail hero button boxes are unchanged @ ${width}px`, async ({ page }) => {
+  test(`Mint Detail hero buttons are 36px, in one row, inside their group @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()
     await settled(page)
     const btns = await heroButtons(page)
-    const glyphs = await heroGlyphWidths(page)
     expect(btns).toHaveLength(3)
-    expect(glyphs).toHaveLength(2)
-    expectedHeroBoxes(width, glyphs).forEach((want, i) => {
-      for (const k of ['left', 'width', 'height'] as const) {
-        expect(Math.abs(btns[i]![k] - want[k]), `${btns[i]!.label}.${k} (glyphs ${glyphs.join('/')}px)`).toBeLessThanOrEqual(0.05)
-      }
-    })
+    for (const b of btns) {
+      expect(Math.abs(b.height - 36), `${b.label} height ${b.height}`).toBeLessThanOrEqual(0.5)
+      expect(b.outsideContainer, `${b.label} outside its group`).toBeLessThanOrEqual(0.5)
+      expect(b.clippedBy, `${b.label} text clipped`).toBeLessThanOrEqual(0.5)
+    }
+    for (let i = 1; i < btns.length; i++) expect(btns[i]!.left, 'no overlap').toBeGreaterThanOrEqual(btns[i - 1]!.right - 0.5)
   })
 }
 
-// ── Stats hero notes wrap at spaces (2026-10-03) ─────────────────────────────────────────────────
-// "all known" / "of all known" / "active mints" / "from Nuremberg": at 701–900px the note column is only
-// 25–65px wide. The note shrinks its font with the column so ordinary words stay whole (overflow-wrap:
-// break-word, not anywhere); only "Nuremberg" may still break, and only when wider than the column (< ~870px).
 for (const width of [700, 740, 768, 800, 900]) {
   test(`Stats notes: no ordinary word is split across lines @ ${width}px`, async ({ page }) => {
     await mount(page, {}, { width })
@@ -565,10 +518,7 @@ for (const width of [320, 340, 360, 375, 390, 400, 412, 414]) {
   })
 }
 
-// Mint QR is a 12px SVG on every machine. The ↗ / ⇆ glyph icons come from the OS fallback font (see
-// HERO_GLYPHS_RECORDED), so they are checked against their own natural width on this machine: rendered at full
-// size means not flex-shrunk, which is what this test guards.
-const HERO_QR_ICON = 12
+// From 420px the three icons (16 px SVGs since the 2026-11-19 mockup alignment) render at full size, never flex-shrunk.
 for (const width of [420, 430, 1440]) {
   test(`Mint Detail hero icons keep their size @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })
@@ -576,14 +526,10 @@ for (const width of [420, 430, 1440]) {
     await expect(page.locator('.md-tabs')).toBeVisible()
     await settled(page)
     const icons = await heroIcons(page)
-    const glyphs = await heroGlyphWidths(page)
     expect(icons).toHaveLength(3)
-    expect(glyphs).toHaveLength(2)
-    const want = [HERO_QR_ICON, ...glyphs]
     icons.forEach((ic, i) => {
       expect(ic.display).not.toBe('none')
-      expect(want[i]!, `icon ${i} natural width`).toBeGreaterThan(5)
-      expect(Math.abs(ic.width - want[i]!), `icon ${i}: ${ic.width}px, natural ${want[i]}px`).toBeLessThanOrEqual(0.3)
+      expect(Math.abs(ic.width - 16), `icon ${i}: ${ic.width}px`).toBeLessThanOrEqual(0.3)
     })
   })
 }
@@ -642,7 +588,7 @@ for (const [width, minHit] of [[360, 43.5], [390, 43.5], [768, 43.5], [1440, 43.
     await mouse.ctx.close()
     expect(t.layout).toEqual(m.layout)
     expect(t.pageHeight).toBe(m.pageHeight)
-    for (const h of m.hit) expect(h.height).toBeLessThan(35) // no extension without a coarse pointer
+    for (const h of m.hit) expect(h.height).toBeLessThan(37) // no extension without a coarse pointer (36 px buttons)
   })
 }
 

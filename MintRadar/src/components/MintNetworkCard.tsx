@@ -9,10 +9,10 @@ export function MintNetworkCard({ rows }: { rows: NetworkRows }) {
       <div className="md-panel-title">Network</div>
       <div className="md-info-grid md-info-list">
         {rows.ip && (
-          <div className="md-info-row"><span className="md-info-label">IP</span><span className="md-info-value md-info-code">{rows.ip}</span></div>
+          <div className="md-info-row"><span className="md-info-label">IP address</span><span className="md-info-value md-info-code">{rows.ip}</span></div>
         )}
         {rows.network && (
-          <div className="md-info-row"><span className="md-info-label">Network</span><span className="md-info-value">{rows.network}</span></div>
+          <div className="md-info-row"><span className="md-info-label">Hosting network</span><span className="md-info-value">{rows.network}</span></div>
         )}
         {rows.country && (
           <div className="md-info-row">

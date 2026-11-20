@@ -5,7 +5,8 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 // "High / Moderate / Low Reliability" in a narrow badge that was once cut ("High Relial" at 320px). Since the redesign the
 // score tile spans the strip's first row: the number, then its words beside it. The words lie inside the tile, unclipped.
 
-const LABELS = [['High Reliability', 92], ['Moderate Reliability', 55], ['Low Reliability', 20]] as const
+// The band word alone since 2026-11-19 (owner): "High. Operational health, not solvency."
+const LABELS = [['High.', 92], ['Moderate.', 55], ['Low.', 20]] as const
 const known = LABELS.map(([, score], i) => ({ ...MOCK_KNOWN_MINTS[0]!, url: `https://badge${i}.mint.example`, name: `Badge ${i}`, online: true, reliabilityScore: score }))
 
 test.beforeEach(async ({ page }) => {

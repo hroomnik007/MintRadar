@@ -6,7 +6,7 @@
 // subscriptions and the lazy nostr-tools loading are unchanged. This component holds no state or hooks.
 import type { Dispatch, SetStateAction } from 'react'
 import { nip19 } from 'nostr-tools'
-import { Copy, Check, ExternalLink, Link2, User } from 'lucide-react'
+import { Copy, Check, ExternalLink, Link2, User, ChevronLeft, ChevronRight } from 'lucide-react'
 import { njumpEventUrl, npubFromPubkey } from '@/utils/nostrLinks'
 import { REVIEW_READ_RELAYS } from '@/core/nostr/relays'
 import { REVIEWS_NIP87_TEXT, OPERATOR_REVIEW_NOTE } from '@/utils/tooltipTexts'
@@ -175,7 +175,12 @@ export function ReviewsTab({
                               <span className="review-stars">{starString(r.rating)}</span>
                             )}
                             <span className="review-date">{formatReviewDate(r.createdAt)}</span>
-                            <span className="review-actions">
+                          </div>
+                        </div>
+                        {r.comment ? <p className="review-comment">{r.comment}</p>
+                          : r.rating !== null ? <p className="review-no-comment">Rated without a comment.</p> : null}
+                        {/* Under the text, left (2026-11-19 mockup alignment; they sat at the right of the header). */}
+                        <span className="review-actions">
                               <button
                                 type="button"
                                 className="review-action-btn"
@@ -216,10 +221,7 @@ export function ReviewsTab({
                                 }}
                               >{copiedReviewAction === r.id + '-link' ? <Check size={13} /> : <Link2 size={13} />}</button>
                             </span>
-                          </div>
-                        </div>
-                        {r.comment ? <p className="review-comment">{r.comment}</p>
-                          : r.rating !== null ? <p className="review-no-comment">Rated without a comment.</p> : null}
+
                       </div>
                     )
                   })}
@@ -231,7 +233,7 @@ export function ReviewsTab({
                         disabled={reviewsPage === 1}
                         onClick={() => goToReviewsPage(reviewsPage - 1)}
                         aria-label="Previous page"
-                      >‹</button>
+                      ><ChevronLeft size={16} aria-hidden="true" /></button>
                       <span className="reviews-page-of" aria-current="page">Page {reviewsPage} of {reviewsTotalPages}</span>
                       <button
                         type="button"
@@ -239,7 +241,7 @@ export function ReviewsTab({
                         disabled={reviewsPage === reviewsTotalPages}
                         onClick={() => goToReviewsPage(reviewsPage + 1)}
                         aria-label="Next page"
-                      >›</button>
+                      ><ChevronRight size={16} aria-hidden="true" /></button>
                     </nav>
                   )}
                     </>

@@ -76,7 +76,7 @@ test.describe('Mint Detail score without a stored score', () => {
     // One placeholder: the strip's score tile (the side panel's gauge went with the 2026-11-19 redesign).
     await expect(page.getByRole('img', { name: 'Score not available yet' })).toHaveCount(1)
     await expect(page.getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText(PLACEHOLDER)
-    await expect(badge(page)).toContainText('Not available yet')
+    await expect(badge(page)).toContainText('Pending. Operational health, not solvency.')
     await expect(badge(page)).not.toContainText('Reliability')
     // the Uptime row is the part computed from the missing history: no "0%" and no "0/40" either
     await expect(page.locator('.md-reliability-panel .rb-row-display').first()).toHaveText(PLACEHOLDER)
@@ -93,7 +93,7 @@ test.describe('Mint Detail score without a stored score', () => {
     await expect(gaugeNum(page)).toHaveText('71')
     await expect(gaugeNum(page)).not.toHaveAttribute('aria-label', /.+/)
     await expect(page.getByTestId('md-summary-score').locator('.md-sc-value')).toHaveText('71')
-    await expect(badge(page)).toContainText('High Reliability')
+    await expect(badge(page)).toContainText('High. Operational health, not solvency.')
     await expect(uptimeScore(page)).toHaveText('40/40')
   })
 
@@ -103,7 +103,7 @@ test.describe('Mint Detail score without a stored score', () => {
     const tile = page.getByTestId('md-summary-score').locator('.md-sc-value')
     await expect(tile).toHaveText(PLACEHOLDER)
     await expect(tile).toHaveAttribute('aria-label', 'Score not available yet')
-    await expect(page.getByTestId('md-summary-score').locator('.md-sc-sub')).toContainText('Not available yet')
+    await expect(page.getByTestId('md-summary-score').locator('.md-sc-sub')).toContainText('Pending.')
     await page.locator('.md-sc-score-link').click()
     const dialog = page.getByRole('dialog', { name: 'Reliability Score Breakdown' })
     await expect(dialog.locator('.rb-hero-score')).toHaveText(PLACEHOLDER)
@@ -126,7 +126,7 @@ test.describe('Mint Detail score without a stored score', () => {
     await frames(page, 3)
     await expect(gaugeNum(page)).toHaveText(PLACEHOLDER)
     await expect(gaugeNum(page)).toHaveAttribute('aria-label', 'Score not available yet')
-    await expect(badge(page)).toContainText('Not available yet')
+    await expect(badge(page)).toContainText('Pending. Operational health, not solvency.')
     await expect(uptimeScore(page)).toHaveText(`${PLACEHOLDER}/40`)
     await expect(page.locator('.md-reliability-panel')).not.toContainText(/\b(31|71)\b/)
     expect(errors, 'no uncaught page error').toEqual([])
@@ -137,7 +137,7 @@ test.describe('Mint Detail score without a stored score', () => {
     await m.reached
     await expect(gaugeNum(page)).toHaveText('88')
     await expect(gaugeNum(page)).not.toHaveAttribute('aria-label', /.+/)
-    await expect(badge(page)).toContainText('High Reliability')
+    await expect(badge(page)).toContainText('High. Operational health, not solvency.')
     await expect(page.getByRole('img', { name: 'Score not available yet' })).toHaveCount(0)
     m.release()
     await expect(gaugeNum(page)).toHaveText('88')
