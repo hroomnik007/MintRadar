@@ -316,7 +316,7 @@ export default function ForWallets() {
             <li>Hide test mints (<code>isTest: true</code>); the default list already leaves them out.</li>
             <li>Show <code>status</code> next to the score, and a short hint while <code>scoreCappedNew</code> is true. When <code>scoreStale</code> is true, label the score as the last measured one.</li>
             <li>Filter by the <code>unit</code> your wallet holds.</li>
-            <li>Show <code>name</code> and <code>software</code> as plain text: they come from the mints and are untrusted.</li>
+            <li>Show <code>name</code> and <code>software</code> as plain text: they come from the mints and should be shown as plain text.</li>
             <li>Never present the score as a recommendation to deposit funds, and link people to the methodology.</li>
           </ul>
         </section>

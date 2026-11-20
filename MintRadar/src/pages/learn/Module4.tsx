@@ -57,7 +57,7 @@ export default function Module4() {
       </p>
 
       <KeyTakeaway>
-        <strong>Seed phrase + NUT-09 support = recoverable. No seed backup = permanent loss on device failure, no matter how trustworthy the mint is.</strong>
+        <strong>Seed phrase + NUT-09 support = recoverable. No seed backup = permanent loss on device failure, no matter how well the mint is run.</strong>
       </KeyTakeaway>
 
       <h2>Pick a wallet</h2>

@@ -23,14 +23,14 @@ export default function Module3() {
       </p>
       <ul>
         <li><strong>NUT-09 (Restore):</strong> lets you recover your ecash from just your wallet's seed phrase, even if you lose your device. Without it, losing your phone could mean losing your funds even if the mint is fine.</li>
-        <li><strong>NUT-12 (DLEQ proofs):</strong> lets your wallet cryptographically verify that the mint signed your tokens correctly, without needing to trust the mint's word for it.</li>
+        <li><strong>NUT-12 (DLEQ proofs):</strong> lets your wallet cryptographically verify that the mint signed your tokens correctly, without having to take the mint's word for it.</li>
         <li><strong>NUT-11 (P2PK):</strong> lets you lock ecash tokens so only a specific person (holding a specific key) can spend them — useful if you want to send funds that can't be redeemed by just anyone who intercepts them.</li>
       </ul>
       <p>
-        A mint missing these isn't necessarily malicious, but it does mean you're trusting it with less of a safety net.
+        A mint missing these isn't necessarily malicious, but it does mean you have less of a safety net.
       </p>
       <p>
-        <strong>4. Operator transparency.</strong> Does the mint publish contact information? Is there a real person or team behind it who can be reached? Anonymous mints aren't automatically untrustworthy, but a mint with no way to reach the operator is one you're trusting on faith alone.
+        <strong>4. Operator transparency.</strong> Does the mint publish contact information? Is there a real person or team behind it who can be reached? Anonymous mints aren't automatically a problem, but a mint with no way to reach the operator is one you are using on faith alone.
       </p>
 
       <h2>How MintRadar's Reliability Score works</h2>
@@ -63,13 +63,13 @@ export default function Module3() {
           <strong>Audit reliability — 25%.</strong> The share of the real mint/melt swaps run against the mint over the last 7 days whose failure cashu.info attributes to the mint. No attributed failures scores full marks; the more of its swaps fail through its own fault, the lower the score. This is weighted second-highest because it tests something uptime can't: whether the mint's actual token operations complete correctly, not just whether the server answers a ping. A mint can be "online" by MintRadar's own check and still fail real swaps. A mint with fewer than 10 swaps in that window, with no audit data, or whose stored audit data is more than 7 days old is scored neutral (12.5 of 25) rather than penalized for lack of data.
         </li>
         <li>
-          <strong>NUT Support — 15%.</strong> The share of the tracked NUTs (the individual pieces of the Cashu spec — see the list above for the security-relevant ones) that the mint's <code>/v1/info</code> reports supporting. This is weighted lower than uptime and audit reliability because missing NUTs is a feature gap, not necessarily a sign the mint is broken or untrustworthy — but it does mean fewer safety nets (like NUT-09 restore or NUT-12 DLEQ proofs) are available to you.
+          <strong>NUT Support — 15%.</strong> The share of the tracked NUTs (the individual pieces of the Cashu spec — see the list above for the security-relevant ones) that the mint's <code>/v1/info</code> reports supporting. This is weighted lower than uptime and audit reliability because missing NUTs is a feature gap, not necessarily a sign the mint is broken or poorly run — but it does mean fewer safety nets (like NUT-09 restore or NUT-12 DLEQ proofs) are available to you.
         </li>
         <li>
           <strong>Version freshness — 15%.</strong> How far the mint's reported software version is behind the newest stable release of that software (Nutshell or cdk-mintd). Being on the latest release or one minor version behind earns the full 15 points; two minor versions behind earns 9, three 6, four 3 and five or more 0, and a mint two or more minor versions behind is labelled "outdated". Pre-releases of a current line (such as a release candidate) are not penalised. Recent versions carry security patches and bug fixes, but a slightly outdated version doesn't necessarily mean the mint is unsafe today — which is why this sits at the same modest weight as NUT support rather than higher.
         </li>
         <li>
-          <strong>Contact info — 5%.</strong> Whether the operator has published a reachable channel (email, X/Twitter, or Nostr) in the mint's own <code>/v1/info</code>. This gets the smallest weight deliberately: it's operator-supplied information, not independently verified, so it's treated as a weak, easily-gamed signal rather than a strong indicator of trustworthiness on its own.
+          <strong>Contact info — 5%.</strong> Whether the operator has published a reachable channel (email, X/Twitter, or Nostr) in the mint's own <code>/v1/info</code>. This gets the smallest weight deliberately: it's operator-supplied information, not independently verified, so it's treated as a weak, easily-gamed signal rather than a strong signal on its own.
         </li>
       </ul>
       <p>

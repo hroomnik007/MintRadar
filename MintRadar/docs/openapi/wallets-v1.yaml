@@ -404,7 +404,7 @@ components:
           description: Normalised mint URL (https, lower-case host, no trailing slash after a bare host; a path is kept as it is).
         name:
           type: [string, 'null']
-          description: The cleaned display name the website uses; null means show the hostname (also for mints on the hidden-names list). Untrusted text, render as plain text.
+          description: The cleaned display name the website uses; null means show the hostname (also for mints on the hidden-names list). External text, render as plain text.
         status:
           type: string
           enum: [online, offline, degraded, archived]
@@ -469,7 +469,7 @@ components:
         software:
           type: [string, 'null']
           maxLength: 100
-          description: The mint's own version string (for example `Nutshell/0.21.0`). Untrusted text.
+          description: The mint's own version string (for example `Nutshell/0.21.0`). External text.
         outdated:
           type: [boolean, 'null']
           description: |

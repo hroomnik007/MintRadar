@@ -74,7 +74,7 @@ test('nsec screen: Connect has a Zap svg (no ⚡), shortened warning has a Trian
     "Your key is held in this browser's memory for this session, cleared on logout.")
   const warn = page.locator('.nostr-advanced-warn')
   await expect(warn).toContainText(
-    'Pasting a private key into a browser is risky. Prefer a NIP-07 extension or a remote signer, and only use this on a device you trust.')
+    'Pasting a private key into a browser is risky. Prefer a NIP-07 extension or a remote signer, and only use this on a device you control.')
   await expect(warn.locator('svg')).toHaveCount(1)
   expect(await warn.textContent()).not.toContain('⚠')
   const connect = page.getByRole('button', { name: 'Connect' })

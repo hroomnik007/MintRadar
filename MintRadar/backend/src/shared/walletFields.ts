@@ -30,7 +30,7 @@ export const WALLET_ENVELOPE_FIELDS: readonly WalletField[] = [
 
 export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'url', type: 'string', nullable: false, meaning: 'Normalised mint URL: https, lower-case host, no trailing slash after a bare host; a path is kept as it is.' },
-  { name: 'name', type: 'string', nullable: true, meaning: 'Cleaned display name. null means show the hostname. Untrusted text: render it as plain text.' },
+  { name: 'name', type: 'string', nullable: true, meaning: 'Cleaned display name. null means show the hostname. External text: render it as plain text.' },
   { name: 'status', type: '"online" | "offline" | "degraded" | "archived"', nullable: false, meaning: 'online: the latest probe succeeded. offline: it failed, or the mint was never probed. degraded: the latest probe failed and either at least 4 probes in the last 24 hours all failed or that failed probe is more than 24 hours old. archived: the latest probe failed and the last successful probe was more than 30 days ago.' },
   { name: 'score', type: 'integer 0 to 100', nullable: true, meaning: 'Reliability Score, an operational health signal. null until the first probe: "no data yet", not a bad score.' },
   { name: 'scoreStale', type: 'boolean', nullable: false, meaning: 'true when status is not "online" (offline, degraded or archived): the score is then the last measured one and says nothing about the present. Derived from status only; the score value is not changed.' },
@@ -43,7 +43,7 @@ export const WALLET_MINT_FIELDS: readonly WalletField[] = [
   { name: 'nuts', type: 'string[]', nullable: true, meaning: 'NUT numbers the mint advertises, ascending, as strings. A NUT whose /v1/info entry has "supported": false is not listed. null when unknown.' },
   { name: 'mintDisabled', type: 'boolean', nullable: true, meaning: 'true when the mint lists NUT-04 (minting) in its /v1/info with "disabled": true: it does not issue new ecash right now. false when NUT-04 is listed without it or not listed; null when the mint\'s NUTs are unknown. NUT-04 stays in nuts.' },
   { name: 'meltDisabled', type: 'boolean', nullable: true, meaning: 'true when the mint lists NUT-05 (melting) in its /v1/info with "disabled": true: it does not pay out right now. false when NUT-05 is listed without it or not listed; null when the mint\'s NUTs are unknown. NUT-05 stays in nuts.' },
-  { name: 'software', type: 'string', nullable: true, meaning: 'The mint\'s own version string, for example Nutshell/0.21.0. Untrusted text, at most 100 characters.' },
+  { name: 'software', type: 'string', nullable: true, meaning: 'The mint\'s own version string, for example Nutshell/0.21.0. External text, at most 100 characters.' },
   { name: 'outdated', type: 'boolean', nullable: true, meaning: 'true: two or more minor versions behind the newest stable release. false: not outdated. null: unknown software, no or unreadable version, or no reference release.' },
   { name: 'isTest', type: 'boolean', nullable: false, meaning: 'On MintRadar\'s manual test-mint list. Test mints are never recommended.' },
   { name: 'audit', type: 'object', nullable: true, meaning: 'cashu.info\'s swap statistics for the mint. null when none are stored. The Reliability Score takes the worse result of this 7-day window and of the long window (auditLong); a window with fewer than 10 swaps is not used, and data older than 168 hours scores neutral.' },

@@ -28,7 +28,7 @@ export default function Module2() {
         In theory, a mint could issue more ecash than it actually holds in reserve. If that happens, whoever tries to redeem their tokens last will find there's nothing left. This is sometimes called an <strong>exit scam</strong> or <strong>rug pull</strong>.
       </p>
       <p>
-        The Cashu community is actively working on ways to make mint reserves verifiable (look up "Proof of Liabilities" if you want to go deeper), but as of today, this remains an open problem. Trust in a mint is still, to a significant degree, trust in its operator.
+        The Cashu community is actively working on ways to make mint reserves verifiable (look up "Proof of Liabilities" if you want to go deeper), but as of today, this remains an open problem. Whether a mint can pay you back still depends, to a significant degree, on its operator.
       </p>
 
       <h2>Risk #3: Software bugs</h2>

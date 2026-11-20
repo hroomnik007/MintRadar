@@ -318,7 +318,7 @@ export default function Methodology() {
           <h2 id="not-measured" tabIndex={-1} className="about-h2">What is not measured</h2>
           <ul>
             <li>Solvency, reserves or whether the mint can pay out everything it owes.</li>
-            <li>Who runs the mint, whether the operator is trustworthy, or its legal and custody practices. Published contact details are not verified.</li>
+            <li>Who runs the mint, the operator's reputation, or its legal and custody practices. Published contact details are not verified.</li>
             <li>Latency from your location. Latency is measured from {PROBE_LOCATION} and is not part of the score.</li>
             <li>Lightning liquidity and routing, and failures cashu.info does not attribute to the mint.</li>
             <li>Software quality beyond how recent the version is.</li>
