@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { WALLETS } from '@/constants/wallets'
 import type { WalletInfo, WalletPlatform } from '@/constants/wallets'
 import { PageHead } from '@/components/layout/PageHead'
@@ -24,14 +24,15 @@ function WalletCard({ w }: { w: WalletInfo }) {
         {w.platforms.map(p => <span key={p} className="wallet-platform-tag">{p}</span>)}
       </span>
       <span className="wallet-blurb">{w.blurb}</span>
-      <span className="wallet-link">{hostname(w.url)}<ExternalLink size={14} aria-hidden="true" /></span>
+      <span className="wallet-link">{hostname(w.url)}<ArrowUpRight size={14} aria-hidden="true" /></span>
     </a>
   )
 }
 
 export default function Wallets() {
   const wallets = WALLETS.filter(w => !w.selfHost).sort(byName)
-  const selfHost = WALLETS.filter(w => w.selfHost).sort(byName)
+  // The reference implementation first, as in the approved mockup (Nutshell, then cdk-mintd).
+  const selfHost = WALLETS.filter(w => w.selfHost)
   const platforms = (['Android', 'iOS', 'Web', 'CLI'] as WalletPlatform[]).filter(p => wallets.some(w => w.platforms.includes(p)))
   const [platform, setPlatform] = useState<WalletPlatform | 'all'>('all')
   const shown = platform === 'all' ? wallets : wallets.filter(w => w.platforms.includes(platform))

@@ -50,7 +50,7 @@ export const WALLETS: WalletInfo[] = [
   {
     name: 'Cashu.me',
     platforms: ['Web'],
-    blurb: 'The reference browser wallet — no install, good for trying Cashu and testing a new mint quickly.',
+    blurb: 'The reference browser wallet: no install, good for trying Cashu and testing a new mint quickly.',
     url: 'https://wallet.cashu.me',
   },
   {
@@ -68,26 +68,26 @@ export const WALLETS: WalletInfo[] = [
   {
     name: 'Zeus',
     platforms: ['Android', 'iOS'],
-    blurb: 'Self-custodial Lightning wallet that also speaks Cashu via the Cashu Development Kit, handy if you want ecash inside a full-featured Bitcoin wallet.',
+    blurb: 'Self-custodial Lightning wallet that also speaks Cashu through the Cashu Development Kit, if you want ecash inside a full Bitcoin wallet.',
     url: 'https://zeusln.com',
   },
   {
     name: 'Linky',
     platforms: ['Web'],
-    blurb: 'Contact and messaging PWA (Nostr + Lightning) with a built-in Cashu wallet — receive ecash to a <npub>@linky.fit address, send tokens directly in chat, and manage held/spent proofs.',
+    blurb: 'Contact and messaging PWA (Nostr and Lightning) with a built-in Cashu wallet: receive ecash to an npub address and send tokens in chat.',
     url: 'https://linky.fit',
   },
   {
     name: 'Nutshell',
     platforms: ['CLI'],
-    blurb: 'The reference Python implementation, including a command-line wallet handy for scripting and running your own mint.',
+    blurb: 'Python, mint and CLI wallet.',
     url: 'https://github.com/cashubtc/nutshell',
     selfHost: true,
   },
   {
     name: 'cdk-mintd',
     platforms: ['CLI'],
-    blurb: 'The Rust mint server built on the Cashu Development Kit, for running your own mint.',
+    blurb: 'Rust, built on the Cashu Development Kit.',
     url: 'https://github.com/cashubtc/cdk',
     selfHost: true,
   },

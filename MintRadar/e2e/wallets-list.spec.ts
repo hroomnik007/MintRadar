@@ -28,7 +28,7 @@ test('Nutshell lives in a "Run your own mint" subsection, not the main wallet gr
   // Self-host section below the grid: one panel of rows since the 2026-11-19 redesign (Nutshell, cdk-mintd).
   const selfHost = page.locator('.wallets-selfhost')
   await expect(selfHost.getByText('Run your own mint')).toBeVisible()
-  await expect(selfHost.locator('.wallets-selfhost-row dt')).toHaveText(['cdk-mintd', 'Nutshell'])
+  await expect(selfHost.locator('.wallets-selfhost-row dt')).toHaveText(['Nutshell', 'cdk-mintd'])
   await expect(selfHost.locator('.wallets-selfhost-row', { hasText: 'Nutshell' }).getByRole('link')).toHaveAttribute('href', 'https://github.com/cashubtc/nutshell')
 })
 

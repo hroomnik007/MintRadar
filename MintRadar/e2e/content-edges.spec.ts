@@ -117,7 +117,7 @@ const STATES: State[] = [
       await expect(p.locator('.wizard-rec-row').first()).toBeVisible({ timeout: 15_000 })
     } },
   // The self-host grid is one panel of rows since the 2026-11-19 redesign; the platform filter row has the edges too.
-  { name: 'Wallets', containers: [A('.wallets-header'), A('.wallets-filter'), A('.wallets-grid'), A('.wallets-selfhost')],
+  { name: 'Wallets', containers: [A('.wallets-header'), A('.wallets-filter'), A('.wallets-grid'), A('.wallets-selfhost', 'border')],
     setup: async p => { await boot(p); await p.goto('/wallets'); await expect(p.locator('.wallets-grid').first()).toBeVisible() } },
   { name: 'Learn', containers: [A('.learn-page-header'), A('.learn-course')],
     setup: async p => { await boot(p); await p.goto('/learn'); await expect(p.locator('.learn-mod').first()).toBeVisible() } },

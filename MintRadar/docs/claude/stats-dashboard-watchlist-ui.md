@@ -645,3 +645,9 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/stats.html` (phone: `mobi
 - Toggles (Uptime / Reliability, 7d / 30d, 30d / 90d) in the text face.
 - The layout-shift reservations were re-measured for this (see "Re-measured 2026-11-19" above); the spec's
   `LOADED`, `NOTE_HEIGHTS` and the n1 note case date (21 Nov, its text is the measured one) follow.
+
+## Wallets, 2026-11-19 mockup alignment
+
+`wallets.html`: four columns from 300 px (4 + 4 + 1 at 1440 px, as the mockup), platform tags as outlined code tags, the
+filter as the shared segmented control, the link arrow ↗ (lucide ArrowUpRight); "Run your own mint" is one panel
+(Nutshell first, then cdk-mintd) with the mockup's short lines; the Cashu.me, Linky and Zeus blurbs as in the mockup.

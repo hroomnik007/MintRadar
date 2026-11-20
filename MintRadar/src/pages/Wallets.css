@@ -68,3 +68,31 @@
   .wallets-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; padding-block: 12px; }
   .wallet-card { padding: 16px; }
 }
+
+/* ── Mockup alignment, 2026-11-19 (wallets.html) ─────────────────────────────────────────────────────────────────────
+   Four columns on a wide screen (300 px minimum, the mockup's 4 + 4 + 1), platform tags as outlined code tags, the
+   filter as the shared segmented control (36 px, copper line under the chosen one), "Run your own mint" as ONE panel:
+   title and line on the left, the two rows on the right with the text right-aligned. */
+.wallets-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.wallet-platform-tag {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
+  border: 1px solid var(--border-strong); color: var(--text2); font: 500 var(--fs-xs) var(--font-mono);
+}
+.wallets-seg { border-color: var(--border-strong); }
+.wallets-seg button { height: 36px; min-height: 36px; padding: 0 14px; border-left-color: var(--border); font-weight: 500; }
+.wallets-seg button.on { background: var(--elevated); box-shadow: inset 0 -2px 0 var(--action); }
+.wallets-selfhost {
+  margin-top: 28px; padding: 22px 24px; max-width: calc(var(--dash-chrome-max) - var(--page-pad) * 2);
+  width: calc(100% - var(--page-pad) * 2);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+.wallets-selfhost-rows { background: none; border: 0; border-radius: 0; padding: 0; }
+.wallets-selfhost-row { grid-template-columns: minmax(90px, auto) minmax(0, 1fr); padding: 10px 0; align-items: baseline; }
+.wallets-selfhost-row dt { font-weight: 400; color: var(--text2); }
+.wallets-selfhost-row dd { text-align: right; color: var(--text); }
+.wallets-selfhost-row a { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 760px) {
+  .wallets-selfhost { grid-template-columns: minmax(0, 1fr); padding: 18px 16px; }
+  .wallets-selfhost-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .wallets-selfhost-row dd { text-align: left; }
+}
