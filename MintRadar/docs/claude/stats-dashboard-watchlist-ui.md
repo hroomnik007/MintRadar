@@ -84,7 +84,7 @@ is framed, not filled.
 ## Watchlist, 2026-11-19 redesign (phase 6d): current layout, supersedes the card grid described below
 
 Approved mockup `~/Claude/refs/mintradar-redesign-1118/watchlist.html`; styles in the "phase 6d" blocks of `Watchlist.css`.
-- **Logged out:** `.wl-login-gate` is a two-column section at the page width (one column at 860 px and below), left-aligned
+- **Logged out:** `.wl-login-gate` is ONE panel with two columns (mockup alignment 2026-11-19; it was two boxes), the copper 44 px "Log in with Nostr" has no icon; it is a two-column section at the page width (one column at 860 px and below), left-aligned
   like the other pages. Left panel: h1 "Watchlist", "Keep the mints you use in one short list, the same on every device.",
   the solid copper **"Log in with Nostr"** (it was green "Login via Nostr") with "Browse mints without logging in" beside
   it, then "What is Nostr?". Right panel: three points with an icon each (star, bell, key). The "Watch this mint" dialogs

@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHead } from '@/components/layout/PageHead'
 import { cardsLatencyNote } from '@/constants/probeLocation'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, KeyRound, Star, Zap } from 'lucide-react'
+import { Bell, KeyRound, Star } from 'lucide-react'
 import { nip19 } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 import { sharedPool } from '@/core/nostr/pool'
@@ -305,7 +305,7 @@ export default function Watchlist() {
                 className="wl-add-btn wl-gate-login"
                 onClick={() => window.dispatchEvent(new CustomEvent('mintradar:open-login'))}
               >
-                <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Log in with Nostr
+                Log in with Nostr
               </button>
               <Link className="wl-login-browse" to="/">Browse mints without logging in</Link>
             </div>
@@ -320,7 +320,7 @@ export default function Watchlist() {
           </div>
           <ul className="wl-login-points">
             <li><Star size={18} aria-hidden="true" /><span>Star a mint anywhere on the site and it lands here.</span></li>
-            <li><Bell size={18} aria-hidden="true" /><span>Get a private message when one of them goes down or comes back, or when its key or fee changes. Optional, per mint.</span></li>
+            <li><Bell size={18} aria-hidden="true" /><span>Get a private message when one of them goes down or comes back, or when its public key or input fee changes. Optional, per mint.</span></li>
             <li><KeyRound size={18} aria-hidden="true" /><span>No email and no password: you sign in with a key that stays in your signer.</span></li>
           </ul>
         </section>

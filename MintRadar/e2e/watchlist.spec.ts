@@ -19,7 +19,7 @@ test.describe('Watchlist', () => {
     await expect(gate.locator('.wl-login-points li svg')).toHaveCount(3)
     await expect(gate.getByRole('link', { name: 'Browse mints without logging in' })).toHaveAttribute('href', '/')
     // One list of what it gives (it used to repeat the DM sentence in a line above it).
-    await expect(gate.getByText(/Get a private message when one of them goes down or comes back, or when its key or fee changes\. Optional, per mint\./)).toBeVisible()
+    await expect(gate.getByText(/Get a private message when one of them goes down or comes back, or when its public key or input fee changes\. Optional, per mint\./)).toBeVisible()
     await expect(gate.locator('.wl-login-hint')).toHaveCount(0)
     // No watchlist grid is rendered.
     await expect(page.locator('.wl-grid')).toHaveCount(0)
