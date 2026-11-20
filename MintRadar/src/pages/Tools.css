@@ -391,7 +391,7 @@ a.token-action-btn:focus {
 }
 
 @media (min-width: 901px) {
-  .find-my-mint-btn { max-width: 280px; margin: 0 auto; }
+  .find-my-mint-btn { max-width: 280px; margin: 0; }
 }
 @media (max-width: 900px) {
   .tools-grid { grid-template-columns: 1fr; }
@@ -591,3 +591,72 @@ a.token-action-btn:focus {
 /* A chosen answer is an interactive selection: copper, not the green of a mint's state. */
 .wizard-opt.active { border-color: var(--action); background: var(--action-soft); }
 .wizard-unit-opt.active { color: var(--action-ink) !important; background: var(--action-soft) !important; }
+
+/* ── Mockup alignment, 2026-11-19 (tools.html; owner: "the buttons as in the design") ──────────────────────────────
+   The solid copper action is a faded copper while disabled (it was grey); the wizard heading carries "Step N of 2" at
+   the right; the currency switch is the shared segmented control at the card's width; the amounts are radio-like rows
+   (dot, word, amount at the right; the chosen one copper); a result is the score as a readout, the name as a link, its
+   facts, and an outlined "Open in Cashu.me". The privacy lines use an info icon. */
+.tool-btn-primary:disabled,
+.tool-act .tool-btn-primary:disabled { background: var(--action); color: #1a1006; box-shadow: none; opacity: .45; }
+.wizard-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.wizard-head .wizard-step-text { font-size: var(--fs-xs); color: var(--text2); white-space: nowrap; }
+.wizard-steps { margin-top: 0; }
+.wizard-unit-seg { width: 100%; border: 1px solid var(--border-strong); border-radius: 8px; background: transparent; }
+.wizard-unit-opt { min-height: 36px; color: var(--text2); font: 500 var(--fs-sm) var(--font-body); background: transparent; border-radius: 0; }
+.wizard-unit-opt:first-child { border-radius: 7px 0 0 7px; }
+.wizard-unit-opt:last-child { border-radius: 0 7px 7px 0; }
+.wizard-unit-opt + .wizard-unit-opt { border-left-color: var(--border); }
+.wizard-unit-opt.active { color: var(--text) !important; background: var(--elevated) !important; box-shadow: inset 0 -2px 0 var(--action); }
+@media (min-width: 701px) {
+  .wizard-unit-seg { align-self: stretch; }
+  .wizard-unit-opt { flex: 1 1 0; }
+}
+.wizard-opt.wizard-opt-radio {
+  display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 14px 16px; background: transparent; border: 1px solid var(--border-strong); border-radius: 8px;
+}
+.wizard-opt.wizard-opt-radio .wizard-opt-label { font-size: var(--fs-md); color: var(--text); }
+.wizard-opt.wizard-opt-radio .wizard-opt-sub { text-align: right; font-size: var(--fs-sm) !important; color: var(--text2) !important; }
+.wizard-opt-dot { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--text3); box-sizing: border-box; }
+.wizard-opt.wizard-opt-radio:hover { border-color: var(--text3); }
+.wizard-opt.wizard-opt-radio.active { border-color: var(--action); background: var(--action-soft); }
+.wizard-opt.wizard-opt-radio.active .wizard-opt-dot { border: 5px solid var(--action); background: #1a1006; }
+
+.wizard-rec-row {
+  display: grid !important; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 4px 14px; align-items: start;
+  padding: 14px 0 !important; background: transparent !important; border: 0 !important; border-top: 1px solid var(--border) !important;
+  border-radius: 0 !important; cursor: default;
+}
+.wizard-rec-row:first-of-type { border-top: 0 !important; }
+.wizard-rec-readout {
+  display: block; font-family: var(--font-display); font-size: 32px; font-weight: 680; font-stretch: 75%;
+  letter-spacing: -0.02em; line-height: 1; padding: 0; background: none; border: 0;
+}
+.wizard-rec-info { display: grid; gap: 3px; min-width: 0; }
+.wizard-rec-name { color: var(--text); font-weight: 600; font-size: var(--fs-md); text-decoration: none; overflow-wrap: anywhere; }
+.wizard-rec-name:hover { color: var(--action); }
+.wizard-rec-reason { font-size: var(--fs-xs); color: var(--green-bright); }
+.wizard-rec-facts, .wizard-rec-meta, .wizard-rec-limits { font-size: var(--fs-xs); color: var(--text2); }
+.wizard-rec-wallet {
+  display: inline-flex; align-items: center; height: 36px; padding: 0 14px; white-space: nowrap;
+  border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); font: 500 var(--fs-sm) var(--font-body); text-decoration: none;
+}
+.wizard-rec-wallet:hover { border-color: var(--text3); }
+@media (max-width: 560px) {
+  .wizard-rec-row { grid-template-columns: 44px minmax(0, 1fr); }
+  .wizard-rec-wallet { grid-column: 2; justify-self: start; margin-top: 6px; }
+  .wizard-rec-readout { font-size: 28px; }
+}
+.tool-header.wizard-head { flex-direction: row; flex-wrap: wrap; }
+.wizard-rec-meta .wizard-rec-rating, .wizard-rec-meta .wizard-rec-ln {
+  display: inline; padding: 0; margin: 0; border: 0; background: none; border-radius: 0; font: inherit; color: inherit;
+}
+.wizard-rec-meta .wizard-rec-star { color: var(--amber); }
+.wizard-start-over-btn {
+  height: 36px; padding: 0 14px; background: transparent !important; border: 1px solid var(--border-strong) !important;
+  border-radius: 8px; color: var(--text) !important; font: 500 var(--fs-sm) var(--font-body) !important; letter-spacing: 0;
+}
+.wizard-start-over-btn:hover { border-color: var(--text3) !important; }
+/* "Find my mint" as the mockup's solid action: its own width at the left, 40 px. */
+.tool-btn-primary.find-my-mint-btn { width: auto; align-self: flex-start; height: 40px; padding: 0 18px; font: 600 var(--fs-sm) var(--font-body); }

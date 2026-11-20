@@ -64,14 +64,15 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
   })
 })
 
-test('disabled primary buttons are neutral grey, not faded green, and keep their height when enabled', async ({ page }) => {
+test('disabled primary buttons are faded copper (owner, 2026-11-19 mockup), never green, and keep their height when enabled', async ({ page }) => {
   await openTools(page)
   const btn = page.getByRole('button', { name: 'Inspect token' })
   await expect(btn).toBeDisabled()
   const off = await btn.evaluate(el => { const cs = getComputedStyle(el); return { op: cs.opacity, bg: cs.backgroundColor, h: el.getBoundingClientRect().height } })
-  expect(off.op).toBe('1')
-  const accent = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = 'var(--accent)'; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c })
-  expect(off.bg).not.toBe(accent)
+  expect(off.op).toBe('0.45')
+  const color = (v: string) => page.evaluate(x => { const d = document.createElement('div'); d.style.color = x; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c }, v)
+  expect(off.bg).not.toBe(await color('var(--accent)'))
+  expect(off.bg).toBe(await color('var(--action)'))
   await page.locator('.token-input').fill('cashuBxyz')
   await expect(btn).toBeEnabled()
   const onH = await btn.evaluate(el => el.getBoundingClientRect().height)

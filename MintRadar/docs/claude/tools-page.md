@@ -421,3 +421,15 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
   would nest interactive controls.
 - `e2e/payment-request.spec.ts` ("decoding sends nothing") ignores same-origin `/fonts/*.woff2` requests: the mono face of
   the result may load only then, and a static font file carries nothing that was pasted.
+
+## Tools, 2026-11-19 mockup alignment (owner: "the buttons as in the design")
+
+- The solid copper action is **faded copper (opacity .45) while disabled**, as in the mockup (it was neutral grey after
+  the 2026-11-15 audit; the owner chose the mockup). The privacy lines use an info icon.
+- Wizard: title **"Find a mint for me"** with "Step N of 2" at its right, the copper bar under both (the helper line is
+  gone); the currency switch is the shared segmented control at the card's width (copper line under the chosen unit);
+  "How much do you plan to keep there?" with radio-like rows (dot, word, amount at the right; copper when chosen);
+  "Find my mint" is a 40 px solid button at the left; "Start over" is outlined.
+- Results: the score as a readout (accessible name "Reliability N"), the name as a link to the mint, the facts under it,
+  and an outlined **"Open in Cashu.me"** (owner's choice of name; `wallet.cashu.me/?mint=`). The row is no longer one
+  clickable box, so the button is not nested in a link.

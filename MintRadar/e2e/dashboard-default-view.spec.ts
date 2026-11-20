@@ -92,7 +92,7 @@ test.describe('Dashboard default view', () => {
 
     await page.getByRole('button', { name: 'Find a mint' }).click()
     await expect(page).toHaveURL(/\/tools#pick$/)
-    await expect(page.locator('#pick').getByText('Best Mint for Me')).toBeInViewport()
+    await expect(page.locator('#pick').getByText('Find a mint for me')).toBeInViewport()
 
     await page.goBack()
     await page.getByRole('button', { name: 'Inspect a token' }).click()

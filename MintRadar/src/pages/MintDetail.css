@@ -3005,7 +3005,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
    the left, the pager as two outlined 36 px buttons around "Page N of M". */
 .mint-detail .review-card { padding: 16px 0; }
 .mint-detail .review-author-npub { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text3); }
-.mint-detail .review-comment { font-size: var(--fs-md); line-height: 1.5; max-width: 70ch; margin: 6px 0 0 48px; }
+.mint-detail .review-comment { font-size: var(--fs-md); line-height: 1.55; max-width: 70ch; margin: 6px 0 0 48px; }
 .mint-detail .review-no-comment { margin: 6px 0 0 48px; }
 .mint-detail .review-actions { display: flex; gap: 2px; margin: 6px 0 0 42px; }
 .mint-detail .review-action-btn { width: 30px; height: 30px; display: inline-grid; place-items: center; border-radius: 8px; color: var(--text3); }
@@ -3030,3 +3030,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .mint-detail .md-strip .latency-test-btn { display: inline-block; white-space: nowrap; }
 .md-about-lede, .md-about-more { overflow-wrap: anywhere; }
 .mint-detail .md-keyset-row .md-keyset-expiry--soon { color: var(--amber); }
+/* Narrow phones: the latency tile is about 110 px wide, so "Your latency: 1100 ms" takes two lines. The link keeps a
+   two-line box from the start, so the result changes neither its top, its height nor the strip. */
+@media (max-width: 400px) {
+  .mint-detail .md-strip .latency-test-btn { display: block; width: 100%; white-space: normal; font-size: var(--fs-xs); line-height: 1.45; height: 2.9em; min-height: 0; text-align: left; overflow-wrap: anywhere; }
+}

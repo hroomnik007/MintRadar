@@ -66,7 +66,7 @@ test.describe('Dashboard newcomer action strip', () => {
     await page.getByRole('button', { name: 'Find a mint' }).click()
     await expect(page).toHaveURL(/\/tools#pick$/)
 
-    await expect(page.locator('#pick').getByText('Best Mint for Me')).toBeInViewport()
+    await expect(page.locator('#pick').getByText('Find a mint for me')).toBeInViewport()
   })
 
   test('Inspect a token lands on /tools#token with the inspector in view', async ({ page }) => {

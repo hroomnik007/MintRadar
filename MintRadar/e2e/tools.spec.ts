@@ -590,10 +590,12 @@ test.describe('Tools', () => {
     })
   })
 
-  test('Best Mint Wizard shows the helper line and no endorsement disclaimer', async ({ page }) => {
+  test('Best Mint Wizard is "Find a mint for me" with its step beside the title, no endorsement disclaimer', async ({ page }) => {
     await expect(page.locator('.wizard-disclaimer')).toHaveCount(0)
-    await expect(page.locator('.tool-card', { hasText: 'Best Mint for Me' }).locator('.tool-subtitle'))
-      .toContainText('to find the best mints for you.')
+    // 2026-11-19 mockup alignment: the title and "Step 1 of 2" share a line; the helper line under the title is gone.
+    const head = page.locator('.tool-card', { hasText: 'Find a mint for me' }).locator('.wizard-head')
+    await expect(head.locator('.tool-title')).toHaveText('Find a mint for me')
+    await expect(head.locator('.wizard-step-text')).toHaveText('Step 1 of 2')
   })
 
   test('Best Mint Wizard result rows use the card Reliability formatting (shield + "Reliability N")', async ({ page }) => {
@@ -604,8 +606,9 @@ test.describe('Tools', () => {
 
     const firstRow = page.locator('.wizard-rec-row').first()
     await expect(firstRow).toBeVisible({ timeout: 15_000 })
-    await expect(firstRow.locator('.wizard-rec-reliability')).toContainText(/^Reliability \d+$/)
-    await expect(firstRow.locator('.wizard-rec-reliability svg')).toBeVisible() // the shield
+    // The score as a readout since the 2026-11-19 mockup alignment; "Reliability N" is its accessible name.
+    await expect(firstRow.locator('.wizard-rec-reliability')).toHaveText(/^\d+$/)
+    await expect(firstRow.locator('.wizard-rec-reliability')).toHaveAttribute('aria-label', /^Reliability \d+$/)
     await expect(firstRow.locator('.wizard-rec-score')).toHaveCount(0)    // no bare "NN%"
   })
 

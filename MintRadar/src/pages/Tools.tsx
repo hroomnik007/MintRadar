@@ -1,11 +1,9 @@
 import { SIGNATURE_CHECK_TEXT, CLAIM_FEE_TEXT, TEST_MINT_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { clickableProps } from '@/utils/clickableProps'
 import { passesWizardNutChecks } from '@/utils/nutFilters'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { MintFavicon } from '@/components/mint/MintFavicon'
-import { IcShield } from '@/components/mint/IcShield'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { useNow } from '@/hooks/useNow'
 import { parseCashuToken, formatTokenAmount, decodeTokenWithMint, checkTokenSpentState, classifySignatureCheck, classifySpentCheck, tokenActionState, amountCarriesCurrencySymbol, stripTokenWhitespace, InvalidMintUrlError, tokenFeeFacts, localProofKeysetIds, unspentConfidence, unknownKeysetIds, type SignatureCheck, type TokenInfo, type TokenSpentCheck, type TokenFeeFacts } from '@/utils/cashuToken'
@@ -14,7 +12,7 @@ import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { PaymentRequestInspector } from '@/components/PaymentRequestInspector'
 import { PageHead } from '@/components/layout/PageHead'
-import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, Hourglass, ExternalLink, ArrowRight, type LucideIcon } from 'lucide-react'
+import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, Hourglass, ExternalLink, ArrowRight, Info, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
@@ -332,7 +330,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
     <div className="tool-card">
       <div className="tool-header">
         <div className="tool-title">Token inspector</div>
-        <div className="tool-subtitle">Paste a Cashu token (v4 or v3) to check its mint, amount and reliability before redeeming.</div>
+        <div className="tool-subtitle">Paste a Cashu token (v4 or v3) to see its mint, amount and reliability before you redeem it.</div>
       </div>
 
       <textarea
@@ -357,7 +355,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
         </button>
         {!cleanToken && <span className="token-hint">Paste a token first.</span>}
       </div>
-      <p className="token-note tool-private"><Lock size={14} aria-hidden="true" /><span>Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.</span></p>
+      <p className="token-note tool-private"><Info size={14} aria-hidden="true" /><span>Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.</span></p>
 
       {parseError && inspected && (
         <div className="token-error">{parseError}</div>
@@ -708,7 +706,6 @@ const ADVANCED_CHECKS: { id: WizardCheck; label: string; sub: string; Icon: Luci
 ]
 
 function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
-  const navigate = useNavigate()
   // Computed over the full known-mints list — see Dashboard.tsx's own
   // duplicateDisplayNames for the rationale.
   const duplicateDisplayNames = useMemo(() => computeDuplicateMintNames(knownMints), [knownMints])
@@ -872,14 +869,12 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
   return (
     <div className="tool-card">
-      <div className="tool-header">
-        <div className="tool-title">Best mint for me</div>
-        <div className="tool-subtitle">Answer a few quick questions to find the best mints for you.</div>
-      </div>
-
-      {/* "Step N of 2" and a copper bar (2026-11-19 redesign; they were numbered circles). */}
-      <div className="wizard-steps">
+      {/* "Find a mint for me" with "Step N of 2" beside it and the copper bar under both (mockup alignment 2026-11-19). */}
+      <div className="tool-header wizard-head">
+        <div className="tool-title">Find a mint for me</div>
         <span className="wizard-step-text">Step {step} of 2</span>
+      </div>
+      <div className="wizard-steps">
         <div className="wizard-step-bar" role="progressbar" aria-label="Progress" aria-valuemin={1} aria-valuemax={2} aria-valuenow={step}>
           <i style={{ width: `${(step / 2) * 100}%` }} />
         </div>
@@ -902,15 +897,17 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
             </div>
           )}
 
-          <div className="wizard-q">How much do you plan to store?</div>
+          <div className="wizard-q">How much do you plan to keep there?</div>
           <div className="wizard-options">
             {[
               { id: 'small' as SizeOption, label: 'Small', sub: sizeHints?.[0] },
               { id: 'medium' as SizeOption, label: 'Medium', sub: sizeHints?.[1] },
               { id: 'large' as SizeOption, label: 'Large', sub: sizeHints?.[2] },
             ].map(opt => (
-              <button key={opt.id} type="button" className={`wizard-opt${size === opt.id ? ' active' : ''}`}
+              <button key={opt.id} type="button" className={`wizard-opt wizard-opt-radio${size === opt.id ? ' active' : ''}`}
                 onClick={() => { setSize(opt.id); setStep(2) }}>
+                {/* A radio-like row (mockup alignment): the dot, the word, the amount at the right. */}
+                <span className="wizard-opt-dot" aria-hidden="true" />
                 <div className="wizard-opt-label">{opt.label}</div>
                 {opt.sub && <div className="wizard-opt-sub">{opt.sub}</div>}
               </button>
@@ -1016,15 +1013,31 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
               // The latency is said once per row: the reason line already gives it when speed was asked for.
               const metaLatency = recsCtx && reasonMentionsLatency({ checks: recsCtx.checks, latencyLimit: recsCtx.limit }) ? null : rec.latencyMs
               return (
-                <div key={rec.url} className="wizard-rec-row" {...clickableProps(() => navigate(`/mint/${encodeURIComponent(rec.url)}`))}>
-                  <span className="wizard-rank">#{idx + 1}</span>
-                  <MintFavicon url={rec.url} iconUrl={rec.mint.iconUrl ?? null} size={28} radius={6} />
+                // Mockup alignment (2026-11-19): the score as a readout, the name a link to the mint, its facts under it, and
+                // "Open in Cashu.me" (owner's choice of name: it opens Cashu.me with this mint, as on Mint Detail). The row
+                // itself is no longer one big link, so the button is not a control inside a link.
+                <div key={rec.url} className="wizard-rec-row">
+                  <span
+                    className={`wizard-rec-reliability wizard-rec-readout tier-${reliabilityNum == null ? 'none' : reliabilityNum >= 70 ? 'high' : reliabilityNum >= 40 ? 'mod' : 'low'}`}
+                    style={{ color: reliabilityCol }}
+                    aria-label={cardReliabilityLabel(reliabilityNum)}
+                  >{reliabilityNum ?? '–'}</span>
                   <div className="wizard-rec-info">
-                    <div className="wizard-rec-name">{mintDisplayName(rec.mint, duplicateDisplayNames)}</div>
+                    <Link className="wizard-rec-name" to={`/mint/${encodeURIComponent(rec.url)}`}>{mintDisplayName(rec.mint, duplicateDisplayNames)}</Link>
+                    {idx === 0 && <div className="wizard-rec-reason">Best match for your filters</div>}
+                    {reason && <div className="wizard-rec-facts">{reason}</div>}
                     <div className="wizard-rec-meta">
                       {metaLatency != null && <span>{metaLatency} ms from your browser</span>}
                       {/* The separator only between two facts: without a latency sample the line began with "· ". */}
                       {rec.mint.uptimePct24h != null && <span>{metaLatency != null ? ' · ' : ''}{rec.mint.uptimePct24h}% uptime (24h)</span>}
+                      {(rec.mint.reviewCount ?? 0) > 0 && rec.mint.reviewAvgRating != null && (
+                        <span className="wizard-rec-rating">
+                          {' · '}<span className="wizard-rec-star" aria-hidden="true">★</span>
+                          <span>{rec.mint.reviewAvgRating.toFixed(1)}</span>
+                          <span className="wizard-rec-rating-n">({rec.mint.reviewCount})</span>
+                        </span>
+                      )}
+                      {lnLabel && <span className="wizard-rec-ln">{' · '}{lnLabel}</span>}
                     </div>
                     <div className="wizard-rec-limits">
                       {(mintRange ?? meltRange) !== null ? (
@@ -1037,29 +1050,13 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                         <span>No {unitLabel} limits published by this mint</span>
                       )}
                     </div>
-                    {reason && <div className="wizard-rec-facts">{reason}</div>}
                   </div>
-                  <div className="wizard-rec-badge-col">
-                  <span className="wizard-rec-badges">
-                    <span className="wizard-rec-reliability" style={{ color: reliabilityCol }}>
-                      <IcShield size={11} /><span>{cardReliabilityLabel(reliabilityNum)}</span>
-                    </span>
-                    {(rec.mint.reviewCount ?? 0) > 0 && rec.mint.reviewAvgRating != null && (
-                      <span className="wizard-rec-rating">
-                        <span className="wizard-rec-star" aria-hidden="true">★</span>
-                        <span>{rec.mint.reviewAvgRating.toFixed(1)}</span>
-                        <span className="wizard-rec-rating-n">({rec.mint.reviewCount})</span>
-                      </span>
-                    )}
-                    {lnLabel && (
-                      <span className="wizard-rec-ln">
-                        <Zap size={10} aria-hidden /><span>{lnLabel}</span>
-                      </span>
-                    )}
-                  </span>
-                  {idx === 0 && <div className="wizard-rec-reason">Best match for your filters</div>}
-                  </div>
-                  <span className="wizard-rec-view">View →</span>
+                  <a
+                    className="wizard-rec-wallet"
+                    href={`https://wallet.cashu.me/?mint=${encodeURIComponent(rec.url)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >Open in Cashu.me</a>
                 </div>
               )
             })}
