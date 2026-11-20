@@ -10,8 +10,6 @@ import { AuditVerdictBlock, AuditStack, AuditDirections, AuditDays, AuditSwapLis
 import type { AuditCzView } from '@/utils/auditCz'
 import { auditNoDataText, cashuInfoViewText } from '@/utils/tooltipTexts'
 
-/** What cashu.info does, as far as MintRadar knows it (docs/claude/scoring-and-probing.md, "Audit reliability"). */
-const AUDITOR_METHOD_TEXT = 'cashu.info runs test swaps through this mint over Lightning: deposits into it and withdrawals out of it. A failure counts against this mint only when cashu.info puts it on the mint; a payment that fails on the way does not. Attempts the auditor stops before sending, such as too little balance or an amount outside the mint\'s limits, are not swaps.'
 
 // ⓘ next to the "Audit stats" heading. A local component so the identical icon can be dropped into both the desktop
 // header and the mobile heading.
@@ -82,10 +80,10 @@ export function AuditTab({ auditCzLoading, czView, czSyncNote, now }: AuditTabPr
     )
   }
   const infoText = cashuInfoViewText()
-  // AuditDays draws nothing without a stored day; then "How the auditor tests" takes the row alone.
+  // AuditDays draws nothing without a stored day; then its panel is left out.
   const hasDays = czView.daily.some(d => d.ok + d.failed > 0)
   // 2026-11-19 redesign (phase 4e): the verdict panel (number beside its sentence, the bar), the four figures in one
-  // frame, swaps per day beside "How the auditor tests", and the swap list in its own panel.
+  // frame, swaps per day, and the swap list in its own panel (the "How the auditor tests" panel went on 2026-11-20).
   return (
     <div className="md-audit">
       <section className="md-panel md-audit-collapsible">
@@ -105,25 +103,21 @@ export function AuditTab({ auditCzLoading, czView, czSyncNote, now }: AuditTabPr
         </div>
         {czView.verdict && <AuditVerdictBlock verdict={czView.verdict} view={czView} />}
         {czView.verdict && <AuditStack verdict={czView.verdict} />}
+        {/* The source under the verdict (owner, 2026-11-20: the "How the auditor tests" panel only repeated the verdict's
+            own sentence, so it went). */}
+        <p className="md-audit-src">
+          Data from cashu.info{czSyncNote ? `, ${czSyncNote.text}` : ''}.
+          {czView.sourceHref && <>{' '}<a href={czView.sourceHref} target="_blank" rel="noopener noreferrer" className="audit-external-link">Open this mint on cashu.info</a></>}
+        </p>
       </section>
 
       <AuditDirections directions={czView.directions} avgSwapTime={czView.avgSwapTime} verdict={czView.verdict} />
 
-      <div className={`md-audit-two${hasDays ? '' : ' md-audit-one'}`}>
-        {hasDays && (
-          <section className="md-panel md-audit-days" aria-label="Swaps per day">
-            <AuditDays daily={czView.daily} />
-          </section>
-        )}
-        <section className="md-panel md-audit-how" aria-labelledby="md-audit-how-title">
-          <h2 id="md-audit-how-title" className="md-panel-title">How the auditor tests</h2>
-          <p className="md-audit-how-text">{AUDITOR_METHOD_TEXT}</p>
-          <p className="md-audit-how-src">
-            Data from cashu.info{czSyncNote ? `, ${czSyncNote.text}` : ''}.
-            {czView.sourceHref && <>{' '}<a href={czView.sourceHref} target="_blank" rel="noopener noreferrer" className="audit-external-link">Open this mint on cashu.info</a></>}
-          </p>
+      {hasDays && (
+        <section className="md-panel md-audit-days" aria-label="Swaps per day">
+          <AuditDays daily={czView.daily} />
         </section>
-      </div>
+      )}
 
       <section className="md-panel md-audit-swaps" aria-labelledby="md-audit-swaps-title">
         <h2 id="md-audit-swaps-title" className="md-panel-title">Recent swaps</h2>

@@ -1250,11 +1250,9 @@ button.md-url-copy.copied > svg { opacity: 1; }
    flex-shrunk below its 12px size at every width up to 418px (0px at 360, 5.3px at 400, 10px at 414) while the
    other two keep theirs, so the row looked inconsistent. All three decorative icons (aria-hidden; the text
    label is the accessible name) go; from 420px (icon 12.0px) they all render at full size. */
-@media (max-width: 419.98px) {
-  .md-quick-btn > svg,
-  .md-quick-btn > span[aria-hidden="true"],
-  .md-compare-btn > svg,
-  .md-compare-btn > span[aria-hidden="true"] { display: none; }
+/* Since 2026-11-20 (owner) the icons stay on phones too; the buttons get tighter padding there so icon and label fit. */
+@media (max-width: 640px) {
+  .mint-detail .md-quick-btn, .mint-detail .md-compare-btn { padding: 0 10px; gap: 6px; }
 }
 
 /* Match the navbar + Dashboard content gutter, which drops to 14px at ≤600px. */
@@ -2796,9 +2794,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .mint-detail .md-audit .au-dir-sub { order: 4; font-size: var(--fs-xs); color: var(--text2); }
 
 .md-audit-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.md-audit-how-text { margin: 0; font-size: var(--fs-sm); color: var(--text2); line-height: 1.55; max-width: 62ch; }
-.md-audit-how-src { margin: 12px 0 0; font-size: var(--fs-xs); color: var(--text3); }
-.mint-detail .md-audit-how-src .audit-external-link { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
 .mint-detail .md-audit-swaps .md-panel-title { margin-bottom: 10px; }
 
 /* Results as text (the coloured chips are gone): green for a success, amber for a failure, muted when neutral. */
@@ -3035,3 +3030,15 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 @media (max-width: 400px) {
   .mint-detail .md-strip .latency-test-btn { display: block; width: 100%; white-space: normal; font-size: var(--fs-xs); line-height: 1.45; height: 2.9em; min-height: 0; text-align: left; overflow-wrap: anywhere; }
 }
+
+/* "What happened" marks by kind (owner, 2026-11-20): copper is for what you can click, so no software change is copper.
+   Outage: red (an ongoing one with a soft red halo). Update: a grey ring. Switch of software: a filled grey dot. First
+   sighting: a small faint dot. The kind is also the word at the right of the row. */
+.md-ev-mark { box-sizing: border-box; }
+.md-ev-update .md-ev-mark { background: transparent; border: 2px solid var(--text2); }
+.md-ev-switch .md-ev-mark { background: var(--text2); }
+.md-ev-first .md-ev-mark { width: 7px; height: 7px; margin-top: 6.5px; background: var(--text3); }
+.md-ev-outage[data-ongoing="true"] .md-ev-mark { box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 30%, transparent); }
+.md-audit-src { margin: 12px 0 0; font-size: var(--fs-xs); color: var(--text3); }
+.mint-detail .md-audit-src .audit-external-link { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
+.mint-detail .md-audit-days .au-days { max-width: 720px; }

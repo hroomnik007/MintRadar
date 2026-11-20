@@ -502,14 +502,20 @@ const heroIcons = (page: Page) => page.evaluate(() =>
     return { display: cs.display, width: r.width, hidden: icon.getAttribute('aria-hidden') === 'true' || icon.tagName === 'svg' }
   }))
 
+// Since 2026-11-20 (owner) the icons stay on phones: full size, and no label is clipped.
 for (const width of [320, 340, 360, 375, 390, 400, 412, 414]) {
-  test(`Mint Detail hero buttons are text-only @ ${width}px`, async ({ page }) => {
+  test(`Mint Detail hero buttons keep their icons on phones @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })
     await page.goto(`/mint/${encodeURIComponent(url)}`)
     await expect(page.locator('.md-tabs')).toBeVisible()
     await settled(page)
     for (const ic of await heroIcons(page)) {
-      expect(ic.display === 'none' || ic.width === 0, `icon rendered: display ${ic.display}, ${ic.width}px`).toBe(true)
+      expect(ic.display, 'icon shown').not.toBe('none')
+      expect(Math.abs(ic.width - 16), `icon ${ic.width}px`).toBeLessThanOrEqual(0.3)
+    }
+    for (const b of await heroButtons(page)) {
+      expect(b.clippedBy, `${b.label} clipped`).toBeLessThanOrEqual(0.5)
+      expect(b.outsideViewport, `${b.label} outside the viewport`).toBeLessThanOrEqual(0.5)
     }
     // text labels and accessible names stay
     await expect(page.getByRole('button', { name: 'Mint QR' })).toBeVisible()
@@ -518,7 +524,7 @@ for (const width of [320, 340, 360, 375, 390, 400, 412, 414]) {
   })
 }
 
-// From 420px the three icons (16 px SVGs since the 2026-11-19 mockup alignment) render at full size, never flex-shrunk.
+// The three icons (16 px SVGs since the 2026-11-19 mockup alignment) render at full size, never flex-shrunk.
 for (const width of [420, 430, 1440]) {
   test(`Mint Detail hero icons keep their size @ ${width}px`, async ({ page }) => {
     const { url } = await mount(page, {}, { width })

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { pickSort } from './fixtures/sortMenu'
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -49,7 +50,7 @@ test.describe('Dashboard default view', () => {
     await page.goto('/')
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
-    await page.locator('.sort-select').selectOption('name')
+    await pickSort(page, 'name')
     await expect(page.locator('.mint-grid .card-name')).toHaveText([
       'Alpha Mint', 'Bravo Mint', 'Delta Mint',
     ])

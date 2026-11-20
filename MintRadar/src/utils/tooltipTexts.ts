@@ -284,11 +284,11 @@ export function cooldownUnit(minutes: number): string {
   return minutes % 60 === 0 ? `${minutes / 60} hours` : `${minutes} minutes`
 }
 /** Explainer above the Watchlist cards. */
-export function watchlistNotifyExplainer(cooldownMinutes: number = UPDOWN_COOLDOWN_MINUTES, dailyCap: number = DM_DAILY_CAP): string {
-  const every = cooldownMinutes === 60 ? 'an hour' : `per ${cooldownUnit(cooldownMinutes)}`
-  // Matches the Alerts switch and "More alerts" (2026-11-19) and the server's rules (backend notificationLimits.ts:
-  // UPDOWN_COOLDOWN_MINUTES, DM_DAILY_CAP per DM_CAP_WINDOW_HOURS; key and fee change DMs go to anyone with an alert on).
-  return `Optional Nostr DMs. Alerts: one when a watched mint goes down, one when it's back (at most once ${every} each); “More alerts” adds three more. With any alert on you also hear when its public key or input fee changes. At most ${dailyCap} DMs in 24 hours; needs a Nostr client that shows private messages.`
+export function watchlistNotifyExplainer(dailyCap: number = DM_DAILY_CAP): string {
+  // Short (owner, 2026-11-20: the three-sentence version was too long). Matches the server (backend
+  // notificationLimits.ts): DM_DAILY_CAP per 24-hour window; key and fee change DMs go to anyone with an alert on. The
+  // once-an-hour limit per direction is an anti-spam rule of the server, not something to read before turning one on.
+  return `Optional alerts come as Nostr private messages, at most ${dailyCap} a day. Any alert also tells you when the mint's key or fee changes.`
 }
 /** Notice after a failed unsubscribe on removing a watched mint. */
 export function notifyStopNotice(name: string, days: number = NOTIFICATION_RETENTION_DAYS): string {

@@ -16,6 +16,7 @@ import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import { useModalFocus } from '@/hooks/useModalFocus'
 
 import type { MintStatus } from '@core/mint/api'
+import { SortMenu } from '@/components/SortMenu'
 import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
@@ -89,9 +90,6 @@ const IcClose = () => (
     <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
     <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
-)
-const IcChevronDown = () => (
-  <svg className="sort-select-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
 )
 // The sort options of the select, in reading order (Reliability Score is the default).
 const SORT_LABELS = [['reliability', 'Reliability'], ['reviewCount', 'Most reviewed'], ['rating', 'Rating'], ['latency', 'Latency'], ['name', 'Name']] as const
@@ -1368,17 +1366,8 @@ export default function Dashboard() {
             own direction (score, reviews and rating high first, latency low first, name A to Z); there is no direction
             button since the mockup alignment (owner, 2026-11-19). A ?sortDir= in a shared link still applies. */}
         <div className="sort-control">
-          <label className="sort-select-wrap">
-            <span className="sr-only">Sort by</span>
-            <select
-              className="sort-select"
-              value={sortBy}
-              onChange={e => handleSortClick(e.target.value as typeof sortBy)}
-            >
-              {SORT_LABELS.map(([key, label]) => <option key={key} value={key}>Sort: {label}</option>)}
-            </select>
-            <IcChevronDown />
-          </label>
+          {/* Our own list, not the system one (owner, 2026-11-20): SortMenu. */}
+          <SortMenu className="sort-select-wrap" value={sortBy} options={SORT_LABELS} onChange={v => handleSortClick(v)} />
         </div>
         <div className="view-toggle">
           <button type="button" className={`view-toggle-btn${viewMode === 'cards' ? ' active' : ''}`} onClick={() => handleViewMode('cards')} title="Card view" aria-label="Card view" aria-pressed={viewMode === 'cards'}>

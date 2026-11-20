@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { pickSort } from './fixtures/sortMenu'
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -76,7 +77,7 @@ test.describe('Dashboard', () => {
     const names = page.locator('.mint-grid .card-name')
     // One select since the 2026-11-19 redesign; each option has its own direction (no direction button since the
     // mockup alignment), a ?dir= in the URL still applies.
-    const sortBy = (value: string) => page.locator('.sort-select').selectOption(value)
+    const sortBy = (value: 'name' | 'reviewCount' | 'rating') => pickSort(page, value)
 
     // Default sort is now Reliability Score desc: Alpha 92, Delta 78, Bravo 55, Charlie offline → 0.
     await expect(names).toHaveText(['Alpha Mint', 'Delta Mint', 'Bravo Mint', 'Charlie Mint'])
@@ -93,7 +94,7 @@ test.describe('Dashboard', () => {
     const names = page.locator('.mint-grid .card-name')
     // Fixture reviewCount: Alpha 12, Charlie 4, Delta 3, Bravo 0 — Bravo must
     // sort last regardless of its (null) average rating.
-    await page.locator('.sort-select').selectOption('reviewCount')
+    await pickSort(page, 'reviewCount')
     await expect(names).toHaveText(['Alpha Mint', 'Charlie Mint', 'Delta Mint', 'Bravo Mint'])
   })
 
@@ -121,7 +122,7 @@ test.describe('Dashboard', () => {
     await page.route('**/api/mints/known', r => r.fulfill({ json: rows }))
     await page.goto('/?status=all')
     await expect(page.locator('.mint-card')).toHaveCount(4)
-    await page.locator('.sort-select').selectOption('rating')
+    await pickSort(page, 'rating')
     await expect(page.locator('.mint-grid .card-name')).toHaveText(['Many Mint', 'Three Mint', 'One Mint', 'None Mint'])
     // What the card shows is the real average and the count of all reviews, as before.
     const many = page.locator('.mint-card', { hasText: 'Many Mint' })
@@ -130,3 +131,42 @@ test.describe('Dashboard', () => {
   })
 })
 
+
+// The sort control is our own list since 2026-11-20 (owner: the native one looked like a system window).
+test.describe('Sort list', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockRelays(page)
+    await installApiMocks(page)
+    await page.goto('/?status=all')
+    await expect(page.locator('.mint-card').first()).toBeVisible()
+  })
+
+  test('keyboard: ArrowDown opens on the chosen option, arrows move, Enter chooses, focus returns to the button', async ({ page }) => {
+    const btn = page.locator('.sort-select')
+    await expect(btn).toHaveAttribute('aria-haspopup', 'listbox')
+    await btn.focus()
+    await page.keyboard.press('ArrowDown')
+    const list = page.getByRole('listbox', { name: 'Sort by' })
+    await expect(list).toBeFocused()
+    await expect(list.getByRole('option', { selected: true })).toHaveText('Reliability')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expect(list).toHaveCount(0)
+    await expect(btn).toBeFocused()
+    await expect(btn).toContainText('Sort: Most reviewed')
+    await expect(page).toHaveURL(/[?&]sort=reviewCount/)
+  })
+
+  test('Escape and a click outside close it without changing the sort', async ({ page }) => {
+    const btn = page.locator('.sort-select')
+    await btn.click()
+    await expect(btn).toHaveAttribute('aria-expanded', 'true')
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await expect(btn).toBeFocused()
+    await btn.click()
+    await page.mouse.click(5, 300)
+    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await expect(btn).toContainText('Sort: Reliability')
+  })
+})

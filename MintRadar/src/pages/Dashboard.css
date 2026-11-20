@@ -2894,27 +2894,33 @@
 .dash-intro .dash-status-btn { background: transparent; border-color: var(--border-strong); min-height: 40px; }
 .dashboard-controls { margin-top: 22px; }
 
-/* The open sort list in the site's own style, not the system menu (owner, 2026-11-19): the customizable select
-   (appearance: base-select, Chromium 135+). The control stays a native <select> (keyboard, screen readers, the
-   specs' selectOption); a browser without it keeps the system list. */
-@supports (appearance: base-select) {
-  .dashboard-controls .sort-select,
-  .dashboard-controls .sort-select::picker(select) { appearance: base-select; }
-  .dashboard-controls .sort-select { display: flex; align-items: center; }
-  .dashboard-controls .sort-select::picker-icon { display: none; }
-  .dashboard-controls .sort-select::picker(select) {
-    margin-top: 6px; padding: 4px; min-width: anchor-size(width);
-    background: var(--surface); color: var(--text);
-    border: 1px solid var(--border-strong); border-radius: 10px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
-  }
-  .dashboard-controls .sort-select option {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px; border-radius: 6px; background: transparent; color: var(--text2);
-    font: 500 var(--fs-sm) var(--font-body); cursor: pointer;
-  }
-  .dashboard-controls .sort-select option:hover,
-  .dashboard-controls .sort-select option:focus-visible { background: var(--elevated); color: var(--text); outline: none; }
-  .dashboard-controls .sort-select option:checked { color: var(--text); background: var(--elevated); box-shadow: inset 2px 0 0 var(--action); }
-  .dashboard-controls .sort-select option::checkmark { content: none; display: none; }
+/* The sort control is our own list (SortMenu, owner 2026-11-20: the native list looked like a system window and
+   only Chromium can restyle it). The button keeps the select's look; the list is a panel of the page's surface with the
+   chosen option checked and ruled in copper. */
+.sort-menu { position: relative; display: inline-flex; min-width: 0; }
+.dashboard-controls .sort-menu .sort-select {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 0 12px; min-width: 190px; text-align: left;
+}
+.sort-menu .sort-select-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sort-menu .sort-select-chevron { position: static; transform: none; flex: none; color: var(--text2); transition: transform .15s ease; }
+.sort-menu .sort-select[aria-expanded="true"] .sort-select-chevron { transform: rotate(180deg); }
+.sort-menu-list {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; min-width: 100%; margin: 0; padding: 4px;
+  list-style: none; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 10px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .5); outline: none;
+}
+.sort-menu-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: 36px; padding: 0 10px 0 12px; border-radius: 6px; cursor: pointer;
+  color: var(--text2); font: 500 var(--fs-sm) var(--font-body); white-space: nowrap;
+}
+.sort-menu-option.is-active { background: var(--elevated); color: var(--text); }
+.sort-menu-option.is-selected { color: var(--text); box-shadow: inset 2px 0 0 var(--action); }
+.sort-menu-option svg { color: var(--action); flex: none; }
+.sort-menu-list:focus-visible .sort-menu-option.is-active { outline: 2px solid var(--action); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) { .sort-menu .sort-select-chevron { transition: none; } }
+@media (max-width: 900px) {
+  .sort-menu, .dashboard-controls .sort-menu .sort-select { width: 100%; min-width: 0; }
+  .sort-menu-list { right: 0; }
 }

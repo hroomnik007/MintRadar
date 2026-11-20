@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, loginAs, MOCK_MINTS } from './fixtures/mocks'
 import { layoutReady } from './fixtures/settle'
+import { pickSort } from './fixtures/sortMenu'
 
 // Three layout fixes (docs/claude/mobile-and-tooltips.md, "Layout overflow fixes (2026-09-30)"):
 //  1. Dashboard toolbar: .submit-btn pushed the page sideways at 901–990px (row needs 991px on one line).
@@ -60,11 +61,15 @@ for (const width of [320, 340, 360]) {
       expect(box.x).toBeGreaterThanOrEqual(0)
       expect(box.x + box.width).toBeLessThanOrEqual(width)
     }
-    await expect(select.locator('option')).toHaveCount(5)
-    for (const value of ['reliability', 'reviewCount', 'rating', 'latency', 'name']) {
-      await select.selectOption(value)
-      await expect(select).toHaveValue(value)
-    }
+    // Our own list since 2026-11-20: five options, each reachable, the list inside the viewport too.
+    await select.click()
+    const list = page.getByRole('listbox', { name: 'Sort by' })
+    await expect(list.getByRole('option')).toHaveCount(5)
+    const lb = (await list.boundingBox())!
+    expect(lb.x).toBeGreaterThanOrEqual(0)
+    expect(lb.x + lb.width).toBeLessThanOrEqual(width)
+    await page.keyboard.press('Escape')
+    for (const key of ['reliability', 'reviewCount', 'rating', 'latency', 'name'] as const) await pickSort(page, key)
     const after = await overflow(page)
     expect(after.sw).toBeLessThanOrEqual(after.cw)
   })

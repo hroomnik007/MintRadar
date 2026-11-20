@@ -160,7 +160,10 @@ export function HistoryTab({
       ) : (
         <ol className="md-events">
           {events.map((ev, i) => (
-            <li key={i} className={`md-ev md-ev-${ev.kind}`} {...(ev.kind === 'outage' && ev.ongoing ? { 'data-ongoing': 'true' } : {})}>
+            // The mark tells the kind apart by colour and shape (owner, 2026-11-20; every software change was copper, the
+            // colour of what you can click): an outage red, an update a grey ring, a switch of software a grey dot, the
+            // first sighting a small faint dot.
+            <li key={i} className={`md-ev md-ev-${ev.kind}${ev.kind === 'software' ? (ev.from === null ? ' md-ev-first' : ev.switched ? ' md-ev-switch' : ' md-ev-update') : ''}`} {...(ev.kind === 'outage' && ev.ongoing ? { 'data-ongoing': 'true' } : {})}>
               <span className="md-ev-date">{formatDate(ev.at, { year: false, local: true })}</span>
               <span className="md-ev-mark" aria-hidden="true" />
               <span className="md-ev-text">

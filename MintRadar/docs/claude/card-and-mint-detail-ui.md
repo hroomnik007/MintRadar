@@ -739,3 +739,10 @@ Blocks "Mockup alignment, 2026-11-19" at the end of `MintDetail.css`; `mint.html
 - Not changed on purpose: the Audit "Audit stats · via cashu.info · synced" header (40+ spec checks), "View on Nostr" as
   a 32 px button (its geometry is pinned in `changeDates.test.tsx`), the score part rows' wording (shared with the "How it
   is made" dialog), the coloured review avatars (the palette is a tested feature).
+
+### Follow-ups of 2026-11-20 (owner)
+- "What happened" marks by kind, never copper (copper = clickable): outage red (ongoing with a halo), update a grey ring,
+  switch of software a grey dot, first sighting a small faint dot (`.md-ev-update` / `.md-ev-switch` / `.md-ev-first`).
+- Audit: the "How the auditor tests" panel is gone (it repeated the verdict's sentence); its source line "Data from
+  cashu.info, synced … Open this mint on cashu.info" sits under the verdict (`.md-audit-src`); swaps per day takes the row.
+- The header action icons show on phones too (they were hidden below 420 px); tighter padding up to 640 px.

@@ -76,8 +76,10 @@
 `mints.html`: one row of 40 px outlined controls on the page background (block at the end of `Dashboard.css`):
 search "Search mints by name or URL", Filters, the select "Sort: Reliability" (option label shortened from "Reliability
 Score"), the view switch (frame, copper line under the chosen view), "Add a mint" (neutral; was copper "Add mint").
-The open list is styled like the site with the customizable select (`appearance: base-select`, Chromium 135+; other
-browsers keep the system list), still a native `<select>`. **No direction button any more:** each sort option has its own direction (`DEFAULT_SORT_DIRS`); `?dir=` in a link still
+The sort control is our own list since 2026-11-20 (`src/components/SortMenu.tsx`, owner: the native list looked like a
+system window and only Chromium can restyle it): a button "Sort: Reliability" and a `role="listbox"` panel (check and copper
+rule on the chosen option; ArrowDown/Enter/Space open it, arrows/Home/End move, Enter/Space choose, Escape/Tab or a
+click outside close, focus returns to the button). Specs pick options with `e2e/fixtures/sortMenu.ts` (`pickSort`). **No direction button any more:** each sort option has its own direction (`DEFAULT_SORT_DIRS`); `?dir=` in a link still
 applies. **"Reset to defaults"** shows only off the default view (it was a disabled icon button). The network sentence box
 is framed, not filled.
 
@@ -92,9 +94,9 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/watchlist.html`; styles i
 - **Logged in:** the Mints page cards (`MintCard` with `showAlerts`) in the usual grid, the summary line and the DM
   explainer above them. A one-panel row layout (WatchlistRow) shipped briefly on 2026-11-19 and was reverted the same
   evening: the owner found the rows did not read as clickable. No "Add a mint" button.
-- **Explainer** (`watchlistNotifyExplainer`), checked against the server (backend `notificationLimits.ts`,
-  `nostrService.ts`): goes down / comes back at most once an hour each, "More alerts" adds three more, anyone with an
-  alert on also gets the public key and input fee change DMs, at most 40 DMs per 24-hour window.
+- **Explainer** (`watchlistNotifyExplainer`, shortened 2026-11-20 by the owner): "Optional alerts come as Nostr private
+  messages, at most 40 a day. Any alert also tells you when the mint's key or fee changes." Checked against the server
+  (backend `notificationLimits.ts`, `nostrService.ts`); the once-an-hour limit per direction is not repeated there.
 - **Alerts (owner's choice of 2026-11-19):** one switch per card (`WatchAlerts` in `NotifyStrip.tsx`, under the card foot, `role="switch"`,
   copper when on) turns "goes down" AND "goes up" on or off together in ONE request
   (`setNotifyFlags` in `notificationSubscription.ts`, one signature); it shows on when either is on. "More alerts" opens the

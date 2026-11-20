@@ -10,7 +10,7 @@ type Page = import('@playwright/test').Page
 // (e2e/fixtures/auditCz.ts); nothing here reaches cashu.info or audit.8333.space.
 
 const row = (page: Page, host: string) => page.locator('.audit-swaps-table tbody tr', { hasText: host })
-const czLink = (page: Page) => page.getByRole('link', { name: 'Open this mint on cashu.info' }) // in "How the auditor tests" since the 2026-11-19 redesign
+const czLink = (page: Page) => page.getByRole('link', { name: 'Open this mint on cashu.info' }) // under the verdict since 2026-11-20 (the "How the auditor tests" panel went)
 // cashu.info view (2026-11-13 layout): the verdict, one bar, the direction figures by key, swaps per day and ONE swap
 // list with a filter ("All | Deposits | Withdrawals | Failed"), 8 rows until "Show all".
 const tile = (page: Page, key: string) => page.locator(`.au-dirs [data-tile="${key}"]`)
@@ -780,9 +780,10 @@ test.describe('verdict-to-bar spacing', () => {
         const s = await spacing(page)
         expect(s.next).toBe('.au-figures')
         expect(s.leftover).toBeLessThan(4)
-        // verdict margin-bottom 18px + .au-figures margin-top 20px
+        // verdict margin-bottom 18px + .au-figures margin-top 20px, plus the source line under the verdict since 2026-11-20
+        const src = (await page.locator('.md-audit-src').boundingBox())!
         expect(s.gapToNext).toBeGreaterThanOrEqual(0)
-        expect(s.gapToNext).toBeLessThan(48)
+        expect(s.gapToNext - src.height - 12).toBeLessThan(48)
         await expectTwoColumnFigures(page)
       })
     })
