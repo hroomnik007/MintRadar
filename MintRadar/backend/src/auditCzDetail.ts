@@ -3,7 +3,8 @@
 // audit_cz_fetched_at and are the inputs of the audit part of the Reliability Score (shared/auditScore.ts);
 // the rest is for display. Visitors never trigger an outbound request; the endpoint reads audit_cz_detail only.
 //
-// Only the subset the Audit tab actually shows is kept (see StoredAuditCzDetail). Never stored: score, scoreParts,
+// The stored subset is the 7-day swap figures (including amount and fees) plus DLEQ and proof-state checks
+// (see StoredAuditCzDetail). Never stored: score, scoreParts,
 // reviews, daily, changes, incidents7d, latency, TLS, step timings, the auditor's swap test, network facts, spec,
 // Frankfurt data. The Network card does not use this source at all: IP, AS, country and the onion flag are
 // measured by us (mintAddress.ts, the ipinfo lookup in prober.ts, /v1/info `urls`).
@@ -20,8 +21,10 @@ export const DETAIL_RUN_BUDGET_MS = 25 * 60_000
 
 const MAX_COUNT = 10_000_000
 const MAX_MS = 10 * 60_000
+/** Amounts and fees in sat over a 7-day window; 1e12 sat is far above any realistic total. */
+const MAX_AMOUNT = 1_000_000_000_000
 
-export interface DetailDirection { total?: number; success?: number; failed?: number; avgMs?: number }
+export interface DetailDirection { total?: number; success?: number; failed?: number; avgMs?: number; amount?: number; fees?: number }
 export interface StoredAuditCzDetail {
   swaps7d?: {
     all?: DetailDirection
@@ -49,6 +52,7 @@ const ms = (v: unknown): number | undefined => {
   const n = finite(v, MAX_MS)
   return n === undefined ? undefined : Math.round(n)
 }
+const amount = (v: unknown): number | undefined => count(v, MAX_AMOUNT)
 /** Drops undefined entries; an object with no entry left becomes undefined. */
 function pack<T extends Obj>(o: T): T | undefined {
   const out: Obj = {}
@@ -58,7 +62,7 @@ function pack<T extends Obj>(o: T): T | undefined {
 
 function direction(v: unknown): DetailDirection | undefined {
   if (!isObj(v)) return undefined
-  return pack({ total: count(v['total']), success: count(v['success']), failed: count(v['failed']), avgMs: ms(v['avgMs']) })
+  return pack({ total: count(v['total']), success: count(v['success']), failed: count(v['failed']), avgMs: ms(v['avgMs']), amount: amount(v['amount']), fees: amount(v['fees']) })
 }
 
 /** The validated subset of one detail response, or null when the top level is unusable. `expectedId` guards a mismatching body. */
@@ -138,18 +142,69 @@ export function sumLongWindow(rows: DailyRow[], today: string): { total: number;
   return n === 0 ? null : { total, blamed, days: n * LONG_STEP_DAYS }
 }
 
+/** The first-of-day snapshot written to audit_cz_daily (score columns plus the display fields). */
+export interface AuditCzDailySnapshot {
+  total: number
+  blamed: number
+  failed?: number
+  success?: number
+  avgMs?: number
+  amount?: number
+  fees?: number
+  dest?: DetailDirection
+  source?: DetailDirection
+}
+
+/** Pure: the daily snapshot from a stored detail; null when the two score inputs are missing. */
+export function dailySnapshotFromDetail(detail: StoredAuditCzDetail): AuditCzDailySnapshot | null {
+  const total = detail.swaps7d?.all?.total
+  const blamed = detail.swaps7d?.errorsBlamed
+  if (typeof total !== 'number' || typeof blamed !== 'number') return null
+  const all = detail.swaps7d?.all
+  return {
+    total, blamed,
+    ...(typeof all?.failed === 'number' ? { failed: all.failed } : {}),
+    ...(typeof all?.success === 'number' ? { success: all.success } : {}),
+    ...(typeof all?.avgMs === 'number' ? { avgMs: all.avgMs } : {}),
+    ...(typeof all?.amount === 'number' ? { amount: all.amount } : {}),
+    ...(typeof all?.fees === 'number' ? { fees: all.fees } : {}),
+    ...(detail.swaps7d?.asDest ? { dest: detail.swaps7d.asDest } : {}),
+    ...(detail.swaps7d?.asSource ? { source: detail.swaps7d.asSource } : {}),
+  }
+}
+
+function dirVal(d: DetailDirection | undefined, key: keyof DetailDirection): number | null {
+  const v = d?.[key]
+  return typeof v === 'number' ? v : null
+}
+
 /**
  * Stores the day's row (only the FIRST usable totals of a UTC day are kept, so rows 7 days apart cover 7-day
  * spans that do not overlap) and returns the long window ending today. A database error returns null: the mint
  * is then scored from the 7-day window alone until the next run.
  */
-async function storeDailyAndSumLong(url: string, total: number, blamed: number, failed: number | undefined, nowMs: number): Promise<{ total: number; blamed: number; days: number } | null> {
+async function storeDailyAndSumLong(url: string, snap: AuditCzDailySnapshot, nowMs: number): Promise<{ total: number; blamed: number; days: number } | null> {
   try {
     const today = utcDay(nowMs)
     await pool.query(
-      `INSERT INTO audit_cz_daily (url, day, total, blamed, failed) VALUES ($1, $2::date, $3, $4, $5)
+      `INSERT INTO audit_cz_daily (
+         url, day, total, blamed, failed, success, avg_ms, amount, fees,
+         dest_total, dest_success, dest_failed, dest_avg_ms, dest_amount, dest_fees,
+         source_total, source_success, source_failed, source_avg_ms, source_amount, source_fees
+       ) VALUES (
+         $1, $2::date, $3, $4, $5, $6, $7, $8, $9,
+         $10, $11, $12, $13, $14, $15,
+         $16, $17, $18, $19, $20, $21
+       )
        ON CONFLICT (url, day) DO NOTHING`,
-      [url, today, total, blamed, failed ?? null],
+      [
+        url, today, snap.total, snap.blamed, snap.failed ?? null, snap.success ?? null,
+        snap.avgMs ?? null, snap.amount ?? null, snap.fees ?? null,
+        dirVal(snap.dest, 'total'), dirVal(snap.dest, 'success'), dirVal(snap.dest, 'failed'),
+        dirVal(snap.dest, 'avgMs'), dirVal(snap.dest, 'amount'), dirVal(snap.dest, 'fees'),
+        dirVal(snap.source, 'total'), dirVal(snap.source, 'success'), dirVal(snap.source, 'failed'),
+        dirVal(snap.source, 'avgMs'), dirVal(snap.source, 'amount'), dirVal(snap.source, 'fees'),
+      ],
     )
     const r = await pool.query(
       `SELECT to_char(day, 'YYYY-MM-DD') AS day, total, blamed FROM audit_cz_daily
@@ -203,10 +258,11 @@ export async function syncAuditCzDetails(opts: DetailRunOptions = {}): Promise<D
         // One statement = one transaction: the detail row and the score inputs on the tracked mint(s)
         // (exact normalised url, or an alias cashu.info lists for this mint) are written together. Both
         // numbers must be usable, otherwise NULLs (the mint scores neutral); a failed fetch never gets here.
-        const total = detail.swaps7d?.all?.total
-        const blamed = detail.swaps7d?.errorsBlamed
-        const usable = typeof total === 'number' && typeof blamed === 'number'
-        const long = usable ? await storeDailyAndSumLong(row.url, total, blamed, detail.swaps7d?.all?.failed, now()) : null
+        const snap = dailySnapshotFromDetail(detail)
+        const long = snap ? await storeDailyAndSumLong(row.url, snap, now()) : null
+        const total = snap?.total
+        const blamed = snap?.blamed
+        const usable = snap !== null
         await pool.query(
           `WITH up AS (
              INSERT INTO audit_cz_detail (url, detail, fetched_at) VALUES ($1, $2::jsonb, NOW())

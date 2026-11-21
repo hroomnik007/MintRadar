@@ -544,11 +544,34 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
     "swapsCounted": 69
   },
   "detail": {
-    "swaps7d": { "all": { "total": 126, "success": 107, "failed": 19, "avgMs": 8289 }, "asSource": { "total": 64, "success": 51, "failed": 13, "avgMs": 11719 }, "asDest": { "total": 62, "success": 56, "failed": 6, "avgMs": 5166 }, "errorsBlamed": 0, "dleq": { "valid": 56, "invalid": 0, "missing": 0 } },
+    "swaps7d": { "all": { "total": 126, "success": 107, "failed": 19, "avgMs": 8289, "amount": 16052, "fees": 302 }, "asSource": { "total": 64, "success": 51, "failed": 13, "avgMs": 11719, "amount": 12642, "fees": 156 }, "asDest": { "total": 62, "success": 56, "failed": 6, "avgMs": 5166, "amount": 3410, "fees": 146 }, "errorsBlamed": 0, "dleq": { "valid": 56, "invalid": 0, "missing": 0 } },
     "integrity": { "proof_state": { "checked": 9, "spent": 0, "pending": 0 } },
     "network": { "asn": 14061, "asName": "DIGITALOCEAN-ASN - DigitalOcean, LLC, US", "country": "US" },
     "onion": false,
     "fetchedAt": "2026-10-07T07:08:41.120Z"
+  },
+  "daily7d": [{ "day": "2026-11-15", "ok": 12, "failed": 2, "other": 0 }],
+  "long": { "windowDays": 21, "swaps": 360, "attributedFailures": 1 },
+  "since": { "day": "2026-11-07", "swaps": 480, "attributedFailures": 1 },
+  "weeks": [
+    { "start": "2026-11-07", "end": "2026-11-14", "swaps": 120, "attributedFailures": 0,
+      "failed": null, "succeeded": null, "failedElsewhere": null, "avgMs": null, "amount": null, "fees": null,
+      "deposits": null, "withdrawals": null },
+    { "start": "2026-11-14", "end": "2026-11-21", "swaps": 126, "attributedFailures": 0,
+      "failed": 19, "succeeded": 107, "failedElsewhere": 19, "avgMs": 8289, "amount": 16052, "fees": 302,
+      "deposits": { "total": 62, "success": 56, "failed": 6, "avgMs": 5166, "amount": 3410, "fees": 146 },
+      "withdrawals": { "total": 64, "success": 51, "failed": 13, "avgMs": 11719, "amount": 12642, "fees": 156 } }
+  ],
+  "totals": {
+    "d7": { "days": 7, "weeks": 1, "start": "2026-11-14", "end": "2026-11-21", "swaps": 126, "attributedFailures": 0,
+            "outcomes": { "since": "2026-11-14", "swaps": 126, "succeeded": 107, "failedElsewhere": 19, "attributedFailures": 0 },
+            "directions": { "since": "2026-11-14", "deposits": { "total": 62, "success": 56, "failed": 6 }, "withdrawals": { "total": 64, "success": 51, "failed": 13 } } },
+    "d28": { "days": 14, "weeks": 2, "start": "2026-11-07", "end": "2026-11-21", "swaps": 246, "attributedFailures": 0,
+             "outcomes": { "since": "2026-11-14", "swaps": 126, "succeeded": 107, "failedElsewhere": 19, "attributedFailures": 0 },
+             "directions": { "since": "2026-11-14", "deposits": { "total": 62, "success": 56, "failed": 6 }, "withdrawals": { "total": 64, "success": 51, "failed": 13 } } },
+    "all": { "days": 14, "weeks": 2, "start": "2026-11-07", "end": "2026-11-21", "swaps": 246, "attributedFailures": 0,
+             "outcomes": { "since": "2026-11-14", "swaps": 126, "succeeded": 107, "failedElsewhere": 19, "attributedFailures": 0 },
+             "directions": { "since": "2026-11-14", "deposits": { "total": 62, "success": 56, "failed": 6 }, "withdrawals": { "total": 64, "success": 51, "failed": 13 } } }
   }
 }
 ```
@@ -576,6 +599,11 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 | `swaps[].otherMintUrl` / `otherMintName` | string \| null | The counterpart of the swap: the destination for `from`, the source for `to` (name at most 100 characters). |
 | `stats7d` | object \| null | Counted by MintRadar, see below; `null` only when not covered. |
 | `detail` | object \| null \| absent | Validated subset of cashu.info's per-mint detail plus `fetchedAt`; `null` when covered but none stored yet; absent when not covered. See below. |
+| `daily7d` | array \| absent | MintRadar's own count of stored swaps per UTC day, last 7 days, oldest first, zero-filled (`[{ day, ok, failed, other }]`). Absent when not covered. |
+| `long` | object \| null \| absent | The score's long window (`{ windowDays, swaps, attributedFailures }`) from non-overlapping `audit_cz_daily` rows; `null` while only one 7-day total is stored. Absent when not covered. Unchanged: this is still what the score reads (through `mints.audit_cz_long_*`, not this field). |
+| `since` | object \| null \| absent | `{ day, swaps, attributedFailures }`: every stored non-overlapping 7-day row added up; `day` is the first day covered (`end − 7 days` of the oldest week). `null` when nothing is stored. Absent when not covered. |
+| `weeks` | array \| absent | The same non-overlapping snapshots as `since`, oldest first (additive, 2026-11-21). See below. Absent when not covered. |
+| `totals` | object \| absent | `{ d7, d28, all }` sums of `weeks` for the 7-day, 28-day and all-history views (additive, 2026-11-21). See below. Absent when not covered. |
 
 Which swaps are returned: with `direction=from` the swaps whose source is this mint (or one of its aliases), with `direction=to` those whose destination is this mint, with `direction=both` either. A swap that has this mint on both sides appears in all three, labelled `from`.
 
@@ -585,7 +613,7 @@ Which swaps are returned: with `direction=from` the swaps whose source is this m
 
 | Field | Type | Meaning |
 |---|---|---|
-| `detail.swaps7d.all` / `asSource` / `asDest` | `{ total, success, failed, avgMs }` (each number, optional) | 7-day swap counts of the mint: all swaps, as source (melts) and as destination (mints); `avgMs` in milliseconds. |
+| `detail.swaps7d.all` / `asSource` / `asDest` | `{ total, success, failed, avgMs, amount, fees }` (each number, optional) | 7-day swap counts of the mint: all swaps, as source (melts / withdrawals) and as destination (mints / deposits); `avgMs` in milliseconds; `amount` and `fees` in sat. |
 | `detail.swaps7d.errorsBlamed` | number | Failures cashu.info attributes to this mint. |
 | `detail.swaps7d.dleq` | `{ valid, invalid, missing }` | DLEQ proof checks of the swaps. |
 | `detail.integrity.proof_state` | `{ checked, spent, pending }` | The auditor's proof-state check of its own ecash. |
@@ -595,7 +623,11 @@ Which swaps are returned: with `direction=from` the swaps whose source is this m
 
 `detail7d` (the old derived summary) was **removed** when the new Audit tab shipped; read `detail.swaps7d` instead.
 
-**Not covered:** still `200`, `{ "source": "cashu.info", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
+`weeks` (additive, 2026-11-21) is the stored history of cashu.info's 7-day snapshots, not a calendar-day series: each `audit_cz_daily` row is itself a rolling 7-day window, so only rows 7 days apart are kept (the same stride as `since` / the score's long window). Oldest first. `end` is the UTC day the snapshot was first stored; `start` is 7 days before (the first day that window covers). `swaps` / `attributedFailures` are always present. `failed`, `succeeded` (`total − failed`), `failedElsewhere` (`failed − attributedFailures`), `avgMs`, `amount`, `fees`, `deposits` and `withdrawals` are `null` when that field was not stored for the week (rows from before 2026-11-21, or a direction cashu.info omitted). `deposits` is cashu.info `asDest`, `withdrawals` is `asSource`. Display only — this array is not an input of the Reliability Score.
+
+`totals` (additive, 2026-11-21) sums those weeks for three views the Audit tab can switch between: `d7` (today's snapshot), `d28` (the same weeks as `long` / the score's long window: today and 7, 14 and 21 days back, stopping at the first gap, at most four), `all` (every stored week). Each value is `null` when that view has no weeks, otherwise `{ days, weeks, start, end, swaps, attributedFailures, outcomes, directions }`. `swaps` / `attributedFailures` always add every week in the view. `outcomes` and `directions` add up only the newest contiguous suffix of weeks that have those fields (walking backward and stopping at the first week that lacks them) so a total is never invented for a period that was only partly stored; `since` on each is the `start` of the oldest week in that suffix — the day the split applies from. `directions.deposits` / `withdrawals` are `{ total, success, failed }`.
+
+**Not covered:** still `200`, `{ "source": "cashu.info", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail`, `daily7d`, `long`, `since`, `weeks` or `totals` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
 
 **Errors:** `400` `{"error":"Missing required query parameter: url"}` (missing, empty or repeated `url`), `{"error":"url must start with https://"}`, `{"error":"url exceeds maximum length of 500 characters"}`, `{"error":"Invalid url"}` (not well-formed, has whitespace or credentials, private/loopback host), `{"error":"direction must be from, to, or both"}`; `429` from the global rate limit; `500` `{"error":"Internal server error"}`. Successful responses carry `Cache-Control: public, max-age=60` and an `ETag`.
 

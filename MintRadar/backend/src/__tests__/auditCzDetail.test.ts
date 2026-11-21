@@ -28,7 +28,7 @@ vi.mock('../ssrf.js', () => ({
   RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536 },
 }))
 
-import { parseAuditCzDetailFull, syncAuditCzDetails } from '../auditCzDetail.js'
+import { parseAuditCzDetailFull, syncAuditCzDetails, dailySnapshotFromDetail } from '../auditCzDetail.js'
 
 const ID = 'cmmx4oml50000a5l3z6b7qr83'
 
@@ -57,9 +57,9 @@ const real = () => ({
 
 const EXPECTED = {
   swaps7d: {
-    all: { total: 126, success: 107, failed: 19, avgMs: 8289 },
-    asSource: { total: 64, success: 51, failed: 13, avgMs: 11719 },
-    asDest: { total: 62, success: 56, failed: 6, avgMs: 5166 },
+    all: { total: 126, success: 107, failed: 19, avgMs: 8289, amount: 16052, fees: 302 },
+    asSource: { total: 64, success: 51, failed: 13, avgMs: 11719, amount: 12642, fees: 156 },
+    asDest: { total: 62, success: 56, failed: 6, avgMs: 5166, amount: 3410, fees: 146 },
     errorsBlamed: 0, dleq: { valid: 56, invalid: 0, missing: 0 },
   },
   integrity: {
@@ -104,9 +104,9 @@ describe('parseAuditCzDetailFull', () => {
     r['swaps7d'].errorsBlamed = '0'
     r['integrity'].proof_state.detail.checked = 1.5
     const out = parseAuditCzDetailFull(r, ID)!
-    expect(out.swaps7d?.all).toEqual({ success: 107, failed: 19, avgMs: 8289 })
-    expect(out.swaps7d?.asSource).toEqual({ total: 64, failed: 13, avgMs: 11719 })
-    expect(out.swaps7d?.asDest).toEqual({ total: 62, success: 56, failed: 6 })
+    expect(out.swaps7d?.all).toEqual({ success: 107, failed: 19, avgMs: 8289, amount: 16052, fees: 302 })
+    expect(out.swaps7d?.asSource).toEqual({ total: 64, failed: 13, avgMs: 11719, amount: 12642, fees: 156 })
+    expect(out.swaps7d?.asDest).toEqual({ total: 62, success: 56, failed: 6, amount: 3410, fees: 146 })
     expect(out.swaps7d).not.toHaveProperty('errorsBlamed')
     expect(out.integrity?.proof_state).not.toHaveProperty('checked')
   })
@@ -128,9 +128,32 @@ describe('parseAuditCzDetailFull', () => {
     for (const bad of [null, undefined, 'x', 5, [], [real()]]) expect(parseAuditCzDetailFull(bad, ID)).toBeNull()
     expect(parseAuditCzDetailFull({ ...real(), id: 'someoneelse01' }, ID)).toBeNull() // body of another mint
   })
+
+  it('drops an amount or fee that is not a usable non-negative integer', () => {
+    const r = real() as { swaps7d: { all: Record<string, unknown> } }
+    r.swaps7d.all['amount'] = 1e15
+    r.swaps7d.all['fees'] = -1
+    const out = parseAuditCzDetailFull(r, ID)!
+    expect(out.swaps7d?.all).not.toHaveProperty('amount')
+    expect(out.swaps7d?.all).not.toHaveProperty('fees')
+    expect(out.swaps7d?.all).toMatchObject({ total: 126, success: 107 })
+  })
+})
+
+
+describe('dailySnapshotFromDetail', () => {
+  it('copies the 7-day figures the daily row stores, and is null without both score inputs', () => {
+    expect(dailySnapshotFromDetail(EXPECTED)).toEqual({
+      total: 126, blamed: 0, failed: 19, success: 107, avgMs: 8289, amount: 16052, fees: 302,
+      dest: EXPECTED.swaps7d.asDest, source: EXPECTED.swaps7d.asSource,
+    })
+    expect(dailySnapshotFromDetail({ swaps7d: { all: { total: 5 } } })).toBeNull()
+    expect(dailySnapshotFromDetail({ swaps7d: { errorsBlamed: 0 } })).toBeNull()
+  })
 })
 
 describe('syncAuditCzDetails', () => {
+
   const mk = (n: number) => Array.from({ length: n }, (_, i) => ({ url: `https://m${i}.example`, page: `https://cashu.info/mint/mintid${String(i).padStart(4, '0')}` }))
   beforeEach(() => {
     db.details.clear(); db.scoreInputs.clear(); queryMock.mockClear(); fetchMock.mockReset(); readMock.mockReset()
