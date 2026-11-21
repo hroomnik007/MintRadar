@@ -12,7 +12,7 @@ import { pool } from './db.js'
 import { normalizeUrl } from './discovery.js'
 import { publicMintName } from './mintNames.js'
 import { safeFetch, readJsonLimited, RESPONSE_CAPS } from './ssrf.js'
-import { sumLongWindow, utcDay, LONG_STEP_DAYS, type StoredAuditCzDetail, type AuditCzDetailResponse, type DailyRow } from './auditCzDetail.js'
+import { sumLongWindow, utcDay, LONG_STEP_DAYS, LONG_MAX_ROWS, type StoredAuditCzDetail, type AuditCzDetailResponse, type DailyRow } from './auditCzDetail.js'
 
 // Historical identifier (the service was audit.cashu.cz): stays as the stored `source` column value.
 export const AUDIT_CZ_SOURCE = 'audit.cashu.cz'
@@ -419,6 +419,73 @@ export interface AuditCzResponse {
   long?: { windowDays: number; swaps: number; attributedFailures: number } | null
   /** Every stored 7-day total that does not overlap the others, added up; `day` is the first day the sum covers. Null when nothing is stored. */
   since?: { day: string; swaps: number; attributedFailures: number } | null
+  /** Every stored non-overlapping 7-day snapshot (audit_cz_daily, the same stride as `since`), oldest first. Absent when the mint is not covered. */
+  weeks?: AuditCzWeek[]
+  /** Sums of `weeks` for the 7-day, 28-day and all-history views. Absent when the mint is not covered. */
+  totals?: AuditCzTotals
+}
+
+/** One direction of a stored 7-day snapshot; null fields were not stored for that week. */
+export interface AuditCzWeekDirection {
+  total: number | null
+  success: number | null
+  failed: number | null
+  avgMs: number | null
+  amount: number | null
+  fees: number | null
+}
+
+/**
+ * One stored 7-day snapshot of cashu.info's per-mint detail. `start` is the first day it covers and `end` the day it
+ * was stored (the 7 days before `end`). `swaps` and `attributedFailures` are always set; every other figure is null
+ * when it was not stored for that week (snapshots from before 2026-11-21 carry only total, blamed and failed).
+ */
+export interface AuditCzWeek {
+  start: string
+  end: string
+  swaps: number
+  attributedFailures: number
+  failed: number | null
+  succeeded: number | null
+  failedElsewhere: number | null
+  avgMs: number | null
+  amount: number | null
+  fees: number | null
+  deposits: AuditCzWeekDirection | null
+  withdrawals: AuditCzWeekDirection | null
+}
+
+/** Succeeded / failed elsewhere summed over the newest weeks that all have them; `since` is the first day covered. */
+export interface AuditCzOutcomeSplit { since: string; swaps: number; succeeded: number; failedElsewhere: number; attributedFailures: number }
+/** Deposits / withdrawals summed over the newest weeks that all have them; `since` is the first day covered. */
+export interface AuditCzDirectionSplit {
+  since: string
+  deposits: { total: number; success: number; failed: number }
+  withdrawals: { total: number; success: number; failed: number }
+}
+
+/** One view of the history: the weeks it adds up and their sums. */
+export interface AuditCzPeriodTotal {
+  /** Days the sum covers (7 per week). */
+  days: number
+  start: string
+  end: string
+  weeks: number
+  swaps: number
+  attributedFailures: number
+  /** Null when no week of the period has stored its failures. */
+  outcomes: AuditCzOutcomeSplit | null
+  /** Null when no week of the period has stored a direction split. */
+  directions: AuditCzDirectionSplit | null
+}
+
+export interface AuditCzTotals {
+  /** The snapshot stored today; null when today's has not been stored yet. */
+  d7: AuditCzPeriodTotal | null
+  /** Today's snapshot and the ones 7, 14 and 21 days older, stopping at the first missing one (the score's long window). */
+  d28: AuditCzPeriodTotal | null
+  /** Every stored week. */
+  all: AuditCzPeriodTotal | null
 }
 
 export interface AuditCzDay { day: string; ok: number; failed: number; other: number }
@@ -455,6 +522,159 @@ export function sumSince(rows: DailyRow[], today: string): { day: string; swaps:
     if (first === null || t < first) first = t
   }
   return first === null ? null : { day: utcDay(first - LONG_STEP_DAYS * 86_400_000), swaps, attributedFailures: blamed }
+}
+
+/** One audit_cz_daily row as read for the weeks; every column after blamed is nullable. */
+export interface DailyWeekRow {
+  day: string
+  total: unknown
+  blamed: unknown
+  failed?: unknown
+  success?: unknown
+  avg_ms?: unknown
+  amount?: unknown
+  fees?: unknown
+  dest_total?: unknown
+  dest_success?: unknown
+  dest_failed?: unknown
+  dest_avg_ms?: unknown
+  dest_amount?: unknown
+  dest_fees?: unknown
+  source_total?: unknown
+  source_success?: unknown
+  source_failed?: unknown
+  source_avg_ms?: unknown
+  source_amount?: unknown
+  source_fees?: unknown
+}
+
+/** A non-negative finite number from a row cell (pg returns BIGINT as a string), else null. */
+function cell(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
+function weekDirection(r: DailyWeekRow, side: 'dest' | 'source'): AuditCzWeekDirection | null {
+  const t = cell(r[`${side}_total`]), s = cell(r[`${side}_success`]), f = cell(r[`${side}_failed`])
+  const avgMs = cell(r[`${side}_avg_ms`]), amount = cell(r[`${side}_amount`]), fees = cell(r[`${side}_fees`])
+  if (t === null && s === null && f === null && avgMs === null && amount === null && fees === null) return null
+  return {
+    total: t,
+    success: t !== null && s !== null ? Math.min(s, t) : s,
+    failed: t !== null && f !== null ? Math.min(f, t) : f,
+    avgMs, amount, fees,
+  }
+}
+
+/**
+ * Pure: the stored 7-day snapshots that do not overlap (the rows a multiple of 7 days before `today`, as in
+ * sumSince), oldest first. Succeeded and failed elsewhere are derived from total, failed and blamed when failed
+ * was stored: succeeded = total - failed, failed elsewhere = failed - blamed (blamed and failed are clamped so the
+ * three add up to total). Rows of the future or of the overlapping days in between are left out.
+ */
+export function buildAuditCzWeeks(rows: DailyWeekRow[], today: string): AuditCzWeek[] {
+  const t0 = Date.parse(`${today}T00:00:00Z`)
+  const out: AuditCzWeek[] = []
+  for (const r of rows) {
+    const t = Date.parse(`${r.day}T00:00:00Z`)
+    const diff = Math.round((t0 - t) / 86_400_000)
+    if (!Number.isFinite(t) || diff < 0 || diff % LONG_STEP_DAYS !== 0) continue
+    const total = cell(r.total)
+    const blamedRaw = cell(r.blamed)
+    if (total === null || blamedRaw === null) continue
+    const blamed = Math.min(blamedRaw, total)
+    const failedRaw = cell(r.failed)
+    const failed = failedRaw === null ? null : Math.min(Math.max(failedRaw, blamed), total)
+    out.push({
+      start: utcDay(t - LONG_STEP_DAYS * 86_400_000),
+      end: r.day,
+      swaps: total,
+      attributedFailures: blamed,
+      failed,
+      succeeded: failed === null ? null : total - failed,
+      failedElsewhere: failed === null ? null : failed - blamed,
+      avgMs: cell(r.avg_ms),
+      amount: cell(r.amount),
+      fees: cell(r.fees),
+      deposits: weekDirection(r, 'dest'),
+      withdrawals: weekDirection(r, 'source'),
+    })
+  }
+  return out.sort((a, b) => a.end.localeCompare(b.end))
+}
+
+const completeDir = (d: AuditCzWeekDirection | null): d is AuditCzWeekDirection & { total: number; success: number; failed: number } =>
+  !!d && d.total !== null && d.success !== null && d.failed !== null
+
+/**
+ * Pure: the sums of the given weeks (oldest first). The outcome and direction splits add up only the NEWEST weeks
+ * that all carry them, walking back from the newest and stopping at the first week without; `since` names the first
+ * day of the oldest week they include, so the UI can say "split since …" for history that started before the split
+ * was stored. Null for an empty list.
+ */
+export function buildAuditCzPeriodTotal(weeks: AuditCzWeek[]): AuditCzPeriodTotal | null {
+  if (weeks.length === 0) return null
+  const first = weeks[0] as AuditCzWeek
+  const last = weeks[weeks.length - 1] as AuditCzWeek
+  let swaps = 0
+  let blamed = 0
+  for (const w of weeks) { swaps += w.swaps; blamed += w.attributedFailures }
+
+  let outcomes: AuditCzOutcomeSplit | null = null
+  for (let i = weeks.length - 1; i >= 0; i--) {
+    const w = weeks[i] as AuditCzWeek
+    if (w.succeeded === null || w.failedElsewhere === null) break
+    outcomes = outcomes
+      ? { since: w.start, swaps: outcomes.swaps + w.swaps, succeeded: outcomes.succeeded + w.succeeded, failedElsewhere: outcomes.failedElsewhere + w.failedElsewhere, attributedFailures: outcomes.attributedFailures + w.attributedFailures }
+      : { since: w.start, swaps: w.swaps, succeeded: w.succeeded, failedElsewhere: w.failedElsewhere, attributedFailures: w.attributedFailures }
+  }
+
+  let dirSince: string | null = null
+  let depSum = { total: 0, success: 0, failed: 0 }
+  let witSum = { total: 0, success: 0, failed: 0 }
+  for (let i = weeks.length - 1; i >= 0; i--) {
+    const w = weeks[i] as AuditCzWeek
+    if (!completeDir(w.deposits) || !completeDir(w.withdrawals)) break
+    depSum = { total: depSum.total + w.deposits.total, success: depSum.success + w.deposits.success, failed: depSum.failed + w.deposits.failed }
+    witSum = { total: witSum.total + w.withdrawals.total, success: witSum.success + w.withdrawals.success, failed: witSum.failed + w.withdrawals.failed }
+    dirSince = w.start
+  }
+  const directions: AuditCzDirectionSplit | null = dirSince
+    ? { since: dirSince, deposits: depSum, withdrawals: witSum }
+    : null
+
+  return {
+    days: weeks.length * LONG_STEP_DAYS,
+    start: first.start,
+    end: last.end,
+    weeks: weeks.length,
+    swaps,
+    attributedFailures: blamed,
+    outcomes,
+    directions,
+  }
+}
+
+/**
+ * Pure: the three views of the Audit tab. d7 = today's snapshot; d28 = today's and the ones 7, 14 and 21 days
+ * older while each exists (the same weeks as the score's long window, sumLongWindow); all = every week. Needs
+ * `weeks` from buildAuditCzWeeks with the same `today`.
+ */
+export function buildAuditCzTotals(weeks: AuditCzWeek[], today: string): AuditCzTotals {
+  const byEnd = new Map(weeks.map(w => [w.end, w]))
+  const t0 = Date.parse(`${today}T00:00:00Z`)
+  const recent: AuditCzWeek[] = []
+  for (let n = 0; n < LONG_MAX_ROWS; n++) {
+    const w = byEnd.get(utcDay(t0 - n * LONG_STEP_DAYS * 86_400_000))
+    if (!w) break
+    recent.unshift(w)
+  }
+  return {
+    d7: buildAuditCzPeriodTotal(recent.slice(-1)),
+    d28: buildAuditCzPeriodTotal(recent),
+    all: buildAuditCzPeriodTotal(weeks),
+  }
 }
 
 
@@ -598,13 +818,19 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
   )
   const daily7d = buildAuditCzDaily(dq.rows as Array<{ day: string; outcome: string; n: unknown }>, today)
   const dr = await pool.query(
-    `SELECT to_char(day, 'YYYY-MM-DD') AS day, total, blamed FROM audit_cz_daily WHERE url = $1 AND day <= $2::date`,
+    `SELECT to_char(day, 'YYYY-MM-DD') AS day, total, blamed, failed, success, avg_ms, amount, fees,
+            dest_total, dest_success, dest_failed, dest_avg_ms, dest_amount, dest_fees,
+            source_total, source_success, source_failed, source_avg_ms, source_amount, source_fees
+       FROM audit_cz_daily WHERE url = $1 AND day <= $2::date ORDER BY day`,
     [canonical, today],
   )
-  const dailyRows = dr.rows as DailyRow[]
+  const weekRows = dr.rows as DailyWeekRow[]
+  const dailyRows: DailyRow[] = weekRows.map(r => ({ day: r.day, total: Number(r.total), blamed: Number(r.blamed) }))
   const longSum = sumLongWindow(dailyRows, today)
   const long = longSum && longSum.days > LONG_STEP_DAYS ? { windowDays: longSum.days, swaps: longSum.total, attributedFailures: longSum.blamed } : null
   const since = sumSince(dailyRows, today)
+  const weeks = buildAuditCzWeeks(weekRows, today)
+  const totals = buildAuditCzTotals(weeks, today)
   return {
     source: AUDIT_CZ_API_SOURCE,
     // Rebuilt from the id, so a row stored under the old host is served with the new page URL.
@@ -627,5 +853,7 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
     daily7d,
     long,
     since,
+    weeks,
+    totals,
   }
 }

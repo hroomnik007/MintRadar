@@ -583,6 +583,26 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE mints ADD COLUMN IF NOT EXISTS last_contacts_at TIMESTAMPTZ',
     // Newest mint_changes.id a subscriber was told about (public key / input fee DMs): the dedupe claim, one DM per change row.
     'ALTER TABLE notification_subscriptions ADD COLUMN IF NOT EXISTS last_notified_change_id BIGINT',
+    // Display history of cashu.info's 7-day snapshots (auditCzDetail.ts). Additive, nullable, no rewrite of
+    // existing first-of-day rows (ON CONFLICT DO NOTHING stays). The score still reads only total, blamed and
+    // the long-window sums. failed was already on the table; the rest is what the per-mint detail provides
+    // for all / asDest (deposits) / asSource (withdrawals).
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS success INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS avg_ms INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS amount BIGINT',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS fees BIGINT',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS dest_total INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS dest_success INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS dest_failed INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS dest_avg_ms INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS dest_amount BIGINT',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS dest_fees BIGINT',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_total INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_success INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_failed INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_avg_ms INTEGER',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_amount BIGINT',
+    'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_fees BIGINT',
   ]
 
   for (const sql of migrations) {

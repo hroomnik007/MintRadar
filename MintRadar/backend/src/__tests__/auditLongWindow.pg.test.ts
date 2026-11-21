@@ -45,14 +45,25 @@ describe.skipIf(!url)('long audit window against a real Postgres', () => {
       detail.swaps7d = { all: { total: 60, success: 58, failed: 2 }, errorsBlamed: 1 }
       await syncAuditCzDetails(only)
       expect(await col()).toEqual({ audit_cz_total: 60, audit_cz_blamed: 1, audit_cz_long_total: 120, audit_cz_long_blamed: 4, audit_cz_long_days: 21 })
-      const today = (await pool.query(`SELECT total, blamed FROM audit_cz_daily WHERE url = $1 AND day = (NOW() AT TIME ZONE 'UTC')::date`, [m])).rows[0]
-      expect(today).toEqual({ total: 50, blamed: 0 })
+      const today = (await pool.query(`SELECT total, blamed, failed, success FROM audit_cz_daily WHERE url = $1 AND day = (NOW() AT TIME ZONE 'UTC')::date`, [m])).rows[0]
+      expect(today).toEqual({ total: 50, blamed: 0, failed: 1, success: 49 })
 
       const { app } = await import('../index.js')
+      const todayRow = (await pool.query(
+        `SELECT total, blamed, failed, success FROM audit_cz_daily WHERE url = $1 AND day = (NOW() AT TIME ZONE 'UTC')::date`, [m])).rows[0]
+      expect(todayRow).toEqual({ total: 50, blamed: 0, failed: 1, success: 49 })
+
       const a = (await request(app).get('/api/mints/audit-cz').query({ url: m })).body
       expect(a.long).toEqual({ windowDays: 21, swaps: 120, attributedFailures: 4 })
       expect(a.since.swaps).toBe(620) // 50 + 40 + 30 + the row 28 days back; the row 3 days back overlaps and is left out
       expect(a.since.attributedFailures).toBe(4)
+      expect(a.weeks).toHaveLength(4) // today, 7, 14 and 28 days back; the row 3 days back overlaps
+      expect(a.weeks[a.weeks.length - 1]).toMatchObject({ swaps: 50, attributedFailures: 0, failed: 1, succeeded: 49, failedElsewhere: 1 })
+      expect(a.weeks[0]).toMatchObject({ swaps: 500, succeeded: null, failedElsewhere: null }) // 28 days back, only total/blamed stored
+      expect(a.totals.d7).toMatchObject({ days: 7, weeks: 1, swaps: 50, attributedFailures: 0 })
+      expect(a.totals.d7.outcomes).toEqual({ since: a.weeks[a.weeks.length - 1].start, swaps: 50, succeeded: 49, failedElsewhere: 1, attributedFailures: 0 })
+      expect(a.totals.d28).toMatchObject({ days: 21, weeks: 3, swaps: 120, attributedFailures: 4 })
+      expect(a.totals.all).toMatchObject({ days: 28, weeks: 4, swaps: 620, attributedFailures: 4 })
       expect(a.daily7d).toHaveLength(7)
       expect(a.daily7d[6]).toMatchObject({ ok: 1, failed: 1, other: 0 })
       expect(a.daily7d.slice(0, 6).every((d: { ok: number; failed: number }) => d.ok + d.failed === 0)).toBe(true)

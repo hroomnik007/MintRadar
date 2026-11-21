@@ -43,4 +43,16 @@ describe('initDb — audit_cz score inputs', () => {
     await initDb()
     expect(queries.some(q => /audit_recent_/.test(q) && /(DROP|RENAME)/i.test(q))).toBe(false)
   })
+
+  it('adds the audit_cz_daily history columns additively (IF NOT EXISTS) and never drops them', async () => {
+    await initDb()
+    for (const col of [
+      'success INTEGER', 'avg_ms INTEGER', 'amount BIGINT', 'fees BIGINT',
+      'dest_total INTEGER', 'dest_success INTEGER', 'dest_failed INTEGER', 'dest_avg_ms INTEGER', 'dest_amount BIGINT', 'dest_fees BIGINT',
+      'source_total INTEGER', 'source_success INTEGER', 'source_failed INTEGER', 'source_avg_ms INTEGER', 'source_amount BIGINT', 'source_fees BIGINT',
+    ]) {
+      expect(queries).toContain(`ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS ${col}`)
+    }
+    expect(queries.some(q => /audit_cz_daily/i.test(q) && /DROP COLUMN/i.test(q))).toBe(false)
+  })
 })

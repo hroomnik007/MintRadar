@@ -47,9 +47,50 @@ export interface AuditCzData {
   long?: { windowDays: number; swaps: number; attributedFailures: number } | null
   /** Every stored 7-day total that does not overlap, added up. */
   since?: { day: string; swaps: number; attributedFailures: number } | null
+  /** Non-overlapping 7-day snapshots, oldest first. Absent when not covered. */
+  weeks?: AuditCzWeek[]
+  /** Sums of `weeks` for the 7-day, 28-day and all-history views. Absent when not covered. */
+  totals?: AuditCzTotals
 }
 
-export interface AuditCzDirectionCounts { total?: number; success?: number; failed?: number; avgMs?: number }
+export interface AuditCzWeekDirection {
+  total: number | null
+  success: number | null
+  failed: number | null
+  avgMs: number | null
+  amount: number | null
+  fees: number | null
+}
+
+export interface AuditCzWeek {
+  start: string
+  end: string
+  swaps: number
+  attributedFailures: number
+  failed: number | null
+  succeeded: number | null
+  failedElsewhere: number | null
+  avgMs: number | null
+  amount: number | null
+  fees: number | null
+  deposits: AuditCzWeekDirection | null
+  withdrawals: AuditCzWeekDirection | null
+}
+
+export interface AuditCzPeriodTotal {
+  days: number
+  weeks: number
+  start: string
+  end: string
+  swaps: number
+  attributedFailures: number
+  outcomes: { since: string; swaps: number; succeeded: number; failedElsewhere: number; attributedFailures: number } | null
+  directions: { since: string; deposits: { total: number; success: number; failed: number }; withdrawals: { total: number; success: number; failed: number } } | null
+}
+
+export interface AuditCzTotals { d7: AuditCzPeriodTotal | null; d28: AuditCzPeriodTotal | null; all: AuditCzPeriodTotal | null }
+
+export interface AuditCzDirectionCounts { total?: number; success?: number; failed?: number; avgMs?: number; amount?: number; fees?: number }
 
 /** Every field is optional: the backend drops a malformed field instead of the record. Strings are untrusted text. */
 export interface AuditCzDetail {
