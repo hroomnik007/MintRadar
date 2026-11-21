@@ -423,6 +423,8 @@ export interface AuditCzResponse {
   weeks?: AuditCzWeek[]
   /** Sums of `weeks` for the 7-day, 28-day and all-history views. Absent when the mint is not covered. */
   totals?: AuditCzTotals
+  /** Official 7-day (per-mint detail) and 30-day (swap graph + list blamed) views for the Audit tab. Absent when not covered. */
+  periods?: AuditCzPeriods
 }
 
 /** One direction of a stored 7-day snapshot; null fields were not stored for that week. */
@@ -487,6 +489,28 @@ export interface AuditCzTotals {
   /** Every stored week. */
   all: AuditCzPeriodTotal | null
 }
+
+/** Successful of all, plus how many failed, for deposits or withdrawals in one official period. */
+export interface AuditCzPeriodSplit { success: number; total: number; failed: number }
+
+/**
+ * One official cashu.info window for the Audit tab (display only). `succeeded` / `failedElsewhere` / `attributedFailures`
+ * add up to `swaps`. The success rate the tab shows is succeeded / swaps, the same calculation as before.
+ */
+export interface AuditCzPeriodView {
+  days: 7 | 30
+  swaps: number
+  succeeded: number
+  failedElsewhere: number
+  attributedFailures: number
+  avgMs: number | null
+  amount: number | null
+  deposits: AuditCzPeriodSplit | null
+  withdrawals: AuditCzPeriodSplit | null
+  fetchedAt: string | null
+}
+
+export interface AuditCzPeriods { d7: AuditCzPeriodView | null; d30: AuditCzPeriodView | null }
 
 export interface AuditCzDay { day: string; ok: number; failed: number; other: number }
 
@@ -677,6 +701,104 @@ export function buildAuditCzTotals(weeks: AuditCzWeek[], today: string): AuditCz
   }
 }
 
+const periodSplit = (paid: number, failed: number): AuditCzPeriodSplit => ({
+  success: paid, failed, total: paid + failed,
+})
+
+/**
+ * Pure: one official period from total, paid/failed and blamed. Blamed and failed are clamped so
+ * succeeded + failed elsewhere + blamed = swaps. The tab's success rate is succeeded / swaps.
+ */
+export function buildAuditCzPeriodView(input: {
+  days: 7 | 30
+  total: number
+  failed: number
+  blamed: number
+  avgMs: number | null
+  amount: number | null
+  deposits: { paid: number; failed: number } | null
+  withdrawals: { paid: number; failed: number } | null
+  fetchedAt: string | null
+}): AuditCzPeriodView {
+  const total = Math.max(0, input.total)
+  const blamed = Math.min(Math.max(0, input.blamed), total)
+  const failed = Math.min(Math.max(input.failed, blamed), total)
+  return {
+    days: input.days,
+    swaps: total,
+    succeeded: total - failed,
+    failedElsewhere: failed - blamed,
+    attributedFailures: blamed,
+    avgMs: input.avgMs,
+    amount: input.amount,
+    deposits: input.deposits ? periodSplit(input.deposits.paid, input.deposits.failed) : null,
+    withdrawals: input.withdrawals ? periodSplit(input.withdrawals.paid, input.withdrawals.failed) : null,
+    fetchedAt: input.fetchedAt,
+  }
+}
+
+/** The tab's 7-day view from the stored per-mint detail; null without both score inputs (total and errorsBlamed). */
+export function periodFromDetail(detail: StoredAuditCzDetail | null | undefined, fetchedAt: string | null): AuditCzPeriodView | null {
+  const all = detail?.swaps7d?.all
+  const total = all?.total
+  const blamed = detail?.swaps7d?.errorsBlamed
+  if (typeof total !== 'number' || typeof blamed !== 'number') return null
+  const dir = (d: { total?: number; success?: number; failed?: number } | undefined): { paid: number; failed: number } | null => {
+    if (typeof d?.success !== 'number' || typeof d?.total !== 'number') return null
+    const paid = Math.min(d.success, d.total)
+    const failed = typeof d.failed === 'number' ? Math.min(d.failed, d.total) : Math.max(0, d.total - paid)
+    return { paid, failed }
+  }
+  return buildAuditCzPeriodView({
+    days: 7,
+    total,
+    failed: typeof all?.failed === 'number' ? all.failed : blamed,
+    blamed,
+    avgMs: typeof all?.avgMs === 'number' ? all.avgMs : null,
+    amount: typeof all?.amount === 'number' ? all.amount : null,
+    deposits: dir(detail?.swaps7d?.asDest),
+    withdrawals: dir(detail?.swaps7d?.asSource),
+    fetchedAt,
+  })
+}
+
+/** The tab's 30-day view from the stored swap graph plus the list feed's attributedFailures; null until first stored. */
+export function periodFromNetwork30d(row: {
+  network30_paid?: unknown
+  network30_failed?: unknown
+  network30_amount?: unknown
+  network30_avg_ms?: unknown
+  network30_dest_paid?: unknown
+  network30_dest_failed?: unknown
+  network30_dest_amount?: unknown
+  network30_source_paid?: unknown
+  network30_source_failed?: unknown
+  network30_source_amount?: unknown
+  network30_fetched_at?: unknown
+  attributed_failures?: unknown
+}): AuditCzPeriodView | null {
+  const paid = cell(row.network30_paid)
+  const failed = cell(row.network30_failed)
+  const fetchedAt = iso(row.network30_fetched_at)
+  if (paid === null || failed === null || !fetchedAt) return null
+  const destPaid = cell(row.network30_dest_paid)
+  const destFailed = cell(row.network30_dest_failed)
+  const sourcePaid = cell(row.network30_source_paid)
+  const sourceFailed = cell(row.network30_source_failed)
+  return buildAuditCzPeriodView({
+    days: 30,
+    total: paid + failed,
+    failed,
+    blamed: cell(row.attributed_failures) ?? 0,
+    avgMs: cell(row.network30_avg_ms),
+    amount: cell(row.network30_amount),
+    deposits: destPaid !== null && destFailed !== null ? { paid: destPaid, failed: destFailed } : null,
+    withdrawals: sourcePaid !== null && sourceFailed !== null ? { paid: sourcePaid, failed: sourceFailed } : null,
+    fetchedAt,
+  })
+}
+
+
 
 /** One row per (direction, outcome) from the grouped query in getAuditCzForMint. */
 export interface AuditCzStatsRow {
@@ -740,7 +862,11 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
   const key = auditCzKey(rawUrl)
   // Match on their url or any of their aliases (stored keyed the same way).
   const m = await pool.query(
-    `SELECT url, state, uptime24h, uptime7d, uptime30d, attributed_failures, minted, melted, last_check, page, fetched_at
+    `SELECT url, state, uptime24h, uptime7d, uptime30d, attributed_failures, minted, melted, last_check, page, fetched_at,
+            network30_paid, network30_failed, network30_amount, network30_avg_ms,
+            network30_dest_paid, network30_dest_failed, network30_dest_amount,
+            network30_source_paid, network30_source_failed, network30_source_amount,
+            network30_fetched_at
        FROM audit_cz_mints
       WHERE url = $1 OR url IN (SELECT mint_url FROM audit_cz_aliases WHERE alias_url = $1)
       LIMIT 1`,
@@ -855,5 +981,6 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
     since,
     weeks,
     totals,
+    periods: { d7: periodFromDetail(detail, detail?.fetchedAt ?? null), d30: periodFromNetwork30d(row) },
   }
 }

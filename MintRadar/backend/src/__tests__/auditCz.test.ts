@@ -63,7 +63,7 @@ vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn
 vi.mock('../ssrf.js', () => ({
   safeFetch: fetchMock,
   readJsonLimited: readMock,
-  RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536 },
+  RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536, auditCzNetwork: 1048576 },
 }))
 
 import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, auditCzIdFromPage, AUDIT_CZ_SOURCE } from '../auditCz.js'
@@ -250,5 +250,37 @@ describe('per-mint detail (read side)', () => {
     const none = await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')
     expect(none.detail).toBeNull()
     expect('detail' in (await getAuditCzForMint('https://nobody.example'))).toBe(false)
+  })
+
+  it('exposes official 7-day and 30-day period views additively (d30 is null until the graph is stored)', async () => {
+    feed([mint()], [])
+    await syncAuditCz()
+    db.details.set('https://mint.minibits.cash/Bitcoin', {
+      detail: { swaps7d: { all: { total: 10, success: 7, failed: 3, avgMs: 400, amount: 90 }, asDest: { total: 5, success: 4, failed: 1 }, asSource: { total: 5, success: 3, failed: 2 }, errorsBlamed: 1 } },
+      fetched_at: new Date('2026-11-21T08:00:00Z'),
+    })
+    const before = await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')
+    expect(before.periods?.d7).toMatchObject({ days: 7, swaps: 10, succeeded: 7, failedElsewhere: 2, attributedFailures: 1, avgMs: 400, amount: 90, deposits: { success: 4, total: 5, failed: 1 }, withdrawals: { success: 3, total: 5, failed: 2 }, fetchedAt: '2026-11-21T08:00:00.000Z' })
+    expect(before.periods?.d30).toBeNull()
+    const row = db.mints.get('https://mint.minibits.cash/Bitcoin') as Record<string, unknown>
+    row['network30_paid'] = 40
+    row['network30_failed'] = 6
+    row['network30_amount'] = 900
+    row['network30_avg_ms'] = 300
+    row['network30_dest_paid'] = 18
+    row['network30_dest_failed'] = 2
+    row['network30_source_paid'] = 22
+    row['network30_source_failed'] = 4
+    row['network30_fetched_at'] = new Date('2026-11-21T10:18:00Z')
+    row['attributed_failures'] = 3
+    const after = await getAuditCzForMint('https://mint.minibits.cash/Bitcoin')
+    expect(after.periods?.d30).toEqual({
+      days: 30, swaps: 46, succeeded: 40, failedElsewhere: 3, attributedFailures: 3,
+      avgMs: 300, amount: 900,
+      deposits: { success: 18, total: 20, failed: 2 },
+      withdrawals: { success: 22, total: 26, failed: 4 },
+      fetchedAt: '2026-11-21T10:18:00.000Z',
+    })
+    expect(after.periods?.d7?.swaps).toBe(10)
   })
 })

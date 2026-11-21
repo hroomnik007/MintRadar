@@ -188,6 +188,9 @@ export default function Methodology() {
             fewer than {M.audit.minSwaps} swaps in both windows, when there is no cashu.info data for it, or when the
             stored data is older than {M.audit.maxAgeHours} hours ({M.audit.windowDays} days).
           </p>
+          <p>
+            The Audit tab on a mint page can also show a 7-day or 30-day swap view and weekly snapshots of the same source; those figures are for reading and are not an input to this score.
+          </p>
 
           <h3 className="doc-h3">NUT support ({w.nuts} points)</h3>
           <p>

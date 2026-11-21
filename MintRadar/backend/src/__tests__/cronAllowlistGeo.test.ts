@@ -32,6 +32,7 @@ vi.mock('../discovery.js', async () => {
 })
 vi.mock('../auditCz.js', () => ({ syncAuditCz: vi.fn() }))
 vi.mock('../auditCzDetail.js', () => ({ syncAuditCzDetails: vi.fn() }))
+vi.mock('../auditCzNetwork.js', () => ({ syncAuditCzNetwork: vi.fn() }))
 vi.mock('../mintAddress.js', () => ({ refreshMintAddresses: vi.fn() }))
 vi.mock('../reviewsSync.js', () => ({ refreshAllMintReviews: vi.fn(), recomputeReviewCountRollups: vi.fn(), isReviewSyncRunning: vi.fn() }))
 vi.mock('../reviewsSchedule.js', () => ({ startReviewsSyncTimer: vi.fn() }))

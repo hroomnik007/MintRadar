@@ -5,6 +5,7 @@ import { runKeysetsTick } from './keysetsSync.js'
 import { discoverMintsFromNostr, discoverMintsFromApi } from './discovery.js'
 import { syncAuditCz } from './auditCz.js'
 import { syncAuditCzDetails } from './auditCzDetail.js'
+import { syncAuditCzNetwork } from './auditCzNetwork.js'
 import { refreshMintAddresses } from './mintAddress.js'
 import { refreshAllMintReviews, recomputeReviewCountRollups, isReviewSyncRunning } from './reviewsSync.js'
 import { startReviewsSyncTimer } from './reviewsSchedule.js'
@@ -127,6 +128,17 @@ export function startCron(): void {
       await syncAuditCzDetails()
     } catch (err) {
       logCronError('cashu.info detail', err)
+    }
+  })
+
+  // cashu.info 30-day swap graph (display only, the Audit tab's 30-day view): one GET every 30 minutes, offset
+  // from the detail job. cashu.info caches the answer for 60 seconds; a failed fetch writes nothing.
+  cron.schedule('18,48 * * * *', async () => {
+    if (isAllowlistMode()) return
+    try {
+      await syncAuditCzNetwork()
+    } catch (err) {
+      logCronError('cashu.info network', err)
     }
   })
 

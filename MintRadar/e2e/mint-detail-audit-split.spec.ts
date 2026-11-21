@@ -72,7 +72,7 @@ test.describe('no source line; header tooltip', () => {
   test('the Audit stats ⓘ names the two windows of the score', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
     await page.locator('.md-audit-header-main .md-audit-info').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. Deposits and withdrawals are the 7 days split by direction.')
+    await expect(page.getByRole('tooltip')).toHaveText('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. The Audit tab can also show the last 30 days of swaps; that view is not an input to the score.')
   })
 })
 
@@ -303,10 +303,14 @@ for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const
       ...czSwapList([ok, melt, limits, ok, pending, ok, ok]),
       ...czSwapList([ok, melt]).map((s, i) => ({ ...s, id: `t${i}`, direction: 'to' as const, otherMintUrl: `https://a-rather-long-source-host-name-${i}.mint.example`, at: ago((90 + i) * 60_000) })),
     ]
-    const daily7d = [6, 5, 4, 3, 2, 1, 0].map(b => ({ day: day(b), ok: 12 + b, failed: b % 3, other: 0 }))
-    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps, daily7d, long: { windowDays: 28, swaps: 410, attributedFailures: 2 }, since: { day: '2026-08-01', swaps: 900, attributedFailures: 3 } })))
+    const weeks = [3, 2, 1, 0].map(b => ({
+      start: day(b * 7 + 7), end: day(b * 7), swaps: 20 + b, attributedFailures: b % 2,
+      failed: b % 3, succeeded: 20 + b - (b % 3), failedElsewhere: Math.max(0, (b % 3) - (b % 2)),
+      avgMs: null, amount: null, fees: null, deposits: null, withdrawals: null,
+    }))
+    await gotoAuditTab(page, czOnly(auditCzResponse({ swaps, weeks, long: { windowDays: 28, swaps: 410, attributedFailures: 2 }, since: { day: '2026-08-01', swaps: 900, attributedFailures: 3 } })))
     await expect(swapList(page).locator('tbody tr')).toHaveCount(8)
-    await expect(page.getByTestId('audit-days')).toBeVisible()
+    await expect(page.getByTestId('audit-weeks')).toBeVisible()
     await layoutReady(page)
     for (const filter of [0, 3] as const) {
       await chips(page).nth(filter).click()

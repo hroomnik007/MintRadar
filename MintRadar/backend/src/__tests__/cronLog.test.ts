@@ -20,6 +20,7 @@ vi.mock('../prober.js', () => ({
 vi.mock('../discovery.js', () => ({ discoverMintsFromNostr: vi.fn(), discoverMintsFromApi: vi.fn() }))
 vi.mock('../auditCz.js', () => ({ syncAuditCz: failing }))
 vi.mock('../auditCzDetail.js', () => ({ syncAuditCzDetails: failing }))
+vi.mock('../auditCzNetwork.js', () => ({ syncAuditCzNetwork: failing }))
 vi.mock('../mintAddress.js', () => ({ refreshMintAddresses: vi.fn() }))
 vi.mock('../reviewsSync.js', () => ({ refreshAllMintReviews: vi.fn(), recomputeReviewCountRollups: vi.fn(), isReviewSyncRunning: vi.fn() }))
 vi.mock('../reviewsSchedule.js', () => ({ startReviewsSyncTimer: vi.fn() }))
@@ -39,6 +40,7 @@ const JOBS: Array<[string, string]> = [
   ['*/5 * * * *', 'probe'],
   ['3,13,23,33,43,53 * * * *', 'cashu.info sync'],
   ['8,38 * * * *', 'cashu.info detail'],
+  ['18,48 * * * *', 'cashu.info network'],
   ['0 3 * * *', 'prune'],
   ['15 3 * * *', 'unvalidated mint prune'],
   ['15 4 * * *', 'revalidation'],

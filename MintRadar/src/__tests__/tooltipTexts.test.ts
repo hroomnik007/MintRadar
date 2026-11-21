@@ -104,9 +104,9 @@ describe('numbers in the built texts equal their sources', () => {
     expect(numbers(T.depositsTileText())).toEqual([T.AUDIT_WINDOW_DAYS])
     expect(numbers(T.withdrawalsTileText())).toEqual([T.AUDIT_WINDOW_DAYS])
   })
-  it('cashu.info view text: the score takes the worse of two windows, the directions are the 7 days split', () => {
-    expect(T.cashuInfoViewText()).toBe('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. Deposits and withdrawals are the 7 days split by direction.')
-    expect(numbers(T.cashuInfoViewText())).toEqual([T.AUDIT_WINDOW_DAYS, AUDIT_LONG_WINDOW_DAYS, T.AUDIT_WINDOW_DAYS])
+  it('cashu.info view text: the score takes the worse of two windows; the 30-day tab view is not a score input', () => {
+    expect(T.cashuInfoViewText()).toBe('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. The Audit tab can also show the last 30 days of swaps; that view is not an input to the score.')
+    expect(numbers(T.cashuInfoViewText())).toEqual([T.AUDIT_WINDOW_DAYS, AUDIT_LONG_WINDOW_DAYS, 30])
   })
   it('Audit tab texts do not name audit.8333.space (no longer shown)', () => {
     expect(T.cashuInfoViewText()).not.toMatch(/8333/)

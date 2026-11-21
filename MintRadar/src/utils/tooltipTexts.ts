@@ -191,16 +191,16 @@ export function sameOperatorText(hosts: readonly string[]): string {
 }
 
 /** cashu.info tiles (Mint Detail > Audit). */
-export function depositsTileText(): string {
-  return `Deposits into this mint (mint operations) in the last ${AUDIT_WINDOW_DAYS} days, counted by cashu.info: successful of all.`
+export function depositsTileText(days: number = AUDIT_WINDOW_DAYS): string {
+  return `Deposits into this mint (mint operations) in the last ${days} days, counted by cashu.info: successful of all.`
 }
-export function withdrawalsTileText(): string {
-  return `Withdrawals from this mint (melt operations) in the last ${AUDIT_WINDOW_DAYS} days, counted by cashu.info: successful of all.`
+export function withdrawalsTileText(days: number = AUDIT_WINDOW_DAYS): string {
+  return `Withdrawals from this mint (melt operations) in the last ${days} days, counted by cashu.info: successful of all.`
 }
 
 /** Audit tab: the ⓘ of the cashu.info view. */
 export function cashuInfoViewText(): string {
-  return `The Reliability Score takes the worse result of two cashu.info windows: the last ${AUDIT_WINDOW_DAYS} days and up to ${AUDIT_LONG_WINDOW_DAYS} days. Deposits and withdrawals are the ${AUDIT_WINDOW_DAYS} days split by direction.`
+  return `The Reliability Score takes the worse result of two cashu.info windows: the last ${AUDIT_WINDOW_DAYS} days and up to ${AUDIT_LONG_WINDOW_DAYS} days. The Audit tab can also show the last 30 days of swaps; that view is not an input to the score.`
 }
 
 /** Audit tab: the ⓘ of the "No audit data" panel. */

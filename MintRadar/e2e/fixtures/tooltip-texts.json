@@ -513,7 +513,7 @@
       "Last synced from cashu.info: <DATE>.",
       "Mint also advertises a .onion URL",
       "MintRadar",
-      "The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. Deposits and withdrawals are the 7 days split by direction.",
+      "The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. The Audit tab can also show the last 30 days of swaps; that view is not an input to the score.",
       "Withdrawals from this mint (melt operations) in the last 7 days, counted by cashu.info: successful of all.",
       "melt quote failed"
     ],
@@ -527,7 +527,7 @@
       "Last synced from cashu.info: <DATE>.",
       "Mint also advertises a .onion URL",
       "MintRadar",
-      "The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. Deposits and withdrawals are the 7 days split by direction.",
+      "The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. The Audit tab can also show the last 30 days of swaps; that view is not an input to the score.",
       "Withdrawals from this mint (melt operations) in the last 7 days, counted by cashu.info: successful of all.",
       "melt quote failed"
     ],

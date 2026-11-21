@@ -1,4 +1,4 @@
-import type { AuditCzData, AuditCzDetail, AuditCzDirectionCounts } from '@/hooks/useAuditCz'
+import type { AuditCzData, AuditCzDetail, AuditCzDirectionCounts, AuditCzPeriodView, AuditCzPeriods, AuditCzWeek } from '@/hooks/useAuditCz'
 import { depositsTileText, withdrawalsTileText, AUDIT_WINDOW_DAYS } from './tooltipTexts'
 import { formatTimeAgo } from './mintFormatting'
 import { formatDateTimeUtc } from './formatDate'
@@ -79,8 +79,12 @@ export interface AuditCzView {
   long: { windowDays: number; swaps: number; attributedFailures: number } | null
   /** Everything stored so far; null when nothing is, or when it is no more than the long window. */
   since: { day: string; swaps: number; attributedFailures: number } | null
-  /** The single longer-window line; null while the long window is 7 days or shorter. */
+  /** The single longer-window line; null while the long window is 7 days or shorter. Kept for helpers; the tab no longer shows it. */
   longer: { day: string; swaps: number; attributedFailures: number } | null
+  /** Official 7-day and 30-day views; d30 is null until the 30-day graph has been stored. */
+  periods: AuditCzPeriods
+  /** Stored weekly snapshots, oldest first; the tab shows the newest four that exist. */
+  weeks: AuditCzWeek[]
 }
 
 function swapState(status: string): string {
@@ -196,12 +200,30 @@ function directionFigure(key: 'mints' | 'melts', label: string, tooltip: string,
 }
 
 /** Deposits (mint) first: asDest = this mint was the destination of a swap. Withdrawals (melt) = asSource. */
-export function auditDirections(d: AuditCzDetail): AuditDirectionFigure[] {
+export function auditDirections(d: AuditCzDetail, days: number = AUDIT_WINDOW_DAYS): AuditDirectionFigure[] {
   const s = d.swaps7d
   return [
-    directionFigure('mints', 'Deposits (mint)', depositsTileText(), s?.asDest),
-    directionFigure('melts', 'Withdrawals (melt)', withdrawalsTileText(), s?.asSource),
+    directionFigure('mints', 'Deposits (mint)', depositsTileText(days), s?.asDest),
+    directionFigure('melts', 'Withdrawals (melt)', withdrawalsTileText(days), s?.asSource),
   ]
+}
+
+/** The tab's headline, bar and tiles for one official period (7 or 30 days). */
+export function auditVerdictFromPeriod(p: AuditCzPeriodView): AuditVerdict {
+  return { total: p.swaps, blamed: p.attributedFailures, failedElsewhere: p.failedElsewhere, ok: p.succeeded }
+}
+
+export function auditDirectionsFromPeriod(p: AuditCzPeriodView): AuditDirectionFigure[] {
+  const asCounts = (s: { success: number; total: number; failed: number } | null): AuditCzDirectionCounts | undefined =>
+    s ? { success: s.success, total: s.total, failed: s.failed } : undefined
+  return [
+    directionFigure('mints', 'Deposits (mint)', depositsTileText(p.days), asCounts(p.deposits)),
+    directionFigure('melts', 'Withdrawals (melt)', withdrawalsTileText(p.days), asCounts(p.withdrawals)),
+  ]
+}
+
+export function auditAvgFromPeriod(p: AuditCzPeriodView): string | null {
+  return p.avgMs !== null && Number.isFinite(p.avgMs) ? formatAvgSwapTime(p.avgMs) : null
 }
 
 /** The numbers of the score's 7-day window: (total, blamed) are exactly what the audit part reads. */
@@ -227,15 +249,15 @@ export function isLongerAuditWindow<T extends { windowDays: number }>(l: T | nul
  * this mint, the words say of how many swaps over how long. "failures caused by this mint in 126 swaps over 7 days",
  * "failure caused by this mint in 1 swap over 7 days"; with no swaps the number is the 0 swaps: "swaps in the last 7 days".
  */
-export function auditVerdictSentence(v: AuditVerdict): { number: string; words: string } {
-  if (v.total === 0) return { number: '0', words: `swaps in the last ${AUDIT_WINDOW_DAYS} days` }
-  return { number: fmt(v.blamed), words: `${v.blamed === 1 ? 'failure' : 'failures'} caused by this mint in ${swapsWord(v.total)} over ${AUDIT_WINDOW_DAYS} days` }
+export function auditVerdictSentence(v: AuditVerdict, days: number = AUDIT_WINDOW_DAYS): { number: string; words: string } {
+  if (v.total === 0) return { number: '0', words: `swaps in the last ${days} days` }
+  return { number: fmt(v.blamed), words: `${v.blamed === 1 ? 'failure' : 'failures'} caused by this mint in ${swapsWord(v.total)} over ${days} days` }
 }
 
 /** "Last 7 days: 50 swaps, 0 failures caused by this mint"; with no swaps, only the count (the readout's aria name). */
-export function auditVerdictHeadline(v: AuditVerdict): string {
-  if (v.total === 0) return `Last ${AUDIT_WINDOW_DAYS} days: 0 swaps`
-  return `Last ${AUDIT_WINDOW_DAYS} days: ${swapsWord(v.total)}, ${failuresWord(v.blamed)} caused by this mint`
+export function auditVerdictHeadline(v: AuditVerdict, days: number = AUDIT_WINDOW_DAYS): string {
+  if (v.total === 0) return `Last ${days} days: 0 swaps`
+  return `Last ${days} days: ${swapsWord(v.total)}, ${failuresWord(v.blamed)} caused by this mint`
 }
 
 /** Successful swaps / all swaps in the last 7 days, to one decimal; null when there were none. */
@@ -251,8 +273,32 @@ export function auditSuccessRateText(v: AuditVerdict): string {
   return `${rate.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(rate) ? 0 : 1, maximumFractionDigits: 1 })}%`
 }
 
-export function auditSuccessRateCaption(): string {
-  return `Success rate · ${AUDIT_WINDOW_DAYS} days`
+export function auditSuccessRateCaption(days: number = AUDIT_WINDOW_DAYS): string {
+  return `Success rate · ${days} days`
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
+
+/** Exact label for a stored week, e.g. "7–14 Nov", "28 Oct–4 Nov", "30 Dec 2025–6 Jan 2026". */
+export function auditWeekLabel(start: string, end: string): string {
+  const s = new Date(`${start}T00:00:00Z`)
+  const e = new Date(`${end}T00:00:00Z`)
+  if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime())) return `${start}–${end}`
+  const sm = MONTHS[s.getUTCMonth()]
+  const em = MONTHS[e.getUTCMonth()]
+  const sd = s.getUTCDate()
+  const ed = e.getUTCDate()
+  const sy = s.getUTCFullYear()
+  const ey = e.getUTCFullYear()
+  if (sy !== ey) return `${sd} ${sm} ${sy}–${ed} ${em} ${ey}`
+  if (sm === em) return `${sd}–${ed} ${sm}`
+  return `${sd} ${sm}–${ed} ${em}`
+}
+
+/** The newest stored weekly snapshots, at most `limit`, in chronological order. No empty placeholder weeks. */
+export function auditWeeksForChart(weeks: AuditCzWeek[] | undefined | null, limit = 4): AuditCzWeek[] {
+  if (!Array.isArray(weeks) || weeks.length === 0 || limit <= 0) return []
+  return weeks.slice(-limit)
 }
 
 /** Under the success rate: the score still ignores failures the source does not attribute to this mint. */
@@ -330,6 +376,11 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     // Hidden while the long window is 7 days or shorter (Methodology 8 ignores it then), or when it adds nothing beyond that window.
     since: data.since && isLongerAuditWindow(data.long) && data.since.swaps > data.long.swaps ? data.since : null,
     longer: auditLongerWindow(data.long, data.since, now),
+    periods: {
+      d7: data.periods?.d7 ?? null,
+      d30: data.periods?.d30 ?? null,
+    },
+    weeks: Array.isArray(data.weeks) ? data.weeks : [],
   }
 }
 

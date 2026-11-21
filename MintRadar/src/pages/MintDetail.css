@@ -2332,6 +2332,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .au-day-col { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 72px; border-bottom: 1px solid var(--border); }
 .au-day-col i { display: block; border-radius: 2px; }
 .au-day-label { font-family: var(--font-mono); font-size: 12px; line-height: 1.3; color: var(--text3); text-align: center; }
+.au-weeks .au-day-label { white-space: normal; }
 /* Swap-list filter: same look as the dashboard segmented filters (.filter-seg / .filter-seg-opt).
    One row always; on a narrow screen the row scrolls sideways instead of wrapping. */
 .au-chips-wrap {
@@ -2960,11 +2961,14 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   background: var(--elevated); color: var(--text); box-shadow: inset 0 -2px 0 var(--action);
 }
 .mint-detail .md-seg button:hover:not(.on) { color: var(--text); }
+.mint-detail .md-seg button:disabled { color: var(--text3); cursor: not-allowed; opacity: 0.55; }
+.mint-detail .md-audit-period { margin: 12px 0 16px; }
+.mint-detail .md-audit-period-note { margin: 8px 0 0; }
 .mint-detail .md-hist-chart .recharts-text { font-family: var(--font-body); }
 
 /* ── Mockup alignment, 2026-11-19: Audit (mint.html "Audit") ───────────────────────────────────────────────────────
-   The four figures as readouts ("9 of 9" with a small "of") without the mini bars, swaps per day with the count and
-   the weekday under each bar in the text face, the swap filter as the shared segmented control beside its heading. */
+   The four figures as readouts ("9 of 9" with a small "of") without the mini bars, weekly snapshots with the count and
+   the date range under each bar in the text face, the swap filter as the shared segmented control beside its heading. */
 .mint-detail .md-audit .au-dir-value { font-family: var(--font-display); font-size: 36px; font-weight: 680; font-stretch: 75%; letter-spacing: -0.02em; line-height: 1; }
 .mint-detail .md-audit .au-dir-value small { font-family: var(--font-body); font-size: var(--fs-md); font-weight: 500; font-stretch: 100%; color: var(--text2); letter-spacing: 0; margin-left: 2px; }
 .mint-detail .md-audit .au-dir-value.au-dir-nodata { font-size: var(--fs-md); font-weight: 500; font-stretch: 100%; color: var(--text3); }

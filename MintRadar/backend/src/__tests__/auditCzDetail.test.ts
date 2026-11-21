@@ -25,7 +25,7 @@ vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn
 vi.mock('../ssrf.js', () => ({
   safeFetch: fetchMock,
   readJsonLimited: readMock,
-  RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536 },
+  RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536, auditCzNetwork: 1048576 },
 }))
 
 import { parseAuditCzDetailFull, syncAuditCzDetails, dailySnapshotFromDetail } from '../auditCzDetail.js'
