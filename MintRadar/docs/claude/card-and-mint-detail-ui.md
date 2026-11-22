@@ -764,3 +764,16 @@ Blocks "Mockup alignment, 2026-11-19" at the end of `MintDetail.css`; `mint.html
 - NUT names come from one list, `NUT_NAMES` (`constants/nuts.ts`), used by the card chips, the NUTs tab and the groups.
 - The score formula tooltip lists the parts in the order Uptime, Audit, NUT support, Version, Contact.
 - An unavailable mint without contacts says "This mint lists no contact."
+
+## UI/UX report fixes, Mint Detail and layout (2026-11-22)
+- **M4:** Audit (cashu.info) swap chips: at ≤420px the visible labels read "All · In · Out · Failed".
+  - This is done with `data-short` + `::before`; the text content and accessible name are unchanged.
+- **M5:** when a URL has a tab hash (`#reviews`, `#audit`…), the tabs are scrolled into view after the first render (`scrollTabsIntoView`).
+  - The offset is the `.navbar` height (57px by default), and nothing scrolls if the tabs are already on screen.
+- **M8:** the "not tracked" header back link is auto-sized and does not wrap. A long URL in `code` wraps inside the box.
+- **M9:** the History chart X axis has 12px right padding on narrow screens, so the last date is not cut.
+- **D3:** "Log in with Nostr" in the reviews box and the watch-login modal is a filled copper button.
+- **D5:** every "All mints" / "All modules" back link is one component, `BackLink` (chevron + label).
+- **N1:** on touch screens, a tap on the 30-day uptime bars (Mint Detail, where readouts exist) shows the day's readout, and sliding moves it.
+  - It closes after 4s or on a tap outside. `touch-action: pan-y` is set, so vertical scrolling still works. Mouse behaviour is unchanged.
+- **N5:** "Browse tracked mints →" and "Add a mint" on a not-tracked mint are router links. "Add a mint" opens the add dialog via `state.openAddMint`.

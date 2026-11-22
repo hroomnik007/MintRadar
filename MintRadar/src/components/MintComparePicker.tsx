@@ -34,16 +34,22 @@ export function MintComparePicker({
   // own duplicateDisplayNames prop for why this matters.
   duplicateDisplayNames?: ReadonlySet<string> | undefined
 }) {
-  const dialogRef = useModalFocus('.md-picker-search') // search field first, as before (was autoFocus)
+  // Search field first on a mouse/keyboard device (was autoFocus). On touch (M6, UI/UX report 2026-11-22) the dialog itself
+  // takes focus: focusing the field opened the on-screen keyboard over half of the list.
+  const [coarse] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches)
+  const dialogRef = useModalFocus(coarse ? undefined : '.md-picker-search')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const q = search.toLowerCase()
-  // Listed by the name the row shows (it used to be the caller's order, by hostname, which read as random next to the
-  // names); test mints go last, they are rarely what someone wants to compare with.
+  // Highest Reliability Score first (M6, UI/UX report 2026-11-22: it was A to Z, "21linz, 21Mint, 28MINT…"), then by the
+  // name the row shows; a mint without a score after the scored ones; test mints go last, they are rarely what someone
+  // wants to compare with.
   const sorted = useMemo(() => [...candidates].sort((a, b) => {
     const test = Number(isTestMint(a.url)) - Number(isTestMint(b.url))
     if (test !== 0) return test
+    const byScore = (b.reliabilityScore ?? -1) - (a.reliabilityScore ?? -1)
+    if (byScore !== 0) return byScore
     const byName = mintDisplayName(a, duplicateDisplayNames).localeCompare(mintDisplayName(b, duplicateDisplayNames), 'en', { sensitivity: 'base', numeric: true })
     return byName !== 0 ? byName : a.url.localeCompare(b.url)
   }), [candidates, duplicateDisplayNames])

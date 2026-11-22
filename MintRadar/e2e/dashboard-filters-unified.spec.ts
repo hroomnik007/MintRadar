@@ -51,8 +51,8 @@ for (const width of [1440, 390]) {
       }), [...GROUPS])
       const ref = rows[0]!
       for (const r of rows) {
-        expect(r.segH, r.g).toBe(28)
-        expect(r.optH.every(h => h === 28), `${r.g} option heights`).toBe(true)
+        expect(r.segH, r.g).toBe(36)
+        expect(r.optH.every(h => h === 36), `${r.g} option heights`).toBe(true)
         expect(r.font, r.g).toBe(ref.font)
         expect(r.segRadius, r.g).toBe(ref.segRadius)
         expect(r.firstRadius, r.g).toBe(ref.firstRadius)
@@ -71,7 +71,7 @@ for (const width of [1440, 390]) {
     test('Reset and Show are as tall as the segments', async ({ page }) => {
       await open(page, width)
       for (const b of [page.getByRole('button', { name: 'Reset', exact: true }), page.locator('.filter-apply-btn')]) {
-        expect((await b.boundingBox())!.height).toBe(28)
+        expect((await b.boundingBox())!.height).toBe(36)
       }
     })
   })
@@ -83,7 +83,7 @@ test('1440px: row 1 holds the four groups, row 2 holds Hide outdated, Hide test 
   const row1 = await Promise.all(GROUPS.map(g => top(seg(g))))
   const row2 = await Promise.all(['.filter-outdated-check', '.filter-check', '.filter-slider', '.filter-reset-btn', '.filter-apply-btn'].map(top))
   for (const b of row1) expect(Math.abs(b.y - row1[0]!.y)).toBeLessThan(2)
-  for (const b of row2) expect(b.y + b.height / 2).toBeGreaterThan(row1[0]!.y + 28 + 8)
+  for (const b of row2) expect(b.y + b.height / 2).toBeGreaterThan(row1[0]!.y + 36 + 8)
   const mid = row2.map(b => b.y + b.height / 2)
   expect(Math.max(...mid) - Math.min(...mid)).toBeLessThan(2)                       // one line
   // left to right: Hide outdated, Hide test mints, Reliability, Reset, Show; the buttons end at the panel's right edge

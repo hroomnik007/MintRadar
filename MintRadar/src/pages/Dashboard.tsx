@@ -35,7 +35,7 @@ import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { isNutOffered } from '@/utils/nutSupport'
 import { hasRequiredNuts } from '@/utils/nutFilters'
 import { parseMethodParam, mintMatchesMethod, methodOptions, methodDisplayText } from '@/utils/methodFilter'
-import { parseSoftwareParam, buildSoftwareParam, mintMatchesSoftware, softwareGroups } from '@/utils/softwareFilter'
+import { parseSoftwareParam, buildSoftwareParam, mintMatchesSoftware, softwareGroups, SOFTWARE_UNKNOWN } from '@/utils/softwareFilter'
 import { OUTDATED_PARAM, parseOutdatedParam, buildOutdatedParam, mintMatchesOutdated, hasUnknownVersion, unknownKeptNote } from '@/utils/outdatedFilter'
 import { UNIT_FILTER_OPTIONS, parseUnitParam, buildUnitParam, mintMatchesUnits, countUnitHidden, unitHiddenNote, type UnitFilterValue } from '@/utils/unitFilter'
 import { InfoTooltip } from '@/components/InfoTooltip'
@@ -43,6 +43,9 @@ import { probeErrorMessage, probeRateLimitMessage, isProbeErrorKind, type ProbeE
 import { classifySubmitInput, submitInputReason } from '@/utils/submitInput'
 import { parseBulkInput, bulkFailureMessage, MAX_BULK_URLS } from '@/utils/bulkInput'
 import './Dashboard.css'
+
+/** Payment methods left out of the Method filter (M2, 2026-11-22). */
+const HIDDEN_FILTER_METHODS: ReadonlySet<string> = new Set(['paypal', 'venmo'])
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
 // that chunk only loads when a user actually opens Compare, not on every
@@ -777,7 +780,11 @@ export default function Dashboard() {
   const hiddenCount = hiddenByDefaultCount(trackedMints, activeFilters.status)
 
   // Software groups come from ALL tracked mints (not the status pool), so an option does not appear or vanish when Status changes.
-  const softwareChoices = useMemo(() => softwareGroups(trackedMints, pendingFilters.software), [trackedMints, pendingFilters.software])
+  // M2: no "Unknown" option in the Software filter (it was cut off on phones); kept while it is selected so it can be cleared.
+  const softwareChoices = useMemo(() => {
+    const g = softwareGroups(trackedMints, pendingFilters.software)
+    return { ...g, options: g.options.filter(o => o.key !== SOFTWARE_UNKNOWN || pendingFilters.software.includes(SOFTWARE_UNKNOWN)) }
+  }, [trackedMints, pendingFilters.software])
   const softwareFamilies = useMemo(() => softwareGroups(trackedMints).families, [trackedMints])
 
   const filteredMints = useMemo(() => {
@@ -795,7 +802,9 @@ export default function Dashboard() {
   }, [allMints, activeFilters, showDegraded, search, softwareFamilies])
   const activeFilterCount = countActiveFilters(activeFilters)
   // Method filter options: what the tracked mints offer right now (a switched-off NUT-04/05 side does not count), plus the selected one.
-  const methodChoices = useMemo(() => methodOptions(allMints, pendingFilters.method), [allMints, pendingFilters.method])
+  // M2 (UI/UX report 2026-11-22): PayPal and Venmo are not offered in the Method filter (they cut the row on phones);
+  // a ?method= already set to one of them stays listed so it can be cleared.
+  const methodChoices = useMemo(() => methodOptions(allMints, pendingFilters.method).filter(m => !HIDDEN_FILTER_METHODS.has(m) || m === pendingFilters.method), [allMints, pendingFilters.method])
   // Phone default view: first MOBILE_COLLAPSED_ONLINE online mints + "Show all N" (mobileCollapse.ts).
   const isPhone = useMediaQuery(MOBILE_COLLAPSE_QUERY)
   const [mobileExpanded, setMobileExpanded] = useState(() => {

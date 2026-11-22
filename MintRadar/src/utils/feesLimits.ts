@@ -166,7 +166,7 @@ export function limitTable(
   // The method in words ("Lightning" for bolt11, 2026-11-19 mockup alignment); the unit only when there is more than one
   // (the card's line under its title names a single unit).
   const multiUnit = new Set(keys.map(k => k.split('|')[1])).size > 1
-  const word = (m: string) => m === 'bolt11' ? 'Lightning' : m === 'bolt12' ? 'Lightning (BOLT12)' : m === 'onchain' ? 'On-chain' : m
+  const word = paymentMethodWord
   return keys.map(k => {
     const [method, unit] = k.split('|') as [string, string]
     const d = dep.get(k), w = wd.get(k)
@@ -177,4 +177,9 @@ export function limitTable(
       withdrawal: disabled.melt ? 'Disabled by the mint' : w ? rangeText(w) : '—',
     }
   })
+}
+
+/** A payment method in words: "Lightning" for bolt11, "Lightning (BOLT12)", "On-chain"; any other name as it is. */
+export function paymentMethodWord(m: string): string {
+  return m === 'bolt11' ? 'Lightning' : m === 'bolt12' ? 'Lightning (BOLT12)' : m === 'onchain' ? 'On-chain' : m
 }

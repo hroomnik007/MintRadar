@@ -605,7 +605,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             </div>
             <p className="cmp-m-status" role="status" aria-live="polite">{onlyDiffStatusText}</p>
             <div className="cmp-m-scroll" role="region" aria-label="Mint comparison table" aria-describedby="cmp-m-hint" tabIndex={0}>
-              <table className="cmp-m-table" style={mints.length > 2 ? { width: 96 + mints.length * 132 } : undefined}>
+              <table className="cmp-m-table" style={mints.length > 2 ? { width: 120 + mints.length * 132 } : undefined}>
                 <thead>
                   <tr>
                     <th scope="col" className="cmp-m-corner"><span className="sr-only">Metric</span></th>

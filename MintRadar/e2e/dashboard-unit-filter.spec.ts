@@ -145,7 +145,7 @@ test.describe('Dashboard unit filter', () => {
     })
   }
 
-  test('chips have a 44px hit area on touch devices (visible height is 28px)', async ({ browser }) => {
+  test('chips have a hit area of at least 44px on touch devices (visible height is 36px)', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
     const page = await ctx.newPage()
     await setup(page)
@@ -154,8 +154,8 @@ test.describe('Dashboard unit filter', () => {
     await openPanel(page)
     for (const u of ['sat', 'usd', 'eur']) {
       const b = (await chip(page, u).boundingBox())!
-      // 28px since 6ed4592 / 20b0541 (was 36px)
-      expect(b.height).toBe(28)
+      // 36px again since D2 (UI/UX report 2026-11-22; 28px from 6ed4592 / 20b0541)
+      expect(b.height).toBe(36)
       // 8px invisible ::before above and below → 28 + 8 + 8 = 44px hit area; 3px outside the box still lands on the chip.
       const hit = await chip(page, u).evaluate((el, dy) => {
         const r = el.getBoundingClientRect()

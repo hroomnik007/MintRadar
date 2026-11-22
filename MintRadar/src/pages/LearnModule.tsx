@@ -3,6 +3,7 @@ import type { ComponentType, LazyExoticComponent } from 'react'
 import { useParams, useNavigate, Link, Navigate } from 'react-router-dom'
 import { LEARN_MODULES } from '@/constants/learnModules'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { BackLink } from '@/components/BackLink'
 import { LEARN_MODULE_NOT_FOUND_TITLE, learnModuleTitle } from '@/utils/pageMeta'
 import './LearnModule.css'
 
@@ -59,7 +60,7 @@ export default function LearnModule() {
     <div className="learn-module-page">
       <article className="learn-module">
       {/* 2026-11-19 redesign (phase 6b): "All modules", where the reader is in the course, and "Next, module N". */}
-      <Link to="/learn" className="learn-back-link"><span aria-hidden="true">←</span> All modules</Link>
+      <BackLink to="/learn" className="learn-back-link" label="All modules" />
       <p className="learn-kicker">Module {mod.order} of {sorted.length}, {mod.readingMinutes} {mod.readingMinutes === 1 ? 'minute' : 'minutes'}</p>
 
       <Suspense fallback={lazyFallback}>

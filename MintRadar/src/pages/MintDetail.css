@@ -1560,6 +1560,7 @@ button.md-url-copy.copied > svg { opacity: 1; }
   font-weight: 600;
   cursor: pointer;
 }
+.md-not-tracked-link { text-decoration: none; }
 .md-not-tracked-link:hover { text-decoration: underline; }
 /* Bad /mint/nostr/ link (MintNaddr.tsx): two ways on, side by side, wrapping on a phone. 44px tall targets on touch. */
 .md-naddr-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 20px; }
@@ -2039,9 +2040,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .md-url-scheme { display: none; }
 }
 
-/* Logged-out watch prompt: outlined green action like the Nostr login modal's Connect. */
-.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--action-ink); border: 1px solid var(--action); border-radius: 10px; font-size: 14px; font-weight: 600; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
-.rv-btn-login:hover { background: var(--action-soft); border-color: var(--action); }
+/* Logged-out watch prompt: "Log in with Nostr" is the filled copper action everywhere (D3, UI/UX report 2026-11-22: it
+   was outlined here and filled on /watchlist and under the reviews). */
+.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--action); color: #04120d; border: 1px solid var(--action); border-radius: 10px; font-size: 14px; font-weight: 700; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
+.rv-btn-login:hover { background: color-mix(in srgb, var(--action) 85%, #fff); border-color: var(--action); }
 .rv-btn-login:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 
 /* ── New language: Add-to-wallet (QR) and Reliability Score breakdown modals ──
@@ -3047,3 +3049,25 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-audit-src { margin: 12px 0 0; font-size: var(--fs-xs); color: var(--text3); }
 .mint-detail .md-audit-src .audit-external-link { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
 .mint-detail .md-audit-days .au-days { max-width: 720px; }
+
+/* M3 (UI/UX report 2026-11-22): "How it is made" is a 17px line of text; on touch an invisible band makes it 44px tall. */
+@media (pointer: coarse) {
+  .md-strip-link { position: relative; }
+  .md-strip-link::before { content: ''; position: absolute; left: -4px; right: -4px; top: -14px; bottom: -14px; }
+}
+
+/* M4 (UI/UX report 2026-11-22): Recent swaps chips read "All · In · Out · Failed" at 420px and less (AuditSwapList). */
+@media (max-width: 420px) {
+  .au-chip-label[data-short] { font-size: 0; }
+  .au-chip-label[data-short]::before { content: attr(data-short); font-size: var(--fs-sm); }
+  .mint-detail .md-audit .au-chip { padding: 0 11px; }
+}
+
+/* M8 (UI/UX report 2026-11-22): on the not-tracked page "‹ All mints" looks as on a tracked mint (the phone rule above
+   made it a 28px box, so the label wrapped to two lines and the chevron was squeezed out), and the URL moves to its own
+   line whole when it fits there instead of breaking in the middle ("example.invali/d"). */
+.mint-detail .md-header-bare .md-back {
+  width: auto; height: auto; min-height: 32px; padding: 4px 0; white-space: nowrap;
+}
+.mint-detail .md-header-bare .md-back .md-back-label { display: inline; }
+.md-not-tracked-body code { display: inline-block; max-width: 100%; vertical-align: bottom; }

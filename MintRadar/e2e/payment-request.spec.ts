@@ -418,16 +418,18 @@ test.describe('layout', () => {
     }
   })
 
+  // M10 (UI/UX report 2026-11-22, owner's choice): one column shows Best mint for me first (CSS `order`), then the
+  // Token inspector and the Payment request inspector. The DOM order is unchanged (token, payment request, pick).
   for (const w of [768, 390, 320] as const) {
-    test(`${w}px: one column in the order Token inspector, Payment request inspector, Best mint for me`, async ({ page }) => {
+    test(`${w}px: one column in the order Best mint for me, Token inspector, Payment request inspector`, async ({ page }) => {
       await open(page, [w, 900])
       await layoutReady(page)
       const b = await boxes(page)
-      expect(b.order).toEqual(['token', 'payment-request', 'pick'])
+      expect(b.order, 'DOM order').toEqual(['token', 'payment-request', 'pick'])
       expect(Math.abs(b.pr.x - b.token.x)).toBeLessThanOrEqual(1)
       expect(Math.abs(b.pick.x - b.token.x)).toBeLessThanOrEqual(1)
+      expect(b.token.y).toBeGreaterThanOrEqual(b.pick.b - 1)
       expect(b.pr.y).toBeGreaterThanOrEqual(b.token.b - 1)
-      expect(b.pick.y).toBeGreaterThanOrEqual(b.pr.b - 1)
     })
   }
 

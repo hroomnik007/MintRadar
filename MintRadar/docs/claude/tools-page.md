@@ -438,3 +438,6 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
   (`whyBestReasons` / `whyBestText` in `wizardScoring.ts`: higher Reliability Score, better reviews, more NUTs,
   faster from your browser, your preferred software), e.g. "Best match: higher Reliability Score (92 vs 78) · better
   reviews (4.2★ from 12 ratings)". With no runner-up it keeps "Best match for your filters".
+
+- Phone/tablet order (M10, 2026-11-22, owner's choice): at ≤900px the one column shows Best mint for me first, then Token inspector and Payment request inspector.
+  - This is done with CSS `order` (`.tools-col { display: contents }`, `#pick.tool-anchor { order: -1 }`); the DOM order is unchanged.

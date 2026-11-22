@@ -1564,8 +1564,9 @@
 
 .grid-unit-hidden-note { opacity: 0.85; }
 
-/* Segmented control — a row of buttons, same visual language as .wizard-unit-seg (Tools):
-   28px visible, 44px touch target through an invisible ::before (28 + 8 + 8, see .filter-bar). */
+/* Segmented control — a row of buttons in the shared .md-seg look (D2, UI/UX report 2026-11-22: it was the only segmented
+   control at 28px / 12.5px without the copper line): 36px visible, 14px text, hairline separators, the chosen option a
+   step lighter with a copper line under it; a touch target over 44px through an invisible ::before (36 + 8 + 8, see .filter-bar). */
 .filter-seg {
   /* One column per option, all 1fr: the options of a group are equally wide (as wide as the longest text); when the
      control is narrower than that, the longer texts keep their own width and the others share the rest. */
@@ -1574,11 +1575,11 @@
   grid-auto-columns: 1fr;
   align-items: stretch;
   position: relative;
-  height: 28px;
+  height: 36px;
   min-width: 0;
   border-radius: 8px;
 }
-/* The 1px outer frame is drawn as an overlay (not a real border) so the options inside are the full 28px. */
+/* The 1px outer frame is drawn as an overlay (not a real border) so the options inside are the full 36px. */
 .filter-seg::after {
   content: '';
   position: absolute;
@@ -1595,25 +1596,26 @@
   min-width: 44px;
   padding: 0 8px;
   white-space: nowrap;
-  background-color: var(--surface-3);
+  background-color: transparent;
   background-image: none;
   border: none;
   border-radius: 0;
   box-shadow: none;
   color: var(--text2);
   font-family: var(--font-body);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
   letter-spacing: 0;
   cursor: pointer;
 }
-.filter-seg-opt + .filter-seg-opt { border-left: 1px solid var(--border2); }
+.filter-seg-opt + .filter-seg-opt { border-left: 1px solid var(--border); }
 .filter-seg-opt:first-child { border-radius: 8px 0 0 8px; }
 .filter-seg-opt:last-child { border-radius: 0 8px 8px 0; }
-/* Selected: accent tint over the raised fill, accent text, subtle accent border (inset, so no size change). */
+/* Selected: as .md-seg button.on, a step lighter with a copper line under it (inset, so no size change). */
 .filter-seg-opt.active {
-  background-image: linear-gradient(var(--accent-dim), var(--accent-dim));
-  box-shadow: inset 0 0 0 1px var(--accent-brd);
-  color: var(--action);
+  background-color: var(--elevated);
+  box-shadow: inset 0 -2px 0 var(--action);
+  color: var(--text);
 }
 /* Native radio stays in the DOM and focusable (arrow keys work); it just covers its segment. */
 .filter-seg-opt input[type="radio"] {
@@ -1629,15 +1631,11 @@
 .filter-seg-opt:focus-visible,
 .filter-seg-opt:has(input:focus-visible) { z-index: 1; outline: 2px solid var(--action); outline-offset: 2px; }
 @media (hover: hover) {
-  .filter-seg-opt:not(.active):hover {
-    background-image: linear-gradient(var(--border), var(--border));
-    box-shadow: inset 0 0 0 1px var(--border-strong);
-    color: var(--text);
-  }
+  .filter-seg-opt:not(.active):hover { color: var(--text); }
   .filter-seg-opt:not(.active):active { background-image: none; }
 }
-/* Touch: visible height stays 28px; an invisible extension (8px above/below only, never
-   sideways) brings the target to 44px: 28 + 8 + 8. Same technique as .wizard-unit-opt / .md-back.
+/* Touch: visible height stays 36px; an invisible extension (8px above/below only, never
+   sideways) brings the target to 52px: 36 + 8 + 8. Same technique as .wizard-unit-opt / .md-back.
    The rows around a segment must leave 8px each for it, see --filter-row-gap on .filter-bar. */
 @media (pointer: coarse), (max-width: 600px) {
   .filter-seg-opt::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
@@ -1713,7 +1711,7 @@
   .filter-field-label { width: 72px; }
   .filter-field .filter-seg { flex: 1 1 auto; }
   /* min-content: an option is never narrower than its text (the grid then gives the longer texts their own width) */
-  .filter-seg-opt { min-width: min-content; padding: 0 4px; }
+  .filter-seg-opt { min-width: min-content; padding: 0 4px; font-size: 12.5px; font-weight: 400; } /* D2: 14px from 601px up; a phone row of options keeps the old 12.5px so it fits */
   .filter-footer { flex: 1 1 100%; gap: 12px 6px; }
   .filter-rel { flex: 1 1 100%; }
   .filter-rel .filter-slider { flex: 1 1 auto; width: auto; min-width: 0; }
@@ -1830,7 +1828,7 @@
 .filter-reset-btn,
 .filter-apply-btn {
   position: relative;
-  height: 28px; /* the same as the segments (.filter-seg) */
+  height: 36px; /* the same as the segments (.filter-seg), 36px since D2 (2026-11-22) */
   border-radius: 8px;
   font-size: 12px;
   cursor: pointer;
@@ -1859,7 +1857,7 @@
 .filter-reset-btn:focus-visible,
 .filter-apply-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 @media (pointer: coarse), (max-width: 600px) {
-  /* 28 + 8 + 8 = 44px target, like the segments (the rows around leave 8px each for it, see .filter-bar) */
+  /* 36 + 8 + 8 = 52px target, like the segments (the rows around leave 8px each for it, see .filter-bar) */
   .filter-reset-btn::before,
   .filter-apply-btn::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
   /* Reset has a 1px border and ::before is positioned against the padding box → 1px more each side */
@@ -2138,21 +2136,24 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  width: 96px;
+  width: 120px;
   background: var(--bg2);
   box-shadow: 1px 0 0 var(--border2);
 }
 .cmp-m-corner { padding-left: 12px; }
+/* M1 (UI/UX report 2026-11-22): sentence case in the body font, wider column, words never broken in the middle
+   ("RELIABILIT / Y SCORE" and a three-line "LATENCY (YOUR BROWSER)" in mono capitals before). */
 .cmp-m-lbl {
   padding-left: 12px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  font-family: var(--font-mono);
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-body);
+  line-height: 1.3;
+  overflow-wrap: normal;
+  hyphens: auto;
 }
 .cmp-m-lbl .info-tooltip { vertical-align: middle; margin-left: 2px; }
 .cmp-m-mint { vertical-align: bottom; }
@@ -2726,6 +2727,21 @@
   box-shadow: none;
 }
 .mint-card:hover { border-color: var(--border-strong); }
+/* Hover lift (owner, 2026-11-22, after cashu.info's Mints cards: translateY(-2px) + a 2px accent-wash ring, 150ms):
+   2px up, a soft drop shadow and a faint copper ring, mouse only (a tap must not leave a card lifted) and never with
+   reduced motion. `translate`, not `transform`: the fadein entry animation keeps its `transform` (fill: both) and
+   would win over a hover transform. */
+@media (hover: hover) and (pointer: fine) {
+  .mint-card { transition: box-shadow 150ms ease, border-color 150ms ease, translate 150ms ease; }
+  .mint-card:hover {
+    translate: 0 -2px;
+    box-shadow: 0 12px 28px -16px rgba(0, 0, 0, 0.75), 0 0 0 2px var(--copper-soft);
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .mint-card { transition: box-shadow 150ms ease, border-color 150ms ease; }
+  .mint-card:hover { translate: none; }
+}
 .card-link::after { border-radius: 12px; }
 .mint-card .card-top { margin: 0; }
 .mint-card .card-name-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: start; gap: 0 12px; }
@@ -2923,4 +2939,12 @@
 @media (max-width: 900px) {
   .sort-menu, .dashboard-controls .sort-menu .sort-select { width: 100%; min-width: 0; }
   .sort-menu-list { right: 0; }
+}
+
+/* M3 (UI/UX report 2026-11-22): touch targets of the small controls of the Mints page reach 44px without changing what is
+   seen. The card ☆ / ⇄ already have invisible bands (the (pointer: coarse) block above: 28 + 20 = 48px and 32 + 20 = 52px
+   tall). The "Start with the basics" link in the intro sentence gets vertical padding that does not move the line
+   (inline padding never does). */
+@media (pointer: coarse) {
+  .dashboard .page-head-desc a { padding-block: 12px; margin-block: -12px; }
 }

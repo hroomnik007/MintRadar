@@ -17,7 +17,7 @@ describe('methodNames', () => {
 
 describe('methodsCell', () => {
   it('lists the methods, says when none are declared, and a switched-off side wins over its list', () => {
-    expect(methodsCell([m('bolt11', 'sat'), m('bolt12', 'sat')], false)).toEqual({ text: 'bolt11, bolt12', state: 'list' })
+    expect(methodsCell([m('bolt11', 'sat'), m('bolt12', 'sat')], false)).toEqual({ text: 'Lightning, Lightning (BOLT12)', state: 'list' })
     expect(methodsCell([], false)).toEqual({ text: METHODS_NONE, state: 'none' })
     expect(methodsCell([m('bolt11', 'sat')], true)).toEqual({ text: METHODS_DISABLED, state: 'disabled' })
   })
@@ -37,8 +37,8 @@ describe('compareMethods', () => {
       mintMethods: [m('bolt11', 'sat', 1, 1_000_000), m('bolt12', 'sat', 1)],
       meltMethods: [m('bolt11', 'sat', 1, 500_000)],
     })
-    expect(c.deposit.text).toBe('bolt11, bolt12')
-    expect(c.withdrawal.text).toBe('bolt11')
+    expect(c.deposit.text).toBe('Lightning, Lightning (BOLT12)')
+    expect(c.withdrawal.text).toBe('Lightning')
     expect(c.units).toBe('SAT, USD')
     expect(c.limits.map(r => `${r.label}: ${r.value}`)).toEqual([
       'Deposit · bolt11 · sat: min 1, max 1,000,000',

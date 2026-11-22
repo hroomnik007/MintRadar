@@ -25,7 +25,7 @@
 
 /* Mint Detail hover readout of one day (UptimeBars `readouts`): mouse only, above the bars, pinned to the panel edge
    near either end. The hovered bar lifts a little; the others stay as they are. */
-.uptime-bars.has-readouts { position: relative; cursor: default; }
+.uptime-bars.has-readouts { position: relative; cursor: default; touch-action: pan-y; } /* N1: a sideways slide moves the touch readout */
 .uptime-bars i.is-hover { outline: 1px solid color-mix(in srgb, var(--text) 60%, transparent); outline-offset: 1px; }
 /* One line, in the height of the heading row above the bars, so it never leaves the panel. */
 .ub-tip {
