@@ -35,13 +35,14 @@ const chip = (page: Page, k: string) => page.locator(`.filter-software-chip[data
 const openPanel = async (page: Page) => { await page.locator('.filter-btn').click(); await expect(page.locator('.filter-panel')).toBeVisible() }
 
 test.describe('Dashboard software filter', () => {
-  test('options: every family by count, then Unknown', async ({ page }) => {
+  // M2 (2026-11-22): no "Unknown" option any more (it was cut off on phones); ?software=unknown still filters (test below).
+  test('options: every family by count, no Unknown option', async ({ page }) => {
     await setup(page)
     await page.goto('/')
     await expect(cards(page)).toHaveCount(7)
     await openPanel(page)
     await expect(page.locator('#filter-software-label')).toHaveText('Software')
-    await expect(page.locator('.filter-software-chip')).toHaveText(['Nutshell', 'CDK-Mintd', 'LekMint', 'Unknown'])
+    await expect(page.locator('.filter-software-chip')).toHaveText(['Nutshell', 'CDK-Mintd', 'LekMint'])
   })
 
   test('selecting an option changes the count and the cards; Apply puts it in the URL and the badge', async ({ page }) => {
@@ -58,11 +59,12 @@ test.describe('Dashboard software filter', () => {
     await expect(page.locator('.filter-btn')).toContainText('1')
   })
 
-  test('multi-select ORs: CDK + LekMint + Unknown', async ({ page }) => {
+  test('multi-select ORs: CDK + LekMint + Unknown (Unknown from the URL, listed while selected)', async ({ page }) => {
     await setup(page)
-    await page.goto('/')
+    await page.goto('/?software=unknown')
     await openPanel(page)
-    for (const k of ['cdk', 'lekmint', 'unknown']) await chip(page, k).click()
+    await expect(chip(page, 'unknown')).toHaveAttribute('aria-pressed', 'true')
+    for (const k of ['cdk', 'lekmint']) await chip(page, k).click()
     await expect(page.locator('.filter-apply-btn')).toHaveText('Show 4 of 7')
     await page.locator('.filter-apply-btn').click()
     await expect(cards(page)).toHaveCount(4)

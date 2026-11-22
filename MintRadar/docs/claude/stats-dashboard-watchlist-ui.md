@@ -666,3 +666,19 @@ movers"; "Network score over time" ("Copper lines mark methodology versions."). 
 control. The geography list is NOT collapsed into "And N more cities with one mint each" (the mockup's line): the
 "View others" dialog lists only the cities past the top ten, so the hidden single-mint cities would be lost. Phone board
 heights re-measured in `stats-layout-shift.spec.ts` (390: 3514, 320: 3687).
+
+## UI/UX report fixes, Mints page (2026-11-22)
+- **Filters (D2):** segmented controls use the shared `.md-seg` look.
+  - Size: 36px tall, 14px/500 text; on phones (≤600px) the text is 12.5px/400 so a row of options fits.
+  - Style: transparent options with hairline separators. The chosen option is `--elevated` with an inset 2px copper line. Hover changes only the text colour.
+  - Reset and Show are 36px. Touch targets are 52px through the ::before bands.
+- **Filter options (M2):** PayPal and Venmo are not offered as payment methods, and the Software "Unknown" option is gone.
+  An option already set from a URL (e.g. `/?software=unknown`) still shows, so it can be removed.
+- **Touch (M3):** the "Start with the basics" link in the intro gets 12px vertical padding with negative margin on coarse pointers, so the hit area is ≥ 44px and the line does not move.
+- **Compare picker (M6):** sorted by Reliability Score, highest first, with unscored mints after and test mints last. No autofocus on the search with a coarse pointer, so the keyboard does not cover the list.
+- **Compare table on a phone (M1):** the label column is 120px, sentence case, body font 13px, and words are not broken. Method cells use words ("Lightning", "Lightning (BOLT12)"), not bolt11/bolt12.
+- **Card hover lift (owner, after cashu.info):** with `(hover: hover) and (pointer: fine)`, a hovered `.mint-card` moves up 2px (`translate`) and gets a soft drop shadow and a 2px `--copper-soft` ring, with a 150ms transition.
+  - Under `prefers-reduced-motion: reduce` there is no movement.
+  - `translate` is used rather than `transform` because the `fadein` entry animation holds `transform` (fill: both).
+  - cashu.info does `.mint-card:hover { transform: translateY(-2px); box-shadow: var(--shadow), 0 0 0 2px var(--accent-wash) }` with `transition: transform .15s, box-shadow .15s`, and turns it off under reduced motion.
+  - Pinned by `e2e/mint-card-hover-lift.spec.ts`.

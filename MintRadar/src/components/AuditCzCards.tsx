@@ -246,10 +246,13 @@ export function AuditStateText({ row: s }: { row: AuditSwapRow }) {
   )
 }
 
-const FILTERS: ReadonlyArray<{ key: AuditSwapFilter; label: string }> = [
+// `short`: the chip text on phones of 420px and less (M4, UI/UX report 2026-11-22: "All · In · Out · Failed"; the full
+// set was 364px in a 320px row and hid "Failed"). Drawn by CSS from data-short; the full word stays in the text (and the
+// accessible name "In Deposits 2" still starts with what is seen).
+const FILTERS: ReadonlyArray<{ key: AuditSwapFilter; label: string; short?: string }> = [
   { key: 'all', label: 'All' },
-  { key: 'deposits', label: 'Deposits' },
-  { key: 'withdrawals', label: 'Withdrawals' },
+  { key: 'deposits', label: 'Deposits', short: 'In' },
+  { key: 'withdrawals', label: 'Withdrawals', short: 'Out' },
   { key: 'failed', label: 'Failed' },
 ]
 
@@ -266,7 +269,7 @@ export function AuditSwapList({ rows, now, days = 7 }: { rows: AuditSwapRow[]; n
         <div className="au-chips" role="group" aria-label="Filter swaps">
           {FILTERS.map(f => (
             <button key={f.key} type="button" className="au-chip" aria-pressed={filter === f.key} onClick={() => { setFilter(f.key); setExpanded(false) }}>
-              {f.label} <span className="au-chip-n">{filterAuditSwaps(rows, f.key).length}</span>
+              {f.short ? <span className="au-chip-label" data-short={f.short}>{f.label}</span> : f.label} <span className="au-chip-n">{filterAuditSwaps(rows, f.key).length}</span>
             </button>
           ))}
         </div>

@@ -1,5 +1,5 @@
 // Rules from the 2026-11-10 UI review (the phone list column rule went with the 2026-11-19 redesign: phones show cards): the Compare picker lists by the shown
-// name with test mints last and the score in the row, and the Audit strip explains its red marks.
+// score (name before the 2026-11-22 UI/UX report) with test mints last and the score in the row, and the Audit strip explains its red marks.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import type { KnownMint } from '@/hooks/useKnownMints'
@@ -29,10 +29,11 @@ describe('Compare picker', () => {
   beforeEach(() => { vi.stubGlobal('ResizeObserver', class { observe() { /* jsdom */ } unobserve() { /* jsdom */ } disconnect() { /* jsdom */ } }) })
   afterEach(() => { vi.unstubAllGlobals() })
 
-  it('lists by the shown name (case-insensitive, numbers in order) and puts test mints last', () => {
+  // Since 2026-11-22 (UI/UX report M6): highest Reliability Score first, unscored after, test mints last.
+  it('lists by Reliability Score (highest first), unscored after, and puts test mints last', () => {
     const { baseElement } = render(<MintComparePicker candidates={CANDIDATES} baseLabel="Base" onClose={() => undefined} onConfirm={() => undefined} />)
     const names = Array.from(baseElement.querySelectorAll('.md-picker-name')).map(n => n.textContent)
-    expect(names).toEqual(['21linz Cashu Mint', 'Alpha Mint', 'antifiat mint', 'Kinda Reckless Mint', 'Cashu test mint'])
+    expect(names).toEqual(['Kinda Reckless Mint', 'antifiat mint', '21linz Cashu Mint', 'Alpha Mint', 'Cashu test mint'])
   })
 
   it('shows the score as a plain number with a hidden label; no number for an unscored mint', () => {

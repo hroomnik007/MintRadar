@@ -3,7 +3,7 @@ import { njumpEventUrl, mintAnnounceNaddr } from '@/utils/nostrLinks'
 import { nip87AnnouncementOf } from '@/utils/nip87Announcement'
 import { NIP87_ANNOUNCEMENT_LABEL, NIP87_NOT_SEEN_TEXT, nip87KeyText, nip87StoredSuffix } from '@/utils/nip87Texts'
 import { useParams, useNavigate, useLocation, Navigate, Link } from 'react-router-dom'
-import { Fragment, useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
+import { Fragment, useEffect, useState, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { UptimeBars } from '@/components/mint/UptimeBars'
@@ -66,6 +66,7 @@ import { classifyMintVersion, latestMapFor, type LatestVersions } from '@/utils/
 import { useNow } from '@/hooks/useNow'
 import { mintDetailMeta, MINT_NOT_FOUND_TITLE } from '@/utils/pageMeta'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { BackLink } from '@/components/BackLink'
 import { CLIENT_LATENCY_BUTTON_LABEL, CLIENT_LATENCY_RESULT_MS, latencyCaption } from '@/constants/probeLocation'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, uptimeTileText, type OutagesResponse } from '@/utils/mintDetailFacts'
@@ -92,7 +93,7 @@ const ComparisonModal = lazy(() => import('@/components/ComparisonModal').then(m
 import {
   Copy, Check, Info,
   Zap, QrCode,
-  ArrowUpRight, User, ChevronLeft, ArrowLeftRight,
+  ArrowUpRight, User, ArrowLeftRight,
 } from 'lucide-react'
 
 // Short label for the "Signing with" row — mirrors AppShell's navbar profile
@@ -224,6 +225,17 @@ function httpErrorTooltip(lastError: string): string | undefined {
   return NON_HTTP_ERROR_EXPLANATIONS[lastError]
 }
 
+
+/**
+ * M5: scroll the tab row of Mint Detail to the top, under the sticky navbar (57px; measured, so a taller bar still fits),
+ * only when it is not already on screen (on a desktop the tabs are usually visible and nothing moves).
+ */
+function scrollTabsIntoView(tabs: HTMLElement) {
+  const navH = document.querySelector('.navbar')?.getBoundingClientRect().height ?? 57
+  const r = tabs.getBoundingClientRect()
+  if (r.top >= navH && r.bottom <= window.innerHeight) return
+  window.scrollTo({ top: Math.max(0, window.scrollY + r.top - navH - 8), behavior: 'auto' })
+}
 
 function MintDetailContent({ url }: { url: string }) {
   const now = useNow()
@@ -604,16 +616,28 @@ function MintDetailContent({ url }: { url: string }) {
   // Also follows a hash-only change on the same mint page: an in-app link (router location hash) and a typed or
   // pasted URL that only changes the fragment (hashchange). Tabs themselves use replaceState, which fires neither.
   const { hash: locationHash } = useLocation()
+  // M5 (UI/UX report 2026-11-22): a tab link also brings the tabs into view. On a phone the header and the figures fill
+  // the first screen, so "#reviews" opened the right tab out of sight. Set here, done after the render that has the tabs.
+  const scrollToTabsPending = useRef(false)
   useEffect(() => {
     const apply = () => {
       const m = window.location.hash.match(/^#(overview|history|nuts|audit|reviews)$/)
       if (!m?.[1]) return
       setActiveTab(m[1] as 'overview' | 'history' | 'nuts' | 'audit' | 'reviews')
+      scrollToTabsPending.current = true
     }
     apply()
     window.addEventListener('hashchange', apply)
     return () => window.removeEventListener('hashchange', apply)
   }, [url, locationHash])
+  useEffect(() => {
+    if (!scrollToTabsPending.current) return
+    const tabs = document.querySelector<HTMLElement>('.mint-detail .md-tabs')
+    if (!tabs) return // still loading: the next render tries again
+    scrollToTabsPending.current = false
+    const id = window.requestAnimationFrame(() => scrollTabsIntoView(tabs))
+    return () => window.cancelAnimationFrame(id)
+  })
 
   // The slot grid only changes when the current hour/day bucket does, so key the memo on the bucket, not on every 30 s
   // useNow tick: a new data array on each tick made the chart re-run its line animation.
@@ -676,7 +700,7 @@ function MintDetailContent({ url }: { url: string }) {
     return (
       <div className="mint-detail">
         <div className="md-header">
-          <Link className="md-back" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
+          <BackLink className="md-back" to="/" label="All mints" />
         </div>
       </div>
     )
@@ -1098,7 +1122,7 @@ function MintDetailContent({ url }: { url: string }) {
           the shareable URL and "first seen" under it | the actions on the right (under the name on phones). */}
       <div className="md-header md-dh">
         {/* "All mints" to the list (mockup alignment 2026-11-19; it was "← Back" through the browser history). */}
-        <Link className="md-back md-back-compact" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
+        <BackLink className="md-back md-back-compact" to="/" label="All mints" />
         <div className="md-dh-main">
           <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={isMobile ? 48 : 64} radius={isMobile ? 12 : 14} className="md-hdr-favicon" />
           <div className="md-namebox">
@@ -1902,7 +1926,7 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
     <div className="mint-detail">
       {/* Only Back: no card around it (an empty bordered box read as a header that failed to load). */}
       <div className="md-header md-header-bare">
-        <Link className="md-back" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
+        <BackLink className="md-back" to="/" label="All mints" />
       </div>
       <div className="md-not-tracked">
         <h1 className="md-not-tracked-title">Not a tracked mint</h1>
@@ -1923,12 +1947,13 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
           </p>
         )}
         <p className="md-not-tracked-suggest">
-          <button type="button" className="md-not-tracked-link" onClick={() => navigate('/')}>Browse tracked mints →</button>
+          {/* Links, not buttons with navigate() (N5, UI/UX report 2026-11-22): they open in a new tab and can be copied. */}
+          <Link className="md-not-tracked-link" to="/">Browse tracked mints →</Link>
         </p>
         <p className="md-not-tracked-suggest">
           {/* Opens the Dashboard's "Add a mint" dialog (location state openAddMint); nothing is submitted from here. */}
           Know this mint?{' '}
-          <button type="button" className="md-not-tracked-link" data-testid="not-tracked-add" onClick={() => navigate('/', { state: { openAddMint: true } })}>Add a mint</button>
+          <Link className="md-not-tracked-link" data-testid="not-tracked-add" to="/" state={{ openAddMint: true }}>Add a mint</Link>
         </p>
       </div>
     </div>
@@ -1942,7 +1967,7 @@ function MintInvalidUrl() {
   return (
     <div className="mint-detail">
       <div className="md-header md-header-bare">
-        <Link className="md-back" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
+        <BackLink className="md-back" to="/" label="All mints" />
       </div>
       <h1 style={{ color: 'var(--red)', padding: '24px', fontSize: '14px', fontWeight: 400 }}>Invalid mint URL.</h1>
     </div>
@@ -1966,7 +1991,7 @@ export default function MintDetail() {
     return (
       <div className="mint-detail mint-detail-pending">
         <div className="md-header">
-          <Link className="md-back" to="/"><ChevronLeft size={16} aria-hidden="true" /><span className="md-back-label">All mints</span></Link>
+          <BackLink className="md-back" to="/" label="All mints" />
         </div>
         <h1 className="sr-only">Mint details</h1>
         {knownError ? <LoadError message={MINT_LIST_ERROR} onRetry={() => void refetchKnown()} /> : <LoadingNote />}

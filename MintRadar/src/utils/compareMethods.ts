@@ -3,7 +3,7 @@
 // two never disagree. A switched-off NUT-04/05 (`disabled: true`, #168) reads "Disabled by the mint", like there.
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { isNutDisabled } from '@/utils/nutSupport'
-import { limitRows, type LimitRow } from '@/utils/feesLimits'
+import { limitRows, paymentMethodWord, type LimitRow } from '@/utils/feesLimits'
 import { sortUnits } from '@/utils/sortUnits'
 
 type MethodLike = { method: string; unit: string; [key: string]: unknown }
@@ -16,7 +16,7 @@ export const METHODS_DISABLED = 'Disabled by the mint'
 export const METHODS_NONE = 'None declared'
 
 export interface MethodsCell {
-  /** "bolt11, bolt12", METHODS_DISABLED or METHODS_NONE. */
+  /** "Lightning, Lightning (BOLT12)" (the methods in words, as on Mint Detail; M1 2026-11-22), METHODS_DISABLED or METHODS_NONE. */
   text: string
   state: 'list' | 'disabled' | 'none'
 }
@@ -34,7 +34,7 @@ export function methodNames(list: readonly MethodLike[] | null | undefined): str
 export function methodsCell(list: readonly MethodLike[] | null | undefined, disabled: boolean): MethodsCell {
   if (disabled) return { text: METHODS_DISABLED, state: 'disabled' }
   const names = methodNames(list)
-  return names.length === 0 ? { text: METHODS_NONE, state: 'none' } : { text: names.join(', '), state: 'list' }
+  return names.length === 0 ? { text: METHODS_NONE, state: 'none' } : { text: names.map(paymentMethodWord).join(', '), state: 'list' }
 }
 
 /** Which of NUT-04 / NUT-05 the mint switched off (nutsLimits['4'|'5'].disabled === true). */

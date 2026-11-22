@@ -101,7 +101,7 @@ describe('mobile Compare table', () => {
     const row = (id: string) => baseElement.querySelector(`table.cmp-m-table tbody tr[data-row="${id}"]`) as HTMLElement
     expect(rowIds(baseElement)).toEqual(expect.arrayContaining(['deposit-methods', 'withdrawal-methods', 'limits', 'units']))
     const dep = row('deposit-methods').querySelectorAll('td')
-    expect(dep[0]!.textContent).toBe('bolt11, bolt12')
+    expect(dep[0]!.textContent).toBe('Lightning, Lightning (BOLT12)') // plain words since 2026-11-22 (UI/UX report M1)
     expect(dep[1]!.textContent).toContain('Disabled by the mint')
     const lim = row('limits').querySelectorAll('td')
     expect(lim[0]!.textContent).toContain('Deposit · bolt12 · satmin 1, max 500')
@@ -121,7 +121,7 @@ describe('mobile Compare table', () => {
     const off: KnownMint = { ...B, nutsLimits: { '4': {}, '5': { methods: [], disabled: true } }, units: ['sat', 'usd'] }
     const { baseElement } = renderModal([{ ...A, mintMethods: [{ method: 'bolt11', unit: 'sat' }], meltMethods: [{ method: 'bolt11', unit: 'sat' }] }, off])
     const cells = (id: string) => Array.from(baseElement.querySelectorAll(`.cmp-grid .cmp-val[data-row="${id}"]`)).map(e => e.textContent)
-    expect(cells('deposit-methods')).toEqual(['bolt11', 'None declared'])
+    expect(cells('deposit-methods')).toEqual(['Lightning', 'None declared'])
     expect(cells('withdrawal-methods')[1]).toContain('Disabled by the mint')
     expect(cells('units')).toEqual(['SAT', 'SAT, USD'])
     expect(cells('limits')[0]).toContain('min not declared, max not declared')

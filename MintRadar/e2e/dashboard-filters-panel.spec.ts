@@ -233,20 +233,22 @@ test.describe('Filters panel — layout', () => {
     await openPanel(page)
     expect((await page.locator('.filter-panel').boundingBox())!.height).toBeLessThanOrEqual(360)
     await page.setViewportSize({ width: 1440, height: 900 })
-    expect((await page.locator('.filter-panel').boundingBox())!.height).toBeLessThanOrEqual(106)
+    // 36px segments since D2 (2026-11-22; they were 28px): two rows still, ≤ 110px.
+    expect((await page.locator('.filter-panel').boundingBox())!.height).toBeLessThanOrEqual(110)
   })
 
   // The segments are 28px with 10px text since 6ed4592 / 20b0541 (compact); the checkbox row and
   // the buttons are still 36px. The touch target of a segment is 28 + 8 + 8 = 44px (test below).
-  // F2 (2026-10-29): Reset and "Show N of M" are as tall as the segments (28px); only the checkbox row stays 36px.
-  test('segments, Reset and Show are 28px tall, the checkbox row is 36px tall', async ({ page }) => {
+  // F2 (2026-10-29): Reset and "Show N of M" are as tall as the segments; only the checkbox row had its own 36px.
+  // D2 (2026-11-22): the segments take the shared .md-seg look, 36px, and Reset / Show follow them.
+  test('segments, Reset and Show are 36px tall like the checkbox row', async ({ page }) => {
     await openPanel(page)
     const expected: Array<[ReturnType<Page['locator']>, number]> = [
-      [page.locator('.filter-seg').first(), 28],
-      [page.locator('.filter-seg').nth(1), 28],
+      [page.locator('.filter-seg').first(), 36],
+      [page.locator('.filter-seg').nth(1), 36],
       [page.locator('.filter-check'), 36],
-      [page.getByRole('button', { name: 'Reset', exact: true }), 28],
-      [showBtn(page), 28],
+      [page.getByRole('button', { name: 'Reset', exact: true }), 36],
+      [showBtn(page), 36],
     ]
     for (const [loc, height] of expected) {
       expect((await loc.boundingBox())!.height).toBe(height)
@@ -284,8 +286,8 @@ test.describe('Filters panel — layout', () => {
           up: ownsPoint(el, x, b.top - 3), down: ownsPoint(el, x, b.bottom + 3),
         }
       })
-      // Targets 0-6 are the segment options (28px since 6ed4592 / 20b0541), 7 is the checkbox row (36px), 8 and 9 are Reset / Show (28px since F2).
-      expect(r.h).toBe(targets.indexOf(t) === 7 ? 36 : 28)
+      // Every target is 36px since D2 (2026-11-22): the segment options, the checkbox row, Reset and Show.
+      expect(r.h).toBe(36)
       expect(r.pseudoContent).toBe('""')
       expect(r.pseudoH).toBeGreaterThanOrEqual(44)
       expect(r, `target ${targets.indexOf(t)}`).toMatchObject({ up: true, down: true })
@@ -496,34 +498,36 @@ test.describe('Filters panel — labels versus options', () => {
     expect(await page.evaluate(() => document.activeElement?.closest('.filter-field-label') ?? null)).toBeNull()
   })
 
-  test('options look like buttons; the selected one differs by computed style', async ({ page }) => {
+  // D2 (2026-11-22): the shared .md-seg look — options inside one framed control with hairline separators, the
+  // selected one a step lighter with a copper line under it (it had a filled background per option before).
+  test('options are buttons in one framed control; the selected one differs by computed style', async ({ page }) => {
     await openPanel(page)
     const props = ['cursor', 'background-color', 'background-image', 'box-shadow', 'color']
     for (const opt of await page.locator('.filter-seg-opt').all()) {
       const st = await style(opt, props)
       expect(st.cursor).toBe('pointer')
-      expect(st['background-color']).not.toBe('rgba(0, 0, 0, 0)')
     }
     await chip(page, 'usd').click()
     const on = await style(chip(page, 'usd'), props)
     const off = await style(chip(page, 'eur'), props)
     expect(on.color).not.toBe(off.color)
     expect(on['box-shadow']).not.toBe(off['box-shadow'])
-    expect(on['background-image']).not.toBe(off['background-image'])
+    expect(on['box-shadow']).toContain('inset')
+    expect(on['background-color']).not.toBe(off['background-color'])
     const frame = await page.locator('.filter-seg').first().evaluate(el => getComputedStyle(el, '::after').borderTopWidth)
     expect(frame).toBe('1px')
     expect((await style(page.locator('.filter-seg-opt').nth(1), ['border-left-width']))['border-left-width']).toBe('1px')
   })
 
-  test('hover lightens an unselected option and strengthens its border (hover-capable pointer)', async ({ page }) => {
+  // D2 (2026-11-22): as .md-seg, hover brightens the text of an unselected option (no fill, no line).
+  test('hover brightens the text of an unselected option (hover-capable pointer)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await openPanel(page)
     const opt = chip(page, 'eur')
-    const rest = await style(opt, ['background-image', 'box-shadow'])
+    const rest = await style(opt, ['color', 'box-shadow'])
     await opt.hover()
-    const hov = await style(opt, ['background-image', 'box-shadow'])
-    expect(hov['background-image']).not.toBe(rest['background-image'])
-    expect(hov['box-shadow']).not.toBe(rest['box-shadow'])
+    await expect.poll(async () => (await style(opt, ['color'])).color).not.toBe(rest.color)
+    expect((await style(opt, ['box-shadow']))['box-shadow']).toBe(rest['box-shadow'])
   })
 
   test('keyboard focus ring: 2px accent outline with an offset', async ({ page }) => {

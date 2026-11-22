@@ -30,6 +30,8 @@ function MintDetailHistoryChart({ data, metric, interval, height, narrow = false
           dataKey="label"
           tick={{ fontSize: 12, fill: 'var(--text3)' }}
           axisLine={false} tickLine={false}
+          // M9 (UI/UX report 2026-11-22): on a phone the last date label ("22 Nov") was cut at the right edge.
+          padding={narrow ? { left: 0, right: 12 } : { left: 0, right: 0 }}
           // At most one label per day (every 4th bucket for 24h); on a phone every second one, or seven "13 Nov" labels
           // run together (2026-11-19 redesign).
           interval={(() => {

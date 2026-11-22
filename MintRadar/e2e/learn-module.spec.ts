@@ -32,7 +32,7 @@ test('unknown numeric or unknown slug still shows "Module not found"', async ({ 
 
 test('a middle module footer links "Next, module 2" to the following module', async ({ page }) => {
   await page.goto('/learn/cashu-basics')
-  await expect(page.locator('.learn-back-link')).toHaveText('← All modules')
+  await expect(page.locator('.learn-back-link')).toHaveText('All modules')
   await expect(page.locator('.learn-kicker')).toHaveText('Module 1 of 5, 2 minutes')
   const next = page.locator('.learn-nav-next')
   await expect(next).toContainText('Next, module 2')

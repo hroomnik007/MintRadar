@@ -89,7 +89,8 @@
 .rv-btn-cancel { border: 1px solid var(--border2); color: var(--text2); font-size: 14px; padding: 9px 16px; }
 @media (max-width: 480px) { .rv-modal { padding: 18px; } }
 
-/* Logged-out watch prompt: outlined green action like the Nostr login modal's Connect. */
-.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--action-ink); border: 1px solid var(--action); border-radius: 10px; font-size: 14px; font-weight: 600; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
-.rv-btn-login:hover { background: var(--action-soft); border-color: var(--action); }
+/* Logged-out watch prompt: "Log in with Nostr" is the filled copper action everywhere (D3, UI/UX report 2026-11-22: it
+   was outlined here and filled on /watchlist and under the reviews). */
+.rv-btn-login { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--action); color: #04120d; border: 1px solid var(--action); border-radius: 10px; font-size: 14px; font-weight: 700; padding: 9px 18px; transition: background var(--transition), border-color var(--transition); }
+.rv-btn-login:hover { background: color-mix(in srgb, var(--action) 85%, #fff); border-color: var(--action); }
 .rv-btn-login:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }

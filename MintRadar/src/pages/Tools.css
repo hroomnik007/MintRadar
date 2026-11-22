@@ -395,6 +395,10 @@ a.token-action-btn:focus {
 }
 @media (max-width: 900px) {
   .tools-grid { grid-template-columns: 1fr; }
+  /* M10 (UI/UX report 2026-11-22): in one column "Find a mint for me" comes first (the homepage links to #pick), then
+     the Token and the Payment request inspectors. The left column dissolves into the grid so `order` can move the wizard. */
+  .tools-col { display: contents; }
+  #pick.tool-anchor { order: -1; }
 }
 /* Token Inspector, above the 700px mobile breakpoint: the primary button is centered like
    the wizard's "Find my mint", "Check if spent" is content-sized and left-aligned, and the

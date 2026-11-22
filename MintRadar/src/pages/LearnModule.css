@@ -16,7 +16,10 @@
 }
 
 .learn-back-link {
-  display: inline-block;
+  /* BackLink (D5): chevron + label in one line, like "‹ All mints" on Mint Detail. */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
   font-family: var(--font-mono);
   color: var(--text3);
