@@ -1,7 +1,7 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import {
-  auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
+  auditCzStateTitle, auditCzStageText, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
   auditVerdictHeadline, auditVerdictSentence, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT,
   auditWeekLabel, auditWeeksForChart,
   type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
@@ -233,10 +233,11 @@ function breakAfterUnderscore(text: string): ReactNode {
  */
 export function AuditStateText({ row: s }: { row: AuditSwapRow }) {
   const tip = auditCzStateTitle(s)
-  // "Succeeded" for cashu.info's OK (2026-11-19 redesign); any other state stays the source's word.
+  // "Succeeded" for cashu.info's OK (2026-11-19 redesign); any other state stays the source's word, its stage in plain
+  // words ("failed at Lightning quote", T4 2026-11-22), the source's stage code kept in data-stage.
   const text = s.neutral === 'limits' || s.neutral === 'balance' ? AUDIT_CZ_NEUTRAL_TEXT[s.neutral]
     : s.state === 'OK' ? 'Succeeded'
-    : <>{breakAfterUnderscore(s.state)}{s.stage ? <>{' ('}{breakAfterUnderscore(s.stage)}{')'}</> : null}</>
+    : <>{breakAfterUnderscore(s.state)}{s.stage ? <>{' '}<span data-stage={s.stage}>{auditCzStageText(s.stage)}</span></> : null}</>
   return (
     <>
       {tip ? <InfoTooltip text={tip} width={240}><span>{text}</span></InfoTooltip> : text}

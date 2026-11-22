@@ -54,6 +54,10 @@ describe('renderMintOgHtml', () => {
     expect(mintOgDescription({ ...full, reviewRatedCount: 1 })).toContain('in 1 review')
     expect(mintOgDescription({ ...full, uptimePct24h: null, nutCount: 0, reviewAvgRating: null })).toBe('Reliability Score: 98/100 · Online')
     expect(mintOgDescription({ ...full, reviewRatedCount: 0 })).not.toContain('rated')
+    // N4 (2026-11-22): the 30-day uptime of the cards when it is stored, one decimal, never rounded up to 100.
+    expect(mintOgDescription({ ...full, uptimePct30dExact: 99.96 })).toBe('Reliability Score: 98/100 · Online · 99.9% uptime (30 d) · 14 NUTs · rated 4.7/5 in 90 reviews')
+    expect(mintOgDescription({ ...full, uptimePct30dExact: 100 })).toContain('100% uptime (30 d)')
+    expect(mintOgDescription({ ...full, uptimePct30dExact: null })).toContain('100% uptime (24h)')
   })
 
   it('writes the score as points out of 100 and never with a percent sign (og:description, twitter:description, description)', () => {

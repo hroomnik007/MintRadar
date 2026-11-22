@@ -129,7 +129,7 @@ test.describe('Stats NUT coverage modal', () => {
     await expect(modal(page)).toHaveCount(0)
   })
 
-  // Narrow-screen layout: 49 online mints, 26 of them offering NUT-19 (long title "NUT-19 · Cached responses").
+  // Narrow-screen layout: 49 online mints, 26 of them offering NUT-19 (long title "NUT-19 · Safe retries").
   test.describe('header and footer layout', () => {
     const many = Array.from({ length: 49 }, (_, i) => ({
       ...MOCK_KNOWN_MINTS[0]!, url: `https://m${i}.example`, name: `Mint ${i}`, online: true, reliabilityScore: 90 - i,

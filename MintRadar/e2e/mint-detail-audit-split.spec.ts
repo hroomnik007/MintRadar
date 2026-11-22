@@ -212,7 +212,7 @@ test.describe('swap list filter', () => {
 })
 
 // On phones the Result text of a failed row wraps inside its cell, only at the space or after an underscore
-// ("failed (mint_quote)" never breaks inside a word), is never cut, and the page does not scroll sideways.
+// ("failed at deposit invoice" never breaks inside a word; the stage was a code like "mint_quote" until 2026-11-22), is never cut, and the page does not scroll sideways.
 for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
   test(`Result text of failed rows is not clipped and the page does not scroll sideways @ ${w}px`, async ({ page }) => {
     await resize(page, w, h)
@@ -276,8 +276,8 @@ for (const [w, h] of [[640, 900], [390, 844], [320, 640]] as const) {
     expect(m.doc).toBeLessThanOrEqual(0)
     expect(m.wrap, 'the table fits its box').toBeLessThanOrEqual(0)
     // the failed rows carry the amber chip and their full state is in the text
-    await expect(swapList(page).locator('tr.au-row-fail', { hasText: 'failed (melt)' })).toHaveCount(2)
-    await expect(swapList(page).locator('tr.au-row-fail', { hasText: 'failed (mint_quote)' })).toHaveCount(2)
+    await expect(swapList(page).locator('tr.au-row-fail', { hasText: 'failed at Lightning payment' })).toHaveCount(2)
+    await expect(swapList(page).locator('tr.au-row-fail', { hasText: 'failed at deposit invoice' })).toHaveCount(2)
     await expect(swapList(page).locator('tr.au-row-fail .au-res-fail')).toHaveCount(4)
   })
 }

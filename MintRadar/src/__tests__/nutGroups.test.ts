@@ -15,3 +15,19 @@ describe('NUT groups of the NUTs tab', () => {
     }
   })
 })
+
+// D4 (UI/UX report 2026-11-22): one name per tracked NUT on Stats, the NUT dialogs and the NUTs tab.
+describe('one name per tracked NUT', () => {
+  it('NUT_META, NUT_DESCRIPTIONS and NUT_GROUPS use NUT_NAMES', async () => {
+    const { NUT_META, NUT_NAMES, TRACKED_NUTS: tracked } = await import('@/constants/nuts')
+    const { NUT_DESCRIPTIONS, NUT_GROUPS: groups } = await import('@/pages/mintDetail/nutCatalog')
+    const inGroups = new Map(groups.flatMap(g => g.nuts.map(n => [n.nut, n.name] as const)))
+    for (const nut of tracked) {
+      const name = NUT_NAMES[nut]
+      expect(name, nut).toBeTruthy()
+      expect(NUT_META[nut]?.short, nut).toBe(name)
+      expect(NUT_DESCRIPTIONS[nut]?.short, nut).toBe(name)
+      expect(inGroups.get(nut), nut).toBe(name)
+    }
+  })
+})

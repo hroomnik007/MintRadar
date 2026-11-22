@@ -311,7 +311,7 @@ export default function ForWallets() {
         <section aria-labelledby="ux">
           <h2 id="ux" tabIndex={-1} className="about-h2">Suggested UX</h2>
           <ul>
-            <li>Show the score with its label as <strong>operational health</strong> (for example &quot;Operational health 92/100&quot;), never as &quot;safe&quot; or &quot;trusted&quot;.</li>
+            <li>Show the score with its label as <strong>operational health</strong> (for example &quot;Operational health 92/100&quot;), never as &quot;safe&quot; or as an endorsement.</li>
             <li>Treat a <code>null</code> score as <strong>no data yet</strong>, not as a bad score.</li>
             <li>Hide test mints (<code>isTest: true</code>); the default list already leaves them out.</li>
             <li>Show <code>status</code> next to the score, and a short hint while <code>scoreCappedNew</code> is true. When <code>scoreStale</code> is true, label the score as the last measured one.</li>

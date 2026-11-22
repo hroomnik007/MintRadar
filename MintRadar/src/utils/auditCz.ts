@@ -152,6 +152,20 @@ export function truncateText(text: string, max: number): string {
   return chars.length <= max ? text : `${chars.slice(0, max - 1).join('').trimEnd()}…`
 }
 
+/** cashu.info swap stages in plain words (T4, UI/UX report 2026-11-22): "failed at swap" instead of "failed (split)". */
+export const AUDIT_CZ_STAGE_TEXT: Readonly<Record<string, string>> = {
+  split: 'swap',
+  mint_quote: 'deposit invoice',
+  mint: 'issuing coins',
+  melt_quote: 'Lightning quote',
+  melt: 'Lightning payment',
+}
+
+/** The words after the state of a failed row: "at Lightning quote"; an unknown stage code with its underscores as spaces. */
+export function auditCzStageText(stage: string): string {
+  return `at ${AUDIT_CZ_STAGE_TEXT[stage] ?? stage.replace(/_/g, ' ')}`
+}
+
 /**
  * Tooltip of the State cell of a row that is not OK (cashu.info view). Grey rows start with the fixed
  * "Not counted against the mint: …" explanation, followed by the failure text; other rows carry the failure

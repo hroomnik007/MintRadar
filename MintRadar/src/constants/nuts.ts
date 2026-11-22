@@ -49,22 +49,44 @@ export const TRACKED_NUT_KEYS: string[] = TRACKED_NUTS.map(
   nut => String(parseInt(nut.slice(4), 10))
 )
 
+/**
+ * One plain name per tracked NUT (D4, UI/UX report 2026-11-22): Stats, the NUT dialogs, the For wallets request builder and
+ * the Mint Detail NUTs tab all read it, so the same NUT never has two names (it was "Pay-to-PK" on Stats and "Pay to public
+ * key" on the NUTs tab). The names are the NUTs tab's (2026-11-19 redesign, phase 4d).
+ */
+export const NUT_NAMES: Readonly<Record<string, string>> = {
+  'NUT-04': 'Mint tokens',
+  'NUT-05': 'Melt tokens',
+  'NUT-07': 'Token state',
+  'NUT-08': 'Overpay refund',
+  'NUT-09': 'Restore',
+  'NUT-10': 'Spending conditions',
+  'NUT-11': 'Pay to public key',
+  'NUT-12': 'DLEQ proofs',
+  'NUT-14': 'Hash locks',
+  'NUT-15': 'Multi-mint payments',
+  'NUT-17': 'Live updates',
+  'NUT-19': 'Safe retries',
+  'NUT-20': 'Signed mint quotes',
+  'NUT-29': 'Batched minting',
+}
+
 /** Display metadata per NUT. */
 export const NUT_META: Record<string, NutMeta> = {
-  'NUT-04': { short: 'Mint tokens', desc: 'Minting new Cashu tokens against a Lightning invoice.', specNum: '04' },
-  'NUT-05': { short: 'Melt tokens', desc: 'Melting Cashu tokens to pay a Lightning invoice.', specNum: '05' },
-  'NUT-07': { short: 'Token state', desc: 'Checking whether a coin has been spent or is still valid.', specNum: '07' },
-  'NUT-08': { short: 'Overpay melt', desc: 'Overpaying melt fees and receiving change tokens back.', specNum: '08' },
-  'NUT-09': { short: 'Restore', desc: 'Restoring blinded signatures from mint backup data.', specNum: '09' },
-  'NUT-10': { short: 'Spending conditions', desc: 'Spending conditions that must be met to use a coin.', specNum: '10' },
-  'NUT-11': { short: 'Pay-to-PK', desc: 'Lock tokens to a specific public key for secure transfers.', specNum: '11' },
-  'NUT-12': { short: 'DLEQ proofs', desc: 'Discrete Log Equality proofs for verifiable blind signatures.', specNum: '12' },
-  'NUT-14': { short: 'HTLCs', desc: 'Hash Time Locked Contracts for atomic swaps.', specNum: '14' },
-  'NUT-15': { short: 'Multi-mint MPP', desc: 'Split a single Lightning payment across multiple mints simultaneously.', specNum: '15' },
-  'NUT-17': { short: 'WebSocket', desc: 'Real-time mint updates via WebSocket subscription.', specNum: '17' },
-  'NUT-19': { short: 'Cached responses', desc: 'Mints cache successful responses so wallets can replay after a network error.', specNum: '19' },
-  'NUT-20': { short: 'Mint quote sig', desc: 'Mint signs quote requests for authenticity.', specNum: '20' },
-  'NUT-29': { short: 'Batched minting', desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', specNum: '29' },
+  'NUT-04': { short: NUT_NAMES['NUT-04']!, desc: 'Minting new Cashu tokens against a Lightning invoice.', specNum: '04' },
+  'NUT-05': { short: NUT_NAMES['NUT-05']!, desc: 'Melting Cashu tokens to pay a Lightning invoice.', specNum: '05' },
+  'NUT-07': { short: NUT_NAMES['NUT-07']!, desc: 'Checking whether a coin has been spent or is still valid.', specNum: '07' },
+  'NUT-08': { short: NUT_NAMES['NUT-08']!, desc: 'Overpaying melt fees and receiving change tokens back.', specNum: '08' },
+  'NUT-09': { short: NUT_NAMES['NUT-09']!, desc: 'Restoring blinded signatures from mint backup data.', specNum: '09' },
+  'NUT-10': { short: NUT_NAMES['NUT-10']!, desc: 'Spending conditions that must be met to use a coin.', specNum: '10' },
+  'NUT-11': { short: NUT_NAMES['NUT-11']!, desc: 'Lock tokens to a specific public key for secure transfers.', specNum: '11' },
+  'NUT-12': { short: NUT_NAMES['NUT-12']!, desc: 'Discrete Log Equality proofs for verifiable blind signatures.', specNum: '12' },
+  'NUT-14': { short: NUT_NAMES['NUT-14']!, desc: 'Hash Time Locked Contracts for atomic swaps.', specNum: '14' },
+  'NUT-15': { short: NUT_NAMES['NUT-15']!, desc: 'Split a single Lightning payment across multiple mints simultaneously.', specNum: '15' },
+  'NUT-17': { short: NUT_NAMES['NUT-17']!, desc: 'Real-time mint updates via WebSocket subscription.', specNum: '17' },
+  'NUT-19': { short: NUT_NAMES['NUT-19']!, desc: 'Mints cache successful responses so wallets can replay after a network error.', specNum: '19' },
+  'NUT-20': { short: NUT_NAMES['NUT-20']!, desc: 'Mint signs quote requests for authenticity.', specNum: '20' },
+  'NUT-29': { short: NUT_NAMES['NUT-29']!, desc: 'Wallets can mint tokens for multiple quotes in a single atomic request.', specNum: '29' },
 }
 
 /** cashubtc/nuts spec URL for a tracked NUT, or null if it isn't tracked. */

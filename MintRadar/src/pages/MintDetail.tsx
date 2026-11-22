@@ -41,7 +41,7 @@ import { supportedNutKeys, offeredNutKeys } from '@/utils/nutSupport'
 import { NutDescription, NutSpecLink } from '@/components/NutSpec'
 import { nutOfferBreakdown } from '@/utils/nutFilters'
 import { formatDate } from '@/utils/formatDate'
-import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel, uptime30dColor } from '@/utils/mintFormatting'
+import { displayName as mintDisplayName, isNewMint, firstSeenLabel, reliabilityScoreColor, reliabilityScoreInfo, SCORE_PENDING_INFO, SCORE_PENDING_TEXT, UPTIME_PENDING_ARIA_LABEL, SCORE_PENDING_ARIA_LABEL, auditReliabilityColor, MIN_MEANINGFUL_REVIEWS, mintHostname, resolveMintDetailUrl, computeDuplicateMintNames, mintStatusLabel, uptime30dColor, uptime30dShown, formatUptime30d } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
@@ -854,6 +854,8 @@ function MintDetailContent({ url }: { url: string }) {
   const storedUptimeInputs = storedBreakdown?.uptimeParts ? storedBreakdown.uptimeInputs : undefined
   const uptimeRowDisplay = storedUptimeInputs ? `${uptimePct}% · 30d ${storedUptimeInputs.uptime30dPct}%` : `${uptimePct}%`
   const uptimeTooltip = uptimeRowTooltip(storedBreakdown, formatDuration) ?? uptimeRowText()
+  // U1: the unrounded 30-day share cut down to one decimal (never a rounded-up 100 % with yellow days).
+  const uptime30dShownValue = uptime30dShown(knownMint?.uptimePct30dExact, knownMint?.uptimePct30d)
   const reliabilityBreakdownRows = [
     { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : uptimeRowDisplay, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeTooltip },
     { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: rowAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
@@ -1333,11 +1335,11 @@ function MintDetailContent({ url }: { url: string }) {
         <section className="md-trace" aria-labelledby="md-trace-h">
           <div className="md-trace-head">
             <h2 id="md-trace-h" className="md-trace-title">Last 30 days</h2>
-            {typeof knownMint.uptimePct30d === 'number' && (
+            {uptime30dShownValue != null && (
               <span className="md-trace-note" data-testid="md-uptime-30d">
-                <span style={{ color: uptime30dColor(knownMint.uptimePct30d) }}>{knownMint.uptimePct30d}%</span> uptime
-                {uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount) && (
-                  <span className="md-uptime-30d-note">{uptime30dOutageNote(knownMint.uptimePct30d, outagesData?.outageCount).replace(/^ · /, ', ')}</span>
+                <span style={{ color: uptime30dColor(uptime30dShownValue) }}>{formatUptime30d(uptime30dShownValue)}%</span> uptime
+                {uptime30dOutageNote(uptime30dShownValue, outagesData?.outageCount) && (
+                  <span className="md-uptime-30d-note">{uptime30dOutageNote(uptime30dShownValue, outagesData?.outageCount).replace(/^ · /, ', ')}</span>
                 )}
               </span>
             )}

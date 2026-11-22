@@ -92,9 +92,10 @@ export function outdatedSoftwareText(): string {
  */
 export const TRACKING_HISTORY_TEXT = `Share of all tracked mints that MintRadar has known for ${FRESH_MINT_MONTHS} ${FRESH_MINT_MONTHS === 1 ? 'month' : 'months'} or more, from the day it first saw each. It does not measure how stable the network is. A stand-in for churn, which MintRadar cannot measure yet.`
 
-/** Mint Detail: the Reliability Score formula (tooltip next to the title, and the visible line of the breakdown dialog). */
+/** Mint Detail: the Reliability Score formula (tooltip next to the title, and the visible line of the breakdown dialog), its
+ *  parts in the order of the breakdown rows above it: Uptime, Audit, NUT support, Version, Contact (T7, 2026-11-22). */
 export function scoreFormulaText(): string {
-  return `Score = Uptime×${UPTIME_POINTS}% + NUT support×${NUT_POINTS}% + Version×${VERSION_POINTS}% + Contact×${CONTACT_POINTS}% + Audit×${AUDIT_POINTS}%. New mints (first ${NEW_MINT_MAX_DAYS} days) are capped at ${NEW_MINT_RELIABILITY_CAP}.`
+  return `Score = Uptime×${UPTIME_POINTS}% + Audit×${AUDIT_POINTS}% + NUT support×${NUT_POINTS}% + Version×${VERSION_POINTS}% + Contact×${CONTACT_POINTS}%. New mints (first ${NEW_MINT_MAX_DAYS} days) are capped at ${NEW_MINT_RELIABILITY_CAP}.`
 }
 
 /** Breakdown rows. */

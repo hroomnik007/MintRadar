@@ -68,6 +68,16 @@ export function outageHeadline(e: Extract<HistoryEvent, { kind: 'outage' }>): st
   return `Not answering for ${formatDuration(e.durationMs)}${e.ongoing ? ' so far' : ''}`
 }
 
+/** "15 days", "3 hours", "20 min": how long ago, in its largest whole unit (T6: "15d 13h ago" read as a code). */
+export function roughAgo(ms: number): string {
+  const min = Math.max(0, Math.floor(ms / 60_000))
+  const hours = Math.floor(min / 60)
+  const days = Math.floor(hours / 24)
+  if (days >= 1) return days === 1 ? '1 day' : `${days} days`
+  if (hours >= 1) return hours === 1 ? '1 hour' : `${hours} hours`
+  return `${min} min`
+}
+
 /**
  * The line under the outage count. While an outage is ongoing it says how long the mint has been down and NEVER a time
  * since the last outage (an older API still sent a small sinceLastOutageMs then: the "2m" bug). Otherwise the API's mean
@@ -80,6 +90,6 @@ export function outageFigureNote(data: OutagesResponse | undefined): string | nu
   // The mean hides one long outage among short ones (8 outages, mean 21 h, one of them 6.8 days): name the longest when
   // there is more than one (with one, the mean is that outage).
   const longest = typeof data.longestOutageMs === 'number' && data.longestOutageMs > 0 && data.outageCount > 1 ? ` (longest ${formatDuration(data.longestOutageMs)})` : ''
-  const since = data.sinceLastOutageMs != null ? `, the last ${formatDuration(data.sinceLastOutageMs)} ago` : ''
+  const since = data.sinceLastOutageMs != null ? `, the last one ${roughAgo(data.sinceLastOutageMs)} ago` : ''
   return `${formatDuration(data.avgRecoveryMs)} to recover on average${longest}${since}`
 }

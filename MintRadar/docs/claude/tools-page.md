@@ -433,3 +433,8 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
 - Results: the score as a readout (accessible name "Reliability N"), the name as a link to the mint, the facts under it,
   and an outlined **"Open in Cashu.me"** (owner's choice of name; `wallet.cashu.me/?mint=`). The row is no longer one
   clickable box, so the button is not nested in a link.
+
+- Best Mint Wizard (2026-11-22): the line under #1 names one or two concrete reasons it beats #2
+  (`whyBestReasons` / `whyBestText` in `wizardScoring.ts`: higher Reliability Score, better reviews, more NUTs,
+  faster from your browser, your preferred software), e.g. "Best match: higher Reliability Score (92 vs 78) · better
+  reviews (4.2★ from 12 ratings)". With no runner-up it keeps "Best match for your filters".

@@ -135,9 +135,12 @@ export function latencyPercentilesText(p50: number | null | undefined, p95: numb
   return `Median ${f(p50)} · p95 ${f(p95)}${period ? ` over ${PERIOD_TEXT[period]}` : ''}`
 }
 
-/** " · 1 outage" next to a 30-day uptime of a rounded 100 % that still had outages in the window; '' otherwise. */
+/**
+ * " · 1 outage" next to a 30-day uptime of 99.5 % or more (the figures that used to round to 100 %) that still had
+ * outages in the window; '' otherwise. Since U1 (2026-11-22) the figure is shown with one decimal, cut down.
+ */
 export function uptime30dOutageNote(pct: number | null | undefined, outageCount: number | null | undefined): string {
-  if (pct !== 100 || !outageCount || outageCount <= 0) return ''
+  if (pct == null || pct < 99.5 || !outageCount || outageCount <= 0) return ''
   return ` · ${outageCount === 1 ? '1 outage' : `${outageCount} outages`}`
 }
 

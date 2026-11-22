@@ -342,3 +342,7 @@ minute) only reads the last result (`getDailyUptime()`), so a snapshot refresh s
 count `pool.query` calls). A failed read keeps the previous buckets (or none) and never fails the snapshot; right after a
 start, before the first read, the field is `null`. Read by the 30 bars on
 the mint cards and the list view (`UptimeBars`).
+
+- OG description of a mint page (`backend/src/og.ts`, 2026-11-22): uses the exact 30-day uptime from the stored score
+  breakdown (`uptimeInputs.uptime30dExactPct`, one decimal rounded down, as on the site), "… % uptime (30 d)";
+  without it, the 24 h figure as before.

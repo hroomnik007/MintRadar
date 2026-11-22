@@ -753,3 +753,14 @@ Blocks "Mockup alignment, 2026-11-19" at the end of `MintDetail.css`; `mint.html
 - Audit: the "How the auditor tests" panel is gone (it repeated the verdict's sentence); its source line "Data from
   cashu.info, synced … Open this mint on cashu.info" sits under the verdict (`.md-audit-src`); swaps per day takes the row.
 - The header action icons show on phones too (they were hidden below 420 px); tighter padding up to 640 px.
+
+## UI/UX report fixes (2026-11-22)
+- 30-day uptime is shown with one decimal from `uptimePct30dExact`, rounded **down** (`uptime30dShown`,
+  `formatUptime30d` in `mintFormatting.ts`), so 99.96 % reads "99.9%", never "100%"; only an exact 100 reads "100%".
+  Same on the card, the list view and the detail "Last 30 days" line; the outage note shows from 99.5 % up.
+- History: the outage line reads ", the last one 15 days ago" (`roughAgo`, `historyTimeline.ts`).
+- Audit (cashu.info) failed rows name the step in plain words: "failed at swap / deposit invoice / issuing coins /
+  Lightning quote / Lightning payment" (`AUDIT_CZ_STAGE_TEXT`, `auditCz.ts`).
+- NUT names come from one list, `NUT_NAMES` (`constants/nuts.ts`), used by the card chips, the NUTs tab and the groups.
+- The score formula tooltip lists the parts in the order Uptime, Audit, NUT support, Version, Contact.
+- An unavailable mint without contacts says "This mint lists no contact."

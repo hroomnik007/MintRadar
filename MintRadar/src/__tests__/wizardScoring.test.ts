@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { weightsFor, reviewsScore, REVIEWS_WEIGHT, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
+import { weightsFor, reviewsScore, REVIEWS_WEIGHT, whyBestReasons, whyBestText, WHY_BEST_FALLBACK, type WizardCheck, type SizeOption, type WhyBestEntry } from '@/utils/wizardScoring'
 
 const sum = (w: Record<string, number>) => Object.values(w).reduce((a, b) => a + b, 0)
 const combos: Set<WizardCheck>[] = [new Set(['fast']), new Set(['reliable']), new Set(['fast', 'reliable']), new Set(['ln'])]
@@ -95,5 +95,35 @@ describe('latencyPart (2026-11-14: without "Fast from here" latency only breaks 
     const { latencyPart, latencyScore, weightsFor } = await import('@/utils/wizardScoring')
     const w = weightsFor(new Set(['fast']), 'small')
     expect(latencyPart(w, 100, 1000, true)).toBeCloseTo(w.latency * latencyScore(100, 1000, true), 12)
+  })
+})
+
+// U5 (UI/UX report 2026-11-22): the line under #1 names up to two concrete reasons from the score parts.
+describe('whyBestReasons / whyBestText', () => {
+  const entry = (o: Partial<WhyBestEntry['parts']>, mint: Partial<WhyBestEntry['mint']>, latencyMs: number | null = null): WhyBestEntry => ({
+    parts: { latency: 0, reliability: 0, nuts: 0, reviews: 0, software: 0, ...o },
+    latencyMs,
+    mint: { reliabilityScore: 90, nutCount: 12, reviewAvgRating: null, reviewRatedCount: 0, reviewCount: 0, reviewSurge: false, ...mint },
+  })
+  it('names the parts where #1 gains most over #2, largest first, at most two', () => {
+    // The report's case: 98 above 99 because of reviews and NUTs.
+    const best = entry({ reliability: 0.617, reviews: 0.09, nuts: 0.09 }, { reliabilityScore: 98, nutCount: 14, reviewAvgRating: 4.9, reviewRatedCount: 16 })
+    const second = entry({ reliability: 0.624, reviews: 0.07, nuts: 0.08, latency: 0.01 }, { reliabilityScore: 99, nutCount: 12, reviewAvgRating: 5, reviewRatedCount: 4 })
+    const r = whyBestReasons(best, second)
+    expect(r).toEqual(['better reviews (4.9★ from 16 ratings)', 'more NUTs supported (14 vs 12)'])
+    expect(whyBestText(r)).toBe('Best match: better reviews (4.9★ from 16 ratings) · more NUTs supported (14 vs 12)')
+  })
+  it('a higher Reliability Score, the browser latency and the preferred software', () => {
+    const best = entry({ reliability: 0.7, latency: 0.3, software: 0.02 }, { reliabilityScore: 95 }, 120)
+    const second = entry({ reliability: 0.6, latency: 0.1 }, { reliabilityScore: 85 }, 900)
+    expect(whyBestReasons(best, second)).toEqual(['faster from your browser (120 vs 900 ms)', 'higher Reliability Score (95 vs 85)'])
+    expect(whyBestReasons(best, second, 3)[2]).toBe('your preferred software')
+  })
+  it('never praises reviews that do not count, and falls back without a runner-up or a lead', () => {
+    const best = entry({ reviews: 0.08 }, { reviewAvgRating: 5, reviewRatedCount: 1 })
+    const second = entry({ reviews: 0.05 }, {})
+    expect(whyBestReasons(best, second)).toEqual([])
+    expect(whyBestReasons(best, null)).toEqual([])
+    expect(whyBestText([])).toBe(WHY_BEST_FALLBACK)
   })
 })

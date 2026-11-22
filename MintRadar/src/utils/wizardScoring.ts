@@ -124,3 +124,62 @@ export function reviewsScore(
   const adjusted = usable ? bayesianRating(mint.reviewAvgRating as number, n) : RATING_PRIOR
   return (adjusted - 1) / 4
 }
+
+/** The weighted parts of one wizard score (same 0..1 scale as the score itself); `software` is the preference credit. */
+export interface WizardParts { latency: number; reliability: number; nuts: number; reviews: number; software: number }
+
+export interface WhyBestEntry {
+  parts: WizardParts
+  latencyMs: number | null
+  mint: Pick<KnownMint, 'reliabilityScore' | 'nutCount' | 'reviewAvgRating' | 'reviewRatedCount' | 'reviewCount' | 'reviewSurge'>
+}
+
+/** Fallback line under #1 when there is no concrete reason to give (no runner-up, or nothing ahead of it). */
+export const WHY_BEST_FALLBACK = 'Best match for your filters'
+
+/**
+ * U5 (UI/UX report 2026-11-22): up to `max` concrete reasons why the first result is ahead of the second, from the
+ * parts of the wizard score where #1 gains the most over #2 (largest gain first). Only positive facts about #1 are
+ * said; a part where #1 is not ahead is left out. Empty when there is no runner-up or no part puts #1 ahead.
+ */
+export function whyBestReasons(best: WhyBestEntry, runnerUp: WhyBestEntry | null, max = 2): string[] {
+  if (!runnerUp) return []
+  const gains = (Object.keys(best.parts) as (keyof WizardParts)[])
+    .map(k => ({ k, gain: best.parts[k] - runnerUp.parts[k] }))
+    .filter(g => g.gain > 1e-9)
+    .sort((a, b) => b.gain - a.gain)
+  const out: string[] = []
+  for (const { k } of gains) {
+    const text = reasonText(k, best, runnerUp)
+    if (text) out.push(text)
+    if (out.length >= max) break
+  }
+  return out
+}
+
+function reasonText(k: keyof WizardParts, best: WhyBestEntry, other: WhyBestEntry): string | null {
+  switch (k) {
+    case 'reliability':
+      return best.mint.reliabilityScore != null && other.mint.reliabilityScore != null
+        ? `higher Reliability Score (${best.mint.reliabilityScore} vs ${other.mint.reliabilityScore})`
+        : null
+    case 'reviews': {
+      const n = best.mint.reviewRatedCount ?? best.mint.reviewCount ?? 0
+      const usable = best.mint.reviewAvgRating != null && n >= MIN_REVIEWS_FOR_SCORE && !best.mint.reviewSurge
+      // A mint without usable ratings is never praised for them (it can only be ahead because #2's are weak).
+      return usable ? `better reviews (${(best.mint.reviewAvgRating as number).toFixed(1)}★ from ${n} ratings)` : null
+    }
+    case 'nuts':
+      return best.mint.nutCount != null && other.mint.nutCount != null ? `more NUTs supported (${best.mint.nutCount} vs ${other.mint.nutCount})` : null
+    case 'latency':
+      if (best.latencyMs === null) return null
+      return other.latencyMs !== null ? `faster from your browser (${best.latencyMs} vs ${other.latencyMs} ms)` : `${best.latencyMs} ms from your browser`
+    case 'software':
+      return 'your preferred software'
+  }
+}
+
+/** The line under #1: "Best match: " and the reasons, or the fallback sentence. */
+export function whyBestText(reasons: readonly string[]): string {
+  return reasons.length > 0 ? `Best match: ${reasons.join(' · ')}` : WHY_BEST_FALLBACK
+}

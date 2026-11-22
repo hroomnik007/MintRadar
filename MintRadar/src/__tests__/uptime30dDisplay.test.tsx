@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { MIN_RECOMMENDATION_UPTIME_30D_PCT, hasSteadyUptime, exactPct as feExactPct } from '@/utils/reliabilityScore'
 import { exactPct as beExactPct } from '../../backend/src/shared/reliabilityScore'
-import { isUptime30dLow, uptime30dColor } from '@/utils/mintFormatting'
+import { isUptime30dLow, uptime30dColor, uptime30dShown, formatUptime30d } from '@/utils/mintFormatting'
 import { COMPARE_UPTIME_30D_LABEL } from '@/utils/compareLabels'
 
 vi.mock('@/core/nostr/pool', () => ({
@@ -72,13 +72,34 @@ describe('mint card', () => {
     expect(chip(render(wrap(<MintCard mint={UNKNOWN} />)).container)).toBeNull()
     expect(chip(render(wrap(<MintCard mint={{ ...STEADY, uptimePct30d: MIN_RECOMMENDATION_UPTIME_30D_PCT }} />)).container)).toBeNull()
     const low = chip(render(wrap(<MintCard mint={WEEK_DOWN} />)).container) as HTMLElement | null
-    expect(low?.textContent).toBe('77%')
+    expect(low?.textContent).toBe('77.0%')
     expect(low?.style.color).toContain('--med')
   })
   // The "up 24h" chip went with the 2026-11-19 redesign (phase 3): the card shows the 30-day uptime as a fact instead.
   it('the Uptime 30 d fact shows the same figure', () => {
     const { container } = render(wrap(<MintCard mint={WEEK_DOWN} />))
-    expect(container.querySelector('.card-facts')?.textContent).toContain('Uptime 30 d77%')
+    expect(container.querySelector('.card-facts')?.textContent).toContain('Uptime 30 d77.0%')
+  })
+  // U1 (UI/UX report 2026-11-22): the unrounded share with one decimal, cut down, so yellow days never read as 100 %.
+  it('shows uptimePct30dExact with one decimal and never rounds up to 100', () => {
+    const facts = (m: KnownMint) => render(wrap(<MintCard mint={m} />)).container.querySelector('.card-facts')?.textContent
+    expect(facts({ ...STEADY, uptimePct30d: 100, uptimePct30dExact: 99.96 })).toContain('Uptime 30 d99.9%')
+    expect(facts({ ...STEADY, uptimePct30d: 100, uptimePct30dExact: 99.6 })).toContain('Uptime 30 d99.6%')
+    expect(facts({ ...STEADY, uptimePct30d: 100, uptimePct30dExact: 100 })).toContain('Uptime 30 d100%')
+    // No exact figure (older snapshot): the whole percent as before.
+    expect(facts({ ...STEADY, uptimePct30d: 98, uptimePct30dExact: null })).toContain('Uptime 30 d98.0%')
+  })
+})
+
+describe('uptime30dShown / formatUptime30d', () => {
+  it('cuts down to one decimal and falls back to the whole percent', () => {
+    expect(uptime30dShown(99.99, 100)).toBe(99.9)
+    expect(uptime30dShown(4.35, 4)).toBe(4.3)
+    expect(uptime30dShown(null, 97)).toBe(97)
+    expect(uptime30dShown(undefined, null)).toBeNull()
+    expect(formatUptime30d(99.9)).toBe('99.9')
+    expect(formatUptime30d(97)).toBe('97.0')
+    expect(formatUptime30d(100)).toBe('100')
   })
 })
 

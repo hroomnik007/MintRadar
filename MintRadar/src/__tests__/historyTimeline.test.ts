@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildHistoryEvents, compareSentence, outageFigureNote, outageHeadline, versionText } from '@/utils/historyTimeline'
+import { buildHistoryEvents, compareSentence, outageFigureNote, outageHeadline, roughAgo, versionText } from '@/utils/historyTimeline'
 import type { OutagesResponse } from '@/utils/mintDetailFacts'
 
 const H = 3_600_000
@@ -60,13 +60,20 @@ describe('outageFigureNote', () => {
   })
   it('a recovered mint: the mean time to recover and how long ago the last outage was', () => {
     expect(outageFigureNote({ sinceLastOutageMs: 2 * H, avgRecoveryMs: H, outageCount: 2, recoveredCount: 2, ongoing: false, currentOutage: null, outages: [] }))
-      .toBe('1h to recover on average, the last 2h ago')
+      .toBe('1h to recover on average, the last one 2 hours ago')
   })
   it('names the longest outage when there is more than one (methodology 7), never for one or an API without the field', () => {
     const base: OutagesResponse = { sinceLastOutageMs: 10 * 24 * H, avgRecoveryMs: 21 * H, outageCount: 8, recoveredCount: 8, ongoing: false, currentOutage: null, outages: [] }
-    expect(outageFigureNote({ ...base, longestOutageMs: 162.5 * H })).toBe('21h to recover on average (longest 6d 18h), the last 10d ago')
+    expect(outageFigureNote({ ...base, longestOutageMs: 162.5 * H })).toBe('21h to recover on average (longest 6d 18h), the last one 10 days ago')
     expect(outageFigureNote({ ...base, outageCount: 1, longestOutageMs: 3 * H })).not.toContain('longest')
     expect(outageFigureNote(base)).not.toContain('longest')
+  })
+  it('says how long ago in one plain unit (T6: "the last 15d 13h ago" became "the last one 15 days ago")', () => {
+    expect(roughAgo((15 * 24 + 13) * H)).toBe('15 days')
+    expect(roughAgo(24 * H)).toBe('1 day')
+    expect(roughAgo(H)).toBe('1 hour')
+    expect(roughAgo(5 * H + 59 * 60000)).toBe('5 hours')
+    expect(roughAgo(20 * 60000)).toBe('20 min')
   })
   it('nothing without outages or data', () => {
     expect(outageFigureNote(undefined)).toBeNull()
