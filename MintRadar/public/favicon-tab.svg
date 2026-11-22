@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none">
+  <!-- Browser-tab favicon (2026-11-22): the radar mark of favicon.svg without the dark tile and disc, so only the mark
+       shows on the tab. The default colours are a middle tone that reads on light
+       and dark tab bars (the PNG/ICO rasters carry them); a light scheme gets darker greens, a dark one the site's
+       mint colours. App icons keep favicon.svg with its solid tile. -->
+  <style>
+    .ring { stroke: #33ad83; } .sweep { fill: #33ad83; } .beam { stroke: #3fbf92; } .hub { fill: #3fbf92; } .blip { fill: #d07a45; }
+    @media (prefers-color-scheme: light) {
+      .ring { stroke: #1d8a65; } .sweep { fill: #1d8a65; } .beam { stroke: #0f6e4e; } .hub { fill: #0f6e4e; } .blip { fill: #c2682f; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .ring { stroke: #5cc9a3; } .sweep { fill: #5cc9a3; } .beam { stroke: #9ddfc5; } .hub { fill: #9ddfc5; } .blip { fill: #d98a5a; }
+    }
+  </style>
+  <path class="sweep" d="M16 16 L8.29 6.81 A12 12 0 0 1 11.9 4.72 Z" opacity="0.1"/>
+  <path class="sweep" d="M16 16 L11.9 4.72 A12 12 0 0 1 16 4 Z" opacity="0.18"/>
+  <path class="sweep" d="M16 16 L16 4 A12 12 0 0 1 20.1 4.72 Z" opacity="0.3"/>
+  <path class="sweep" d="M16 16 L20.1 4.72 A12 12 0 0 1 23.71 6.81 Z" opacity="0.45"/>
+  <path class="sweep" d="M16 16 L23.71 6.81 A12 12 0 0 1 26.39 10 Z" opacity="0.62"/>
+  <circle class="ring" cx="16" cy="16" r="13" stroke-width="2.2"/>
+  <circle class="ring" cx="16" cy="16" r="6.5" stroke-width="1" opacity="0.45"/>
+  <path class="beam" d="M16 16 L26.39 10" stroke-width="2" stroke-linecap="round"/>
+  <circle class="hub" cx="16" cy="16" r="1.9"/>
+  <circle class="blip" cx="10.2" cy="20.6" r="3.6" opacity="0.3"/>
+  <circle class="blip" cx="10.2" cy="20.6" r="2.1"/>
+</svg>

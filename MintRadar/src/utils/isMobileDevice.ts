@@ -7,3 +7,10 @@ export function isMobileDevice(): boolean {
   if (typeof uaData?.mobile === 'boolean') return uaData.mobile
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
 }
+
+// Android only (Amber, the signer app named in the login modal, is an Android app).
+export function isAndroidDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
+  return uaData?.platform === 'Android' || /Android/i.test(navigator.userAgent)
+}

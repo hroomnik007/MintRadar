@@ -522,3 +522,15 @@ slightly darker panels look better). Only text contrast rises. The QR code of th
 - **Page header (`PageHead`):** the dimmed radar motif on the right is gone (decoration only); title `--fs-xl` (28px,
   24px on phones), weight 650; description `--fs-md` (16px); its link copper.
 - **Navbar:** see `mobile-and-tooltips.md` ("Navbar since the 2026-11-18 redesign").
+
+**2026-11-22 (UI/UX report):**
+- **Tab favicon:** new `public/favicon-tab.svg`, the radar mark without the dark tile and disc (transparent).
+  - Default colours are a middle tone that reads on light and dark tab bars.
+  - `prefers-color-scheme: light` uses darker greens; `dark` uses the site's mint colours.
+  - `favicon-16x16.png`, `favicon-32x32.png` and `favicon.ico` are rendered from it (`generate-icons.mjs`).
+  - `index.html` links it as `type="image/svg+xml"`, cache-busted through `HTML_ASSETS`.
+  - The app icons (`icons/icon-*`, maskable 192/512) and `apple-touch-icon.png` still come from `favicon.svg` with its solid tile.
+- **OG image (D6):** new `public/og-image-mintradar.png` (1200x630, MintRadar Sans, copper and mint accent).
+  - Source is `scripts/og-image/og-image-mintradar.html`, rendered with `node scripts/render-og-image.mjs` (Playwright Chromium, no new dependency).
+  - It is the new `og:image` / `twitter:image` in `index.html` and `backend/src/og.ts` (a new name because X caches by path).
+  - `og-image-radar.png` is frozen from now on (SHA-256 pinned in `brandAssetCacheBust.test.ts`).

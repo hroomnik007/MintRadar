@@ -540,6 +540,10 @@ export function initBunkerQR(onStage?: (stage: PairingStage) => void): {
   uri: string
   loginPromise: Promise<NostrProfile>
   cancel: () => void
+  /** Epoch ms when the pairing gives up (the 2-minute timeout), for the countdown in the login modal. */
+  deadline: number
+  /** True while at least one pairing relay has an open connection (shown as "Connected to relay"). */
+  relayConnected: () => boolean
 } {
   const { uri, clientSecretKey } = buildNostrConnectURI()
   const abortCtrl = new AbortController()
@@ -550,6 +554,13 @@ export function initBunkerQR(onStage?: (stage: PairingStage) => void): {
   const pairingPool = new ResilientNip46Pool()
   let handedOff = false
   const disposePool = () => { if (!handedOff) pairingPool.destroy() }
+  const deadline = Date.now() + QR_PAIRING_TIMEOUT_MS
+  const relayConnected = (): boolean => {
+    const status = typeof pairingPool.listConnectionStatus === 'function' ? pairingPool.listConnectionStatus() : null
+    if (!status) return false
+    for (const open of status.values()) if (open) return true
+    return false
+  }
 
   const rawSigner = BunkerSigner.fromURI(
     clientSecretKey,
@@ -644,6 +655,8 @@ export function initBunkerQR(onStage?: (stage: PairingStage) => void): {
   return {
     uri,
     loginPromise,
+    deadline,
+    relayConnected,
     cancel: () => {
       if (timeoutId !== undefined) clearTimeout(timeoutId)
       abortCtrl.abort()

@@ -11,10 +11,11 @@ const HTML_ASSETS = [
   '/favicon.ico',
   '/favicon-32x32.png',
   '/favicon-16x16.png',
+  '/favicon-tab.svg',
   '/apple-touch-icon.png',
   '/early-preload.js',
 ]
-// og:image / twitter:image (/og-image-radar.png) are deliberately NOT in this list: X caches the card image by
+// og:image / twitter:image (/og-image-mintradar.png) are deliberately NOT in this list: X caches the card image by
 // path and ignores ?v=, so a changed OG image gets a new file name instead (see docs/claude/design-palette-and-chrome.md).
 
 export function brandHash(publicPath: string, root = process.cwd()): string {

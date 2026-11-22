@@ -56,7 +56,8 @@ test('remote-signer: QR appears automatically on selection (no extra click)', as
   const fills = await page.$$eval('.nostr-qr-wrap svg path', ps => ps.map(p => p.getAttribute('fill')))
   expect(fills).toEqual(expect.arrayContaining(['#132019', '#f2f7f4']))
   await expect(page.locator('.nostr-qr-caption')).toContainText(/signer app/i)
-  await expect(page.locator('.nostr-remote-status')).toContainText(/waiting for your signer/i)
+  // F2 (2026-11-22): relay state + countdown to the 2-minute timeout.
+  await expect(page.getByTestId('pairing-status')).toHaveText(/^Connected to relay · waiting for approval \((2:00|1:5\d)\)$/)
   await expect(page.locator('.nostr-remote-divider')).toContainText(/paste the connection link/i)
 
   // Copy connection link puts the nostrconnect:// pairing URI on the clipboard
@@ -141,7 +142,7 @@ test.describe('on a phone', () => {
   test('remote-signer: "Open in signer app" is a plain link to the same pairing URI as the copy button', async ({ page }) => {
     await setup(page)
     await page.locator('.nostr-method-card', { hasText: 'Remote signer' }).click()
-    await page.waitForSelector('.nostr-qr-wrap svg')
+    await page.waitForSelector('a.nostr-open-signer')
     const link = page.locator('a.nostr-open-signer')
     await expect(link).toHaveCount(1)
     await expect(link).toHaveText('Open in signer app')
@@ -163,5 +164,32 @@ test.describe('on a phone', () => {
     const first = await page.locator('a.nostr-open-signer').getAttribute('href')
     await page.locator('.nostr-qr-refresh').click()
     await expect.poll(() => page.locator('a.nostr-open-signer').getAttribute('href')).not.toBe(first)
+  })
+  // M7 (2026-11-22): a phone cannot scan its own screen, so "Open in signer app" leads and the QR is folded.
+  test('remote-signer on a phone: "Open in signer app" first, QR folded under "Show QR for another device"', async ({ page }) => {
+    await setup(page)
+    await page.locator('.nostr-method-card', { hasText: 'Remote signer' }).click()
+    const link = page.locator('a.nostr-open-signer')
+    await expect(link).toBeVisible()
+    await expect(page.locator('.nostr-qr-wrap')).toHaveCount(0)
+    // the link is the first control of the view, above the copy button
+    const linkBox = await link.boundingBox()
+    const copyBox = await page.locator('.nostr-qr-copy').boundingBox()
+    expect(linkBox!.y).toBeLessThan(copyBox!.y)
+    const toggle = page.getByRole('button', { name: 'Show QR for another device' })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await toggle.click()
+    await expect(page.locator('.nostr-qr-wrap svg')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Hide QR' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  // F1 (2026-11-22): without an extension a phone gets the signer app path, not an install link.
+  test('Nostr extension on a phone without one: offers the signer app and switches to Remote signer', async ({ page }) => {
+    await setup(page)
+    await page.locator('.nostr-method-card', { hasText: 'Nostr extension' }).click()
+    await expect(page.locator('.nostr-warn')).toContainText('No Nostr extension detected')
+    await expect(page.locator('.nostr-warn a', { hasText: 'Install Alby' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Use Amber instead' }).click()
+    await expect(page.locator('a.nostr-open-signer')).toBeVisible()
   })
 })

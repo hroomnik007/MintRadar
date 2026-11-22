@@ -403,3 +403,20 @@ Why: the mint list loaded every icon at full size (26 files, 1429 KB, largest 25
 - **Applied 2026-11-13 (with the owner's go-ahead):** the package installed 32 packages in all (libgd3 and its libraries; nothing upgraded or removed, nginx itself unchanged; its trigger reloaded nginx, no restart), backup `/etc/nginx/sites-available/mintradar.org.conf.bak-20261113-145206`, the live file equals the repo file. Live after: macadamia 250 381 B -> 18 152 B, sovran 205 052 -> 8 385, the mint list's first view 1395 KiB -> 223 KiB of icons (26 images), 204 / 400 / 304 as before, the other vhosts of the server answered as before the reload.
 - **One response header rule learned live:** nginx copies `Cache-Control` and `Content-Type` of the REDIRECTING response onto the final one. The first version of the route set `Cache-Control: no-store` on the redirect, and the resized icon went out with both `no-store` and the 7-day header. The redirect response now carries neither (pinned in `integration/mint-icon.test.ts`). The container stub had not sent that header, so the test above missed it.
 - **Apply steps, for the record:** `apt-get install libnginx-mod-http-image-filter`, backup of the live `mintradar.org.conf`, copy of `deploy/nginx.conf`, `nginx -t`, reload. Check: `curl -s -o /dev/null -w '%{size_download} %{content_type}\n' 'https://mintradar.org/api/mint/icon?url=https%3A%2F%2Fmint.macadamia.cash'` (about 18 KB instead of 250 KB). Rollback: restore the backup and reload (the package may stay installed; unused it does nothing).
+
+## Load speed fixes from the UI/UX report (2026-11-22)
+- **P1:** on `/mint/:url`, `public/early-preload.js` also adds `<link rel="modulepreload">` for the lazy MintDetail chunk
+  and its static imports that the entry does not load. The hashed chunk URLs come from the build:
+  `vite-route-preload.ts` (`transformIndexHtml`, order post) writes them into
+  `data-mint-detail-modules` on the early-preload `<script>` tag, and the script reads them with `document.currentScript`.
+  The script file stays the same across builds, so its year-long cache and `?v=` hash still work. Only `/assets/*.js`
+  URLs are accepted. Dev has no attribute and nothing is preloaded. Prerendering the static pages (Learn, Methodology,
+  About, For wallets) was NOT done (a bigger build change).
+- **P2:** `index.html` preloads `/fonts/MintRadarSans-2.0.27-latin.woff2` (`as="font" crossorigin`). It is the only
+  static preload because every route uses that font. `src/index.css` adds `'MintRadar Sans Fallback'`
+  (`local('Arial')`/Liberation Sans/Roboto with `size-adjust: 102.39%`, `ascent-override: 106.45%`,
+  `descent-override: 31.25%`, `line-gap-override: 0%`, measured with fontTools against Liberation Sans) after
+  'MintRadar Sans' in `--sans`, so the font swap moves less text.
+- **P5:** `src/core/nostr/pool.ts`: in the shared pool, a relay whose connection failed is skipped for
+  `RELAY_SKIP_MS` (10 min) in this page session. SimplePool sees a rejected `ensureRelay`, and the other relays answer
+  as before. This does not apply while offline or to an aborted attempt.

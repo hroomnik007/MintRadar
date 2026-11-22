@@ -8,13 +8,27 @@
 // is required for as="fetch" even on the same origin; without it the response is not reused and the request goes out
 // twice. Plain script, no imports: Vite does not bundle public/, and nginx caches it for a year (the page links it
 // as /early-preload.js?v=<hash>, see vite-brand-assets.ts). Pinned by src/__tests__/earlyPreload.test.ts.
+// On "/mint/:url" it also modulepreloads the lazy MintDetail chunk (P1, 2026-11-22): a build writes the chunk URLs
+// into this script tag's data-mint-detail-modules (vite-route-preload.ts), since the hashed names cannot live here.
 (function () {
   var p = location.pathname
-  if (p !== '/' && !/^\/mint\/[^/]+\/?$/.test(p)) return
+  var detail = /^\/mint\/[^/]+\/?$/.test(p)
+  if (p !== '/' && !detail) return
   var link = document.createElement('link')
   link.setAttribute('rel', 'preload')
   link.setAttribute('as', 'fetch')
   link.setAttribute('href', '/api/mints/known')
   link.setAttribute('crossorigin', 'anonymous')
   document.head.appendChild(link)
+  var me = typeof document.currentScript !== 'undefined' ? document.currentScript : null
+  var mods = detail && me ? me.getAttribute('data-mint-detail-modules') : null
+  if (!mods) return
+  var list = mods.split(' ')
+  for (var i = 0; i < list.length; i++) {
+    if (!/^\/assets\/[\w.-]+\.js$/.test(list[i])) continue
+    var m = document.createElement('link')
+    m.setAttribute('rel', 'modulepreload')
+    m.setAttribute('href', list[i])
+    document.head.appendChild(m)
+  }
 })()

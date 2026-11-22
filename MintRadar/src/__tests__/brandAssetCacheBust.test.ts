@@ -28,17 +28,18 @@ describe('brand asset cache-busting', () => {
   })
 
   it('og:image and twitter:image are the absolute new-name URL with no query string (X caches by path, ignores ?v=)', () => {
-    const url = 'https://mintradar.org/og-image-radar.png'
+    const url = 'https://mintradar.org/og-image-mintradar.png'
     expect(html).toContain(`<meta property="og:image" content="${url}" />`)
     expect(html).toContain(`<meta name="twitter:image" content="${url}" />`)
     expect(html).not.toMatch(/og-image[^"]*\?/)
     expect(BRAND_HTML_ASSETS).not.toContain('/og-image.png')
     expect(BRAND_HTML_ASSETS).not.toContain('/og-image-reliability.png')
     expect(BRAND_HTML_ASSETS).not.toContain('/og-image-radar.png')
+    expect(BRAND_HTML_ASSETS).not.toContain('/og-image-mintradar.png')
   })
 
-  it('the OG image file is a 1200x630 PNG and the old og-image.png and og-image-reliability.png are byte-for-byte unchanged', () => {
-    const png = fs.readFileSync(path.join(ROOT, 'public/og-image-radar.png'))
+  it('the OG image file is a 1200x630 PNG and the old og-image.png, og-image-reliability.png and og-image-radar.png are byte-for-byte unchanged', () => {
+    const png = fs.readFileSync(path.join(ROOT, 'public/og-image-mintradar.png'))
     expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
     expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630])
     // Frozen: X still has this path cached with the old card, so the bytes must never change.
@@ -47,6 +48,9 @@ describe('brand asset cache-busting', () => {
     // Frozen since 2026-11-14 (the card moved to og-image-radar.png): cards already shared on X point at this path.
     const reliability = createHash('sha256').update(fs.readFileSync(path.join(ROOT, 'public/og-image-reliability.png'))).digest('hex')
     expect(reliability).toBe('94ea20723dae86cc133958c060c5d7e90482a84132a127fbec04cc2c07f8c24b')
+    // Frozen since 2026-11-22 (the card moved to og-image-mintradar.png, UI/UX report D6).
+    const radar = createHash('sha256').update(fs.readFileSync(path.join(ROOT, 'public/og-image-radar.png'))).digest('hex')
+    expect(radar).toBe('1c774b3e8a2a72eb81d90c873eeb06dd77121893b7e4abb4bfb0034baf526769')
   })
 
   it('every brand file referenced by index.html is covered, and nothing else is touched', () => {
