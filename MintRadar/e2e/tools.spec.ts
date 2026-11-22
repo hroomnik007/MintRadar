@@ -624,7 +624,8 @@ test.describe('Tools', () => {
     await expect(page.locator('.wizard-rec-note')).toContainText('count only slightly')
   })
 
-  test('Best Mint Wizard shows "Best match for your filters" on the #1 result only', async ({ page }) => {
+  // U5 (2026-11-22): the line under #1 names up to two concrete reasons it is ahead of #2 (whyBestReasons).
+  test('Best Mint Wizard shows why #1 is the best match, on the #1 result only', async ({ page }) => {
     await page.getByRole('radio', { name: 'SAT', exact: true }).click()
     await page.locator('.wizard-opt', { hasText: 'Small' }).click()
     await page.locator('.wizard-opt', { hasText: 'Reliable' }).click()
@@ -632,10 +633,11 @@ test.describe('Tools', () => {
 
     await expect(page.locator('.wizard-rec-row')).toHaveCount(2, { timeout: 15_000 })
     await expect(page.locator('.wizard-rec-reason')).toHaveCount(1)
-    await expect(page.locator('.wizard-rec-row').first().locator('.wizard-rec-reason')).toHaveText('Best match for your filters')
+    await expect(page.locator('.wizard-rec-row').first().locator('.wizard-rec-reason')).toHaveText('Best match: higher Reliability Score (92 vs 78) · better reviews (4.2★ from 12 ratings)')
     await expect(page.locator('.wizard-rec-row').nth(1).locator('.wizard-rec-reason')).toHaveCount(0)
   })
 
+  // With no runner-up there is nothing to compare: the general sentence.
   test('Best Mint Wizard still shows the reason when only one mint is returned', async ({ page }) => {
     await page.route('**/api/mints/known', route => {
       const mints = MOCK_KNOWN_MINTS.map(m =>

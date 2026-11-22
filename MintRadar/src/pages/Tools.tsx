@@ -16,8 +16,8 @@ import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDow
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
-import { weightsFor, reviewsScore, latencyPart, softwarePreferenceCredit, type WizardCheck, type SizeOption } from '@/utils/wizardScoring'
-import { softwareChoices, rankWizardRecs, wizardReasonText, reasonMentionsLatency, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
+import { weightsFor, reviewsScore, latencyPart, softwarePreferenceCredit, whyBestReasons, whyBestText, type WizardCheck, type SizeOption, type WizardParts } from '@/utils/wizardScoring'
+import { softwareChoices, rankWizardRecs, matchesPreferredSoftware, wizardReasonText, reasonMentionsLatency, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -634,6 +634,8 @@ interface WizardRec {
   url: string
   mint: KnownMint
   score: number
+  /** The weighted parts of `score` (and the software credit), for the "why #1" line (whyBestReasons). */
+  parts: WizardParts
   latencyMs: number | null
   mintLimits: UnitLimits | null
   meltLimits: UnitLimits | null
@@ -829,11 +831,20 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
       const latMs = latencyMap.get(m.url) ?? null
       const reliabilityScore = (m.reliabilityScore ?? 0) / 100
       const nutsScore = (m.nutCount ?? 0) / maxNuts
+      const parts: WizardParts = {
+        // Without "Fast from here" latency only breaks ties between close mints (latencyPart, LATENCY_TIE_BREAK_POINTS).
+        latency: latencyPart(w, latMs, maxLatency, checks.has('fast')),
+        reliability: w.reliability * reliabilityScore,
+        nuts: w.nuts * nutsScore,
+        reviews: w.reviews * reviewsScore(m),
+        // Added by rankWizardRecs, not part of `score`; kept here only so the "why #1" line can name it.
+        software: matchesPreferredSoftware(m, effectivePreferred) ? softwarePreferenceCredit(w) : 0,
+      }
       return {
         url: m.url,
         mint: m,
-        // Without "Fast from here" latency only breaks ties between close mints (latencyPart, LATENCY_TIE_BREAK_POINTS).
-        score: latencyPart(w, latMs, maxLatency, checks.has('fast')) + w.reliability * reliabilityScore + w.nuts * nutsScore + w.reviews * reviewsScore(m),
+        score: parts.latency + parts.reliability + parts.nuts + parts.reviews,
+        parts,
         latencyMs: latMs,
         mintLimits: limitsForUnit(m.mintMethods ?? null, selectedUnit),
         meltLimits: limitsForUnit(m.meltMethods ?? null, selectedUnit),
@@ -1024,7 +1035,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                   >{reliabilityNum ?? '–'}</span>
                   <div className="wizard-rec-info">
                     <Link className="wizard-rec-name" to={`/mint/${encodeURIComponent(rec.url)}`}>{mintDisplayName(rec.mint, duplicateDisplayNames)}</Link>
-                    {idx === 0 && <div className="wizard-rec-reason">Best match for your filters</div>}
+                    {idx === 0 && <div className="wizard-rec-reason" data-testid="wizard-why-best">{whyBestText(whyBestReasons(rec, recs[1] ?? null))}</div>}
                     {reason && <div className="wizard-rec-facts">{reason}</div>}
                     <div className="wizard-rec-meta">
                       {metaLatency != null && <span>{metaLatency} ms from your browser</span>}

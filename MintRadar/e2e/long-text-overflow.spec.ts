@@ -343,7 +343,8 @@ for (const width of WIDTHS) {
     // reliability, outages; it had two grids of three).
     test('Mint Detail: History summary cards stay inside their grid', async ({ page }) => {
       const { url } = await mount(page, {}, { width })
-      // Longest realistic outage values (formatDuration: "99d 23h", "23h 59m"), not the "—" placeholders.
+      // Longest realistic outage values ("23h 59m" from formatDuration; the time since the last one reads "99 days ago" since
+      // 2026-11-22, it was "99d 23h ago"), not the "—" placeholders.
       await page.route('**/api/mints/outages**', r => r.fulfill({ json: {
         sinceLastOutageMs: (99 * 24 + 23) * 3_600_000, avgRecoveryMs: (23 * 60 + 59) * 60_000, outageCount: 1234, outages: [],
       } }))
@@ -354,7 +355,7 @@ for (const width of WIDTHS) {
       await expect(grids).toHaveCount(1)
       await expect(grids.first()).toBeVisible()
       await expect(page.locator('.md-hist-summary > div')).toHaveCount(4) // an empty match would pass vacuously
-      await expect(page.getByText('99d 23h')).toBeVisible()
+      await expect(page.getByText('99 days ago')).toBeVisible()
       expect(await leavingParent(page, '.md-hist-summary > div')).toEqual([])
     })
 

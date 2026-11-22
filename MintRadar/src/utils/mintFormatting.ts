@@ -377,6 +377,20 @@ export function uptimeColor(pct: number | null | undefined): string {
 export function isUptime30dLow(pct: number | null | undefined): pct is number {
   return typeof pct === 'number' && pct < MIN_RECOMMENDATION_UPTIME_30D_PCT
 }
+/**
+ * The 30-day uptime as shown on the card, the list view and the Mint Detail "Last 30 days" line: the unrounded share
+ * (uptimePct30dExact) cut DOWN to one decimal, so 99.96 % reads 99.9 % and never 100 % while a day had downtime.
+ * Falls back to the whole-percent uptimePct30d when the exact figure is missing. Null when neither is known.
+ */
+export function uptime30dShown(exact: number | null | undefined, rounded: number | null | undefined): number | null {
+  const v = typeof exact === 'number' && Number.isFinite(exact) ? exact : typeof rounded === 'number' && Number.isFinite(rounded) ? rounded : null
+  if (v === null) return null
+  return Math.floor(v * 10 + 1e-9) / 10
+}
+/** uptime30dShown as text: one decimal ("99.6", "97.0"), a full 100 without it ("100"). */
+export function formatUptime30d(shown: number): string {
+  return shown >= 100 ? '100' : shown.toFixed(1)
+}
 /** Quiet at or above the limit, the warning tone below it (the same token as the 80–95 % band of the 24 h chip). */
 export function uptime30dColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--t3)'

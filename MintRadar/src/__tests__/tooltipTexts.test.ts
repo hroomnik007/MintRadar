@@ -55,7 +55,7 @@ describe('numbers in the built texts equal their sources', () => {
     // the maxima really are what computeReliabilityScore can award
     const best = computeReliabilityScore(100, TRACKED_NUT_COUNT, 'Nutshell/0.20.0', 3, { blamed: 0, total: AUDIT_MIN_SAMPLES, fetchedAt: new Date().toISOString() }, { nutshell: { major: 0, minor: 20 } }, '2000-01-01T00:00:00Z')
     expect(best).toBe(100)
-    expect(numbers(T.scoreFormulaText())).toEqual([T.UPTIME_POINTS, T.NUT_POINTS, T.VERSION_POINTS, T.CONTACT_POINTS, T.AUDIT_POINTS, NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP])
+    expect(numbers(T.scoreFormulaText())).toEqual([T.UPTIME_POINTS, T.AUDIT_POINTS, T.NUT_POINTS, T.VERSION_POINTS, T.CONTACT_POINTS, NEW_MINT_MAX_DAYS, NEW_MINT_RELIABILITY_CAP])
   })
   it('uptime row: 24 h (20 points), 30 days (10), longest outage (6), number of outages (4)', () => {
     expect(numbers(T.uptimeRowText())).toEqual([T.UPTIME_WINDOW_HOURS, UPTIME_24H_MAX, T.UPTIME_30D_WINDOW_DAYS, UPTIME_30D_MAX, LONGEST_OUTAGE_MAX, OUTAGE_COUNT_MAX, T.UPTIME_30D_WINDOW_DAYS])

@@ -16,7 +16,7 @@ const PRIVACY_UPDATED = '15 November 2026'
 const RULES_UPDATED = '17 October 2026'
 
 const SECTIONS = [
-  { id: 'about', label: 'About' },
+  { id: 'about', label: 'What MintRadar is' },
   { id: 'privacy', label: 'Your data' },
   { id: 'terms', label: 'Rules' },
 ] as const
@@ -84,7 +84,7 @@ export default function About() {
         <h1 className="about-h1">About MintRadar</h1>
 
         <section aria-labelledby="about">
-          <h2 id="about" tabIndex={-1} className="about-h2">About</h2>
+          <h2 id="about" tabIndex={-1} className="about-h2">What MintRadar is</h2>
           <p>
             MintRadar is a free, independent monitor and directory for Cashu ecash mints. It shows two separate
             signals: how a mint is running (Reliability Score, from uptime, audit results, supported NUTs, software

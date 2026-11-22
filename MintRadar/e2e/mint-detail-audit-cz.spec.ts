@@ -173,7 +173,7 @@ test('the browser never requests cashu.info: only /api/mints/audit-cz?direction=
 
 // ── c) neutral rows ─────────────────────────────────────────────
 test('limits, balance and pending rows are neutral, failures amber, OK green: one Result chip per row', async ({ page }) => {
-  // 5 OK, 3 failed (melt), 3 limits, 2 balance, 1 pending, interleaved so no position implies the kind.
+  // 5 OK, 3 failed at Lightning payment, 3 limits, 2 balance, 1 pending, interleaved so no position implies the kind.
   const swaps = czSwapList([ok, melt, limits, ok, balance, pending, ok, melt, limits, balance, ok, limits, melt, ok])
   expect(swaps).toHaveLength(14)
   await gotoAuditTab(page, onlyCz(swaps))
@@ -187,7 +187,7 @@ test('limits, balance and pending rows are neutral, failures amber, OK green: on
     return { color: s.color, opacity: s.opacity }
   })
 
-  for (const host of ['melt1', 'melt7', 'melt12']) await state(`${host}.example`).toBe('failed (melt)')
+  for (const host of ['melt1', 'melt7', 'melt12']) await state(`${host}.example`).toBe('failed at Lightning payment')
   for (const host of ['limits2', 'limits8', 'limits11']) await state(`${host}.example`).toBe('below minimum')
   for (const host of ['balance4', 'balance9']) await state(`${host}.example`).toBe('auditor balance')
   await state('pending5.example').toBe('pending')
@@ -596,7 +596,7 @@ test('hostile text from the endpoint is shown as text: no element, no dialog, no
   await expect(page.locator('.audit-swaps-table tbody tr')).toHaveCount(5)
 
   // `stage` and the destination are displayed: literally, as text. (`error` and `otherMintName` are not shown.)
-  expect(await visibleState(page, 'stage2.example')).toBe(`failed (${XSS})`)
+  expect(await visibleState(page, 'stage2.example')).toBe(`failed at ${XSS}`)
   await expect(page.locator('.audit-swaps-table tbody tr').nth(3).locator('td').nth(2)).toHaveText(XSS)
   await expect(page.locator('.audit-swaps-table')).toContainText(XSS)
 
@@ -704,7 +704,7 @@ test.describe('failure reason in the State cell', () => {
     await expect(meltCell).not.toHaveAttribute('title', /.*/)
     expect(await stateTip(page, 'melt1.example')).toBe(NO_ROUTE)
     await expect(meltCell.locator('.sr-only')).toHaveText(NO_ROUTE)
-    expect(await visibleState(page, 'melt1.example')).toBe('failed (melt)')
+    expect(await visibleState(page, 'melt1.example')).toBe('failed at Lightning payment')
     // grey rows: the fixed explanation first, then the error text
     const limitsCell = stateCell(page, 'limits2.example')
     expect(await stateTip(page, 'limits2.example')).toBe(`${LIMITS_WHY}. ${MIN_TEXT}`)
@@ -725,7 +725,7 @@ test.describe('failure reason in the State cell', () => {
     })
     expect(hidden).toEqual({ w: 1, h: 1, position: 'absolute', overflow: 'hidden' })
     // …but it is in the accessibility tree: the cell's accessible text includes it after the visible text
-    await expect(meltCell).toContainText(`failed (melt) ${NO_ROUTE}`, { useInnerText: false })
+    await expect(meltCell).toContainText(`failed at Lightning payment ${NO_ROUTE}`, { useInnerText: false })
   })
 
   test('a failed row without an error text has no tooltip and no hidden element; a grey row keeps the explanation', async ({ page }) => {
@@ -759,9 +759,10 @@ test.describe('failure reason in the State cell', () => {
       const cellEl = stateCell(page, host)
       await expect(cellEl.locator('.sr-only')).toHaveText(XSS)
       expect(await stateTip(page, host)).toMatch(new RegExp(`${XSS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
-      // only the chip span, the tooltip button (with its text span) and the hidden span: nothing the text could have created
+      // only the chip span, the tooltip button (with its text span), the stage words span of a failed row (since 2026-11-22,
+      // "at Lightning payment") and the hidden span: nothing the text could have created
       await expect(cellEl.locator('*:not(button):not(span)')).toHaveCount(0)
-      await expect(cellEl.locator('*')).toHaveCount(4)
+      await expect(cellEl.locator('*')).toHaveCount(host.startsWith('melt') ? 5 : 4)
     }
     await expect(page.locator('.md-audit-collapsible img')).toHaveCount(0)
     await expect(page.locator('[onerror], img[src="x"]')).toHaveCount(0)

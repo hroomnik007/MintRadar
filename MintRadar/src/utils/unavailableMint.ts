@@ -44,5 +44,5 @@ export function restoreSentence(supportsNut09: boolean): string {
 export const KEEP_WALLET_SENTENCE = 'Keep your wallet and your seed phrase.'
 export const TEMPORARY_SENTENCE = 'An outage can be temporary; once the mint is back, check your tokens in your wallet.'
 export function contactSentence(contacts: readonly string[]): string {
-  return contacts.length > 0 ? `You can contact the operator: ${contacts.join(', ')}.` : 'You can contact the operator; this mint lists no contact.'
+  return contacts.length > 0 ? `You can contact the operator: ${contacts.join(', ')}.` : 'This mint lists no contact.'
 }

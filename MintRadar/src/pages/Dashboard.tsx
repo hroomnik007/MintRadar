@@ -21,7 +21,7 @@ import { MintCard } from '@/components/mint/MintCard'
 import { MintComparePicker } from '@/components/MintComparePicker'
 import { useMintHoverPrefetch } from '@/hooks/useMintHoverPrefetch'
 import { PROBE_LOCATION } from '@/constants/probeLocation'
-import { latencyColor, reliabilityColor, uptimeColor, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
+import { latencyColor, reliabilityColor, uptimeColor, uptime30dShown, formatUptime30d, displayName as mintDisplayName, groupMintsByPubkey, sameOperatorUrls, computeDuplicateMintNames, mintStatusLabel } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { parseCompareParam, buildCompareParam, resolveComparedMints } from '@/utils/compareUrlParam'
 import { listReliabilityScore } from '@/utils/reliabilitySort'
@@ -465,6 +465,7 @@ function MintListView({
               const statusLabel = mintStatusLabel(mintStatus(mint))
               const displayName = mintDisplayName(mint, duplicateDisplayNames)
               const score = mint.reliabilityScore ?? null
+              const uptime30d = uptime30dShown(mint.uptimePct30dExact, mint.uptimePct30d)
               return (
                 <tr key={mint.url} className="mint-list-row" onClick={e => { if (!(e.target as Element).closest('a')) navigate(`/mint/${encodeURIComponent(mint.url)}`) }} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
                   <td className="mint-list-td-name">
@@ -482,8 +483,8 @@ function MintListView({
                   <td className="num" style={{ color: isOnline ? latencyColor(mint.latencyMs) : 'var(--text3)' }}>
                     {isOnline && mint.latencyMs != null ? <>{mint.latencyMs}<span className="mint-list-unit">ms</span></> : '—'}
                   </td>
-                  <td className="num" style={{ color: uptimeColor(mint.uptimePct30d ?? null) }}>
-                    {mint.uptimePct30d != null ? <>{mint.uptimePct30d}<span className="mint-list-unit">%</span></> : '—'}
+                  <td className="num" style={{ color: uptimeColor(uptime30d) }}>
+                    {uptime30d != null ? <>{formatUptime30d(uptime30d)}<span className="mint-list-unit">%</span></> : '—'}
                   </td>
                   <td className="num rating-col">
                     {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (

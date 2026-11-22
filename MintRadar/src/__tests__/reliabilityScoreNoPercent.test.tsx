@@ -79,7 +79,7 @@ describe('no rendered Reliability Score contains a percent sign', () => {
     expect(score.textContent).not.toContain('%')
     expect(card.querySelector('.card-reliability')?.textContent ?? '').not.toContain('%')
     // the uptime fact on the same card (Uptime 30 d since the 2026-11-19 redesign) is a real percentage and stays one
-    expect(card.querySelector('.card-facts')?.textContent).toContain('99%')
+    expect(card.querySelector('.card-facts')?.textContent).toContain('99.0%')
   })
 
   it('Compare modal: the Reliability Score row, desktop table and mobile cards', () => {

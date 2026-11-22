@@ -3,6 +3,7 @@ import { computeDegraded } from './degraded.js'
 import { mintStatus } from './shared/mintStatus.js'
 import { publicMintName, isHiddenMintName } from './mintNames.js'
 import { PAGE_META, OG_PAGE_SLUGS } from './shared/pageMeta.js'
+import { readStoredBreakdown } from './scoreBreakdown.js'
 
 // Minimal HTML fragment served ONLY to social-media crawlers (see nginx
 // user-agent map, deploy/nginx.conf) that hit /mint/:url — they don't run JS,
@@ -16,6 +17,8 @@ export interface OgMintData {
   degraded: boolean
   /** Extra facts of the link preview (2026-11-13); each is left out of the description when absent. */
   uptimePct24h?: number | null
+  /** The unrounded 30-day uptime stored with the score (2026-11-22, N4): the window of the cards and the score. */
+  uptimePct30dExact?: number | null
   nutCount?: number | null
   reviewAvgRating?: number | null
   reviewRatedCount?: number | null
@@ -26,13 +29,21 @@ export interface OgMintData {
 export function mintOgDescription(mint: OgMintData): string {
   const reliabilityScoreText = mint.reliabilityScore !== null ? `${mint.reliabilityScore}/100` : 'N/A'
   const parts = [`Reliability Score: ${reliabilityScoreText}`, mintStatusLabel(mint)]
-  if (typeof mint.uptimePct24h === 'number' && Number.isFinite(mint.uptimePct24h)) parts.push(`${mint.uptimePct24h}% uptime (24h)`)
+  // The 30-day uptime as the website shows it (one decimal, cut down, never a rounded-up 100 %); 24 h only without it.
+  if (typeof mint.uptimePct30dExact === 'number' && Number.isFinite(mint.uptimePct30dExact)) parts.push(`${formatUptime30d(mint.uptimePct30dExact)}% uptime (30 d)`)
+  else if (typeof mint.uptimePct24h === 'number' && Number.isFinite(mint.uptimePct24h)) parts.push(`${mint.uptimePct24h}% uptime (24h)`)
   if (typeof mint.nutCount === 'number' && mint.nutCount > 0) parts.push(`${mint.nutCount} NUTs`)
   const n = mint.reviewRatedCount ?? 0
   if (typeof mint.reviewAvgRating === 'number' && Number.isFinite(mint.reviewAvgRating) && n > 0) {
     parts.push(`rated ${mint.reviewAvgRating.toFixed(1)}/5 in ${n} ${n === 1 ? 'review' : 'reviews'}`)
   }
   return parts.join(' · ')
+}
+
+/** 99.96 → "99.9", 97 → "97.0", 100 → "100" (the frontend's uptime30dShown + formatUptime30d, src/utils/mintFormatting.ts). */
+export function formatUptime30d(pct: number): string {
+  const shown = Math.floor(pct * 10 + 1e-9) / 10
+  return shown >= 100 ? '100' : shown.toFixed(1)
 }
 
 // Escapes text for safe interpolation into both HTML body text and
@@ -142,7 +153,7 @@ function numOrNull(v: unknown): number | null {
 
 export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
   const result = await pool.query(
-    `SELECT m.name, m.last_reliability_score, m.nut_count, m.review_avg_rating, m.review_rated_count,
+    `SELECT m.name, m.last_reliability_score, m.nut_count, m.review_avg_rating, m.review_rated_count, m.score_breakdown,
         COUNT(h.online) AS total,
         COALESCE(SUM(CASE WHEN h.online THEN 1 ELSE 0 END), 0) AS online_count,
         latest.online AS latest_online,
@@ -154,7 +165,7 @@ export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
         WHERE url = m.url ORDER BY checked_at DESC, id DESC LIMIT 1
       ) latest ON true
       WHERE m.url = $1
-      GROUP BY m.name, m.last_reliability_score, m.nut_count, m.review_avg_rating, m.review_rated_count, latest.online, latest.checked_at`,
+      GROUP BY m.name, m.last_reliability_score, m.nut_count, m.review_avg_rating, m.review_rated_count, m.score_breakdown, latest.online, latest.checked_at`,
     [url]
   )
 
@@ -172,6 +183,7 @@ export async function fetchOgMintData(url: string): Promise<OgMintData | null> {
     online: latestOnline,
     degraded: computeDegraded(total, onlineCount, latestOnline, latestCheckedAt),
     uptimePct24h: total > 0 ? Math.round((onlineCount / total) * 100) : null,
+    uptimePct30dExact: readStoredBreakdown(row['score_breakdown'])?.uptimeInputs?.uptime30dExactPct ?? null,
     nutCount: numOrNull(row['nut_count']),
     reviewAvgRating: numOrNull(row['review_avg_rating']),
     reviewRatedCount: numOrNull(row['review_rated_count']),
