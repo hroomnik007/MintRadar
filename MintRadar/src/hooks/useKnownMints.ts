@@ -65,6 +65,11 @@ export interface KnownMint {
   /** Uptime per UTC day for the last 30 days, oldest first, today last (null = no probe that day); null for a mint
    *  without any probe in 30 days. Website only (dailyUptime.ts). */
   uptimeDaily30?: Array<number | null> | null
+  /** Uptime per UTC hour for the last 24 hours, oldest first, the current hour last (null = no probe that hour); null
+   *  for a mint without any probe in 24 hours. The home mint cards' bars. Website only (hourlyUptime.ts). */
+  uptimeHourly24?: Array<number | null> | null
+  /** uptimePct24h with one decimal, rounded down (never 100 with a failed probe). The home mint cards' "Uptime 24 h". */
+  uptimePct24hExact?: number | null
   /** 30-day uptime in whole percent, the figure the score's 30-day part and the recommendation gate use; null without history. */
   uptimePct30d?: number | null
   /** The same share unrounded (two decimals, rounded down): what the recommendation gate (hasSteadyUptime) compares. */

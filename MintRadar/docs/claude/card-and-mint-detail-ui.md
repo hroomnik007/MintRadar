@@ -574,7 +574,8 @@ After #211 widened the Latency column, "30 days 100% · 2 outages" wrapped at 12
 - **Badges** (Archived / New, Test mint, Same op) sit in the foot, so a badge never makes one card taller than the next.
   No Degraded badge: the foot's state word says it (red, bold). The SAT / LN / "up 24h" / "77% up 30d" chips are gone:
   units and Lightning are text in the foot, uptime is the bars and the Uptime 30 d fact (ochre below the recommendation
-  limit, `data-testid="card-uptime-30d"`).
+  limit, `data-testid="card-uptime-30d"`). Since 2026-11-22 (owner) the card shows the last 24 hours instead: 24 hourly
+  bars and "Uptime 24 h" (`card-uptime-24h`); see `stats-dashboard-watchlist-ui.md`, "Follow-ups (2026-11-22)".
 - **30 daily bars** (`components/mint/UptimeBars.tsx`, helpers `utils/uptimeBars.ts`): quiet green for a day >= 99.5 %,
   amber >= 95 %, red below (drawn as tall as the uptime, at least a stub), a faint stub for a day without probes; one
   entrance animation (off with reduced motion); `role="img"` with a one-sentence summary. Hidden without `uptimeDaily30`.
@@ -636,7 +637,8 @@ Styles in the "phase 4b" block of `MintDetail.css`.
 
 `mintDetail/HistoryTab.tsx`, helpers in `utils/historyTimeline.ts` (unit test `historyTimeline.test.ts`), styles in the
 "phase 4c" block of `MintDetail.css`.
-- **Period switch** (24h / 7d / 30d / 90d) heads the tab with one sentence; the **metric switch** (Latency / Uptime /
+- **Period switch** (24h / 7d / 30d / 90d) heads the tab (its intro sentence "The figures and the chart cover the period
+  you pick. …" was removed 2026-11-22, owner); the **metric switch** (Latency / Uptime /
   Score) sits in the chart panel's head ("Latency, 7 days", "From Nuremberg.").
 - **Four figures in one frame** (`.md-hist-summary.md-hist-figs`): average latency, average uptime, average reliability
   (band word under it), outages in 30 days (`data-testid="outage-tile-count"`, label `outagesCountLabel(count)`). The line
@@ -748,7 +750,8 @@ Blocks "Mockup alignment, 2026-11-19" at the end of `MintDetail.css`; `mint.html
   is made" dialog), the coloured review avatars (the palette is a tested feature).
 
 ### Follow-ups of 2026-11-20 (owner)
-- "What happened" marks by kind, never copper (copper = clickable): outage red (ongoing with a halo), update a grey ring,
+- "What happened" marks by kind, never copper (copper = clickable): outage red (ongoing with a halo), update a grey ring
+  (green, `--green-bright`, since 2026-11-22, owner),
   switch of software a grey dot, first sighting a small faint dot (`.md-ev-update` / `.md-ev-switch` / `.md-ev-first`).
 - Audit: the "How the auditor tests" panel is gone (it repeated the verdict's sentence); its source line "Data from
   cashu.info, synced … Open this mint on cashu.info" sits under the verdict (`.md-audit-src`); swaps per day takes the row.

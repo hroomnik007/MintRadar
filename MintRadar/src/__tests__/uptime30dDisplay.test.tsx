@@ -64,30 +64,38 @@ describe('the warning tone starts where the recommendation gate does', () => {
   })
 })
 
+// Since 2026-11-22 (owner) the home card shows the last 24 hours ("Uptime 24 h" and 24 hourly bars); the 30-day figure
+// is on Mint Detail and in Compare. The same display rule: one decimal, rounded down, ochre below the gate's limit.
 describe('mint card', () => {
-  const chip = (c: HTMLElement) => c.querySelector('[data-testid="card-uptime-30d"]')
-  // Since the 2026-11-19 redesign the low 30-day uptime is the ochre "Uptime 30 d" fact itself (it was a "77% up 30d" chip).
-  it('marks the 30-day uptime only below the limit', () => {
-    expect(chip(render(wrap(<MintCard mint={STEADY} />)).container)).toBeNull()
-    expect(chip(render(wrap(<MintCard mint={UNKNOWN} />)).container)).toBeNull()
-    expect(chip(render(wrap(<MintCard mint={{ ...STEADY, uptimePct30d: MIN_RECOMMENDATION_UPTIME_30D_PCT }} />)).container)).toBeNull()
-    const low = chip(render(wrap(<MintCard mint={WEEK_DOWN} />)).container) as HTMLElement | null
+  const fact = (c: HTMLElement) => c.querySelector('[data-testid="card-uptime-24h"]') as HTMLElement | null
+  const DAY_DOWN: KnownMint = { ...STEADY, url: 'https://beta.mint.example', name: 'Beta Mint', uptimePct24h: 77, uptimePct24hExact: 77 }
+  it('marks the 24-hour uptime only below the limit', () => {
+    expect(fact(render(wrap(<MintCard mint={STEADY} />)).container)?.dataset.low).toBeUndefined()
+    expect(fact(render(wrap(<MintCard mint={{ ...STEADY, uptimePct24h: null }} />)).container)?.textContent).toBe('–')
+    expect(fact(render(wrap(<MintCard mint={{ ...STEADY, uptimePct24h: MIN_RECOMMENDATION_UPTIME_30D_PCT }} />)).container)?.dataset.low).toBeUndefined()
+    const low = fact(render(wrap(<MintCard mint={DAY_DOWN} />)).container)
     expect(low?.textContent).toBe('77.0%')
+    expect(low?.dataset.low).toBe('true')
     expect(low?.style.color).toContain('--med')
   })
-  // The "up 24h" chip went with the 2026-11-19 redesign (phase 3): the card shows the 30-day uptime as a fact instead.
-  it('the Uptime 30 d fact shows the same figure', () => {
-    const { container } = render(wrap(<MintCard mint={WEEK_DOWN} />))
-    expect(container.querySelector('.card-facts')?.textContent).toContain('Uptime 30 d77.0%')
+  it('the fact is "Uptime 24 h", not the 30-day figure', () => {
+    const { container } = render(wrap(<MintCard mint={{ ...WEEK_DOWN, uptimePct24h: 100, uptimePct24hExact: 100 }} />))
+    expect(container.querySelector('.card-facts')?.textContent).toContain('Uptime 24 h100%')
+    expect(container.querySelector('.card-facts')?.textContent).not.toContain('30 d')
   })
-  // U1 (UI/UX report 2026-11-22): the unrounded share with one decimal, cut down, so yellow days never read as 100 %.
-  it('shows uptimePct30dExact with one decimal and never rounds up to 100', () => {
+  it('shows uptimePct24hExact with one decimal and never rounds up to 100', () => {
     const facts = (m: KnownMint) => render(wrap(<MintCard mint={m} />)).container.querySelector('.card-facts')?.textContent
-    expect(facts({ ...STEADY, uptimePct30d: 100, uptimePct30dExact: 99.96 })).toContain('Uptime 30 d99.9%')
-    expect(facts({ ...STEADY, uptimePct30d: 100, uptimePct30dExact: 99.6 })).toContain('Uptime 30 d99.6%')
-    expect(facts({ ...STEADY, uptimePct30d: 100, uptimePct30dExact: 100 })).toContain('Uptime 30 d100%')
-    // No exact figure (older snapshot): the whole percent as before.
-    expect(facts({ ...STEADY, uptimePct30d: 98, uptimePct30dExact: null })).toContain('Uptime 30 d98.0%')
+    expect(facts({ ...STEADY, uptimePct24h: 100, uptimePct24hExact: 99.6 })).toContain('Uptime 24 h99.6%')
+    expect(facts({ ...STEADY, uptimePct24h: 100, uptimePct24hExact: 100 })).toContain('Uptime 24 h100%')
+    // No exact figure (older snapshot): the whole percent.
+    expect(facts({ ...STEADY, uptimePct24h: 98, uptimePct24hExact: null })).toContain('Uptime 24 h98.0%')
+  })
+  it('24 hourly bars, labelled "24 h" and "Now"', () => {
+    const hours = Array<number | null>(24).fill(100); hours[20] = 50
+    const { container } = render(wrap(<MintCard mint={{ ...STEADY, uptimeHourly24: hours }} />))
+    expect(container.querySelectorAll('.uptime-bars i')).toHaveLength(24)
+    expect(container.querySelector('.uptime-bars')?.getAttribute('aria-label')).toBe('Uptime per hour, last 24 hours: 23 of 24 checked hours 99.5 % or more, lowest 50 %')
+    expect(container.querySelector('.uptime-scale')?.textContent).toBe('24 hNow')
   })
 })
 

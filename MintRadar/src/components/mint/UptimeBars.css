@@ -2,7 +2,7 @@
    day without probes. The one entrance animation of the page: the bars rise once; none with reduced motion. */
 .uptime-bars {
   display: grid;
-  grid-template-columns: repeat(30, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--n, 30), minmax(0, 1fr)); /* 30 days, or 24 hours on the home cards */
   gap: 2px;
   height: 22px;
   align-items: end;

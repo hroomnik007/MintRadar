@@ -34,7 +34,11 @@ async function openCompare(page: Page, size: [number, number], others: string[],
   await expect(page.locator('.mint-card')).toHaveCount(4)
   await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
   for (const name of others) await page.locator('.md-picker-item', { hasText: name }).click()
-  await page.locator('.md-picker-confirm').click()
+  // Confirm from the keyboard with the mouse parked on the navbar: a click leaves the pointer over whatever card lies
+  // under the picker once it closes (the modal chunk loads lazily), and hovering a card prefetches that mint's detail,
+  // probe included (useMintHoverPrefetch). That request belongs to the hover, not to the Compare rows counted below.
+  await page.mouse.move(1, 1)
+  await page.locator('.md-picker-confirm').press('Enter')
   await expect(page.getByText('Mint Comparison')).toBeVisible()
 }
 

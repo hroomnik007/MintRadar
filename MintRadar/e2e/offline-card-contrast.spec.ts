@@ -9,7 +9,7 @@ import { measureEffective } from './fixtures/contrast'
 const TEXT: [string, string][] = [
   // Since the 2026-11-19 redesign: units and Lightning are text in the foot, the state word sits there too (no chips).
   ['name', '.card-name'], ['hostname', '.card-host'], ['units', '.card-units'],
-  ['Lightning', '.card-ln'], ['state word', '.card-state-word'], ['Uptime 30 d label', '.card-facts dt >> nth=1'],
+  ['Lightning', '.card-ln'], ['state word', '.card-state-word'], ['Uptime 24 h label', '.card-facts dt >> nth=1'],
   ['LAST SEEN label', '.latency-label'], ['last seen value', '.latency-value'], ['Reliability word', '.card-reliability-label'],
   ['rating value', '.card-reliability-rating-val'], ['rating count', '.card-reliability-rating-n'],
 ]

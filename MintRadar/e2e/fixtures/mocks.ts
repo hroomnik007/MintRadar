@@ -28,6 +28,8 @@ export interface MockMint {
   uptimePct30dExact?: number | null
   /** Uptime per UTC day, 30 days, oldest first (cards, Mint Detail). Defaults to 30 days at uptimePct30d (or 100). */
   uptimeDaily30?: Array<number | null> | null
+  uptimeHourly24?: Array<number | null> | null
+  uptimePct24hExact?: number | null
   discoveredAt: string
   /** Units this mint issues, as persisted by prober.ts's parseMintMethods(). */
   units: string[] | null
@@ -136,6 +138,8 @@ function knownMintPayload(m: MockMint) {
     uptimePct7d: m.uptimePct7d ?? m.uptimePct24h,
     uptimePct30d: m.uptimePct30d === undefined ? 100 : m.uptimePct30d,
     uptimeDaily30: m.uptimeDaily30 === undefined ? Array<number | null>(30).fill(m.uptimePct30d ?? 100) : m.uptimeDaily30,
+    uptimeHourly24: m.uptimeHourly24 === undefined ? Array<number | null>(24).fill(m.uptimePct24h ?? 100) : m.uptimeHourly24,
+    uptimePct24hExact: m.uptimePct24hExact === undefined ? m.uptimePct24h : m.uptimePct24hExact,
     uptimePct30dExact: m.uptimePct30dExact === undefined ? (m.uptimePct30d === undefined ? 100 : m.uptimePct30d) : m.uptimePct30dExact,
     serverLocation: 'Germany',
     lastCheckedAt: new Date(now - 60_000).toISOString(),

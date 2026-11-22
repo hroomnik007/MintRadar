@@ -1296,7 +1296,7 @@ export default function Dashboard() {
       <PageHead
         title="Cashu mints"
         srTitle="Reliability Score & Uptime Monitor"
-        description={<>How reliably each Cashu mint runs, so you can decide where to keep your sats. New to Cashu? <Link to="/learn/cashu-basics">Start with the basics</Link>.</>}
+        description={<>How reliably each Cashu mint runs, so you can decide where to keep your sats.<span className="page-head-desc-line">New to Cashu? <Link to="/learn/cashu-basics">Start with the basics</Link>.</span></>}
         titleRef={headingRef}
         titleTestId="dashboard-heading"
       />
@@ -1308,10 +1308,13 @@ export default function Dashboard() {
           <div className="dash-status">
             <p className="dash-status-btn">
               <span className="dash-status-live" aria-hidden="true" />
+              {/* Two lines since 2026-11-22 (owner): the count on its own, then when and from where, smaller and muted. */}
               <span className="dash-status-item">
-                <b>{knownLoading ? '—' : onlineCount} of {knownLoading ? '—' : knownTotal}</b> mints answered the last check
-                {' '}<span className="dash-status-time">{formatTimeAgo(lastCheckTime)}</span>{' '}
-                <span className="dash-status-note" data-testid="dash-latency-note">from {PROBE_LOCATION}</span>.
+                <span className="dash-status-main"><b>{knownLoading ? '—' : onlineCount} of {knownLoading ? '—' : knownTotal}</b> mints online</span>
+                <span className="dash-status-sub">
+                  Last check <span className="dash-status-time">{formatTimeAgo(lastCheckTime)}</span>{' '}
+                  <span className="dash-status-note" data-testid="dash-latency-note">from {PROBE_LOCATION}</span>
+                </span>
               </span>
             </p>
           </div>

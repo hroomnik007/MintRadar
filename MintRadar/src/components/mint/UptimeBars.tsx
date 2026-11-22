@@ -14,11 +14,13 @@ import './UptimeBars.css'
 /** How long a readout opened by a tap stays (ms). */
 export const TOUCH_READOUT_MS = 4000
 
-export function UptimeBars({ days, variant = 'card', className = '', readouts }: {
+export function UptimeBars({ days, variant = 'card', className = '', readouts, unit = 'day' }: {
   days: ReadonlyArray<number | null> | null | undefined
   variant?: 'card' | 'wide'
   className?: string
   readouts?: ReadonlyArray<{ date: string; text: string }>
+  /** 'hour': the 24 hourly bars of the home cards (owner 2026-11-22); same colours, same thresholds. */
+  unit?: 'day' | 'hour'
 }) {
   const [hover, setHover] = useState<number | null>(null)
   const [touchOpen, setTouchOpen] = useState(false)
@@ -49,7 +51,9 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts }:
     <div
       className={`uptime-bars uptime-bars-${variant}${readouts ? ' has-readouts' : ''} ${className}`.trim()}
       role="img"
-      aria-label={uptimeBarsSummary(days)}
+      aria-label={uptimeBarsSummary(days, unit)}
+      style={{ ['--n' as string]: n }}
+      data-unit={unit}
       data-testid="uptime-bars"
       ref={rootRef}
       onPointerMove={readouts ? e => {

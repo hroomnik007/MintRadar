@@ -2948,3 +2948,15 @@
 @media (pointer: coarse) {
   .dashboard .page-head-desc a { padding-block: 12px; margin-block: -12px; }
 }
+
+/* Follow-ups 2026-11-22 (owner). The status box: "N of M mints online", and under it "Last check <time> from <place>"
+   smaller and muted. The header's "New to Cashu? Start with the basics." on its own line. "Add mint" (the plus) has the
+   copper outline of "Find a mint for me". */
+.dash-intro .dash-status-item { display: flex; flex-direction: column; gap: 1px; line-height: 1.35; }
+.dash-intro .dash-status-main { color: var(--text); }
+.dash-intro .dash-status-sub { font-size: var(--fs-xs); color: var(--text3); }
+.dash-intro .dash-status-btn { align-items: flex-start; }
+.dash-intro .dash-status-live { align-self: flex-start; margin-top: 6px; transform: none; }
+.dashboard .page-head-desc-line { display: block; }
+.dashboard-controls .submit-btn { border-color: var(--action); color: var(--action); }
+.dashboard-controls .submit-btn:hover { border-color: var(--action); background: var(--action-soft); color: var(--action-ink); }

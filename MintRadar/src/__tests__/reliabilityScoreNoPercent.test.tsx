@@ -72,13 +72,13 @@ const wrap = (ui: React.ReactElement, path = '/', route = '/') => (
 
 describe('no rendered Reliability Score contains a percent sign', () => {
   it('Dashboard card: the score and its "Reliability" line', () => {
-    const { container } = render(wrap(<MintCard mint={{ ...MINT, uptimePct30d: 99 }} />))
+    const { container } = render(wrap(<MintCard mint={{ ...MINT, uptimePct24h: 99, uptimePct24hExact: null }} />))
     const card = container.querySelector('.mint-card') as HTMLElement
     expect(card).not.toBeNull()
     const score = within(card).getByText('92')
     expect(score.textContent).not.toContain('%')
     expect(card.querySelector('.card-reliability')?.textContent ?? '').not.toContain('%')
-    // the uptime fact on the same card (Uptime 30 d since the 2026-11-19 redesign) is a real percentage and stays one
+    // the uptime fact on the same card (Uptime 24 h since 2026-11-22) is a real percentage and stays one
     expect(card.querySelector('.card-facts')?.textContent).toContain('99.0%')
   })
 
