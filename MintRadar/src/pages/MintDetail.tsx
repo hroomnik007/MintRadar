@@ -230,10 +230,57 @@ function httpErrorTooltip(lastError: string): string | undefined {
  * M5: scroll the tab row of Mint Detail to the top, under the sticky navbar (57px; measured, so a taller bar still fits),
  * only when it is not already on screen (on a desktop the tabs are usually visible and nothing moves).
  */
+const TAB_SCROLL_MAX_WAIT_MS = 2500
+
+// The tab panel still shows a loading placeholder ("Loading audit data…", "Loading reviews…").
+function tabPanelLoading(): boolean {
+  const els = document.querySelectorAll('#md-tabpanel [role="status"], #md-tabpanel .md-rv-empty')
+  for (const el of els) if (/^\s*Loading\b/.test(el.textContent ?? '')) return true
+  return false
+}
+
+// Scroll once the page below the tabs has stopped growing for TAB_SCROLL_QUIET_MS (sections of a tab render in turn; a
+// scroll before that lets them push the content under the tabs, which is a layout shift in view), at the latest after
+// `maxWaitMs`. Returns the cancel function for the effect cleanup.
+const TAB_SCROLL_QUIET_MS = 250
+function scrollTabsWhenSettled(tabs: HTMLElement, maxWaitMs: number, onDone: () => void, stillWanted: () => boolean): () => void {
+  let quiet: number | undefined
+  let done = false
+  const run = () => {
+    if (done) return
+    done = true
+    cleanup()
+    if (!stillWanted()) return // dropped by a visitor input meanwhile
+    onDone()
+    scrollTabsIntoView(tabs)
+  }
+  const arm = () => { window.clearTimeout(quiet); quiet = window.setTimeout(run, TAB_SCROLL_QUIET_MS) }
+  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(arm) : null
+  ro?.observe(document.body)
+  const cap = window.setTimeout(run, Math.max(0, maxWaitMs))
+  const cleanup = () => { ro?.disconnect(); window.clearTimeout(quiet); window.clearTimeout(cap) }
+  arm()
+  return () => { done = true; cleanup() }
+}
+
+// The visitor (or anything else) started on the page — scrolled, tapped, typed, moved the mouse (e.g. to open a
+// tooltip), focused something: the pending deep-link scroll is dropped, the page never moves under them. Returns the
+// function that removes the listeners.
+const TAB_SCROLL_CANCEL_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll', 'focusin', 'click'] as const
+function onFirstInput(cb: () => void): () => void {
+  const off = () => { for (const t of TAB_SCROLL_CANCEL_EVENTS) window.removeEventListener(t, fire, { capture: true }) }
+  const fire = () => { off(); cb() }
+  for (const t of TAB_SCROLL_CANCEL_EVENTS) window.addEventListener(t, fire, { passive: true, capture: true })
+  return off
+}
+
 function scrollTabsIntoView(tabs: HTMLElement) {
   const navH = document.querySelector('.navbar')?.getBoundingClientRect().height ?? 57
   const r = tabs.getBoundingClientRect()
-  if (r.top >= navH && r.bottom <= window.innerHeight) return
+  // Tabs in the upper three quarters of the screen (a desktop: header and tabs fit the first screen): the linked tab's
+  // content is visible below them, nothing moves. Tabs at the bottom edge or below it (a phone, where the header and the
+  // figures fill the first screen) are moved up under the navbar, so the linked tab's content shows.
+  if (r.top >= navH && r.top <= window.innerHeight * 0.75) return
   window.scrollTo({ top: Math.max(0, window.scrollY + r.top - navH - 8), behavior: 'auto' })
 }
 
@@ -619,24 +666,44 @@ function MintDetailContent({ url }: { url: string }) {
   // M5 (UI/UX report 2026-11-22): a tab link also brings the tabs into view. On a phone the header and the figures fill
   // the first screen, so "#reviews" opened the right tab out of sight. Set here, done after the render that has the tabs.
   const scrollToTabsPending = useRef(false)
+  const scrollToTabsSince = useRef<number | null>(null)
+  const [, setScrollRetry] = useState(0)
   useEffect(() => {
     const apply = () => {
       const m = window.location.hash.match(/^#(overview|history|nuts|audit|reviews)$/)
       if (!m?.[1]) return
       setActiveTab(m[1] as 'overview' | 'history' | 'nuts' | 'audit' | 'reviews')
+      // #overview is the page as it opens anyway: no scroll for it.
+      if (m[1] === 'overview') return
       scrollToTabsPending.current = true
+      scrollToTabsSince.current = null
+      offInput?.()
+      offInput = onFirstInput(() => { scrollToTabsPending.current = false; scrollToTabsSince.current = null })
     }
+    let offInput: (() => void) | undefined
     apply()
     window.addEventListener('hashchange', apply)
-    return () => window.removeEventListener('hashchange', apply)
+    return () => { window.removeEventListener('hashchange', apply); offInput?.() }
   }, [url, locationHash])
   useEffect(() => {
     if (!scrollToTabsPending.current) return
     const tabs = document.querySelector<HTMLElement>('.mint-detail .md-tabs')
     if (!tabs) return // still loading: the next render tries again
-    scrollToTabsPending.current = false
-    const id = window.requestAnimationFrame(() => scrollTabsIntoView(tabs))
-    return () => window.cancelAnimationFrame(id)
+    // Wait while the linked tab still shows its "Loading …" placeholder: its content would then replace it inside the
+    // first screen and move everything under it (layout shift). The data arriving is a new render, which comes back here;
+    // a tab that never finishes loading is scrolled to after TAB_SCROLL_MAX_WAIT_MS anyway.
+    if (scrollToTabsSince.current === null) scrollToTabsSince.current = Date.now()
+    const waited = Date.now() - scrollToTabsSince.current
+    if (tabPanelLoading() && waited < TAB_SCROLL_MAX_WAIT_MS) {
+      const retry = window.setTimeout(() => setScrollRetry(n => n + 1), TAB_SCROLL_MAX_WAIT_MS - waited)
+      return () => window.clearTimeout(retry)
+    }
+    // Cleared only when the scroll runs: a render before it cancels the wait and the next render starts a new one
+    // (clearing it up front lost the scroll whenever a second render followed).
+    return scrollTabsWhenSettled(tabs, TAB_SCROLL_MAX_WAIT_MS - waited, () => {
+      scrollToTabsPending.current = false
+      scrollToTabsSince.current = null
+    }, () => scrollToTabsPending.current)
   })
 
   // The slot grid only changes when the current hour/day bucket does, so key the memo on the bucket, not on every 30 s

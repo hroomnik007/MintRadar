@@ -12,6 +12,7 @@ import { hasRecentReviewSurge } from './reviewSurge.js'
 import { isArchivedMint } from './archived.js'
 import { healthRecordPublishedAtIso } from './healthAssertions.js'
 import { getDailyUptime } from './dailyUptime.js'
+import { getHourlyUptime } from './hourlyUptime.js'
 import { keysetsOf, changesOf, type Snapshot, type WalletExtra, type AuditDirectionsRow, latency24hOf } from './walletApi.js'
 import { readStoredBreakdown } from './scoreBreakdown.js'
 import { readStoredContactChecks } from './contactChecks.js'
@@ -149,6 +150,7 @@ export function computeKnownMints(): Promise<Snapshot> {
       // Daily uptime buckets of the last 30 UTC days (website cards and Mint Detail): the last background read, no query
       // here (dailyUptime.ts).
       const dailyUptime = getDailyUptime()
+      const hourlyUptime = getHourlyUptime() // the 24 hourly buckets of the home cards (hourlyUptime.ts)
       // C for the IMDB-style weighted Rating sort (see below) — computed from
       // the raw rollup columns before the row map so each mint's WR can be set
       // inline in the literal.
@@ -236,6 +238,9 @@ export function computeKnownMints(): Promise<Snapshot> {
           scoreBreakdown: readStoredBreakdown(r.score_breakdown),
           lastError: (r.last_error as string | null) ?? null,
           uptimePct24h: total === 0 ? null : Math.round(onlineCount / total * 100),
+          // Additive (2026-11-22, website only): the same 24-hour share with one decimal, rounded down, so the home card's
+          // "Uptime 24 h" never reads 100 % when a probe failed (as uptimePct30dExact for the 30-day figure).
+          uptimePct24hExact: total === 0 ? null : Math.floor(onlineCount / total * 1000) / 10,
           // Same computation as uptimePct24h, over a 7-day window — feeds the
           // Stats "Most Reliable" panel (see docs/claude/discovery-and-relays.md), which switched to a
           // 7d default because most of the network sits at 100% on a 24h
@@ -246,6 +251,9 @@ export function computeKnownMints(): Promise<Snapshot> {
           // Additive (2026-11-19, website only): uptime per UTC day for the last 30 days, oldest first, today last; a day
           // without probes is null; null for a mint without any probe in 30 days. See dailyUptime.ts.
           uptimeDaily30: dailyUptime.get(r.url as string) ?? null,
+          // Additive (2026-11-22, website only): uptime per UTC hour for the last 24 hours, oldest first, the current hour
+          // last; null for an hour without probes; null for a mint without any probe in 24 hours. See hourlyUptime.ts.
+          uptimeHourly24: hourlyUptime.get(r.url as string) ?? null,
           // Additive (methodology 7): 30-day uptime, the figure the recommendation gate (hasSteadyUptime) and the
           // score's 30-day part use. The value stored with the score at the newest probe; the live count only until
           // the first probe after a deploy has stored one.

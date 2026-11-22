@@ -343,6 +343,17 @@ count `pool.query` calls). A failed read keeps the previous buckets (or none) an
 start, before the first read, the field is `null`. Read by the 30 bars on
 the mint cards and the list view (`UptimeBars`).
 
+## `uptimeHourly24` and `uptimePct24hExact` on /api/mints/known (2026-11-22)
+
+Website only, additive (the wallet API maps its fields one by one; `/api/v1/wallets*` and `WALLET_MINT_FIELDS` are
+unchanged, the contract test still passes). `uptimeHourly24`: 24 numbers, one per UTC hour, oldest first, the current
+hour last; the share of successful probes that hour, one decimal rounded DOWN; `null` for an hour without a probe, the
+field `null` for a mint without any probe in 24 hours. `backend/src/hourlyUptime.ts` (`buildHourlyBuckets`, unit test
+`hourlyUptime.test.ts`), ONE grouped read (`GROUP BY url, UTC hour` over 24 h) on its own timer every 5 min
+(`startHourlyUptimeRefresh`, `HOURLY_UPTIME_TTL_MS`), read by the snapshot via `getHourlyUptime()` (no extra snapshot
+query; a failed read keeps the previous buckets). `uptimePct24hExact`: the snapshot's 24 h share with one decimal, rounded
+down. Both feed the home mint cards ("Uptime 24 h" and the hourly bars). About 24 numbers per mint.
+
 - OG description of a mint page (`backend/src/og.ts`, 2026-11-22): uses the exact 30-day uptime from the stored score
   breakdown (`uptimeInputs.uptime30dExactPct`, one decimal rounded down, as on the site), "… % uptime (30 d)";
   without it, the 24 h figure as before.

@@ -45,12 +45,15 @@ test.describe('MintCard — copy & reduced badge set', () => {
     await expect(card(page, 'Charlie Mint').locator('.card-reliability-na')).toHaveText('No score yet')
   })
 
-  // The "up 24h" chip went with the 2026-11-19 redesign: 30 daily bars and the Uptime 30 d fact instead.
-  test('the card shows 30 daily bars and the Uptime 30 d fact, no "up 24h" chip', async ({ page }) => {
+  // The "up 24h" chip went with the 2026-11-19 redesign; since 2026-11-22 (owner) the card shows the last 24 hours:
+  // 24 hourly bars ("24 h" … "Now") and the Uptime 24 h fact. Mint Detail keeps the 30 daily bars.
+  test('the card shows 24 hourly bars and the Uptime 24 h fact, no "up 24h" chip', async ({ page }) => {
     await page.goto('/?status=all')
     const alpha = card(page, 'Alpha Mint')
-    await expect(alpha.locator('.uptime-bars i')).toHaveCount(30)
-    await expect(alpha.locator('.card-facts')).toContainText('Uptime 30 d')
+    await expect(alpha.locator('.uptime-bars i')).toHaveCount(24)
+    await expect(alpha.locator('.uptime-scale')).toHaveText('24 hNow')
+    await expect(alpha.locator('.card-facts')).toContainText('Uptime 24 h')
+    await expect(alpha.locator('.card-facts')).not.toContainText('30 d')
     await expect(alpha).not.toContainText('up 24h')
   })
 
@@ -137,9 +140,10 @@ test.describe('MintCard — copy & reduced badge set', () => {
     // 3 of the 4 mocked mints are online (Alpha, Bravo, Delta; Charlie is
     // offline); all 4 are tracked.
     await page.goto('/?status=all')
-    // Since the 2026-11-19 redesign it is one sentence: "N of M mints answered the last check <time> from Nuremberg."
+    // Two lines since 2026-11-22 (owner): "N of M mints online", then "Last check <time> from Nuremberg" smaller and muted.
     const status = page.locator('.dash-status')
-    await expect(status.locator('.dash-status-item')).toContainText('3 of 4 mints answered the last check')
+    await expect(status.locator('.dash-status-main')).toHaveText('3 of 4 mints online')
+    await expect(status.locator('.dash-status-sub')).toContainText(/^\s*Last check .+ from Nuremberg\s*$/)
     await expect(status.locator('.dash-status-time')).toBeVisible()
   })
 

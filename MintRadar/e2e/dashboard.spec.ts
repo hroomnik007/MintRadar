@@ -21,7 +21,7 @@ test.describe('Dashboard', () => {
     // The compact ".dash-status" line reflects the mocked data: 3 of the 4
     // mocked mints are online (Alpha, Bravo, Delta; Charlie is offline).
     const status = page.locator('.dash-status')
-    await expect(status.locator('.dash-status-item')).toContainText('3 of 4 mints answered the last check')
+    await expect(status.locator('.dash-status-item')).toContainText('3 of 4 mints online')
   })
 
   test('search filters the mint list', async ({ page }) => {

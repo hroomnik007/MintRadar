@@ -128,8 +128,8 @@ export function MintCard({
   const scoreWord = score == null ? 'No score yet' : score >= 70 ? 'High' : score >= 40 ? 'Moderate' : 'Low'
   const units = mint.units && mint.units.length > 0 ? sortUnits(mint.units).join(', ') : null
   const lightningText = lightningLabel ? lightningLabel.replace(/^LN/, 'Lightning') : null
-  const uptime30d = uptime30dShown(mint.uptimePct30dExact, mint.uptimePct30d)
-  const lowUptime30d = isUptime30dLow(uptime30d)
+  const uptime24h = uptime30dShown(mint.uptimePct24hExact, mint.uptimePct24h)
+  const lowUptime24h = isUptime30dLow(uptime24h)
   const stateBadge = isArchived && !isOnline ? (
     <span className="card-pill card-hdr-badge card-hdr-archived" style={{ fontWeight: 600, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border2)' }}>Archived</span>
   ) : isNew ? (
@@ -188,10 +188,11 @@ export function MintCard({
       {/* The lower block is pinned to the bottom of the card, so cards in one grid row line up whether or not they carry
           a badges row. */}
       <div className="card-lower">
-      {mint.uptimeDaily30 && (
+      {/* The last 24 hours, one bar per hour (owner 2026-11-22); Mint Detail keeps the 30 daily bars. */}
+      {mint.uptimeHourly24 && (
         <div className="card-trace">
-          <UptimeBars days={mint.uptimeDaily30} />
-          <div className="uptime-scale" aria-hidden="true"><span>30 days</span><span>Today</span></div>
+          <UptimeBars days={mint.uptimeHourly24} unit="hour" />
+          <div className="uptime-scale" aria-hidden="true"><span>24 h</span><span>Now</span></div>
         </div>
       )}
 
@@ -211,10 +212,11 @@ export function MintCard({
           )}
         </div>
         <div>
-          <dt>Uptime 30 d</dt>
-          {/* A low 30-day uptime (below the recommendation gate) is ochre here; it was a separate "77% up 30d" chip. */}
-          <dd className="card-fact-value" data-testid={lowUptime30d ? 'card-uptime-30d' : undefined} style={lowUptime30d ? { color: offlineTone('var(--med)', 'var(--text2)') } : undefined}>
-            {uptime30d == null ? '–' : <>{formatUptime30d(uptime30d)}<span className="latency-unit">%</span></>}
+          <dt>Uptime 24 h</dt>
+          {/* The last 24 hours since 2026-11-22 (owner; it was the 30-day figure, which stays on Mint Detail): one decimal,
+              rounded down, never 100 with a failed probe. Below the 30-day gate's threshold it is ochre, as before. */}
+          <dd className="card-fact-value" data-testid="card-uptime-24h" data-low={lowUptime24h ? 'true' : undefined} style={lowUptime24h ? { color: offlineTone('var(--med)', 'var(--text2)') } : undefined}>
+            {uptime24h == null ? '–' : <>{formatUptime30d(uptime24h)}<span className="latency-unit">%</span></>}
           </dd>
         </div>
         <div className="card-fact-reviews">

@@ -71,7 +71,6 @@ export function HistoryTab({
   const metricLabel = chartMetric === 'latency' ? 'Latency' : chartMetric === 'uptime' ? 'Uptime' : 'Reliability Score'
   return (<>
     <div className="md-hist-bar">
-      <p className="md-hist-intro">The figures and the chart cover the period you pick. Outages and software changes are listed below.</p>
       <div className="md-seg" role="group" aria-label="Period">
         {(['24h', '7d', '30d', '90d'] as const).map(iv => (
           <button

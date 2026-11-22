@@ -75,7 +75,8 @@
 
 `mints.html`: one row of 40 px outlined controls on the page background (block at the end of `Dashboard.css`):
 search "Search mints by name or URL", Filters, the select "Sort: Reliability" (option label shortened from "Reliability
-Score"), the view switch (frame, copper line under the chosen view), "Add a mint" (neutral; was copper "Add mint").
+Score"), the view switch (frame, copper line under the chosen view), "Add a mint" (neutral; was copper "Add mint"; since
+2026-11-22 it has the copper outline of "Find a mint for me" again, see "Follow-ups (2026-11-22)").
 The sort control is our own list since 2026-11-20 (`src/components/SortMenu.tsx`, owner: the native list looked like a
 system window and only Chromium can restyle it): a button "Sort: Reliability" and a `role="listbox"` panel (check and copper
 rule on the chosen option; ArrowDown/Enter/Space open it, arrows/Home/End move, Enter/Space choose, Escape/Tab or a
@@ -613,7 +614,8 @@ The Dashboard button described here was removed the same day by #204 (see "Reset
 
 - **Head:** the description reads "How reliably each Cashu mint runs, so you can decide where to keep your sats."; the
   "We score how it runs…" line is gone. The network state is ONE sentence in a box framed like the Filters button
-  (owner, 2026-11-18): "**N of M** mints answered the last check <time> from Nuremberg." (`.dash-status-btn`, latency note
+  (owner, 2026-11-18): "**N of M** mints answered the last check <time> from Nuremberg." (since 2026-11-22 two lines,
+  see "Follow-ups (2026-11-22)") (`.dash-status-btn`, latency note
   `data-testid="dash-latency-note"`). Beside it "Find a mint for me" (copper) and "Inspect a token"; on phones both go under
   the box as two equal buttons.
 - **Sort:** one `<select class="sort-select">` ("Sort: Reliability Score", Most reviewed, Rating, Latency, Name; each
@@ -682,3 +684,15 @@ heights re-measured in `stats-layout-shift.spec.ts` (390: 3514, 320: 3687).
   - `translate` is used rather than `transform` because the `fadein` entry animation holds `transform` (fill: both).
   - cashu.info does `.mint-card:hover { transform: translateY(-2px); box-shadow: var(--shadow), 0 0 0 2px var(--accent-wash) }` with `transition: transform .15s, box-shadow .15s`, and turns it off under reduced motion.
   - Pinned by `e2e/mint-card-hover-lift.spec.ts`.
+
+## Follow-ups (2026-11-22, owner)
+- **Mint card:** "Uptime 24 h" (`uptimePct24hExact`, one decimal rounded down; falls back to `uptimePct24h`; ochre below
+  the recommendation limit, `data-testid="card-uptime-24h"`, `data-low`) instead of "Uptime 30 d", and 24 hourly bars
+  (`uptimeHourly24`, `<UptimeBars unit="hour">`, same colours and thresholds, scale "24 h" … "Now") instead of the 30 daily
+  bars. The bar count is a CSS variable (`--n`). Mint Detail, the list view and Compare keep the 30-day figures.
+- **Status box:** two lines: "**N of M** mints online" (`.dash-status-main`), then "Last check <time> from Nuremberg"
+  smaller and muted (`.dash-status-sub`, `--fs-xs`, `--text3`). The word "answered" and the full stop are gone.
+- **Head:** "New to Cashu? Start with the basics." is its own line under the description (`.page-head-desc-line`).
+- **"Add a mint" (the plus):** at every width the copper outline and text of "Find a mint for me" (hover: `--action-soft`
+  fill). Its accessible name stays "Add a mint".
+- Pinned by `e2e/ui-followups-1122.spec.ts` (1440 and 390).

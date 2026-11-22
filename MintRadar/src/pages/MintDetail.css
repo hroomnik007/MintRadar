@@ -2664,7 +2664,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* ── 2026-11-19 redesign, phase 4c: History ────────────────────────────────────────────────────────────────────────
    The period switch heads the tab; four figures in one frame (like the strip); the chart at full width; one timeline. */
 .md-hist-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
-.md-hist-intro { margin: 0; font-size: var(--fs-sm); color: var(--text2); max-width: 62ch; }
 .mint-detail .md-hist-figs {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0;
   background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r);
@@ -3039,10 +3038,10 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 }
 
 /* "What happened" marks by kind (owner, 2026-11-20): copper is for what you can click, so no software change is copper.
-   Outage: red (an ongoing one with a soft red halo). Update: a grey ring. Switch of software: a filled grey dot. First
+   Outage: red (an ongoing one with a soft red halo). Update: a green ring (owner 2026-11-22, was grey). Switch of software: a filled grey dot. First
    sighting: a small faint dot. The kind is also the word at the right of the row. */
 .md-ev-mark { box-sizing: border-box; }
-.md-ev-update .md-ev-mark { background: transparent; border: 2px solid var(--text2); }
+.md-ev-update .md-ev-mark { background: transparent; border: 2px solid var(--green-bright); }
 .md-ev-switch .md-ev-mark { background: var(--text2); }
 .md-ev-first .md-ev-mark { width: 7px; height: 7px; margin-top: 6.5px; background: var(--text3); }
 .md-ev-outage[data-ongoing="true"] .md-ev-mark { box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 30%, transparent); }

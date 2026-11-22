@@ -36,7 +36,7 @@ test.describe('Mint counts agree everywhere', () => {
     await expect(page.locator('.mint-card').first()).toBeVisible()
 
     const status = page.locator('.dash-status')
-    await expect(status).toContainText('49 of 90 mints answered the last check')
+    await expect(status).toContainText('49 of 90 mints online')
     await expect(footer(page)).toHaveText('Showing 49 of 90')
     await expect(banner(page)).toContainText('41 mints hidden (offline 24h+)')
 
@@ -46,7 +46,7 @@ test.describe('Mint counts agree everywhere', () => {
     await banner(page).click()
     await expect(footer(page)).toHaveText('Showing 90 of 90')
     await expect(page.locator('.mint-card')).toHaveCount(90)
-    await expect(status).toContainText('49 of 90 mints answered the last check')
+    await expect(status).toContainText('49 of 90 mints online')
     // Archived cards render without NaN/undefined and without console errors, and say they are archived.
     for (const n of ['Mint 91', 'Mint 92']) {
       const card = page.locator('.mint-card', { hasText: n })

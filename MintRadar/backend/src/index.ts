@@ -9,6 +9,7 @@ import cors from 'cors'
 import { initDb } from './db.js'
 import { upsertMint } from './prober.js'
 import { startDailyUptimeRefresh } from './dailyUptime.js'
+import { startHourlyUptimeRefresh } from './hourlyUptime.js'
 import { seedKnownMints, startCron } from './cron.js'
 import { publishServiceProfile } from './nostrService.js'
 import { startAttestations } from './healthPublisher.js'
@@ -206,6 +207,7 @@ if (process.env['NODE_ENV'] !== 'test') {
         startCron()
         knownMints.start() // fire-and-forget warm-up + 45 s refresh timer (unref'ed); failures are logged, never thrown
         startDailyUptimeRefresh() // daily uptime buckets for the cards (dailyUptime.ts): now, then every 10 min
+        startHourlyUptimeRefresh() // hourly uptime buckets for the home cards (hourlyUptime.ts): now, then every 5 min
         stats.start() // same for /api/stats (statsCache.ts)
         refreshReliabilityTrendCache()
         setInterval(refreshReliabilityTrendCache, RELIABILITY_TREND_REFRESH_MS).unref()
