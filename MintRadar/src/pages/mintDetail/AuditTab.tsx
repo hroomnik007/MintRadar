@@ -1,12 +1,12 @@
 // Mint Detail "Audit" tab: the Audit stats panel of cashu.info (the audit source of the Reliability Score) — the
-// sync note, a 7/30-day period switch, the verdict, the bar, the four tiles, weekly snapshots and one swap list.
+// sync note, a 7/30-day period switch, the verdict, the bar, the four tiles, Swaps per day or Swaps per week, and one swap list.
 // The audit query (useAuditCz) stays in MintDetail; this component holds the period switch (default 7 days) and
 // AuditSyncNote's wrap measurement.
 // audit.8333.space is no longer shown (the service has not answered since 2026-09-27); the backend still syncs and
 // serves its fields (/api/mints/known, /api/mints/swaps, /health sources.audit8333) for API clients.
 import { useLayoutEffect, useRef, useState } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { AuditVerdictBlock, AuditStack, AuditDirections, AuditWeeks, AuditSwapList } from '@/components/AuditCzCards'
+import { AuditVerdictBlock, AuditStack, AuditDirections, AuditDays, AuditWeeks, AuditSwapList } from '@/components/AuditCzCards'
 import type { AuditCzView } from '@/utils/auditCz'
 import { auditVerdictFromPeriod, auditDirectionsFromPeriod, auditAvgFromPeriod, auditWeeksForChart } from '@/utils/auditCz'
 import { auditNoDataText, cashuInfoViewText } from '@/utils/tooltipTexts'
@@ -99,9 +99,10 @@ function AuditTabBody({ czView, czSyncNote, now, infoText }: {
   const verdict = selected ? auditVerdictFromPeriod(selected) : (days === 7 ? czView.verdict : null)
   const directions = selected ? auditDirectionsFromPeriod(selected) : (days === 7 ? czView.directions : czView.directions.map(d => ({ ...d, ok: null, total: null, failed: 0, tooltip: d.tooltip })))
   const avgSwapTime = selected ? auditAvgFromPeriod(selected) : (days === 7 ? czView.avgSwapTime : null)
-  const weeks = auditWeeksForChart(czView.weeks)
-  // 2026-11-19 redesign (phase 4e), 2026-11-22 period switch: the verdict panel, the four figures, weekly snapshots,
-  // and the swap list in its own panel.
+  const hasDays = czView.daily.some(d => d.ok + d.failed > 0)
+  const hasWeeks = auditWeeksForChart(czView.weeks).some(w => w.swaps > 0)
+  // 2026-11-19 redesign (phase 4e), 2026-11-22 period switch: the verdict panel, the four figures,
+  // Swaps per day (7 days) or Swaps per week (30 days), and the swap list in its own panel.
   return (
     <div className="md-audit">
       <section className="md-panel md-audit-collapsible">
@@ -138,8 +139,13 @@ function AuditTabBody({ czView, czSyncNote, now, infoText }: {
 
       <AuditDirections directions={directions} avgSwapTime={avgSwapTime} verdict={verdict} days={days} />
 
-      {weeks.length > 0 && (
-        <section className="md-panel md-audit-days" aria-label="Weekly snapshots">
+      {days === 7 && hasDays && (
+        <section className="md-panel md-audit-days" aria-label="Swaps per day">
+          <AuditDays daily={czView.daily} />
+        </section>
+      )}
+      {days === 30 && hasWeeks && (
+        <section className="md-panel md-audit-days" aria-label="Swaps per week">
           <AuditWeeks weeks={czView.weeks} />
         </section>
       )}

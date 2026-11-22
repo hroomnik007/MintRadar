@@ -4,14 +4,14 @@ import {
   auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
   auditVerdictHeadline, auditVerdictSentence, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT,
   auditWeekLabel, auditWeeksForChart,
-  type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure,
+  type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
 } from '@/utils/auditCz'
 import type { AuditCzWeek } from '@/hooks/useAuditCz'
 import { mintHostname, formatTimeAgo } from '@/utils/mintFormatting'
-import { formatDateTimeUtc } from '@/utils/formatDate'
+import { formatDateTimeUtc, DATE_MONTHS } from '@/utils/formatDate'
 
 // The cashu.info view of the Audit tab below the header: the period switch's verdict and tiles (7 or 30 days),
-// weekly snapshots, and one swap list with a filter. Every string from the source is rendered as plain text (React escapes it).
+// Swaps per day (7 days) or Swaps per week (30 days), and one swap list with a filter. Every string from the source is rendered as plain text (React escapes it).
 //
 // Colours: red is only the failures cashu.info attributes to THIS mint (a 7-day total, the verdict and the bar).
 // A single failed swap is amber: the source does not say per swap who caused it.
@@ -107,6 +107,41 @@ export function AuditDirections({ directions, avgSwapTime, verdict, days = 7 }: 
   )
 }
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
+
+/** MintRadar's own count of the stored swaps per UTC day. Nothing renders while no day has a swap. Shown on the 7-day view. */
+export function AuditDays({ daily }: { daily: AuditDay[] }) {
+  const max = Math.max(0, ...daily.map(d => d.ok + d.failed))
+  if (max === 0) return null
+  const unit = 64 / max
+  return (
+    <div className="au-days-wrap" data-testid="audit-days">
+      <div className="au-days-title">Swaps per day <span>UTC, as stored by MintRadar</span></div>
+      <div className="au-days">
+        {daily.map(d => {
+          const t = new Date(`${d.day}T00:00:00Z`)
+          const label = `${WEEKDAYS[t.getUTCDay()]} ${t.getUTCDate()} ${DATE_MONTHS[t.getUTCMonth()]}`
+          const count = d.ok + d.failed
+          return (
+            <div className="au-day" key={d.day} role="img" aria-label={`${label}: ${d.ok} succeeded, ${d.failed} failed`}>
+              <span className="au-day-count">{count > 0 ? count : ''}</span>
+              <div className="au-day-col">
+                {d.failed > 0 && <i className="au-seg-fail" style={{ height: `${Math.max(2, d.failed * unit)}px` }} />}
+                {d.ok > 0 && <i className="au-seg-ok" style={{ height: `${Math.max(2, d.ok * unit)}px` }} />}
+              </div>
+              <span className="au-day-label">{WEEKDAYS[t.getUTCDay()]}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="au-legend au-legend-small">
+        <span><i className="au-seg-ok" />succeeded</span>
+        <span><i className="au-seg-fail" />failed, whoever caused it</span>
+      </div>
+    </div>
+  )
+}
+
 function weekStack(w: AuditCzWeek): { ok: number; elsewhere: number; blamed: number; split: boolean } {
   if (w.succeeded !== null && w.failedElsewhere !== null) {
     return { ok: w.succeeded, elsewhere: w.failedElsewhere, blamed: w.attributedFailures, split: true }
@@ -118,9 +153,8 @@ function weekStack(w: AuditCzWeek): { ok: number; elsewhere: number; blamed: num
 }
 
 /**
- * The newest four stored weekly snapshots (cashu.info 7-day windows). Only weeks that exist are drawn —
- * missing weeks are not shown as empty columns. Replaces "Swaps per day", which only covered 7 UTC days
- * of MintRadar's own feed and could not follow the 30-day switch.
+ * The newest four stored weekly snapshots (cashu.info 7-day windows), shown on the 30-day view.
+ * Only weeks that exist are drawn — missing weeks are not shown as empty columns.
  */
 export function AuditWeeks({ weeks }: { weeks: AuditCzWeek[] }) {
   const shown = auditWeeksForChart(weeks)
@@ -131,7 +165,7 @@ export function AuditWeeks({ weeks }: { weeks: AuditCzWeek[] }) {
   const hasSplit = stacks.some(s => s.split)
   return (
     <div className="au-days-wrap au-weeks-wrap" data-testid="audit-weeks">
-      <div className="au-days-title">Weekly snapshots <span>Last four stored 7-day windows from cashu.info</span></div>
+      <div className="au-days-title">Swaps per week <span>Last four stored 7-day windows from cashu.info</span></div>
       <div className="au-days au-weeks" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }}>
         {shown.map((w, i) => {
           const s = stacks[i]!
