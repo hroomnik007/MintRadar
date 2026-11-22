@@ -66,7 +66,7 @@ export interface AuditCzView {
   checkedAt: string | null
   /** Older than 90 minutes (the detail job runs every 30). */
   notRecent: boolean
-  /** The stored swaps of the last 7 days, both directions, newest first (at most the 100 the page loads). */
+  /** Stored swaps of the last 30 days (the feed retention), newest first; the tab then keeps the selected 7- or 30-day window. */
   swaps: AuditSwapRow[]
   /** Null when the source sent no usable totals. */
   verdict: AuditVerdict | null
@@ -81,6 +81,8 @@ export interface AuditCzView {
   since: { day: string; swaps: number; attributedFailures: number } | null
   /** The single longer-window line; null while the long window is 7 days or shorter. Kept for helpers; the tab no longer shows it. */
   longer: { day: string; swaps: number; attributedFailures: number } | null
+  /** Oldest stored swap for this mint (ISO); null when none. */
+  swapsSince: string | null
   /** Official 7-day and 30-day views; d30 is null until the 30-day graph has been stored. */
   periods: AuditCzPeriods
   /** Stored weekly snapshots, oldest first; the tab shows the newest four that exist. */
@@ -334,6 +336,30 @@ export function filterAuditSwaps(rows: AuditSwapRow[], filter: AuditSwapFilter):
   return rows
 }
 
+export const AUDIT_SWAPS_MAX_DAYS = 30
+
+/** Swaps whose time falls in the last `days` days (rows without a time are kept). */
+export function auditSwapsForPeriod(rows: AuditSwapRow[], days: 7 | 30, now: number): AuditSwapRow[] {
+  const maxAge = days * 86_400_000
+  return rows.filter(r => {
+    const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN
+    return !Number.isFinite(t) || now - t <= maxAge
+  })
+}
+
+/** "since 8 Nov" when the 30-day list does not reach back a full 30 days; otherwise null. */
+export function auditSwapsSinceNote(swapsSince: string | null | undefined, days: 7 | 30, now: number): string | null {
+  if (days !== 30 || !swapsSince) return null
+  const t = new Date(swapsSince).getTime()
+  if (!Number.isFinite(t) || now - t >= AUDIT_SWAPS_MAX_DAYS * 86_400_000) return null
+  const d = new Date(swapsSince)
+  const month = MONTHS[d.getUTCMonth()]
+  const day = d.getUTCDate()
+  const year = d.getUTCFullYear()
+  const nowYear = new Date(now).getUTCFullYear()
+  return year !== nowYear ? `since ${day} ${month} ${year}` : `since ${day} ${month}`
+}
+
 /** Returns null when the mint is not covered or no detail is stored (the caller then shows the audit.8333.space panel or the empty panel). */
 export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditCzView | null {
   if (!data || !data.covered || !data.mint || !data.detail) return null
@@ -364,10 +390,7 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
     sourceHref: data.sourceUrl && AUDIT_CZ_PAGE_RE.test(data.sourceUrl) ? data.sourceUrl : null,
     checkedAt,
     notRecent: Number.isFinite(checkedMs) && now - checkedMs > AUDIT_CZ_NOT_RECENT_MS,
-    swaps: rows.filter(r => {
-      const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN
-      return !Number.isFinite(t) || now - t <= AUDIT_WINDOW_DAYS * 86_400_000
-    }),
+    swaps: auditSwapsForPeriod(rows, AUDIT_SWAPS_MAX_DAYS, now),
     verdict: auditVerdict(data.detail),
     directions: auditDirections(data.detail),
     avgSwapTime: avg !== undefined ? formatAvgSwapTime(avg) : null,
@@ -381,6 +404,7 @@ export function adaptAuditCz(data: AuditCzData | undefined, now: number): AuditC
       d30: data.periods?.d30 ?? null,
     },
     weeks: Array.isArray(data.weeks) ? data.weeks : [],
+    swapsSince: data.swapsSince ?? null,
   }
 }
 

@@ -521,7 +521,8 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 |---|---|---|
 | `url` | yes | The mint URL: `https://…`, at most 500 characters, no whitespace or credentials, a well-formed public host (no private/loopback IP literals). The DNS record is **not** looked up. A mint matches by its URL or by one of the aliases cashu.info lists (compared after URL normalisation and without a trailing slash). |
 | `direction` | no | Which swaps to return: `from` (this mint is the source = a melt), `to` (this mint is the destination = a mint) or `both` (default, also when the parameter is absent). The match is case-sensitive; any other value, an empty value (`direction=`) or a repeated parameter gives `400`. |
-| `limit` | no | Number of newest swaps to return, an integer from `1` to `100`, default `20`. A decimal is rounded down (`2.9` → `2`), `0` and negative numbers become `1`, anything above `100` becomes `100`. A missing, non-numeric (`abc`, `1e2`) or repeated value keeps the default `20`. Bound as an SQL parameter. `stats7d` and `detail7d` are not affected by `limit` or `direction`. |
+| `limit` | no | Number of newest swaps to return, an integer from `1` to `500`, default `20`. A decimal is rounded down (`2.9` → `2`), `0` and negative numbers become `1`, anything above `500` becomes `500`. A missing, non-numeric (`abc`, `1e2`) or repeated value keeps the default `20`. Bound as an SQL parameter. `stats7d` and the per-mint `detail` are not affected by `limit`, `direction` or `days`. |
+| `days` | no | Optional filter on the swap list: `7` or `30`. When set, only swaps with `at` in the last that many days are returned (still ordered newest first and still capped by `limit`). When omitted, the list is the newest `limit` stored swaps with no date filter (the feed itself is kept for 30 days). Any other value, an empty value (`days=`) or a repeated parameter gives `400`. |
 
 **Response (covered), `200`:**
 ```json
@@ -596,7 +597,8 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 | `mint.attributedFailures` | number \| null | Failures the source attributes to this mint (its own window). |
 | `mint.minted` / `mint.melted` | number \| null | Counts from the source's mint list feed (`null` when it omits them). |
 | `mint.lastCheck` | string (ISO) \| null | The source's last check of the mint. |
-| `swaps` | array | Up to `limit` newest swaps for the chosen `direction`, ordered by `at` descending (no tie-break). `[]` when none stored. |
+| `swaps` | array | Up to `limit` newest swaps for the chosen `direction` (and `days`, when set), ordered by `at` descending (no tie-break). `[]` when none stored. |
+| `swapsSince` | string (ISO) \| null \| absent | Oldest stored swap for this mint, independent of `limit` and `days`. `null` when none are stored. Absent when not covered. (Additive, 2026-11-22.) |
 | `swaps[].id` | string | The source's swap id. |
 | `swaps[].at` | string (ISO) | When the swap happened. |
 | `swaps[].status` | string | `success`, `failed`, `pending`, or any other short lowercase token the source sends (`^[a-z][a-z_-]{0,29}$`). |

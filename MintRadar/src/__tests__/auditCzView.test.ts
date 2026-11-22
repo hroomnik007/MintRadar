@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { auditVerdictSentence, adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT, auditLongerWindow, auditSinceLine, isLongerAuditWindow, auditVerdictFromPeriod, auditDirectionsFromPeriod, auditAvgFromPeriod, auditWeekLabel, auditWeeksForChart, type AuditCzView } from '@/utils/auditCz'
+import { auditVerdictSentence, adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditSwapsForPeriod, auditSwapsSinceNote, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT, auditLongerWindow, auditSinceLine, isLongerAuditWindow, auditVerdictFromPeriod, auditDirectionsFromPeriod, auditAvgFromPeriod, auditWeekLabel, auditWeeksForChart, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -173,9 +173,28 @@ describe('the swap list, its filter and the freshness', () => {
     // "Failed" leaves out the grey rows that are not counted against the mint
     expect(filterAuditSwaps(v.swaps, 'failed')).toHaveLength(1)
   })
-  it('only the swaps of the last 7 days are listed (the window of the figures above)', () => {
-    const v = view([row({ at: '2026-10-06T10:00:00Z' }), row({ at: '2026-09-29T10:00:00Z' })])
-    expect(v.swaps).toHaveLength(1)
+  it('the adapter keeps the last 30 days of swaps; the tab then cuts the list to 7 or 30', () => {
+    const now = Date.parse('2026-10-07T07:30:00Z')
+    const v = view([
+      row({ at: '2026-10-06T10:00:00Z' }),
+      row({ at: '2026-09-29T10:00:00Z' }), // 8 days old
+      row({ at: '2026-09-17T10:00:00Z' }), // 20 days old
+      row({ at: '2026-09-06T10:00:00Z' }), // 31 days old
+    ], LNPAY, {}, now)
+    expect(v.swaps).toHaveLength(3)
+    expect(auditSwapsForPeriod(v.swaps, 7, now)).toHaveLength(1)
+    expect(auditSwapsForPeriod(v.swaps, 30, now).map(r => r.createdAt)).toEqual([
+      '2026-10-06T10:00:00Z', '2026-09-29T10:00:00Z', '2026-09-17T10:00:00Z',
+    ])
+  })
+
+  it('the 30-day list can show a short "since {date}" note when stored swaps do not cover 30 days', () => {
+    const now = Date.parse('2026-11-22T00:00:00Z')
+    expect(auditSwapsSinceNote('2026-11-08T12:00:00.000Z', 30, now)).toBe('since 8 Nov')
+    expect(auditSwapsSinceNote('2025-12-20T00:00:00.000Z', 30, Date.parse('2026-01-10T00:00:00Z'))).toBe('since 20 Dec 2025')
+    expect(auditSwapsSinceNote('2026-10-23T00:00:00.000Z', 30, now)).toBeNull() // exactly 30 days
+    expect(auditSwapsSinceNote('2026-11-08T12:00:00.000Z', 7, now)).toBeNull()
+    expect(auditSwapsSinceNote(null, 30, now)).toBeNull()
   })
   it('not updated recently only after 90 minutes (from the stored detail)', () => {
     expect(view([], LNPAY, {}, Date.parse('2026-10-07T08:29:00Z')).notRecent).toBe(false)

@@ -143,7 +143,7 @@ test('only cz has data: header, verdict, bar, directions, one swap list with a f
 })
 
 // ── b) the browser only talks to our own backend ────────────────
-test('the browser never requests cashu.info: only /api/mints/audit-cz?direction=both&limit=100', async ({ page }) => {
+test('the browser never requests cashu.info: only /api/mints/audit-cz?direction=both&days=30&limit=500', async ({ page }) => {
   await page.addInitScript(() => {
     ;(window as unknown as { __csp: string[] }).__csp = []
     document.addEventListener('securitypolicyviolation', e => (window as unknown as { __csp: string[] }).__csp.push(e.blockedURI))
@@ -165,7 +165,8 @@ test('the browser never requests cashu.info: only /api/mints/audit-cz?direction=
   expect(queries.length).toBe(apiAudit.length)
   for (const q of queries) {
     expect(q.get('direction')).toBe('both')
-    expect(q.get('limit')).toBe('100')
+    expect(q.get('days')).toBe('30')
+    expect(q.get('limit')).toBe('500')
     expect(q.get('url')).toBe(ALPHA)
   }
 })
@@ -422,12 +423,19 @@ test.describe('7 days / 30 days period switch', () => {
     await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 7 days')
   })
 
-  test('switching to 30 days updates the headline, bar, success rate, direction tiles and the chart; recent swaps stay as they are', async ({ page }) => {
+  test('switching to 30 days updates the headline, bar, success rate, direction tiles, the chart and Recent swaps', async ({ page }) => {
     const day = (back: number) => new Date(Date.now() - back * 86_400_000).toISOString().slice(0, 10)
     const daily7d = [6, 5, 4, 3, 2, 1, 0].map(b => ({ day: day(b), ok: 2, failed: 0, other: 0 }))
     const weeks = [{ start: '2026-10-17', end: '2026-10-24', swaps: 30, attributedFailures: 2, failed: 5, succeeded: 25, failedElsewhere: 3, avgMs: null, amount: null, fees: null, deposits: null, withdrawals: null }]
-    const swaps = czSwapList([{ kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }])
-    await gotoAuditTab(page, onlyCz(swaps, { periods: { d7, d30 }, daily7d, weeks }))
+    const swaps = czSwapList([
+      { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' },
+      { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' },
+      { kind: 'old', at: ago(8 * 86_400_000) },
+      { kind: 'old', at: ago(12 * 86_400_000) },
+      { kind: 'old', at: ago(20 * 86_400_000) },
+    ])
+    const swapsSince = ago(20 * 86_400_000)
+    await gotoAuditTab(page, onlyCz(swaps, { periods: { d7, d30 }, daily7d, weeks, swapsSince }))
     const sw = page.getByTestId('audit-period-switch')
     await expect(page.getByTestId('audit-period-missing')).toHaveCount(0)
     await expect(sw.getByRole('button', { name: '30 days' })).toBeEnabled()
@@ -455,15 +463,19 @@ test.describe('7 days / 30 days period switch', () => {
     await expect(page.getByTestId('audit-days')).toHaveCount(0)
     await expect(page.getByTestId('audit-weeks')).toBeVisible()
     await expect(page.getByTestId('audit-weeks').locator('.au-days-title')).toContainText('Swaps per week')
-    // Recent swaps stay the last 7 days of the stored feed (8 rows + Show all), not filtered by the 30-day switch.
+    // Recent swaps follow the period: 30 days includes the older stored swaps (8 rows + Show all (N)).
     await expect(swapList(page).locator('tbody tr')).toHaveCount(8)
-    await expect(swapList(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show all (9)')
+    await expect(swapList(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show all (12)')
+    await expect(chip(page, 'All')).toHaveText('All 12')
+    await expect(page.getByTestId('audit-swaps-since')).toHaveText(/since \d+ \w+/)
     await sw.getByRole('button', { name: '7 days' }).click()
     await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 126 swaps, 0 failures caused by this mint')
     await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 7 days')
     await expect(page.getByTestId('audit-days')).toBeVisible()
     await expect(page.getByTestId('audit-weeks')).toHaveCount(0)
     await expect(swapList(page).locator('tbody tr')).toHaveCount(8)
+    await expect(swapList(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show all (9)')
+    await expect(page.getByTestId('audit-swaps-since')).toHaveCount(0)
   })
 })
 
@@ -484,12 +496,33 @@ test.describe('the swap list', () => {
     await expect(swapList(page).locator('tbody tr')).toHaveCount(2)
   })
 
-  test('a swap older than 7 days is not listed: the list is the window of the figures above it', async ({ page }) => {
-    const swaps = czSwapList([ok, ok, ok])
+  test('a swap older than 7 days is hidden on 7 days and listed on 30 days; older than 30 days never is', async ({ page }) => {
+    const d7 = {
+      days: 7, swaps: 126, succeeded: 107, failedElsewhere: 19, attributedFailures: 0,
+      avgMs: 8289, amount: 1000,
+      deposits: { success: 56, total: 62, failed: 6 },
+      withdrawals: { success: 51, total: 64, failed: 13 },
+      fetchedAt: '2026-11-21T08:00:00.000Z',
+    }
+    const d30 = {
+      days: 30, swaps: 400, succeeded: 380, failedElsewhere: 15, attributedFailures: 5,
+      avgMs: 1200, amount: 9000,
+      deposits: { success: 180, total: 190, failed: 10 },
+      withdrawals: { success: 200, total: 210, failed: 10 },
+      fetchedAt: '2026-11-21T10:18:00.000Z',
+    }
+    const swaps = czSwapList([ok, ok, ok, ok])
     swaps[2] = { ...swaps[2]!, at: ago(8 * 86_400_000) }
-    await gotoAuditTab(page, onlyCz(swaps))
+    swaps[3] = { ...swaps[3]!, at: ago(31 * 86_400_000) }
+    await gotoAuditTab(page, onlyCz(swaps, { periods: { d7, d30 }, swapsSince: ago(8 * 86_400_000) }))
     await expect(swapList(page).locator('tbody tr')).toHaveCount(2)
     await expect(chip(page, 'All')).toHaveText('All 2')
+    await expect(page.getByTestId('audit-swaps-since')).toHaveCount(0)
+    await page.getByTestId('audit-period-switch').getByRole('button', { name: '30 days' }).click()
+    await expect(swapList(page).locator('tbody tr')).toHaveCount(3)
+    await expect(chip(page, 'All')).toHaveText('All 3')
+    await expect(page.getByTestId('audit-swaps-since')).toHaveText(/since \d+ \w+/)
+    await expect(page.getByTestId('audit-swaps-empty')).toHaveCount(0)
   })
 })
 

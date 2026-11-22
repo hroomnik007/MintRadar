@@ -53,6 +53,8 @@ export interface AuditCzData {
   totals?: AuditCzTotals
   /** Official 7-day and 30-day views for the Audit tab (display only). Absent when not covered. */
   periods?: AuditCzPeriods
+  /** Oldest stored swap for this mint (ISO). Null when none. Absent when not covered. */
+  swapsSince?: string | null
 }
 
 export interface AuditCzWeekDirection {
@@ -143,7 +145,7 @@ export function useAuditCz(url: string, tabActive: boolean) {
   const query = useQuery({
     queryKey: ['mint', 'audit-cz', url],
     queryFn: async () => {
-      const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}&limit=100&direction=both`)
+      const res = await fetch(`/api/mints/audit-cz?url=${encodeURIComponent(url)}&days=30&limit=500&direction=both`)
       if (!res.ok) throw new Error('Failed to fetch cashu.info data')
       return await res.json() as AuditCzData
     },
