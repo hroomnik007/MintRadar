@@ -53,6 +53,7 @@ describe('brand assets', () => {
     expect(pngSize('public/og-image.png')).toEqual([1200, 630])
     expect(pngSize('public/og-image-reliability.png')).toEqual([1200, 630])
     expect(pngSize('public/og-image-radar.png')).toEqual([1200, 630])
+    expect(pngSize('public/og-image-mintradar.png')).toEqual([1200, 630])
     for (const s of [72, 96, 128, 144, 152, 192, 384, 512]) expect(pngSize(`public/icons/icon-${s}x${s}.png`)).toEqual([s, s])
   })
 

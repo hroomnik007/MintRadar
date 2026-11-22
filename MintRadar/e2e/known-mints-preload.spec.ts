@@ -49,7 +49,7 @@ test.describe('known-mints preload', () => {
     await page.goto('/mint/nostr/not-an-naddr')
     await expect(page.getByTestId('naddr-error')).toBeVisible()
     await page.waitForLoadState('load')
-    await expect(page.locator('head link[rel="preload"]')).toHaveCount(0)
+    await expect(page.locator('head link[rel="preload"]:not([as="font"])')).toHaveCount(0)
   })
 
   for (const route of ['/about', '/methodology', '/wallets', '/learn']) {
@@ -60,7 +60,7 @@ test.describe('known-mints preload', () => {
       // `load` waits for async scripts, so early-preload.js has run by now.
       await page.waitForLoadState('load')
       await flush(page)
-      await expect(page.locator('head link[rel="preload"]')).toHaveCount(0)
+      await expect(page.locator('head link[rel="preload"]:not([as="font"])')).toHaveCount(0)
       expect(seen).toHaveLength(0)
     })
   }

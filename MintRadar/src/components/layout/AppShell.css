@@ -1104,3 +1104,32 @@
 .nostr-new-to-nostr-panel ul { margin: 0 0 8px; padding-left: 18px; }
 .nostr-new-to-nostr-panel li { margin-bottom: 4px; }
 .nostr-new-to-nostr-panel a { color: var(--action); text-decoration: underline; text-underline-offset: 2px; }
+
+/* UI/UX report 2026-11-22 — M7: on a phone "Open in signer app" leads, filled; the QR folds under a toggle.
+   F1: a missing extension on a phone offers the signer app. */
+.nostr-remote-wrap-mobile .nostr-open-signer {
+  margin-top: 0;
+  min-height: 48px;
+  background: var(--action);
+  border-color: var(--action);
+  color: #04120d;
+  font-weight: 700;
+}
+.nostr-remote-wrap-mobile .nostr-open-signer:hover:not(:disabled) { background: var(--action); color: #04120d; }
+.nostr-remote-wrap-mobile .nostr-qr-wrap { margin-top: 12px; }
+.nostr-qr-toggle {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  min-height: 44px;
+  background: transparent;
+  border: 0;
+  color: var(--action);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nostr-qr-toggle:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+.nostr-warn-mobile { display: flex; flex-direction: column; gap: 10px; }
+.nostr-use-signer { width: 100%; min-height: 44px; }

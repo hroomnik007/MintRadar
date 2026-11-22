@@ -6,6 +6,7 @@ import { brandAssetsPlugin, withBrandHash } from './vite-brand-assets'
 import { openApiAssetPlugin } from './vite-openapi'
 import { precompressPlugin } from './vite-precompress'
 import { inlineCssPlugin } from './vite-inline-css'
+import { routePreloadPlugin } from './vite-route-preload'
 
 // Manifest icons carry ?v=<content hash> in builds (see vite-brand-assets.ts); dev leaves them untouched.
 const icon = (command: string, path: string) => (command === 'build' ? withBrandHash(path) : path)
@@ -14,6 +15,7 @@ export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     brandAssetsPlugin(),
+    routePreloadPlugin(),
     inlineCssPlugin(),
     openApiAssetPlugin(),
     VitePWA({

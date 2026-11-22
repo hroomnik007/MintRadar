@@ -341,3 +341,14 @@ only when it applies (all in `tooltipTexts.ts`; `e2e/tooltip-promoted-lines.spec
 - **Hit areas grow only for a coarse pointer.** Small icon buttons (card star / compare, Mint Detail copy icons, hero star, review actions, nav tabs, `.md-back`) get an invisible `::before` (`position: absolute; inset: -Npx`) inside `@media (pointer: coarse)` so the tap area reaches up to 44 px. The visible size, colours and layout are unchanged (no padding, no new box), the desktop (fine pointer) is untouched; the inset is capped so two neighbours' areas never overlap (checked by the hit probe: `elementFromPoint` at the edges of each enlarged area lands on its own button). `.md-back` uses `margin-inline-start: -9px` to keep its text aligned while its target is 44 px.
 - **320 px:** below 390 px the Dashboard sort chips use short labels (`.sort-lbl-short` / `.sort-lbl-full`, e.g. "Reliability Score" → "Reliability"), so the row does not wrap a single chip; below 360 px the nav tabs are 12.5 px with a 4 px gap, so "Learn" stays on the row. At 390 px and wider nothing changes.
 - **Phone Dashboard (≤640 px, `src/utils/mobileCollapse.ts`):** see `stats-dashboard-watchlist-ui.md` ("Phone list: first 10 online mints"). The cut uses `useMediaQuery('(max-width: 640px)')`, not `useIsMobile()` (768 px), so portrait tablets are unchanged. `useMediaQuery` reads "not matching" where `window.matchMedia` does not exist (jsdom without a stub).
+
+## Login on a phone (UI/UX report, 2026-11-22)
+- **M7:** on a phone (`isMobileDevice()`), Remote signer leads with a filled **"Open in signer app"** (48px).
+  - The copy link and "New link" follow.
+  - The QR (a phone cannot scan its own screen) is folded under **"Show QR for another device"** (`.nostr-qr-toggle`, `aria-expanded`).
+  - A desktop is unchanged: QR first and no open link.
+- **F1:** Nostr extension on a phone without one shows "Extensions don't run in most phone browsers" instead of the install link.
+  - It also shows a button, **"Use Amber instead"** on Android and "Use a signer app instead" elsewhere, which switches to Remote signer.
+- **F2:** the pairing status (`PairingStatus.tsx`, `utils/pairingStatus.ts`) reads, for example, "Connected to relay · waiting for approval (1:42)".
+  - Before a relay is connected it reads "Connecting to relay… (1:58)", and after approval "Signer approved, waiting for your public key (m:ss)".
+  - The countdown runs to the 2-minute pairing timeout (`initBunkerQR` returns `deadline` and `relayConnected()`).

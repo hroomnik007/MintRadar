@@ -57,8 +57,8 @@ test.describe('on a phone', () => {
   test('Remote signer first, Nostr extension second, Nostr key (nsec) third', async ({ page }) => {
     await openLogin(page)
     await expect(titles(page)).toHaveText(['Remote signer', 'Nostr extension', 'Nostr key (nsec)'])
-    // The first row is still the remote signer flow (QR pairing).
+    // The first row is still the remote signer flow (pairing; on a phone it leads with "Open in signer app").
     await page.locator('.nostr-method-card').first().click()
-    await page.waitForSelector('.nostr-qr-wrap svg')
+    await page.waitForSelector('a.nostr-open-signer')
   })
 })

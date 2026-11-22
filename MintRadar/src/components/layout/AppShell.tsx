@@ -9,9 +9,10 @@ import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { loadNostrClient } from '@/core/nostr/lazy'
-import { isMobileDevice } from '@/utils/isMobileDevice'
+import { isMobileDevice, isAndroidDevice } from '@/utils/isMobileDevice'
 import type { PairingStage } from '@/core/nostr/client'
 import { NavLogo } from './NavLogo'
+import { PairingStatus } from './PairingStatus'
 import { AccountMenu } from './AccountMenu'
 import './AppShell.css'
 
@@ -178,6 +179,9 @@ export function AppShell() {
   const dismissWatchlistNotice = useWatchlistStore(state => state.dismissNotice)
 
   const [showLoginModal, setShowLoginModal] = useState(false)
+  // Phone or tablet browser (user agent; does not change during a visit): the Remote signer view leads with
+  // "Open in signer app" there, and a missing extension offers the signer app.
+  const mobileDevice = isMobileDevice()
   const [loginMethod, setLoginMethod] = useState<'nip07' | 'nsec' | 'remote-signer'>('nip07')
   // false → the three-method picker is shown; true → collapsed to the focused
   // view for `loginMethod`, with a "Back" link to return to the picker.
@@ -190,6 +194,10 @@ export function AppShell() {
   const [bunkerError, setBunkerError] = useState('')
   const [qrUri, setQrUri] = useState('')
   const [pairingStage, setPairingStage] = useState<PairingStage>('awaiting-signer')
+  // Deadline + relay state of the live pairing, for the status line with the countdown (F2).
+  const [pairingInfo, setPairingInfo] = useState<{ deadline: number; relayConnected: () => boolean } | null>(null)
+  // Phone: the QR (which a phone cannot scan on its own screen) folds under "Show QR for another device" (M7).
+  const [showMobileQr, setShowMobileQr] = useState(false)
   const [copiedUri, setCopiedUri] = useState(false)
   const qrCancelRef = useRef<(() => void) | null>(null)
   // The pairing whose client-module load is still pending (startPairing); a newer start, a teardown or an unmount
@@ -262,12 +270,13 @@ export function AppShell() {
       if (pairingAttemptRef.current !== attempt) return
       pairingAttemptRef.current = null
       let cancel: () => void = () => {}
-      const { uri, loginPromise, cancel: cancelPairing } = initBunkerQR(stage => {
+      const { uri, loginPromise, cancel: cancelPairing, deadline, relayConnected } = initBunkerQR(stage => {
         if (qrCancelRef.current === cancel) setPairingStage(stage)
       })
       cancel = cancelPairing
       qrCancelRef.current = cancel
       setQrUri(uri)
+      setPairingInfo({ deadline, relayConnected })
       setPairingStage('awaiting-signer')
       setCopiedUri(false)
       setBunkerError('')
@@ -303,6 +312,8 @@ export function AppShell() {
     qrCancelRef.current = null
     pairingAttemptRef.current = null
     setQrUri('')
+    setPairingInfo(null)
+    setShowMobileQr(false)
     setCopiedUri(false)
     setBunkerError('')
   }, [])
@@ -556,10 +567,19 @@ export function AppShell() {
                   </div>
                 )}
 
-                {loginMethod === 'nip07' && !nip07Available && (
+                {loginMethod === 'nip07' && !nip07Available && !isMobileDevice() && (
                   <div className="nostr-warn">
                     No Nostr extension detected.{' '}
                     <a href="https://getalby.com" target="_blank" rel="noopener noreferrer">Install Alby</a> or nos2x to continue.
+                  </div>
+                )}
+                {loginMethod === 'nip07' && !nip07Available && isMobileDevice() && (
+                  // F1: extensions do not run in most phone browsers; offer the signer app path instead of an install link.
+                  <div className="nostr-warn nostr-warn-mobile">
+                    No Nostr extension detected. Extensions don&apos;t run in most phone browsers.
+                    <button type="button" className="nostr-connect-btn nostr-use-signer" onClick={() => selectMethod('remote-signer')}>
+                      {isAndroidDevice() ? 'Use Amber instead' : 'Use a signer app instead'}
+                    </button>
                   </div>
                 )}
 
@@ -568,8 +588,14 @@ export function AppShell() {
                 )}
 
                 {loginMethod === 'remote-signer' && (
-                  <div className="nostr-remote-wrap">
-                    {qrUri && (
+                  <div className={`nostr-remote-wrap${mobileDevice ? ' nostr-remote-wrap-mobile' : ''}`}>
+                    {qrUri && mobileDevice && (
+                      // M7: a phone cannot scan its own screen, so the main action comes first: hand the pairing link to
+                      // the signer app directly. Plain link, same tab; the pairing keeps running while the browser is in
+                      // the background.
+                      <a className="nostr-connect-btn nostr-open-signer" href={qrUri}>Open in signer app</a>
+                    )}
+                    {qrUri && (!mobileDevice || showMobileQr) && (
                       <div className="nostr-qr-wrap">
                         {/* #132019 === var(--surface); qrcode.react renders bgColor as an
                             SVG fill attribute, where CSS custom properties don't resolve */}
@@ -577,16 +603,11 @@ export function AppShell() {
                       </div>
                     )}
                     <div className="nostr-qr-caption">
-                      <span>Scan this with your signer app, or copy the link and paste it there.</span>
+                      <span>{mobileDevice ? 'Or copy the link and paste it in your signer app.' : 'Scan this with your signer app, or copy the link and paste it there.'}</span>
                       <button type="button" className="nostr-qr-refresh" onClick={startPairing}>
-                        New QR
+                        {mobileDevice ? 'New link' : 'New QR'}
                       </button>
                     </div>
-                    {qrUri && isMobileDevice() && (
-                      // A phone cannot scan its own screen: hand the pairing link to the signer app (Amber …) directly.
-                      // Plain link, same tab; the pairing keeps running while the browser is in the background.
-                      <a className="nostr-connect-btn nostr-open-signer" href={qrUri}>Open in signer app</a>
-                    )}
                     {qrUri && (
                       <button
                         type="button"
@@ -601,6 +622,16 @@ export function AppShell() {
                         {copiedUri
                           ? <span className="nostr-qr-copy-uri">Copied</span>
                           : <><span className="nostr-qr-copy-uri">{shortenPairingUri(qrUri)}</span><IcCopy /></>}
+                      </button>
+                    )}
+                    {qrUri && mobileDevice && (
+                      <button
+                        type="button"
+                        className="nostr-qr-toggle"
+                        aria-expanded={showMobileQr}
+                        onClick={() => setShowMobileQr(v => !v)}
+                      >
+                        {showMobileQr ? 'Hide QR' : 'Show QR for another device'}
                       </button>
                     )}
                     <p className="nostr-remote-hint">
@@ -625,11 +656,8 @@ export function AppShell() {
                         <Zap size={13} strokeWidth={2.4} aria-hidden="true" /> {isLoading ? '…' : 'Connect'}
                       </button>
                     </div>
-                    {qrUri && !bunkerError && (
-                      <div className="nostr-remote-status">
-                        {pairingStage === 'awaiting-pubkey' ? 'Signer approved, waiting for your public key' : 'Waiting for your signer to approve'}
-                        <span className="nostr-remote-status-sub">This can take up to 2 minutes.</span>
-                      </div>
+                    {qrUri && !bunkerError && pairingInfo && (
+                      <PairingStatus key={qrUri} stage={pairingStage} deadline={pairingInfo.deadline} relayConnected={pairingInfo.relayConnected} />
                     )}
                     {bunkerError && (
                       <div className="nostr-nsec-error" role="alert">

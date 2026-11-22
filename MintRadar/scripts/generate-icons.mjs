@@ -3,12 +3,13 @@
 // 30 lockfile entries). Install it for the run without touching package.json or the lockfile, then run the script:
 //   npm i --no-save sharp@0.35.5
 //   node scripts/generate-icons.mjs
-//   public/favicon.svg    -> public/favicon-16x16.png, favicon-32x32.png, favicon.ico (32x32 PNG in an ICO),
-//                            icons/icon-{72,96,128,144,152,192,384,512}x*.png (rounded tile, transparent corners),
+//   public/favicon-tab.svg -> public/favicon-16x16.png, favicon-32x32.png, favicon.ico (32x32 PNG in an ICO; no tile)
+//   public/favicon.svg    -> icons/icon-{72,96,128,144,152,192,384,512}x*.png (rounded tile, transparent corners),
 //                            apple-touch-icon.png (180x180, opaque --bg, no corner rounding: iOS masks it itself)
 //   public/og-image.svg   -> public/og-image.png (1200x630; frozen, X keeps the old card cached under this path)
 //   public/og-image-reliability.svg -> public/og-image-reliability.png (1200x630; frozen since 2026-11-14, shared cards point at it)
-//   public/og-image-radar.svg -> public/og-image-radar.png (1200x630; the file og:image/twitter:image point at)
+//   public/og-image-radar.svg -> public/og-image-radar.png (1200x630; frozen since 2026-11-22, shared cards point at it)
+// public/og-image-mintradar.png (the file og:image/twitter:image point at) is rendered by scripts/render-og-image.mjs.
 // The OG text uses `font-family: monospace`; the committed PNG was rasterised with DejaVu Sans Mono. Point
 // FONTCONFIG_FILE at a fontconfig that aliases monospace -> DejaVu Sans Mono (see
 // docs/claude/design-palette-and-chrome.md, "Brand assets"), otherwise the machine's default monospace is used.
@@ -31,8 +32,11 @@ for (const size of ICON_SIZES) {
   console.log(`Generated icon-${size}x${size}.png`)
 }
 
-await renderFavicon(16).toFile('public/favicon-16x16.png')
-const favicon32 = await renderFavicon(32).toBuffer()
+// Tab favicons (2026-11-22) come from favicon-tab.svg: the mark without the tile, transparent around it.
+const tabSvg = readFileSync('public/favicon-tab.svg')
+const renderTab = (size) => sharp(tabSvg, { density: (72 * size) / 32 }).resize(size, size).png()
+await renderTab(16).toFile('public/favicon-16x16.png')
+const favicon32 = await renderTab(32).toBuffer()
 writeFileSync('public/favicon-32x32.png', favicon32)
 
 // favicon.ico: one 32x32 image, stored as PNG (supported by every browser that reads .ico favicons).
