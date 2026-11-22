@@ -768,8 +768,13 @@ Blocks "Mockup alignment, 2026-11-19" at the end of `MintDetail.css`; `mint.html
 ## UI/UX report fixes, Mint Detail and layout (2026-11-22)
 - **M4:** Audit (cashu.info) swap chips: at ≤420px the visible labels read "All · In · Out · Failed".
   - This is done with `data-short` + `::before`; the text content and accessible name are unchanged.
-- **M5:** when a URL has a tab hash (`#reviews`, `#audit`…), the tabs are scrolled into view after the first render (`scrollTabsIntoView`).
-  - The offset is the `.navbar` height (57px by default), and nothing scrolls if the tabs are already on screen.
+- **M5:** when a URL has a tab hash (`#reviews`, `#audit`, …; not `#overview`), the tabs are scrolled up under the navbar (`scrollTabsIntoView`).
+  - The offset is the `.navbar` height (57px by default).
+  - It only scrolls when the tabs sit below the upper three quarters of the screen, which in practice means a phone (header and figures fill the first screen). On a desktop nothing moves.
+  - It waits (fix of 2026-11-22, same day) while the tab shows "Loading …", and then until the page has not resized for 250ms, capped at 2.5s (`scrollTabsWhenSettled`), so content that arrives later does not shift the screen (`layout-shift-tools-mint` #audit).
+  - Any input before that cancels it (pointer, key, wheel, touch, scroll, focus, click; `onFirstInput`), so the page never moves under the visitor, e.g. while a tooltip is open.
+  - The first version scrolled in a frame that a second render cancelled, so it never ran.
+  - Pinned by `e2e/mint-detail-hash-scroll.spec.ts`.
 - **M8:** the "not tracked" header back link is auto-sized and does not wrap. A long URL in `code` wraps inside the box.
 - **M9:** the History chart X axis has 12px right padding on narrow screens, so the last date is not cut.
 - **D3:** "Log in with Nostr" in the reviews box and the watch-login modal is a filled copper button.
