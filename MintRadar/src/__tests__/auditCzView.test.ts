@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { auditVerdictSentence, adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT, auditLongerWindow, auditSinceLine, isLongerAuditWindow, type AuditCzView } from '@/utils/auditCz'
+import { auditVerdictSentence, adaptAuditCz, auditCzNeutralKind, auditCzSyncNote, AUDIT_CZ_NOT_RECENT_TEXT, auditCzStateTitle, cleanAuditError, formatAvgSwapTime, formatSwapDuration, filterAuditSwaps, auditVerdictHeadline, auditSuccessRate, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT, auditLongerWindow, auditSinceLine, isLongerAuditWindow, auditVerdictFromPeriod, auditDirectionsFromPeriod, auditAvgFromPeriod, auditWeekLabel, auditWeeksForChart, type AuditCzView } from '@/utils/auditCz'
 import type { AuditCzData, AuditCzDetail } from '@/hooks/useAuditCz'
 
 type Row = AuditCzData['swaps'][number]
@@ -278,4 +278,52 @@ describe('sourceHref accepts only https://cashu.info/mint/<id>', () => {
     'javascript:alert(1)',
     null,
   ])('rejects %s', u => { expect(href(u)).toBeNull() })
+})
+
+describe('7-day and 30-day period views', () => {
+  const d30 = {
+    days: 30 as const, swaps: 46, succeeded: 40, failedElsewhere: 3, attributedFailures: 3,
+    avgMs: 300, amount: 900,
+    deposits: { success: 18, total: 20, failed: 2 },
+    withdrawals: { success: 22, total: 26, failed: 4 },
+    fetchedAt: '2026-11-21T10:18:00.000Z',
+  }
+  it('headline, caption and tiles follow the selected days; success rate stays succeeded/swaps', () => {
+    const v = auditVerdictFromPeriod(d30)
+    expect(v).toEqual({ total: 46, ok: 40, failedElsewhere: 3, blamed: 3 })
+    expect(auditSuccessRate(v)).toBe(87) // 40/46, same formula as the 7-day tile
+    expect(auditSuccessRateCaption(30)).toBe('Success rate · 30 days')
+    expect(auditVerdictHeadline(v, 30)).toBe('Last 30 days: 46 swaps, 3 failures caused by this mint')
+    expect(auditVerdictSentence(v, 30)).toEqual({ number: '3', words: 'failures caused by this mint in 46 swaps over 30 days' })
+    expect(auditAvgFromPeriod(d30)).toBe('300 ms')
+    const dirs = Object.fromEntries(auditDirectionsFromPeriod(d30).map(t => [t.key, t]))
+    expect(dirs['mints']).toMatchObject({ ok: 18, total: 20, failed: 2, tooltip: 'Deposits into this mint (mint operations) in the last 30 days, counted by cashu.info: successful of all.' })
+    expect(dirs['melts']).toMatchObject({ ok: 22, total: 26, failed: 4 })
+  })
+  it('adaptAuditCz passes periods through and leaves d30 null when missing', () => {
+    const with30 = view([], LNPAY, { periods: { d7: { ...d30, days: 7, swaps: 10, succeeded: 7, failedElsewhere: 2, attributedFailures: 1, avgMs: 400, amount: 90, deposits: { success: 4, total: 5, failed: 1 }, withdrawals: { success: 3, total: 5, failed: 2 }, fetchedAt: '2026-11-21T08:00:00.000Z' }, d30 } })
+    expect(with30.periods.d30?.swaps).toBe(46)
+    expect(with30.periods.d7?.swaps).toBe(10)
+    expect(view([]).periods).toEqual({ d7: null, d30: null })
+  })
+})
+
+describe('weekly snapshot chart helpers', () => {
+  const week = (start: string, end: string, swaps: number, extra: Record<string, unknown> = {}) => ({
+    start, end, swaps, attributedFailures: 0, failed: 0, succeeded: swaps, failedElsewhere: 0,
+    avgMs: null, amount: null, fees: null, deposits: null, withdrawals: null, ...extra,
+  })
+  it('labels a week with exact dates, compact when the month is the same', () => {
+    expect(auditWeekLabel('2026-11-07', '2026-11-14')).toBe('7–14 Nov')
+    expect(auditWeekLabel('2026-10-28', '2026-11-04')).toBe('28 Oct–4 Nov')
+    expect(auditWeekLabel('2025-12-30', '2026-01-06')).toBe('30 Dec 2025–6 Jan 2026')
+  })
+  it('keeps the newest four stored weeks and does not invent empty columns', () => {
+    const weeks = [1, 2, 3, 4, 5].map(i => week(`2026-10-0${i}`, `2026-10-1${i}`, i * 10))
+    const shown = auditWeeksForChart(weeks)
+    expect(shown).toHaveLength(4)
+    expect(shown.map(w => w.swaps)).toEqual([20, 30, 40, 50])
+    expect(auditWeeksForChart(weeks.slice(0, 2))).toHaveLength(2)
+    expect(auditWeeksForChart([])).toEqual([])
+  })
 })

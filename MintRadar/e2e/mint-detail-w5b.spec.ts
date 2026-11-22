@@ -75,7 +75,7 @@ test.describe('W5b A: source line under every score row', () => {
     await expect(page.getByText(/uses this same cashu\.info window/)).toHaveCount(0)
     await expect(page.getByText(/These rows are the same data split by direction/)).toHaveCount(0)
     await page.locator('.md-audit-header-main .md-audit-info').hover()
-    await expect(page.getByRole('tooltip')).toContainText('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. Deposits and withdrawals are the 7 days split by direction.')
+    await expect(page.getByRole('tooltip')).toContainText('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. The Audit tab can also show the last 30 days of swaps; that view is not an input to the score.')
   })
 
   test('320 px: lines wrap inside the panel without clipping', async ({ page }) => {

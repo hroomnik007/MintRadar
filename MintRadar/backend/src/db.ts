@@ -603,6 +603,18 @@ export async function initDb(): Promise<void> {
     'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_avg_ms INTEGER',
     'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_amount BIGINT',
     'ALTER TABLE audit_cz_daily ADD COLUMN IF NOT EXISTS source_fees BIGINT',
+    // 30-day swap graph from cashu.info (auditCzNetwork.ts), display only. attributedFailures stays the list-feed column.
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_paid INTEGER',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_failed INTEGER',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_amount BIGINT',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_avg_ms INTEGER',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_dest_paid INTEGER',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_dest_failed INTEGER',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_dest_amount BIGINT',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_source_paid INTEGER',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_source_failed INTEGER',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_source_amount BIGINT',
+    'ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS network30_fetched_at TIMESTAMPTZ',
   ]
 
   for (const sql of migrations) {

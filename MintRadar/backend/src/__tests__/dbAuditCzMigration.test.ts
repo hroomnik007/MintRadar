@@ -55,4 +55,17 @@ describe('initDb — audit_cz score inputs', () => {
     }
     expect(queries.some(q => /audit_cz_daily/i.test(q) && /DROP COLUMN/i.test(q))).toBe(false)
   })
+
+  it('adds the 30-day swap graph columns on audit_cz_mints additively (IF NOT EXISTS) and never drops them', async () => {
+    await initDb()
+    for (const col of [
+      'network30_paid INTEGER', 'network30_failed INTEGER', 'network30_amount BIGINT', 'network30_avg_ms INTEGER',
+      'network30_dest_paid INTEGER', 'network30_dest_failed INTEGER', 'network30_dest_amount BIGINT',
+      'network30_source_paid INTEGER', 'network30_source_failed INTEGER', 'network30_source_amount BIGINT',
+      'network30_fetched_at TIMESTAMPTZ',
+    ]) {
+      expect(queries).toContain(`ALTER TABLE audit_cz_mints ADD COLUMN IF NOT EXISTS ${col}`)
+    }
+    expect(queries.some(q => /network30_/i.test(q) && /DROP COLUMN/i.test(q))).toBe(false)
+  })
 })

@@ -3,31 +3,30 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import {
   auditCzStateTitle, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
   auditVerdictHeadline, auditVerdictSentence, auditSuccessRateText, auditSuccessRateCaption, AUDIT_SCORE_HINT,
-  auditSinceLine,
-  type AuditCzView, type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
+  auditWeekLabel, auditWeeksForChart,
+  type AuditSwapRow, type AuditSwapFilter, type AuditVerdict, type AuditDirectionFigure, type AuditDay,
 } from '@/utils/auditCz'
+import type { AuditCzWeek } from '@/hooks/useAuditCz'
 import { mintHostname, formatTimeAgo } from '@/utils/mintFormatting'
-import { formatDate, formatDateTimeUtc, DATE_MONTHS } from '@/utils/formatDate'
+import { formatDateTimeUtc, DATE_MONTHS } from '@/utils/formatDate'
 
-// The cashu.info view of the Audit tab below the header: one verdict for the 7 days the score reads, the same swaps
-// as one bar and per direction, MintRadar's own count per day, and one swap list with a filter. Every string from
-// the source is rendered as plain text (React escapes it).
+// The cashu.info view of the Audit tab below the header: the period switch's verdict and tiles (7 or 30 days),
+// Swaps per day (7 days) or Swaps per week (30 days), and one swap list with a filter. Every string from the source is rendered as plain text (React escapes it).
 //
 // Colours: red is only the failures cashu.info attributes to THIS mint (a 7-day total, the verdict and the bar).
 // A single failed swap is amber: the source does not say per swap who caused it.
 
 const ROWS_DEFAULT = 8
 
-/** The 7-day heading, the score hint, and (when it counts) the one longer-window line. */
-export function AuditVerdictBlock({ verdict, view }: { verdict: AuditVerdict; view: AuditCzView }) {
+/** The period heading and the score hint. The grey longer-window line was removed in favour of the 7/30-day switch. */
+export function AuditVerdictBlock({ verdict, days }: { verdict: AuditVerdict; days: 7 | 30 }) {
   return (
     // The big number beside its sentence, on phones too (owner, 2026-11-18); the readout names the whole headline.
     <div className="au-verdict au-headline" data-testid="audit-verdict">
-      <span className={`au-headline-n ${verdict.blamed > 0 ? 'au-verdict-bad' : 'au-verdict-ok'}`} role="img" aria-label={auditVerdictHeadline(verdict)} data-testid="audit-verdict-n">{auditVerdictSentence(verdict).number}</span>
+      <span className={`au-headline-n ${verdict.blamed > 0 ? 'au-verdict-bad' : 'au-verdict-ok'}`} role="img" aria-label={auditVerdictHeadline(verdict, days)} data-testid="audit-verdict-n">{auditVerdictSentence(verdict, days).number}</span>
       <div className="au-verdict-text">
-        <strong className={verdict.blamed > 0 ? 'au-verdict-bad' : undefined} data-testid="audit-verdict-headline" aria-hidden="true">{auditVerdictSentence(verdict).words}</strong>
+        <strong className={verdict.blamed > 0 ? 'au-verdict-bad' : undefined} data-testid="audit-verdict-headline" aria-hidden="true">{auditVerdictSentence(verdict, days).words}</strong>
         <span className="au-verdict-hint" data-testid="audit-score-hint">{AUDIT_SCORE_HINT}</span>
-        {view.longer && <span className="au-verdict-more" data-testid="audit-longer-line">{auditSinceLine(view.longer, formatDate(`${view.longer.day}T00:00:00Z`))}</span>}
       </div>
     </div>
   )
@@ -54,13 +53,14 @@ export function AuditStack({ verdict }: { verdict: AuditVerdict }) {
 }
 
 /** Deposits and withdrawals side by side, then success rate and average swap time in the same figure style. */
-export function AuditDirections({ directions, avgSwapTime, verdict }: {
+export function AuditDirections({ directions, avgSwapTime, verdict, days = 7 }: {
   directions: AuditDirectionFigure[]
   avgSwapTime?: string | null
   verdict?: AuditVerdict | null
+  days?: 7 | 30
 }) {
   const rate = verdict ? auditSuccessRateText(verdict) : null
-  const caption = auditSuccessRateCaption()
+  const caption = auditSuccessRateCaption(days)
   return (
     <div className="au-figures">
       <div className="au-dirs">
@@ -109,7 +109,7 @@ export function AuditDirections({ directions, avgSwapTime, verdict }: {
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
 
-/** MintRadar's own count of the stored swaps per UTC day. Nothing renders while no day has a swap. */
+/** MintRadar's own count of the stored swaps per UTC day. Nothing renders while no day has a swap. Shown on the 7-day view. */
 export function AuditDays({ daily }: { daily: AuditDay[] }) {
   const max = Math.max(0, ...daily.map(d => d.ok + d.failed))
   if (max === 0) return null
@@ -137,6 +137,75 @@ export function AuditDays({ daily }: { daily: AuditDay[] }) {
       <div className="au-legend au-legend-small">
         <span><i className="au-seg-ok" />succeeded</span>
         <span><i className="au-seg-fail" />failed, whoever caused it</span>
+      </div>
+    </div>
+  )
+}
+
+function weekStack(w: AuditCzWeek): { ok: number; elsewhere: number; blamed: number; split: boolean } {
+  if (w.succeeded !== null && w.failedElsewhere !== null) {
+    return { ok: w.succeeded, elsewhere: w.failedElsewhere, blamed: w.attributedFailures, split: true }
+  }
+  if (w.failed !== null) {
+    return { ok: Math.max(0, w.swaps - w.failed), elsewhere: w.failed, blamed: 0, split: false }
+  }
+  return { ok: Math.max(0, w.swaps - w.attributedFailures), elsewhere: 0, blamed: w.attributedFailures, split: true }
+}
+
+/**
+ * The newest four stored weekly snapshots (cashu.info 7-day windows), shown on the 30-day view.
+ * Only weeks that exist are drawn — missing weeks are not shown as empty columns.
+ */
+export function AuditWeeks({ weeks }: { weeks: AuditCzWeek[] }) {
+  const shown = auditWeeksForChart(weeks)
+  const stacks = shown.map(weekStack)
+  const max = Math.max(0, ...stacks.map(s => s.ok + s.elsewhere + s.blamed))
+  if (shown.length === 0 || max === 0) return null
+  const unit = 64 / max
+  const hasSplit = stacks.some(s => s.split)
+  return (
+    <div className="au-days-wrap au-weeks-wrap" data-testid="audit-weeks">
+      <div className="au-days-title">Swaps per week <span>Last four stored 7-day windows from cashu.info</span></div>
+      <div className="au-days au-weeks" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }}>
+        {shown.map((w, i) => {
+          const s = stacks[i]!
+          const label = auditWeekLabel(w.start, w.end)
+          const count = s.ok + s.elsewhere + s.blamed
+          const aria = s.split
+            ? `${label}: ${s.ok} succeeded, ${s.elsewhere} failed elsewhere, ${s.blamed} caused by this mint`
+            : `${label}: ${s.ok} succeeded, ${s.elsewhere} failed`
+          return (
+            <div className="au-day" key={`${w.start}-${w.end}`} role="img" aria-label={aria}>
+              <span className="au-day-count">{count > 0 ? count.toLocaleString('en-US') : ''}</span>
+              <div className="au-day-col">
+                {s.split ? (
+                  <>
+                    {s.blamed > 0 && <i className="au-seg-mint" style={{ height: `${Math.max(2, s.blamed * unit)}px` }} />}
+                    {s.elsewhere > 0 && <i className="au-seg-else" style={{ height: `${Math.max(2, s.elsewhere * unit)}px` }} />}
+                    {s.ok > 0 && <i className="au-seg-ok" style={{ height: `${Math.max(2, s.ok * unit)}px` }} />}
+                  </>
+                ) : (
+                  <>
+                    {s.elsewhere > 0 && <i className="au-seg-fail" style={{ height: `${Math.max(2, s.elsewhere * unit)}px` }} />}
+                    {s.ok > 0 && <i className="au-seg-ok" style={{ height: `${Math.max(2, s.ok * unit)}px` }} />}
+                  </>
+                )}
+              </div>
+              <span className="au-day-label">{label}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="au-legend au-legend-small">
+        <span><i className="au-seg-ok" />succeeded</span>
+        {hasSplit ? (
+          <>
+            <span><i className="au-seg-else" />failed elsewhere</span>
+            <span><i className="au-seg-mint" />caused by this mint</span>
+          </>
+        ) : (
+          <span><i className="au-seg-fail" />failed, whoever caused it</span>
+        )}
       </div>
     </div>
   )

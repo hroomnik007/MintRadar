@@ -1,13 +1,14 @@
 // Mint Detail "Audit" tab: the Audit stats panel of cashu.info (the audit source of the Reliability Score) — the
-// sync note, the 7-day verdict, the bar, the directions, swaps per day and one swap list. The audit query (useAuditCz), the expand states and every derived
-// figure stay in MintDetail and are passed in, so fetch timing and caching are unchanged; this component holds no state
-// of its own (AuditSyncNote keeps its local wrap measurement).
+// sync note, a 7/30-day period switch, the verdict, the bar, the four tiles, Swaps per day or Swaps per week, and one swap list.
+// The audit query (useAuditCz) stays in MintDetail; this component holds the period switch (default 7 days) and
+// AuditSyncNote's wrap measurement.
 // audit.8333.space is no longer shown (the service has not answered since 2026-09-27); the backend still syncs and
 // serves its fields (/api/mints/known, /api/mints/swaps, /health sources.audit8333) for API clients.
 import { useLayoutEffect, useRef, useState } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { AuditVerdictBlock, AuditStack, AuditDirections, AuditDays, AuditSwapList } from '@/components/AuditCzCards'
+import { AuditVerdictBlock, AuditStack, AuditDirections, AuditDays, AuditWeeks, AuditSwapList } from '@/components/AuditCzCards'
 import type { AuditCzView } from '@/utils/auditCz'
+import { auditVerdictFromPeriod, auditDirectionsFromPeriod, auditAvgFromPeriod, auditWeeksForChart } from '@/utils/auditCz'
 import { auditNoDataText, cashuInfoViewText } from '@/utils/tooltipTexts'
 
 
@@ -80,10 +81,28 @@ export function AuditTab({ auditCzLoading, czView, czSyncNote, now }: AuditTabPr
     )
   }
   const infoText = cashuInfoViewText()
-  // AuditDays draws nothing without a stored day; then its panel is left out.
+  return <AuditTabBody czView={czView} czSyncNote={czSyncNote} now={now} infoText={infoText} />
+}
+
+function AuditTabBody({ czView, czSyncNote, now, infoText }: {
+  czView: AuditCzView
+  czSyncNote: { text: string; stale: boolean; tip: string | null } | null
+  now: number
+  infoText: string
+}) {
+  const [period, setPeriod] = useState<7 | 30>(7)
+  const d7 = czView.periods.d7
+  const d30 = czView.periods.d30
+  const has30 = d30 !== null
+  const days: 7 | 30 = period === 30 && has30 ? 30 : 7
+  const selected = days === 30 ? d30 : d7
+  const verdict = selected ? auditVerdictFromPeriod(selected) : (days === 7 ? czView.verdict : null)
+  const directions = selected ? auditDirectionsFromPeriod(selected) : (days === 7 ? czView.directions : czView.directions.map(d => ({ ...d, ok: null, total: null, failed: 0, tooltip: d.tooltip })))
+  const avgSwapTime = selected ? auditAvgFromPeriod(selected) : (days === 7 ? czView.avgSwapTime : null)
   const hasDays = czView.daily.some(d => d.ok + d.failed > 0)
-  // 2026-11-19 redesign (phase 4e): the verdict panel (number beside its sentence, the bar), the four figures in one
-  // frame, swaps per day, and the swap list in its own panel (the "How the auditor tests" panel went on 2026-11-20).
+  const hasWeeks = auditWeeksForChart(czView.weeks).some(w => w.swaps > 0)
+  // 2026-11-19 redesign (phase 4e), 2026-11-22 period switch: the verdict panel, the four figures,
+  // Swaps per day (7 days) or Swaps per week (30 days), and the swap list in its own panel.
   return (
     <div className="md-audit">
       <section className="md-panel md-audit-collapsible">
@@ -101,8 +120,15 @@ export function AuditTab({ auditCzLoading, czView, czSyncNote, now }: AuditTabPr
           <AuditSourceInfoIcon text={infoText} />
           {czSyncNote && <AuditSyncNote note={czSyncNote} testId="audit-cz-sync-mobile" />}
         </div>
-        {czView.verdict && <AuditVerdictBlock verdict={czView.verdict} view={czView} />}
-        {czView.verdict && <AuditStack verdict={czView.verdict} />}
+        <div className="md-audit-period" data-testid="audit-period-switch">
+          <div className="md-seg" role="group" aria-label="Period">
+            <button type="button" className={days === 7 ? 'on' : ''} aria-pressed={days === 7} onClick={() => setPeriod(7)}>7 days</button>
+            <button type="button" className={days === 30 ? 'on' : ''} aria-pressed={days === 30} disabled={!has30} onClick={() => setPeriod(30)}>30 days</button>
+          </div>
+          {!has30 && <p className="audit-cz-muted md-audit-period-note" data-testid="audit-period-missing">30-day swap figures are not stored yet.</p>}
+        </div>
+        {verdict && <AuditVerdictBlock verdict={verdict} days={days} />}
+        {verdict && <AuditStack verdict={verdict} />}
         {/* The source under the verdict (owner, 2026-11-20: the "How the auditor tests" panel only repeated the verdict's
             own sentence, so it went). */}
         <p className="md-audit-src">
@@ -111,11 +137,16 @@ export function AuditTab({ auditCzLoading, czView, czSyncNote, now }: AuditTabPr
         </p>
       </section>
 
-      <AuditDirections directions={czView.directions} avgSwapTime={czView.avgSwapTime} verdict={czView.verdict} />
+      <AuditDirections directions={directions} avgSwapTime={avgSwapTime} verdict={verdict} days={days} />
 
-      {hasDays && (
+      {days === 7 && hasDays && (
         <section className="md-panel md-audit-days" aria-label="Swaps per day">
           <AuditDays daily={czView.daily} />
+        </section>
+      )}
+      {days === 30 && hasWeeks && (
+        <section className="md-panel md-audit-days" aria-label="Swaps per week">
+          <AuditWeeks weeks={czView.weeks} />
         </section>
       )}
 

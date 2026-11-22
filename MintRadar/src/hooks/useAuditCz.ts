@@ -51,6 +51,8 @@ export interface AuditCzData {
   weeks?: AuditCzWeek[]
   /** Sums of `weeks` for the 7-day, 28-day and all-history views. Absent when not covered. */
   totals?: AuditCzTotals
+  /** Official 7-day and 30-day views for the Audit tab (display only). Absent when not covered. */
+  periods?: AuditCzPeriods
 }
 
 export interface AuditCzWeekDirection {
@@ -89,6 +91,25 @@ export interface AuditCzPeriodTotal {
 }
 
 export interface AuditCzTotals { d7: AuditCzPeriodTotal | null; d28: AuditCzPeriodTotal | null; all: AuditCzPeriodTotal | null }
+
+export interface AuditCzPeriodSplit { success: number; total: number; failed: number }
+
+/** One official cashu.info window for the Audit tab. Success rate is succeeded / swaps. */
+export interface AuditCzPeriodView {
+  days: 7 | 30
+  swaps: number
+  succeeded: number
+  failedElsewhere: number
+  attributedFailures: number
+  avgMs: number | null
+  amount?: number | null
+  deposits: AuditCzPeriodSplit | null
+  withdrawals: AuditCzPeriodSplit | null
+  fetchedAt: string | null
+}
+
+export interface AuditCzPeriods { d7: AuditCzPeriodView | null; d30: AuditCzPeriodView | null }
+
 
 export interface AuditCzDirectionCounts { total?: number; success?: number; failed?: number; avgMs?: number; amount?: number; fees?: number }
 

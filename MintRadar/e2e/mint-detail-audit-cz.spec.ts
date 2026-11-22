@@ -11,7 +11,7 @@ type Page = import('@playwright/test').Page
 
 const row = (page: Page, host: string) => page.locator('.audit-swaps-table tbody tr', { hasText: host })
 const czLink = (page: Page) => page.getByRole('link', { name: 'Open this mint on cashu.info' }) // under the verdict since 2026-11-20 (the "How the auditor tests" panel went)
-// cashu.info view (2026-11-13 layout): the verdict, one bar, the direction figures by key, swaps per day and ONE swap
+// cashu.info view (2026-11-13 layout, 2026-11-22 period switch): the verdict, one bar, the direction figures by key, Swaps per day / Swaps per week and ONE swap
 // list with a filter ("All | Deposits | Withdrawals | Failed"), 8 rows until "Show all".
 const tile = (page: Page, key: string) => page.locator(`.au-dirs [data-tile="${key}"]`)
 const tileValue = (page: Page, key: string) => tile(page, key).locator('.au-dir-value')
@@ -284,19 +284,21 @@ test.describe('verdict and directions from the stored detail', () => {
     await expect(page.locator('.au-stack')).toHaveCount(0)
   })
 
-  test('one longer-window line when the long window is longer than 7 days; the points pill is gone', async ({ page }) => {
+  test('the grey longer-window line is gone, even when long and since are present; the points pill stays gone', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { long: { windowDays: 28, swaps: 410, attributedFailures: 2 }, since: { day: '2026-08-01', swaps: 900, attributedFailures: 3 } }))
-    await expect(page.getByTestId('audit-longer-line')).toHaveText('Longer window (since 1 Aug 2026): 900 swaps, 3 failures caused by this mint')
+    await expect(page.getByTestId('audit-longer-line')).toHaveCount(0)
     await expect(page.getByTestId('audit-long-line')).toHaveCount(0)
     await expect(page.getByTestId('audit-since-line')).toHaveCount(0)
     await expect(page.getByTestId('audit-points-pill')).toHaveCount(0)
+    await expect(page.getByText('Longer window')).toHaveCount(0)
   })
 
-  test('a long window with no extra since history still uses the since-style line and the start day', async ({ page }) => {
+  test('a long window with no extra since history also does not bring the longer-window line back', async ({ page }) => {
     await gotoAuditTab(page, onlyCz([], { long: { windowDays: 28, swaps: 410, attributedFailures: 2 }, since: { day: '2026-10-10', swaps: 410, attributedFailures: 2 } }))
-    await expect(page.getByTestId('audit-longer-line')).toHaveText('Longer window (since 10 Oct 2026): 410 swaps, 2 failures caused by this mint')
+    await expect(page.getByTestId('audit-longer-line')).toHaveCount(0)
     await expect(page.getByTestId('audit-long-line')).toHaveCount(0)
     await expect(page.getByTestId('audit-since-line')).toHaveCount(0)
+    await expect(page.getByText('Longer window')).toHaveCount(0)
   })
 
   test('a 7-day long window is ignored, and so is a since line without a longer window', async ({ page }) => {
@@ -323,12 +325,54 @@ test.describe('verdict and directions from the stored detail', () => {
     const daily7d = [6, 5, 4, 3, 2, 1, 0].map(b => ({ day: day(b), ok: b === 0 ? 3 : b === 2 ? 1 : 0, failed: b === 0 ? 1 : 0, other: 0 }))
     await gotoAuditTab(page, onlyCz([], { daily7d }))
     const days = page.getByTestId('audit-days')
+    await expect(days).toBeVisible()
+    await expect(days.locator('.au-days-title')).toContainText('Swaps per day')
     await expect(days.locator('.au-day')).toHaveCount(7)
     await expect(days.locator('.au-day-count')).toHaveText(['', '', '', '', '1', '', '4'])
     await expect(days.locator('.au-day').last().locator('.au-seg-fail')).toHaveCount(1)
+    await expect(page.getByTestId('audit-weeks')).toHaveCount(0)
     await gotoAuditTab(page, onlyCz([], { daily7d: daily7d.map(d => ({ ...d, ok: 0, failed: 0 })) }))
     await expect(verdict(page)).toBeVisible()
     await expect(page.getByTestId('audit-days')).toHaveCount(0)
+  })
+
+  test('30 days: swaps per week shows the newest four stored weeks with exact date labels; no empty columns', async ({ page }) => {
+    const day = (back: number) => new Date(Date.now() - back * 86_400_000).toISOString().slice(0, 10)
+    const daily7d = [6, 5, 4, 3, 2, 1, 0].map(b => ({ day: day(b), ok: b === 0 ? 3 : b === 2 ? 1 : 0, failed: b === 0 ? 1 : 0, other: 0 }))
+    const week = (start: string, end: string, swaps: number, succeeded: number, failedElsewhere: number, blamed: number) => ({
+      start, end, swaps, attributedFailures: blamed, failed: failedElsewhere + blamed, succeeded, failedElsewhere,
+      avgMs: null, amount: null, fees: null, deposits: null, withdrawals: null,
+    })
+    const weeks = [
+      week('2026-10-10', '2026-10-17', 20, 18, 1, 1),
+      week('2026-10-17', '2026-10-24', 30, 25, 3, 2),
+      week('2026-10-24', '2026-10-31', 40, 36, 3, 1),
+      week('2026-10-31', '2026-11-07', 50, 48, 2, 0),
+      week('2026-11-07', '2026-11-14', 12, 10, 1, 1),
+    ]
+    const periods = {
+      d7: { days: 7, swaps: 126, succeeded: 107, failedElsewhere: 19, attributedFailures: 0, avgMs: 8289, amount: 1000, deposits: { success: 56, total: 62, failed: 6 }, withdrawals: { success: 51, total: 64, failed: 13 }, fetchedAt: '2026-11-21T08:00:00.000Z' },
+      d30: { days: 30, swaps: 400, succeeded: 380, failedElsewhere: 15, attributedFailures: 5, avgMs: 1200, amount: 9000, deposits: { success: 180, total: 190, failed: 10 }, withdrawals: { success: 200, total: 210, failed: 10 }, fetchedAt: '2026-11-21T10:18:00.000Z' },
+    }
+    await gotoAuditTab(page, onlyCz([], { daily7d, weeks, periods }))
+    await expect(page.getByTestId('audit-days')).toBeVisible()
+    await expect(page.getByTestId('audit-days').locator('.au-days-title')).toContainText('Swaps per day')
+    await expect(page.getByTestId('audit-weeks')).toHaveCount(0)
+    await page.getByTestId('audit-period-switch').getByRole('button', { name: '30 days' }).click()
+    await expect(page.getByTestId('audit-days')).toHaveCount(0)
+    const chart = page.getByTestId('audit-weeks')
+    await expect(chart).toBeVisible()
+    await expect(chart.locator('.au-days-title')).toContainText('Swaps per week')
+    await expect(chart.locator('.au-day')).toHaveCount(4) // newest four only, the 10–17 Oct week is dropped
+    await expect(chart.locator('.au-day-label')).toHaveText(['17–24 Oct', '24–31 Oct', '31 Oct–7 Nov', '7–14 Nov'])
+    await expect(chart.locator('.au-day-count')).toHaveText(['30', '40', '50', '12'])
+    await gotoAuditTab(page, onlyCz([], { periods, weeks: weeks.slice(0, 2) }))
+    await page.getByTestId('audit-period-switch').getByRole('button', { name: '30 days' }).click()
+    await expect(page.getByTestId('audit-weeks').locator('.au-day')).toHaveCount(2)
+    await gotoAuditTab(page, onlyCz([], { periods: { ...periods, d30: periods.d30 } }))
+    await page.getByTestId('audit-period-switch').getByRole('button', { name: '30 days' }).click()
+    await expect(page.getByTestId('audit-verdict')).toBeVisible()
+    await expect(page.getByTestId('audit-weeks')).toHaveCount(0)
   })
 
   test('the info icons carry the honest tooltips', async ({ page }) => {
@@ -347,6 +391,79 @@ test.describe('verdict and directions from the stored detail', () => {
     }
     // Average swap time has no ⓘ: its label says it, and the window and source are in the sibling tooltips.
     await expect(tile(page, 'avg').locator('.info-tooltip')).toHaveCount(0)
+  })
+})
+
+test.describe('7 days / 30 days period switch', () => {
+  const d7 = {
+    days: 7, swaps: 126, succeeded: 107, failedElsewhere: 19, attributedFailures: 0,
+    avgMs: 8289, amount: 1000,
+    deposits: { success: 56, total: 62, failed: 6 },
+    withdrawals: { success: 51, total: 64, failed: 13 },
+    fetchedAt: '2026-11-21T08:00:00.000Z',
+  }
+  const d30 = {
+    days: 30, swaps: 400, succeeded: 380, failedElsewhere: 15, attributedFailures: 5,
+    avgMs: 1200, amount: 9000,
+    deposits: { success: 180, total: 190, failed: 10 },
+    withdrawals: { success: 200, total: 210, failed: 10 },
+    fetchedAt: '2026-11-21T10:18:00.000Z',
+  }
+  const headline = (page: Page) => page.getByTestId('audit-verdict-n')
+  const rate = (page: Page) => page.getByTestId('audit-success-rate')
+
+  test('without 30-day data: 7 days stays selected, 30 days is disabled, and a short note explains why', async ({ page }) => {
+    await gotoAuditTab(page, onlyCz([]))
+    const sw = page.getByTestId('audit-period-switch')
+    await expect(sw.getByRole('button', { name: '7 days' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(sw.getByRole('button', { name: '30 days' })).toBeDisabled()
+    await expect(page.getByTestId('audit-period-missing')).toHaveText('30-day swap figures are not stored yet.')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 126 swaps, 0 failures caused by this mint')
+    await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 7 days')
+  })
+
+  test('switching to 30 days updates the headline, bar, success rate, direction tiles and the chart; recent swaps stay as they are', async ({ page }) => {
+    const day = (back: number) => new Date(Date.now() - back * 86_400_000).toISOString().slice(0, 10)
+    const daily7d = [6, 5, 4, 3, 2, 1, 0].map(b => ({ day: day(b), ok: 2, failed: 0, other: 0 }))
+    const weeks = [{ start: '2026-10-17', end: '2026-10-24', swaps: 30, attributedFailures: 2, failed: 5, succeeded: 25, failedElsewhere: 3, avgMs: null, amount: null, fees: null, deposits: null, withdrawals: null }]
+    const swaps = czSwapList([{ kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }, { kind: 'ok' }])
+    await gotoAuditTab(page, onlyCz(swaps, { periods: { d7, d30 }, daily7d, weeks }))
+    const sw = page.getByTestId('audit-period-switch')
+    await expect(page.getByTestId('audit-period-missing')).toHaveCount(0)
+    await expect(sw.getByRole('button', { name: '30 days' })).toBeEnabled()
+    await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 7 days')
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('84.9%')
+    await expect(tileValue(page, 'mints')).toHaveText('56 of 62')
+    await expect(tileValue(page, 'melts')).toHaveText('51 of 64')
+    await expect(tileValue(page, 'avg')).toHaveText('8.3 s')
+    await expect(page.getByText('Completed')).toHaveCount(0)
+    await expect(page.getByTestId('audit-days')).toBeVisible()
+    await expect(page.getByTestId('audit-days').locator('.au-days-title')).toContainText('Swaps per day')
+    await expect(page.getByTestId('audit-weeks')).toHaveCount(0)
+    await sw.getByRole('button', { name: '30 days' }).click()
+    await expect(sw.getByRole('button', { name: '30 days' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 30 days: 400 swaps, 5 failures caused by this mint')
+    await expect(page.getByTestId('audit-verdict-headline')).toHaveText('failures caused by this mint in 400 swaps over 30 days')
+    await expect(page.getByTestId('audit-legend').locator('span')).toHaveText(['380 succeeded', '15 failed elsewhere', '5 caused by this mint'])
+    await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 30 days')
+    await expect(rate(page).locator('.au-dir-value')).toHaveText('95%') // 380/400, same formula as the 7-day tile
+    await expect(rate(page)).toHaveAttribute('aria-label', 'Success rate · 30 days: 95%')
+    await expect(tileValue(page, 'mints')).toHaveText('180 of 190')
+    await expect(tileValue(page, 'melts')).toHaveText('200 of 210')
+    await expect(tileValue(page, 'avg')).toHaveText('1.2 s')
+    await expect(page.getByText('Completed')).toHaveCount(0)
+    await expect(page.getByTestId('audit-days')).toHaveCount(0)
+    await expect(page.getByTestId('audit-weeks')).toBeVisible()
+    await expect(page.getByTestId('audit-weeks').locator('.au-days-title')).toContainText('Swaps per week')
+    // Recent swaps stay the last 7 days of the stored feed (8 rows + Show all), not filtered by the 30-day switch.
+    await expect(swapList(page).locator('tbody tr')).toHaveCount(8)
+    await expect(swapList(page).locator('.audit-swaps-show-all-btn')).toHaveText('Show all (9)')
+    await sw.getByRole('button', { name: '7 days' }).click()
+    await expect(headline(page)).toHaveAttribute('aria-label', 'Last 7 days: 126 swaps, 0 failures caused by this mint')
+    await expect(rate(page).locator('.au-dir-label')).toHaveText('Success rate · 7 days')
+    await expect(page.getByTestId('audit-days')).toBeVisible()
+    await expect(page.getByTestId('audit-weeks')).toHaveCount(0)
+    await expect(swapList(page).locator('tbody tr')).toHaveCount(8)
   })
 })
 
@@ -752,9 +869,9 @@ test.describe('verdict-to-bar spacing', () => {
     test.describe(`${width}px`, () => {
       test.use({ viewport: { width, height: 844 } })
 
-      test('failures: the bar follows the longer-window line with normal spacing', async ({ page }) => {
+      test('failures: the bar follows the heading with normal spacing', async ({ page }) => {
         await gotoAuditTab(page, failures)
-        await expect(page.getByTestId('audit-longer-line')).toBeVisible()
+        await expect(page.getByTestId('audit-longer-line')).toHaveCount(0)
         const s = await spacing(page)
         expect(s.next).toBe('.au-stack-wrap')
         expect(s.leftover).toBeLessThan(4)

@@ -513,7 +513,7 @@ Software version timeline for a single mint. `latestGlobalVersion` is `<family>/
 
 ### `GET /api/mints/audit-cz`
 
-Data from the third-party audit service cashu.info for one mint, refreshed server-side every 10 minutes (feeds) and every 30 minutes (the per-mint `detail`); the endpoint reads the database only and never calls cashu.info. This endpoint itself is display only and never merged into any MintRadar value; the Reliability Score's audit part reads two numbers of the same stored `detail` (`swaps7d.all.total`, `swaps7d.errorsBlamed`) through `auditCzTotal` / `auditCzBlamed` / `auditCzFetchedAt` of `/api/mints/known`. Also reachable as `/api/v1/mints/audit-cz`; it is not rate-limit exempt (the global 60 requests / minute / IP applies).
+Data from the third-party audit service cashu.info for one mint, refreshed server-side every 10 minutes (feeds) and every 30 minutes (the per-mint `detail` and the 30-day swap graph); the endpoint reads the database only and never calls cashu.info. This endpoint itself is display only and never merged into any MintRadar value; the Reliability Score's audit part reads two numbers of the same stored `detail` (`swaps7d.all.total`, `swaps7d.errorsBlamed`) through `auditCzTotal` / `auditCzBlamed` / `auditCzFetchedAt` of `/api/mints/known`. Also reachable as `/api/v1/mints/audit-cz`; it is not rate-limit exempt (the global 60 requests / minute / IP applies).
 
 **Query parameters:**
 
@@ -572,6 +572,14 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
     "all": { "days": 14, "weeks": 2, "start": "2026-11-07", "end": "2026-11-21", "swaps": 246, "attributedFailures": 0,
              "outcomes": { "since": "2026-11-14", "swaps": 126, "succeeded": 107, "failedElsewhere": 19, "attributedFailures": 0 },
              "directions": { "since": "2026-11-14", "deposits": { "total": 62, "success": 56, "failed": 6 }, "withdrawals": { "total": 64, "success": 51, "failed": 13 } } }
+  },
+  "periods": {
+    "d7": { "days": 7, "swaps": 126, "succeeded": 107, "failedElsewhere": 19, "attributedFailures": 0, "avgMs": 8289, "amount": 16052,
+            "deposits": { "success": 56, "total": 62, "failed": 6 }, "withdrawals": { "success": 51, "total": 64, "failed": 13 },
+            "fetchedAt": "2026-10-07T07:08:41.120Z" },
+    "d30": { "days": 30, "swaps": 400, "succeeded": 380, "failedElsewhere": 15, "attributedFailures": 5, "avgMs": 1200, "amount": 9000,
+             "deposits": { "success": 180, "total": 190, "failed": 10 }, "withdrawals": { "success": 200, "total": 210, "failed": 10 },
+             "fetchedAt": "2026-10-07T07:18:00.000Z" }
   }
 }
 ```
@@ -604,6 +612,7 @@ Data from the third-party audit service cashu.info for one mint, refreshed serve
 | `since` | object \| null \| absent | `{ day, swaps, attributedFailures }`: every stored non-overlapping 7-day row added up; `day` is the first day covered (`end − 7 days` of the oldest week). `null` when nothing is stored. Absent when not covered. |
 | `weeks` | array \| absent | The same non-overlapping snapshots as `since`, oldest first (additive, 2026-11-21). See below. Absent when not covered. |
 | `totals` | object \| absent | `{ d7, d28, all }` sums of `weeks` for the 7-day, 28-day and all-history views (additive, 2026-11-21). See below. Absent when not covered. |
+| `periods` | object \| absent | Official 7-day and 30-day views for the Audit tab (additive, 2026-11-22). See below. Absent when not covered. |
 
 Which swaps are returned: with `direction=from` the swaps whose source is this mint (or one of its aliases), with `direction=to` those whose destination is this mint, with `direction=both` either. A swap that has this mint on both sides appears in all three, labelled `from`.
 
@@ -625,9 +634,11 @@ Which swaps are returned: with `direction=from` the swaps whose source is this m
 
 `weeks` (additive, 2026-11-21) is the stored history of cashu.info's 7-day snapshots, not a calendar-day series: each `audit_cz_daily` row is itself a rolling 7-day window, so only rows 7 days apart are kept (the same stride as `since` / the score's long window). Oldest first. `end` is the UTC day the snapshot was first stored; `start` is 7 days before (the first day that window covers). `swaps` / `attributedFailures` are always present. `failed`, `succeeded` (`total − failed`), `failedElsewhere` (`failed − attributedFailures`), `avgMs`, `amount`, `fees`, `deposits` and `withdrawals` are `null` when that field was not stored for the week (rows from before 2026-11-21, or a direction cashu.info omitted). `deposits` is cashu.info `asDest`, `withdrawals` is `asSource`. Display only — this array is not an input of the Reliability Score.
 
-`totals` (additive, 2026-11-21) sums those weeks for three views the Audit tab can switch between: `d7` (today's snapshot), `d28` (the same weeks as `long` / the score's long window: today and 7, 14 and 21 days back, stopping at the first gap, at most four), `all` (every stored week). Each value is `null` when that view has no weeks, otherwise `{ days, weeks, start, end, swaps, attributedFailures, outcomes, directions }`. `swaps` / `attributedFailures` always add every week in the view. `outcomes` and `directions` add up only the newest contiguous suffix of weeks that have those fields (walking backward and stopping at the first week that lacks them) so a total is never invented for a period that was only partly stored; `since` on each is the `start` of the oldest week in that suffix — the day the split applies from. `directions.deposits` / `withdrawals` are `{ total, success, failed }`.
+`totals` (additive, 2026-11-21) sums those weeks for three views of the stored history: `d7` (today's snapshot), `d28` (the same weeks as `long` / the score's long window: today and 7, 14 and 21 days back, stopping at the first gap, at most four), `all` (every stored week). Each value is `null` when that view has no weeks, otherwise `{ days, weeks, start, end, swaps, attributedFailures, outcomes, directions }`. `swaps` / `attributedFailures` always add every week in the view. `outcomes` and `directions` add up only the newest contiguous suffix of weeks that have those fields (walking backward and stopping at the first week that lacks them) so a total is never invented for a period that was only partly stored; `since` on each is the `start` of the oldest week in that suffix — the day the split applies from. `directions.deposits` / `withdrawals` are `{ total, success, failed }`.
 
-**Not covered:** still `200`, `{ "source": "cashu.info", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail`, `daily7d`, `long`, `since`, `weeks` or `totals` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
+`periods` (additive, 2026-11-22) is what the Audit tab's 7 days / 30 days switch reads. Display only — not an input of the Reliability Score, and not present on the Wallet API. `d7` is built from the stored per-mint detail (`swaps7d`); `d30` is built from the stored 30-day swap graph (`GET /api/v1/network?range=30d`, dest = deposits / mint, source = withdrawals / melt) plus `mint.attributedFailures` from the list feed (cashu.info's rolling 30-day blamed count). `d30` is `null` until the first successful graph sync. Each side is `{ days, swaps, succeeded, failedElsewhere, attributedFailures, avgMs, amount, deposits, withdrawals, fetchedAt }` or `null`. `succeeded + failedElsewhere + attributedFailures` equals `swaps`. The tab's success rate is `succeeded / swaps`, the same calculation as before. `deposits` / `withdrawals` are `{ success, total, failed }`. The 30-day graph has no fees; the tab does not show fees.
+
+**Not covered:** still `200`, `{ "source": "cashu.info", "sourceUrl": null, "fetchedAt": <newest feed fetch or null>, "covered": false, "mint": null, "swaps": [], "stats7d": null }` — no `detail`, `daily7d`, `long`, `since`, `weeks`, `totals` or `periods` key. This happens for any well-formed `https://` URL that is not in their feed, and `direction` / `limit` are still validated first.
 
 **Errors:** `400` `{"error":"Missing required query parameter: url"}` (missing, empty or repeated `url`), `{"error":"url must start with https://"}`, `{"error":"url exceeds maximum length of 500 characters"}`, `{"error":"Invalid url"}` (not well-formed, has whitespace or credentials, private/loopback host), `{"error":"direction must be from, to, or both"}`; `429` from the global rate limit; `500` `{"error":"Internal server error"}`. Successful responses carry `Cache-Control: public, max-age=60` and an `ETag`.
 

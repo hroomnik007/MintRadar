@@ -72,7 +72,7 @@ test.describe('no source line; header tooltip', () => {
   test('the Audit stats ⓘ names the two windows of the score', async ({ page }) => {
     await gotoAuditTab(page, czOnly(auditCzResponse()))
     await page.locator('.md-audit-header-main .md-audit-info').hover()
-    await expect(page.getByRole('tooltip')).toHaveText('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. Deposits and withdrawals are the 7 days split by direction.')
+    await expect(page.getByRole('tooltip')).toHaveText('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. The Audit tab can also show the last 30 days of swaps; that view is not an input to the score.')
   })
 })
 
@@ -307,6 +307,7 @@ for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 640]] as const
     await gotoAuditTab(page, czOnly(auditCzResponse({ swaps, daily7d, long: { windowDays: 28, swaps: 410, attributedFailures: 2 }, since: { day: '2026-08-01', swaps: 900, attributedFailures: 3 } })))
     await expect(swapList(page).locator('tbody tr')).toHaveCount(8)
     await expect(page.getByTestId('audit-days')).toBeVisible()
+    await expect(page.getByTestId('audit-days').locator('.au-days-title')).toContainText('Swaps per day')
     await layoutReady(page)
     for (const filter of [0, 3] as const) {
       await chips(page).nth(filter).click()
