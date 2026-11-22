@@ -37,7 +37,29 @@ const { rowsRef, poolMock } = vi.hoisted(() => {
         }
         return { rows: [...g.values()].map(r => ({ ...r, n: String(r['n']), dur_n: String(r['dur_n']) })) }
       }
-      if (sql.includes('FROM audit_cz_swaps') && sql.includes('LIMIT $2')) return { rows: [] }
+      if (sql.includes('MIN(at)')) {
+        const urls = p[0] as string[]
+        const times = rowsRef.swaps
+          .filter(s => urls.includes(s['from_url'] as string) || urls.includes(s['to_url'] as string))
+          .map(s => (s['at'] as Date).getTime())
+        return { rows: [{ oldest: times.length ? new Date(Math.min(...times)) : null }] }
+      }
+      if (sql.includes('FROM audit_cz_swaps') && sql.includes('LIMIT $2')) {
+        const urls = p[0] as string[]
+        const limit = p[1] as number
+        const direction = p[2] as string
+        const cutoff = p[3] instanceof Date ? p[3] : null
+        const rows = rowsRef.swaps.filter(s => {
+          const fromHit = urls.includes(s['from_url'] as string)
+          const toHit = urls.includes(s['to_url'] as string)
+          if (direction === 'from' && !fromHit) return false
+          if (direction === 'to' && !toHit) return false
+          if (direction === 'both' && !(fromHit || toHit)) return false
+          if (cutoff && (s['at'] as Date) < cutoff) return false
+          return true
+        }).sort((a, b) => (b['at'] as Date).getTime() - (a['at'] as Date).getTime()).slice(0, limit)
+        return { rows }
+      }
       return { rows: [] }
     }),
   }
@@ -48,7 +70,7 @@ vi.mock('../db.js', () => ({ pool: poolMock }))
 vi.mock('../prober.js', () => ({ probeMintToDb: vi.fn(), isValidCashuMint: vi.fn(), isFunctioningCashuMint: vi.fn() }))
 vi.mock('../ssrf.js', () => ({ safeFetch: vi.fn(), readJsonLimited: vi.fn(), RESPONSE_CAPS: {} }))
 
-import { buildAuditCzStats7d, getAuditCzForMint, clampAuditCzLimit } from '../auditCz.js'
+import { buildAuditCzStats7d, getAuditCzForMint, clampAuditCzLimit, parseAuditCzDays, SWAP_RETENTION_DAYS } from '../auditCz.js'
 
 const M = 'https://m.example'
 const ALIAS = 'https://alias.example'
@@ -124,19 +146,50 @@ describe('buildAuditCzStats7d', () => {
   })
 })
 
-describe('swaps limit parameter', () => {
-  it('clamps to 1..100, defaults to 20 and is passed as a bound parameter', async () => {
+describe('swaps limit and days parameters', () => {
+  it('clamps to 1..500, defaults to 20 and is passed as a bound parameter', async () => {
     expect(clampAuditCzLimit(undefined)).toBe(20)
     expect(clampAuditCzLimit('abc')).toBe(20)
     expect(clampAuditCzLimit('')).toBe(20)
     expect(clampAuditCzLimit('0')).toBe(1)
     expect(clampAuditCzLimit('-5')).toBe(1)
     expect(clampAuditCzLimit('50')).toBe(50)
-    expect(clampAuditCzLimit('500')).toBe(100)
+    expect(clampAuditCzLimit('500')).toBe(500)
+    expect(clampAuditCzLimit('1000')).toBe(500)
     expect(clampAuditCzLimit('7.9')).toBe(7)
-    await getAuditCzForMint(M, clampAuditCzLimit('500'))
+    await getAuditCzForMint(M, clampAuditCzLimit('1000'))
     const call = poolMock.query.mock.calls.filter(c => String(c[0]).includes('LIMIT $2')).at(-1)!
-    expect(String(call[0])).not.toContain('LIMIT 100')
-    expect(call[1]).toEqual([expect.arrayContaining([M]), 100, 'both'])
+    expect(String(call[0])).not.toContain('LIMIT 500')
+    expect(call[1]).toEqual([expect.arrayContaining([M]), 500, 'both', null])
+  })
+
+  it('parseAuditCzDays accepts only 7 or 30, and a missing value leaves the list unfiltered', () => {
+    expect(parseAuditCzDays(undefined)).toBeUndefined()
+    expect(parseAuditCzDays('7')).toBe(7)
+    expect(parseAuditCzDays('30')).toBe(30)
+    expect(parseAuditCzDays('14')).toBe('invalid')
+    expect(parseAuditCzDays('')).toBe('invalid')
+    expect(parseAuditCzDays('7.0')).toBe('invalid')
+  })
+
+  it('days=30 returns swaps from the last 30 days, including those older than 7, and swapsSince is the oldest stored', async () => {
+    rowsRef.swaps = [
+      sw({ id: 'new', at: ago(MIN) }),
+      sw({ id: 'week-plus', at: ago(8 * DAY) }),
+      sw({ id: 'month', at: ago(20 * DAY) }),
+      sw({ id: 'too-old', at: ago(31 * DAY) }),
+    ]
+    const unfiltered = await getAuditCzForMint(M, 20, 'both')
+    expect(unfiltered.swaps.map(x => x.id)).toEqual(['new', 'week-plus', 'month', 'too-old'])
+    expect(unfiltered.swapsSince).toBe(ago(31 * DAY).toISOString())
+    const d7 = await getAuditCzForMint(M, 20, 'both', 7)
+    expect(d7.swaps.map(x => x.id)).toEqual(['new'])
+    expect(d7.swapsSince).toBe(ago(31 * DAY).toISOString())
+    const d30 = await getAuditCzForMint(M, 20, 'both', 30)
+    expect(d30.swaps.map(x => x.id)).toEqual(['new', 'week-plus', 'month'])
+    const call = poolMock.query.mock.calls.filter(c => String(c[0]).includes('LIMIT $2')).at(-1)!
+    expect(String(call[0])).toContain('$4::timestamptz')
+    expect((call[1] as unknown[])[3]).toEqual(new Date(NOW.getTime() - 30 * DAY))
+    expect(SWAP_RETENTION_DAYS).toBe(30)
   })
 })

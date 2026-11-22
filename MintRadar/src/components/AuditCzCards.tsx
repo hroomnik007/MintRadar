@@ -252,11 +252,11 @@ const FILTERS: ReadonlyArray<{ key: AuditSwapFilter; label: string }> = [
   { key: 'failed', label: 'Failed' },
 ]
 
-/** One list of the stored swaps of the last 7 days with a filter (was two tables behind a From / To switch). */
-export function AuditSwapList({ rows, now }: { rows: AuditSwapRow[]; now: number }) {
+/** One list of the stored swaps of the selected period with a filter (was two tables behind a From / To switch). */
+export function AuditSwapList({ rows, now, days = 7 }: { rows: AuditSwapRow[]; now: number; days?: 7 | 30 }) {
   const [filter, setFilter] = useState<AuditSwapFilter>('all')
   const [expanded, setExpanded] = useState(false)
-  if (rows.length === 0) return <p className="audit-cz-muted" data-testid="audit-swaps-empty">No swaps collected in the last 7 days.</p>
+  if (rows.length === 0) return <p className="audit-cz-muted" data-testid="audit-swaps-empty">No swaps collected in the last {days} days.</p>
   const filtered = filterAuditSwaps(rows, filter)
   const shown = expanded ? filtered : filtered.slice(0, ROWS_DEFAULT)
   return (
@@ -273,7 +273,7 @@ export function AuditSwapList({ rows, now }: { rows: AuditSwapRow[]; now: number
       {filtered.length === 0 ? (
         <p className="audit-cz-muted" data-testid="audit-swaps-none">No swaps match this filter.</p>
       ) : (
-        <div className="audit-swaps-table-wrap" tabIndex={0} role="group" aria-label="Swaps of the last 7 days (scrollable)">
+        <div className="audit-swaps-table-wrap" tabIndex={0} role="group" aria-label={`Swaps of the last ${days} days (scrollable)`}>
           <table className="audit-swaps-table au-table">
             <thead>
               <tr><th className="au-col-when">When</th><th>Direction</th><th>Other mint</th><th className="au-num">Amount</th><th className="au-num au-col-fee">Fee</th><th className="au-num au-col-dur">Duration</th><th>Result</th></tr>

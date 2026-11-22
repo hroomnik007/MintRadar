@@ -28,12 +28,24 @@ const { db, fetchMock, readMock, poolMock } = vi.hoisted(() => {
       return { rows: [{ fetched_at: null }] }
     } else if (sql.includes('SELECT alias_url')) {
       return { rows: [...db.aliases].filter(([, m]) => m === p[0]).map(([a]) => ({ alias_url: a })) }
+    } else if (sql.includes('MIN(at)')) {
+      const urls = p[0] as string[]
+      const times = [...db.swaps.values()]
+        .filter(s => urls.includes(s['from_url'] as string) || urls.includes(s['to_url'] as string))
+        .map(s => (s['at'] as Date).getTime())
+      return { rows: [{ oldest: times.length ? new Date(Math.min(...times)) : null }] }
     } else if (sql.includes('FROM audit_cz_swaps') && sql.includes('ANY($1)')) {
       const urls = p[0] as string[]
+      const limit = typeof p[1] === 'number' ? p[1] : 20
+      const cutoff = p[3] instanceof Date ? p[3] : null
       const rows = [...db.swaps.values()]
-        .filter(s => urls.includes(s['from_url'] as string) || urls.includes(s['to_url'] as string))
+        .filter(s => {
+          if (!(urls.includes(s['from_url'] as string) || urls.includes(s['to_url'] as string))) return false
+          if (cutoff && (s['at'] as Date) < cutoff) return false
+          return true
+        })
         .sort((a, b) => (b['at'] as Date).getTime() - (a['at'] as Date).getTime())
-        .slice(0, 20)
+        .slice(0, limit)
       return { rows }
     }
     return { rows: [] } // BEGIN/COMMIT/DELETE prune
@@ -66,7 +78,7 @@ vi.mock('../ssrf.js', () => ({
   RESPONSE_CAPS: { auditCzMints: 1048576, auditCzSwaps: 1048576, auditCzMintDetail: 65536, auditCzNetwork: 1048576 },
 }))
 
-import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, auditCzIdFromPage, AUDIT_CZ_SOURCE } from '../auditCz.js'
+import { auditCzKey, parseAuditCzMintsResponse, parseAuditCzSwapsResponse, syncAuditCz, getAuditCzForMint, getAuditCzSyncStatus, auditCzIdFromPage, AUDIT_CZ_SOURCE, SWAP_RETENTION_DAYS, SWAP_MAX_ROWS } from '../auditCz.js'
 
 const mint = (o: Record<string, unknown> = {}) => ({
   id: 'mint0001', url: 'https://mint.minibits.cash/Bitcoin', isTest: false, aliases: [], name: 'Minibits', state: 'ok',
@@ -283,4 +295,12 @@ describe('per-mint detail (read side)', () => {
     })
     expect(after.periods?.d7?.swaps).toBe(10)
   })
+})
+
+describe('swap-feed retention', () => {
+  it('keeps 30 days of swaps and a cap that does not cut that window', () => {
+    expect(SWAP_RETENTION_DAYS).toBe(30)
+    expect(SWAP_MAX_ROWS).toBe(50_000)
+  })
+
 })

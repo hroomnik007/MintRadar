@@ -34,8 +34,10 @@ const MAX_URL_LEN = 500
 const MAX_ERROR_LEN = 300
 const MAX_NAME_LEN = 100
 const MAX_ALIASES = 20
-const SWAP_RETENTION_DAYS = 14
-const SWAP_MAX_ROWS = 20_000
+/** Rolling window of the stored cashu.info swap feed; prune only after a successful swaps write. */
+export const SWAP_RETENTION_DAYS = 30
+/** Global cap, raised with the 30-day window so the row limit does not cut rows still inside it. */
+export const SWAP_MAX_ROWS = 50_000
 
 const STATS_WINDOW_DAYS = 7
 
@@ -425,6 +427,8 @@ export interface AuditCzResponse {
   totals?: AuditCzTotals
   /** Official 7-day (per-mint detail) and 30-day (swap graph + list blamed) views for the Audit tab. Absent when not covered. */
   periods?: AuditCzPeriods
+  /** Oldest stored swap for this mint (ISO), independent of `limit` and `days`. Null when none are stored. Absent when not covered. */
+  swapsSince?: string | null
 }
 
 /** One direction of a stored 7-day snapshot; null fields were not stored for that week. */
@@ -850,15 +854,23 @@ const iso = (v: unknown): string | null => (v instanceof Date ? v.toISOString() 
 const numOrNullRow = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v))
 
 export const AUDIT_CZ_SWAPS_DEFAULT_LIMIT = 20
-export const AUDIT_CZ_SWAPS_MAX_LIMIT = 100
+export const AUDIT_CZ_SWAPS_MAX_LIMIT = 500
 
-/** Optional `limit` query value → integer in 1..100; anything missing or non-numeric keeps the default (20). */
+/** Optional `limit` query value → integer in 1..500; anything missing or non-numeric keeps the default (20). */
 export function clampAuditCzLimit(raw: unknown): number {
   if (typeof raw !== 'string' || !/^-?\d+(\.\d+)?$/.test(raw.trim())) return AUDIT_CZ_SWAPS_DEFAULT_LIMIT
   return Math.min(AUDIT_CZ_SWAPS_MAX_LIMIT, Math.max(1, Math.floor(Number(raw))))
 }
 
-export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ_SWAPS_DEFAULT_LIMIT, direction: 'from' | 'to' | 'both' = 'both'): Promise<AuditCzResponse> {
+/** Optional `days` query value: 7 or 30. Missing → no date filter on the swap list. Anything else → invalid. */
+export function parseAuditCzDays(raw: unknown): 7 | 30 | undefined | 'invalid' {
+  if (raw === undefined) return undefined
+  if (raw === '7') return 7
+  if (raw === '30') return 30
+  return 'invalid'
+}
+
+export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ_SWAPS_DEFAULT_LIMIT, direction: 'from' | 'to' | 'both' = 'both', days?: 7 | 30): Promise<AuditCzResponse> {
   const key = auditCzKey(rawUrl)
   // Match on their url or any of their aliases (stored keyed the same way).
   const m = await pool.query(
@@ -880,6 +892,7 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
   const canonical = row['url'] as string
   const al = await pool.query(`SELECT alias_url FROM audit_cz_aliases WHERE mint_url = $1`, [canonical])
   const urls = Array.from(new Set([key, canonical, ...al.rows.map(r => (r as Record<string, unknown>)['alias_url'] as string)]))
+  const daysCutoff = days === 7 || days === 30 ? new Date(Date.now() - days * 86_400_000) : null
   const sw = await pool.query(
     `SELECT id, at, status, stage, error, amount, fee, duration_ms, from_url, to_url, from_name, to_name
        FROM audit_cz_swaps
@@ -888,10 +901,16 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
         OR ($3 = 'from' AND from_url = ANY($1))
         OR ($3 = 'to' AND to_url = ANY($1))
       )
+        AND ($4::timestamptz IS NULL OR at >= $4)
       ORDER BY at DESC
       LIMIT $2`,
-    [urls, limit, direction],
+    [urls, limit, direction, daysCutoff],
   )
+  const oldest = await pool.query(
+    `SELECT MIN(at) AS oldest FROM audit_cz_swaps WHERE from_url = ANY($1) OR to_url = ANY($1)`,
+    [urls],
+  )
+  const swapsSince = iso((oldest.rows[0] as Record<string, unknown> | undefined)?.['oldest'])
   // One grouped query over the window (indexes on from_url/to_url + at). A swap whose both sides
   // match this mint is counted once, as a melt. Status other than success/failed counts as pending.
   const cutoff = new Date(Date.now() - STATS_WINDOW_DAYS * 86_400_000)
@@ -982,5 +1001,6 @@ export async function getAuditCzForMint(rawUrl: string, limit: number = AUDIT_CZ
     weeks,
     totals,
     periods: { d7: periodFromDetail(detail, detail?.fetchedAt ?? null), d30: periodFromNetwork30d(row) },
+    swapsSince,
   }
 }

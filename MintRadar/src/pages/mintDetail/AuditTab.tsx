@@ -8,7 +8,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { AuditVerdictBlock, AuditStack, AuditDirections, AuditDays, AuditWeeks, AuditSwapList } from '@/components/AuditCzCards'
 import type { AuditCzView } from '@/utils/auditCz'
-import { auditVerdictFromPeriod, auditDirectionsFromPeriod, auditAvgFromPeriod, auditWeeksForChart } from '@/utils/auditCz'
+import { auditVerdictFromPeriod, auditDirectionsFromPeriod, auditAvgFromPeriod, auditWeeksForChart, auditSwapsForPeriod, auditSwapsSinceNote } from '@/utils/auditCz'
 import { auditNoDataText, cashuInfoViewText } from '@/utils/tooltipTexts'
 
 
@@ -101,6 +101,8 @@ function AuditTabBody({ czView, czSyncNote, now, infoText }: {
   const avgSwapTime = selected ? auditAvgFromPeriod(selected) : (days === 7 ? czView.avgSwapTime : null)
   const hasDays = czView.daily.some(d => d.ok + d.failed > 0)
   const hasWeeks = auditWeeksForChart(czView.weeks).some(w => w.swaps > 0)
+  const swapRows = auditSwapsForPeriod(czView.swaps, days, now)
+  const swapsSinceNote = auditSwapsSinceNote(czView.swapsSince, days, now)
   // 2026-11-19 redesign (phase 4e), 2026-11-22 period switch: the verdict panel, the four figures,
   // Swaps per day (7 days) or Swaps per week (30 days), and the swap list in its own panel.
   return (
@@ -151,8 +153,11 @@ function AuditTabBody({ czView, czSyncNote, now, infoText }: {
       )}
 
       <section className="md-panel md-audit-swaps" aria-labelledby="md-audit-swaps-title">
-        <h2 id="md-audit-swaps-title" className="md-panel-title">Recent swaps</h2>
-        <AuditSwapList rows={czView.swaps} now={now} />
+        <h2 id="md-audit-swaps-title" className="md-panel-title">
+          Recent swaps
+          {swapsSinceNote && <span className="md-audit-swaps-since" data-testid="audit-swaps-since">{swapsSinceNote}</span>}
+        </h2>
+        <AuditSwapList key={days} rows={swapRows} now={now} days={days} />
       </section>
     </div>
   )

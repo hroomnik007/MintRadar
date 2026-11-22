@@ -8,7 +8,7 @@ import { isWellFormedMintUrl } from '../ssrf.js'
 import { getLatestVersionsMap } from '../versionCatalog.js'
 import { splitVersionString, canonicalSoftwareName } from '../shared/reliabilityScore.js'
 import { listMintChanges, ROUTE_CHANGES_MAX } from '../mintChanges.js'
-import { getAuditCzForMint, clampAuditCzLimit } from '../auditCz.js'
+import { getAuditCzForMint, clampAuditCzLimit, parseAuditCzDays } from '../auditCz.js'
 import { normalizeUrl } from '../discovery.js'
 import { rateLimitKey } from '../mintAdmission.js'
 import { fetchOgMintData, renderMintOgHtml, renderPageOgHtml } from '../og.js'
@@ -745,7 +745,12 @@ router.get('/api/mints/audit-cz', (req: Request, res: Response): void => {
         res.status(400).json({ error: 'direction must be from, to, or both' })
         return
       }
-      const body = await getAuditCzForMint(url, clampAuditCzLimit(req.query['limit']), direction)
+      const days = parseAuditCzDays(req.query['days'])
+      if (days === 'invalid') {
+        res.status(400).json({ error: 'days must be 7 or 30' })
+        return
+      }
+      const body = await getAuditCzForMint(url, clampAuditCzLimit(req.query['limit']), direction, days)
       sendCachedBody(res, buildCachedBody(body), 60)
     })
     .catch((err: unknown) => {

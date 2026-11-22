@@ -2796,6 +2796,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 
 .md-audit-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .mint-detail .md-audit-swaps .md-panel-title { margin-bottom: 10px; }
+.mint-detail .md-audit-swaps .md-audit-swaps-since { margin-left: 8px; font-size: var(--fs-xs); font-weight: 400; color: var(--text2); letter-spacing: 0; }
 
 /* Results as text (the coloured chips are gone): green for a success, amber for a failure, muted when neutral. */
 .mint-detail .md-audit .au-res { font-family: var(--font-body); font-size: var(--fs-sm); padding: 0; min-height: 0; border-radius: 0; background: none; }

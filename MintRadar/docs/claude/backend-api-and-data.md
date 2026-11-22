@@ -101,7 +101,7 @@ audit_cz_swaps(id TEXT PK, at, status short lowercase token (success, failed, pe
                amount, fee, duration_ms, from_url, to_url, from_name, to_name, fetched_at, source)
   indexes: (from_url, at DESC), (to_url, at DESC), (at DESC)
 ```
-Keys use `normalizeUrl()` plus a stripped trailing slash (`auditCzKey`); a tracked mint matches when its key equals their `url` or any alias (our DB has no alias data of its own — `aliasOf` is only a submit/discover hint). Swaps are stored as given and matched at read time (from or to) through the same url+aliases set. Sync: upserts, one transaction per response; any failure (timeout, HTTP error, >1 MiB, bad JSON, bad top-level shape) writes and deletes nothing; malformed items are skipped; pruning (>14 days, hard cap 20000 rows) only after a successful swaps write.
+Keys use `normalizeUrl()` plus a stripped trailing slash (`auditCzKey`); a tracked mint matches when its key equals their `url` or any alias (our DB has no alias data of its own — `aliasOf` is only a submit/discover hint). Swaps are stored as given and matched at read time (from or to) through the same url+aliases set. Sync: upserts, one transaction per response; any failure (timeout, HTTP error, >1 MiB, bad JSON, bad top-level shape) writes and deletes nothing; malformed items are skipped; pruning (>30 days, hard cap 50000 rows) only after a successful swaps write.
 
 ### audit_cz_daily (added 2026-11-13, methodology 8: the long audit window)
 ```
