@@ -21,7 +21,10 @@ const LOADED: Record<number, { head: number; board: number; nhi: number; stack: 
   // Re-measured 2026-11-19 for the phase-5 Stats redesign (readout numbers, the five factors at every width, one-column
   // geography with share bars, the movers note in the text face).
   1440: { head: 93.6, board: 1424.6, nhi: 330.7, stack: 722.7 },
-  1024: { head: 93.6, board: 2125.8, nhi: 330.7, stack: 722.7 },
+  // 1024: the Geography card (773 px) is taller than the Movers card in their shared row, so the movers note (32 px) does not
+  // make the board taller: 2157.75 with and without it (measured 2026-11-25; the real-date test failed from 2026-11-23, when
+  // the v9 note left the 7d window, because it expected board + 0 = 2125.8).
+  1024: { head: 93.6, board: 2125.8, nhi: 330.7, stack: 722.7, boardMin: 2157.8 },
   768: { head: 93.6, board: 1858.5, nhi: 336.0, stack: 637.5, boardMin: 1908.5 },
   // Phones re-measured 2026-11-20 for the mockup alignment (panel lines changed length): board -18.5 at 390, +29.5 at 320.
   390: { head: 104.8, board: 3514.0, nhi: 441.0, stack: 632.5 },

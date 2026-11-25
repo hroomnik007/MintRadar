@@ -227,7 +227,7 @@ What moved, measured on that fixture before the change (phone: Lighthouse report
 The reservations (all in `Stats.css`, values as `--stats-reserve-*` custom properties on `.stats-page`, one value per width band, minimum of the band):
 
 **Re-measured 2026-11-19 for the phase-5 redesign** (see "Stats, 2026-11-19 redesign (phase 5)" below): board (without the
-note) 1424 from 1280, 2125 for 769 to 1279, 1858 at 768 (the Geography card sets that row, so the note does not add:
+note) 1424 from 1280, 2125 for 769 to 1279 (at 1024 the Geography card also sets the row: 2157.75 with and without the note, `boardMin` 2157.8; corrected 2026-11-25, the real-date spec had failed since the v9 note left the 7d window on 2026-11-23), 1858 at 768 (the Geography card sets that row, so the note does not add:
 `boardMin` 1908.5 in the spec's `LOADED`), 3438 up to 767; Network health 330 from 856, 354 for 769 to 855, 336 at 768, 417
 for 418 to 767, 441 up to 417; left stack 722 from 920, 740 for 769 to 919, 637 at 768, 615 for 425 to 767, 632 for 383 to
 424, 655 for 333 to 382, 677 for 325 to 332, 695 up to 324. Movers note (text face now): n1 50 up to 331, else 32; n2 50 up
