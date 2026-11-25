@@ -579,6 +579,7 @@ After #211 widened the Latency column, "30 days 100% · 2 outages" wrapped at 12
 - **30 daily bars** (`components/mint/UptimeBars.tsx`, helpers `utils/uptimeBars.ts`): quiet green for a day >= 99.5 %,
   amber >= 95 %, red below (drawn as tall as the uptime, at least a stub), a faint stub for a day without probes; one
   entrance animation (off with reduced motion); `role="img"` with a one-sentence summary. Hidden without `uptimeDaily30`.
+  **Hourly bars on the cards have readouts (2026-11-25, owner):** hover (mouse) or tap / slide (touch) shows "14:00–15:00 UTC · 99.5% uptime" (`uptimeHourReadouts()` in `utils/uptimeBars.ts`, last bar "Now, HH:00 UTC"). `.card-trace` sits at `z-index: 1` above the stretched card link, so a tap on the bars opens the readout, not the mint; the rest of the card still navigates.
   The lower block (bars, facts, foot) is pinned to the card's bottom (`.card-lower`, `margin-top: auto`), and the foot is
   43px high with or without the Compare button (offline cards have none), so every card of a grid is one height
   (`e2e/mint-card-units-and-metrics.spec.ts`).

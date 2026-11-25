@@ -76,3 +76,23 @@ export function uptimeDayReadouts(
     return { date, text }
   })
 }
+
+const HOUR_MS = 3_600_000
+
+/**
+ * The hover / tap readout of each hourly bar on the home cards: the hour (UTC, "14:00-15:00") and its uptime. Oldest
+ * first, the last entry is the current hour (the same order as `uptimeHourly24`).
+ */
+export function uptimeHourReadouts(
+  hours: ReadonlyArray<number | null>,
+  now: number,
+): Array<{ date: string; text: string }> {
+  const current = Math.floor(now / HOUR_MS) * HOUR_MS
+  const n = hours.length
+  const clock = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC', hour12: false })
+  return hours.map((pct, i) => {
+    const start = current - (n - 1 - i) * HOUR_MS
+    const range = `${clock(start)}\u2013${clock(start + HOUR_MS)} UTC`
+    return { date: i === n - 1 ? `Now, ${clock(start)} UTC` : range, text: pct === null ? 'No checks this hour' : `${pct}% uptime` }
+  })
+}

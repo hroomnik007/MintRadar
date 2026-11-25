@@ -9,6 +9,7 @@ import './WatchLoginModal.css'
 import { Zap, ArrowLeftRight } from 'lucide-react'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { UptimeBars } from '@/components/mint/UptimeBars'
+import { uptimeHourReadouts } from '@/utils/uptimeBars'
 import { IcStar } from '@/components/mint/IcStar'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import type { KnownMint } from '@/hooks/useKnownMints'
@@ -191,7 +192,7 @@ export function MintCard({
       {/* The last 24 hours, one bar per hour (owner 2026-11-22); Mint Detail keeps the 30 daily bars. */}
       {mint.uptimeHourly24 && (
         <div className="card-trace">
-          <UptimeBars days={mint.uptimeHourly24} unit="hour" />
+          <UptimeBars days={mint.uptimeHourly24} unit="hour" readouts={uptimeHourReadouts(mint.uptimeHourly24, Date.now())} />
           <div className="uptime-scale" aria-hidden="true"><span>24 h</span><span>Now</span></div>
         </div>
       )}
