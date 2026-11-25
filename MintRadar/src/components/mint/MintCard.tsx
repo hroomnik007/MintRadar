@@ -62,6 +62,8 @@ export function MintCard({
   const profile = useAuthStore(state => state.profile)
   const isLoggedIn = profile !== null
   const [showWatchLoginModal, setShowWatchLoginModal] = useState(false)
+  // Fixed when the card mounts (the hour labels of the bar readouts); a render must not call Date.now() itself.
+  const [mountedAt] = useState(() => Date.now())
   const autoWatch = useCallback((u: string) => {
     if (!useWatchlistStore.getState().mints.includes(u)) void addMint(u)
   }, [addMint])
@@ -192,7 +194,7 @@ export function MintCard({
       {/* The last 24 hours, one bar per hour (owner 2026-11-22); Mint Detail keeps the 30 daily bars. */}
       {mint.uptimeHourly24 && (
         <div className="card-trace">
-          <UptimeBars days={mint.uptimeHourly24} unit="hour" readouts={uptimeHourReadouts(mint.uptimeHourly24, Date.now())} />
+          <UptimeBars days={mint.uptimeHourly24} unit="hour" readouts={uptimeHourReadouts(mint.uptimeHourly24, mountedAt)} />
           <div className="uptime-scale" aria-hidden="true"><span>24 h</span><span>Now</span></div>
         </div>
       )}

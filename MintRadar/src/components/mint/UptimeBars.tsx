@@ -46,7 +46,11 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts, u
   }
   const tip = hover !== null && readouts?.[hover] ? readouts[hover] : null
   // Near either end the readout is pinned to that edge so it never sticks out of the panel.
-  const tipAlign = hover === null ? 'mid' : hover < 3 ? 'start' : hover > n - 4 ? 'end' : 'mid'
+  // The hourly readout ("11:00-12:00 UTC  100% uptime") is wider than a card's half, so it pins to an edge from the
+  // 40 % / 60 % mark on; the day readout of Mint Detail keeps its 3 bars.
+  const wide = unit === 'hour'
+  const edge = wide ? Math.round(n * 0.4) : 3
+  const tipAlign = hover === null ? 'mid' : hover < edge ? 'start' : hover > n - 1 - edge ? 'end' : 'mid'
   return (
     <div
       className={`uptime-bars uptime-bars-${variant}${readouts ? ' has-readouts' : ''} ${className}`.trim()}
