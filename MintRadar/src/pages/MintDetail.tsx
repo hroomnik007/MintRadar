@@ -81,6 +81,10 @@ import { HistoryTab } from './mintDetail/HistoryTab'
 
 /** How long the outage picked on the "Last 30 days" bars stays marked in History (ms). */
 const HISTORY_FOCUS_MS = 4000
+// Mint QR: the QR standard asks for a quiet zone of 4 modules around the code (it was 1); error correction M survives a
+// scratched or glared screen better than L at the same URL length. 200px keeps each module above 5px for a typical URL.
+const QR_SIZE = 200
+const QR_QUIET_ZONE_MODULES = 4
 import { AuditTab } from './mintDetail/AuditTab'
 import { ReviewsTab } from './mintDetail/ReviewsTab'
 import { OverviewTab } from './mintDetail/OverviewTab'
@@ -1714,23 +1718,25 @@ function MintDetailContent({ url }: { url: string }) {
               <div className="qr-modal-code-frame">
                 <QRCodeSVG
                   value={url}
-                  size={184}
-                  level="L"
-                  marginSize={1}
+                  size={QR_SIZE}
+                  level="M"
+                  marginSize={QR_QUIET_ZONE_MODULES}
                   bgColor="#ffffff"
                   fgColor="#000000"
                   role="img"
                   aria-label="QR Code"
-                  style={{display:'block',width:184,height:184}}
+                  style={{display:'block',width:QR_SIZE,height:QR_SIZE}}
                 />
               </div>
             </div>
             <div className="qr-modal-url-row">
-              <input
+              <textarea
                 className="qr-modal-url"
                 readOnly
                 aria-label="Mint URL"
+                rows={Math.min(4, Math.max(1, Math.ceil(url.length / 28)))}
                 value={url}
+                onFocus={e => e.currentTarget.select()}
               />
               <button
                 type="button"
