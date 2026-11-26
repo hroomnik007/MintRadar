@@ -2855,21 +2855,18 @@
 @media (max-width: 768px) {
   .view-toggle { display: none; }
 }
-/* Phones: "Add a mint" keeps its label like on the desktop (it was the plus alone until 2026-11-26); the Sort button gives
-   up the word "Sort:" for a small arrows icon to make room (see SortMenu). At the narrowest phones the label shortens to
-   "Add" (the accessible name stays "Add a mint"); the width is set by the measurement in e2e/addmint-mobile-row.spec.ts.
-   The status dot sits at the start of the sentence. */
+/* Phones: "Add a mint" keeps its label like on the desktop (it was the plus alone until 2026-11-26) and Sort keeps its word
+   "Sort:" (an icon replaced it for a few hours the same day; the owner wanted the word back, and it fits). At the narrowest
+   phones the Add label shortens to "Add" (the accessible name stays "Add a mint"); widths are measured in
+   e2e/addmint-qr-polish.spec.ts. The status dot sits at the start of the sentence. */
 @media (max-width: 600px) {
   .dashboard-controls .submit-btn { padding-inline: 12px; gap: 6px; white-space: nowrap; }
-  .sort-select-prefix { display: none; }
-  .sort-select-icon { display: inline-block; vertical-align: -2px; margin-right: 6px; color: var(--text2); }
 }
 @media (max-width: 330px) {
   .dashboard-controls .submit-btn .submit-btn-more { display: none; }
   .dash-intro .dash-status-btn { align-items: flex-start; }
   .dash-intro .dash-status-live { margin-top: 6px; transform: none; }
 }
-.sort-select-icon { display: none; }
 /* The status sentence is one run of text at every width (older rules gave the latency note its own row). */
 .dash-intro .dash-status-note,
 .dash-intro .dash-status-time { display: inline; margin: 0; padding: 0; font-size: inherit; color: inherit; flex: none; }
@@ -2990,6 +2987,19 @@
 .submit-modal { max-height: calc(var(--vv-h, 100dvh) - 24px); }
 .submit-modal .submit-modal-actions { position: sticky; bottom: -24px; margin: 0 -24px -24px; padding: 8px 24px 24px; background: var(--surface); z-index: 1; }
 .submit-probe-preview.submit-tracked { background: var(--bg3); border-color: var(--border-strong); }
+.submit-tracked { display: flex; align-items: center; gap: 12px; }
+.submit-tracked-body { min-width: 0; flex: 1; }
+.submit-tracked .submit-probe-meta { flex-wrap: wrap; }
 .submit-tracked .submit-probe-name { color: var(--text); }
+.submit-tracked .submit-probe-meta > span:first-child { overflow-wrap: anywhere; }
 .submit-tracked .submit-probe-meta { color: var(--text2); }
 .submit-tracked .submit-probe-meta a { color: var(--action); text-decoration: underline; text-underline-offset: 2px; font-family: var(--font-body); }
+/* Phones: with "Sort:" back, the row "Sort: <option> | reset | + Add a mint" is tightened a little (Add and Sort 12px / 10px
+   side padding, 6px between the controls of that row) so the longest label "Sort: Most reviewed" still fits at 390px with the
+   reset button showing. At 360px with the reset button AND that label it is ~21px short and ends in an ellipsis (the accessible
+   name stays complete); everywhere else it fits whole. Measured in e2e/addmint-qr-polish.spec.ts. */
+@media (max-width: 600px) {
+  .dashboard-controls { column-gap: 6px; }
+  .dashboard-controls .submit-btn { padding-inline: 12px; }
+  .dashboard-controls .sort-menu .sort-select { padding-inline: 10px; gap: 8px; }
+}

@@ -98,7 +98,7 @@ test('Uptime 24h tile: the list value and "loading checks…" while the 24 h his
   await expect(tile.locator('.md-sc-value')).toHaveText('99%')
 })
 
-test('390px: the Mint QR dialog title wraps instead of being cut', async ({ page }) => {
+test('390px: the Mint QR dialog title is one line and a long mint name under it wraps instead of being cut', async ({ page }) => {
   await resize(page, 390, 844)
   await mockRelays(page)
   await installApiMocks(page)
@@ -107,10 +107,14 @@ test('390px: the Mint QR dialog title wraps instead of being cut', async ({ page
   await page.goto(ALPHA_PATH)
   await page.getByRole('button', { name: 'Mint QR' }).click()
   const title = page.locator('.qr-modal-title')
-  await expect(title).toContainText('to wallet')
-  const m = await title.evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth, right: el.getBoundingClientRect().right }))
-  expect(m.sw).toBeLessThanOrEqual(m.cw)
-  expect(m.right).toBeLessThanOrEqual(390)
+  await expect(title).toHaveText('Add to wallet')
+  const name = page.locator('.qr-modal-mint')
+  await expect(name).toHaveText('A Rather Long Community Mint Name')
+  for (const el of [title, name]) {
+    const m = await el.evaluate(e => ({ sw: e.scrollWidth, cw: e.clientWidth, right: e.getBoundingClientRect().right }))
+    expect(m.sw).toBeLessThanOrEqual(m.cw)
+    expect(m.right).toBeLessThanOrEqual(390)
+  }
 })
 
 for (const width of [900, 360]) {

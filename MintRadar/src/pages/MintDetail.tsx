@@ -1709,8 +1709,8 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="qr-modal-header">
               <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={38} radius={9} />
               <div className="qr-modal-heading">
-                <div id="qr-modal-title" className="qr-modal-title">Add {displayName} to wallet</div>
-                <div className="qr-modal-sub">Scan with any Cashu wallet app</div>
+                <div id="qr-modal-title" className="qr-modal-title">Add to wallet</div>
+                <div className="qr-modal-sub qr-modal-mint">{displayName}</div>
               </div>
               <button type="button" className="qr-modal-close" onClick={() => setShowQr(false)} aria-label="Close"><IcClose /></button>
             </div>
@@ -1729,22 +1729,19 @@ function MintDetailContent({ url }: { url: string }) {
                 />
               </div>
             </div>
+            <div className="qr-modal-scan">Scan with any Cashu wallet app</div>
             <div className="qr-modal-url-row">
-              <textarea
-                className="qr-modal-url"
-                readOnly
-                aria-label="Mint URL"
-                rows={Math.min(4, Math.max(1, Math.ceil(url.length / 28)))}
-                value={url}
-                onFocus={e => e.currentTarget.select()}
-              />
+              {/* Plain text, not a field: nothing to focus, no caret; the icon button copies it. */}
+              <div className="qr-modal-url" data-testid="qr-modal-url">{url}</div>
               <button
                 type="button"
-                className="qr-modal-copy"
+                className={`qr-modal-copy${copiedUrl ? ' is-copied' : ''}`}
+                aria-label="Copy mint URL"
                 onClick={() => { void navigator.clipboard.writeText(url); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) }}
               >
-                {copiedUrl ? 'Copied' : 'Copy'}
+                {copiedUrl ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
               </button>
+              <span className="sr-only" role="status">{copiedUrl ? 'Copied' : ''}</span>
             </div>
           </div>
         </div>
