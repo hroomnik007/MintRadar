@@ -622,8 +622,9 @@ The Dashboard button described here was removed the same day by #204 (see "Reset
   starts in its default direction) plus `.sort-dir-btn` (↓ / ↑, named by `aria-label`, no `title`) that flips the
   direction. The five sort chips are gone. Its `<option>`s have role "option" too: scope `getByRole('option')` in a spec
   to its listbox (e.g. the Compare picker, `compare-picker-keyboard.spec.ts`).
-- **List view:** desktop only. Columns Mint (status dot + name + host), Last 30 days (the bars), Latency, Uptime 30 d,
-  Reviews, Software, Reliability (condensed readout); no Status or NUTs column (the status word is read out with the dot,
+- **List view:** desktop only. Columns Mint (status dot + name + host), Last 24 h (the 24 hourly bars with the card's
+  hover readout), Latency, Uptime 24 h (`data-testid="list-uptime-24h"`; the same facts as the card since 2026-11-26,
+  owner; it was Last 30 days / Uptime 30 d), Reviews, Software, Reliability (condensed readout); no Status or NUTs column (the status word is read out with the dot,
   `.mint-list-status`, sr-only). **Phones (<=768px) always show the cards** and hide the view toggle;
   the stored choice (`mintRadar_viewMode`) is kept for wider screens. `utils/listColumns.ts` (the phone column rule) was
   removed with the phone list.

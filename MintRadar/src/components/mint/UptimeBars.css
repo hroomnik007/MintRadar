@@ -48,4 +48,6 @@
 .ub-tip-start { left: 0; transform: none; }
 .ub-tip-end { left: auto; right: 0; transform: none; }
 .ub-tip-date { font-size: var(--fs-xs); color: var(--text3); }
+.uptime-bars.is-selectable { cursor: pointer; }
+.ub-tip-hint { font-size: var(--fs-xs); color: var(--action); }
 .ub-tip-text { font-size: var(--fs-xs); color: var(--text); font-variant-numeric: tabular-nums; }

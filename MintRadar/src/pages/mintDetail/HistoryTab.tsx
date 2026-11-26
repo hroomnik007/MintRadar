@@ -1,7 +1,8 @@
 // Mint Detail "History" tab: period / metric switches, summary figures, the lazy recharts line chart and one timeline of
 // outages and software changes (2026-11-19 redesign, phase 4c). The period and metric state, the queries and all derived figures stay in MintDetail (so the chosen period
 // survives tab switches as before) and are passed in; this component holds no state.
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
+import { outageOverlaps } from '@/utils/uptimeBars'
 import { useMediaQuery } from '@/hooks/useIsMobile'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { formatDate } from '@/utils/formatDate'
@@ -53,12 +54,15 @@ export interface HistoryTabProps {
   outagesData: OutagesResponse | undefined
   lastErrorText: string | null
   versionHistory: Array<{ version: string; firstSeenAt: string }> | undefined
+  /** A UTC day picked on the "Last 30 days" bars (owner, 2026-11-26): its outages are marked and scrolled into view. */
+  focus?: { start: number; end: number; seq: number } | null
+  now?: number
 }
 
 export function HistoryTab({
   chartInterval, onChartInterval, chartMetric, onChartMetric,
   chartAvgLatency, chartPrevLatency, chartAvgUptime, chartPrevUptime, chartPrevInsufficientHistory, chartAvgReliability,
-  chartLatencyPercentiles, chartCoverage, histLineData, outagesData, lastErrorText, versionHistory,
+  chartLatencyPercentiles, chartCoverage, histLineData, outagesData, lastErrorText, versionHistory, focus = null, now = 0,
 }: HistoryTabProps) {
   // 2026-11-19 redesign (phase 4c): the period switch heads the whole tab, four figures in one frame with a sentence
   // against the period before, the chart at full width, and ONE timeline of outages and software changes.
@@ -68,6 +72,19 @@ export function HistoryTab({
   const count = outagesData?.outageCount ?? null
   const ongoing = outagesData?.ongoing === true
   const outageSub = outageFigureNote(outagesData)
+  const isFocused = (ev: (typeof events)[number]) => focus !== null && ev.kind === 'outage'
+    && outageOverlaps({ startedAt: ev.at, durationMs: ev.durationMs, ongoing: ev.ongoing }, focus.start, focus.end, now)
+  const eventsRef = useRef<HTMLOListElement | null>(null)
+  const focusSeq = focus?.seq ?? null
+  // Bring the first marked outage into view once the timeline has it (the outages may still be loading).
+  const hasFocused = focus !== null && events.some(isFocused)
+  useEffect(() => {
+    if (focusSeq === null || !hasFocused) return
+    const el = eventsRef.current?.querySelector<HTMLElement>('.md-ev-focus')
+    if (!el) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' })
+  }, [focusSeq, hasFocused])
   const metricLabel = chartMetric === 'latency' ? 'Latency' : chartMetric === 'uptime' ? 'Uptime' : 'Reliability Score'
   return (<>
     <div className="md-hist-bar">
@@ -157,12 +174,12 @@ export function HistoryTab({
       {events.length === 0 ? (
         <p className="md-hist-empty">No version history available.</p>
       ) : (
-        <ol className="md-events">
+        <ol className="md-events" ref={eventsRef}>
           {events.map((ev, i) => (
             // The mark tells the kind apart by colour and shape (owner, 2026-11-20; every software change was copper, the
             // colour of what you can click): an outage red, an update a grey ring, a switch of software a grey dot, the
             // first sighting a small faint dot.
-            <li key={i} className={`md-ev md-ev-${ev.kind}${ev.kind === 'software' ? (ev.from === null ? ' md-ev-first' : ev.switched ? ' md-ev-switch' : ' md-ev-update') : ''}`} {...(ev.kind === 'outage' && ev.ongoing ? { 'data-ongoing': 'true' } : {})}>
+            <li key={i} className={`md-ev md-ev-${ev.kind}${ev.kind === 'software' ? (ev.from === null ? ' md-ev-first' : ev.switched ? ' md-ev-switch' : ' md-ev-update') : ''}${isFocused(ev) ? ' md-ev-focus' : ''}`} {...(ev.kind === 'outage' && ev.ongoing ? { 'data-ongoing': 'true' } : {})} {...(isFocused(ev) ? { 'data-focus': 'true' } : {})}>
               <span className="md-ev-date">{formatDate(ev.at, { year: false, local: true })}</span>
               <span className="md-ev-mark" aria-hidden="true" />
               <span className="md-ev-text">

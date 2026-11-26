@@ -185,7 +185,7 @@ test.describe('Dashboard list view — reduced columns', () => {
     }
 
     // Columns since the 2026-11-19 redesign.
-    for (const label of ['Last 30 days', 'Latency', 'Uptime 30 d', 'Reviews', 'Software', 'Reliability']) {
+    for (const label of ['Last 24 h', 'Latency', 'Uptime 24 h', 'Reviews', 'Software', 'Reliability']) {
       await expect(page.locator('.mint-list-table th', { hasText: label })).toHaveCount(1)
     }
 
