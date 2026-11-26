@@ -85,6 +85,7 @@ const HISTORY_FOCUS_MS = 4000
 // scratched or glared screen better than L at the same URL length. 200px keeps each module above 5px for a typical URL.
 const QR_SIZE = 200
 const QR_QUIET_ZONE_MODULES = 4
+
 import { AuditTab } from './mintDetail/AuditTab'
 import { ReviewsTab } from './mintDetail/ReviewsTab'
 import { OverviewTab } from './mintDetail/OverviewTab'
@@ -102,6 +103,19 @@ import {
   Zap, QrCode,
   ArrowUpRight, User, ArrowLeftRight,
 } from 'lucide-react'
+
+/** Soft wrap opportunities after each "/" and "." (the scheme stays whole). Same idea as the URL under the mint name. */
+function UrlBreaks({ url }: { url: string }) {
+  const m = /^(https?:\/\/)(.*)$/.exec(url)
+  const scheme = m ? m[1]! : ''
+  const rest = m ? m[2]! : url
+  return (
+    <>
+      {scheme}
+      {rest.split(/(?<=[/.])/).map((part, i) => <Fragment key={i}>{part}<wbr /></Fragment>)}
+    </>
+  )
+}
 
 // Short label for the "Signing with" row — mirrors AppShell's navbar profile
 // METHOD_BADGE so the two read identically (Extension / nsec / Remote signer).
@@ -1732,7 +1746,7 @@ function MintDetailContent({ url }: { url: string }) {
             <div className="qr-modal-scan">Scan with any Cashu wallet app</div>
             <div className="qr-modal-url-row">
               {/* Plain text, not a field: nothing to focus, no caret; the icon button copies it. */}
-              <div className="qr-modal-url" data-testid="qr-modal-url">{url}</div>
+              <div className="qr-modal-url" data-testid="qr-modal-url"><UrlBreaks url={url} /></div>
               <button
                 type="button"
                 className={`qr-modal-copy${copiedUrl ? ' is-copied' : ''}`}

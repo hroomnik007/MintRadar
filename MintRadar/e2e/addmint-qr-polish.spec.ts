@@ -1,12 +1,12 @@
 import { test, expect, type Browser, type Page } from '@playwright/test'
-import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
+import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 import { flush, layoutReady, resize } from './fixtures/settle'
 
 // Add a mint / Mint QR polish (2026-11-26): "Already tracked" in the Single preview, the hint that matches what the
 // field accepts, the mobile row "+ Add a mint" beside Sort with its word "Sort:", 44px touch targets, a dialog whose
 // buttons stay reachable above the on-screen keyboard, a 16px Bulk field, the mint's icon in "Already tracked", and the Mint
 // QR dialog (a one-line title, the URL as plain read-only text with a copy icon in its box, 44px copy and close areas, a
-// 4-module quiet zone).
+// 4-module quiet zone; the URL wraps at slashes and dots, not mid-word).
 
 const ALPHA = MOCK_MINTS[0]!.url
 const PATH = `/mint/${encodeURIComponent(ALPHA)}`
@@ -348,7 +348,61 @@ test.describe('Mint QR dialog', () => {
     await copy.click()
     await expect(copy.locator('svg.lucide-check')).toHaveCount(1)
     await expect(page.locator('.qr-modal [role="status"]')).toHaveText('Copied')
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(ALPHA)
+    const clip = await page.evaluate(() => navigator.clipboard.readText())
+    expect(clip).toBe(ALPHA)
+    expect([0x200B, 0x200C, 0x200D, 0xFEFF].some(c => clip.includes(String.fromCharCode(c))), 'copy has no stray characters from <wbr>').toBe(false)
     await expect(copy.locator('svg.lucide-check')).toHaveCount(0)
   })
+
+  for (const width of [360, 390]) {
+    test(`${width}px: a long path URL wraps after / or ., not mid-word, and copy is the exact URL`, async ({ browser }) => {
+      const LONG = 'https://alpha.mint.example/Bitcoin'
+      const ctx = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: true, isMobile: true })
+      await ctx.grantPermissions(['clipboard-read', 'clipboard-write'])
+      const page = await ctx.newPage()
+      await mockRelays(page)
+      await installApiMocks(page)
+      await page.route('**/api/mints/known', r => r.fulfill({ json: MOCK_KNOWN_MINTS.map((m, i) => (i === 0 ? { ...m, url: LONG } : m)) }))
+      await page.goto(`/mint/${encodeURIComponent(LONG)}`)
+      await layoutReady(page)
+      await page.getByRole('button', { name: 'Mint QR' }).click()
+      const box = page.getByTestId('qr-modal-url')
+      await expect(box).toHaveText(LONG)
+      const u = await box.evaluate(el => {
+        const range = document.createRange()
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+        const lines: { y: number; text: string }[] = []
+        let n: Node | null
+        while ((n = walker.nextNode())) {
+          const t = n as Text
+          for (let i = 0; i < t.length; i++) {
+            range.setStart(t, i)
+            range.setEnd(t, i + 1)
+            const r = range.getBoundingClientRect()
+            if (r.width === 0 && r.height === 0) continue
+            const y = Math.round(r.top)
+            const last = lines[lines.length - 1]
+            if (!last || Math.abs(y - last.y) > 2) lines.push({ y, text: t.data[i]! })
+            else last.text += t.data[i]!
+          }
+        }
+        return { text: el.textContent, inner: (el as HTMLElement).innerText.replace(/\s+/g, ''), wbr: el.querySelectorAll('wbr').length, lines: lines.map(l => l.text) }
+      })
+      expect(u.text).toBe(LONG)
+      expect(u.inner).toBe(LONG)
+      expect(u.wbr, 'soft breaks after / and .').toBeGreaterThan(0)
+      expect(u.lines.join('')).toBe(LONG)
+      expect(u.lines.length, 'this URL is long enough to wrap').toBeGreaterThan(1)
+      for (const line of u.lines.slice(0, -1)) {
+        expect(line.slice(-1), `line "${line}" ends at a slash or a dot`).toMatch(/[/.]/)
+      }
+      expect(u.lines.some(l => l.includes('Bitcoin')), 'Bitcoin stays on one line').toBe(true)
+      expect(u.lines[0]).toMatch(/^https:\/\//)
+      await page.getByRole('button', { name: 'Copy mint URL' }).click()
+      const clip = await page.evaluate(() => navigator.clipboard.readText())
+      expect(clip).toBe(LONG)
+      expect([0x200B, 0x200C, 0x200D, 0xFEFF].some(c => clip.includes(String.fromCharCode(c))), 'copy has no stray characters from <wbr>').toBe(false)
+      await ctx.close()
+    })
+  }
 })
