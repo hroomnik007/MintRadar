@@ -8,6 +8,7 @@ import type { NostrEvent } from 'nostr-tools'
 import { loadSharedPool } from '@/core/nostr/lazy'
 import { useNostrDiscovery } from '@/hooks/useNostrDiscovery'
 import { UptimeBars } from '@/components/mint/UptimeBars'
+import { uptimeHourReadouts } from '@/utils/uptimeBars'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useKnownMints, type KnownMint } from '@/hooks/useKnownMints'
 import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
@@ -427,6 +428,8 @@ function MintListView({
 } & EmptyStateProps) {
   const navigate = useNavigate()
   const { onMintPointerEnter, onMintPointerLeave } = useMintHoverPrefetch()
+  // The hourly readouts name the hour relative to this moment (as on the card; no Date.now in render).
+  const [mountedAt] = useState(() => Date.now())
   const sortedFiltered = useMemo(() => {
     const q = search.toLowerCase()
     const filtered = mints.filter(mint => {
@@ -452,9 +455,9 @@ function MintListView({
           <thead>
             <tr>
               <th>Mint</th>
-              <th>Last 30 days</th>
+              <th>Last 24 h</th>
               <th className="num">Latency</th>
-              <th className="num">Uptime 30 d</th>
+              <th className="num">Uptime 24 h</th>
               <th className="num">Reviews</th>
               <th>Software</th>
               <th className="num">Reliability</th>
@@ -468,7 +471,8 @@ function MintListView({
               const statusLabel = mintStatusLabel(mintStatus(mint))
               const displayName = mintDisplayName(mint, duplicateDisplayNames)
               const score = mint.reliabilityScore ?? null
-              const uptime30d = uptime30dShown(mint.uptimePct30dExact, mint.uptimePct30d)
+              // The same facts as the card (owner 2026-11-26): the last 24 hours, one bar per hour, and Uptime 24 h.
+              const uptime24h = uptime30dShown(mint.uptimePct24hExact, mint.uptimePct24h)
               return (
                 <tr key={mint.url} className="mint-list-row" onClick={e => { if (!(e.target as Element).closest('a')) navigate(`/mint/${encodeURIComponent(mint.url)}`) }} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
                   <td className="mint-list-td-name">
@@ -482,12 +486,12 @@ function MintListView({
                       {displayName !== getHostname(mint.url) && <div className="mint-list-url" title={getHostname(mint.url)}>{getHostname(mint.url)}</div>}
                     </div>
                   </td>
-                  <td className="mint-list-bars"><UptimeBars days={mint.uptimeDaily30} /></td>
+                  <td className="mint-list-bars">{mint.uptimeHourly24 ? <UptimeBars days={mint.uptimeHourly24} unit="hour" readouts={uptimeHourReadouts(mint.uptimeHourly24, mountedAt)} /> : '—'}</td>
                   <td className="num" style={{ color: isOnline ? latencyColor(mint.latencyMs) : 'var(--text3)' }}>
                     {isOnline && mint.latencyMs != null ? <>{mint.latencyMs}<span className="mint-list-unit">ms</span></> : '—'}
                   </td>
-                  <td className="num" style={{ color: uptimeColor(uptime30d) }}>
-                    {uptime30d != null ? <>{formatUptime30d(uptime30d)}<span className="mint-list-unit">%</span></> : '—'}
+                  <td className="num" data-testid="list-uptime-24h" style={{ color: uptimeColor(uptime24h) }}>
+                    {uptime24h != null ? <>{formatUptime30d(uptime24h)}<span className="mint-list-unit">%</span></> : '—'}
                   </td>
                   <td className="num rating-col">
                     {(mint.reviewCount ?? 0) > 0 && mint.reviewAvgRating != null ? (

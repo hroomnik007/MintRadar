@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import {
   auditCzStateTitle, auditCzStageText, AUDIT_CZ_NEUTRAL_TEXT, AUDIT_CZ_NEUTRAL_TITLE, formatSwapDuration, filterAuditSwaps,
@@ -109,21 +109,78 @@ export function AuditDirections({ directions, avgSwapTime, verdict, days = 7 }: 
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
 
+/**
+ * Swaps per day / per week (owner, 2026-11-26): a mouse hovering a column, a tap on it or keyboard focus shows that
+ * column's figures above it and dims the others. A tap elsewhere, a second tap on the same column or Escape closes it.
+ * The readout is aria-hidden: each column's aria-label already says the same.
+ */
+function useColumnReadout() {
+  const [active, setActive] = useState<number | null>(null)
+  const [touch, setTouch] = useState(false)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!touch || active === null) return
+    const outside = (e: PointerEvent) => {
+      if (rootRef.current && e.target instanceof Node && rootRef.current.contains(e.target)) return
+      setActive(null); setTouch(false)
+    }
+    document.addEventListener('pointerdown', outside)
+    return () => document.removeEventListener('pointerdown', outside)
+  }, [touch, active])
+  const rootProps = {
+    ref: rootRef,
+    'data-active': active !== null ? 'true' : undefined,
+    onPointerLeave: (e: React.PointerEvent) => { if (e.pointerType === 'mouse' && !touch) setActive(null) },
+  }
+  const columnProps = (i: number) => ({
+    tabIndex: 0,
+    'data-on': active === i ? 'true' : undefined,
+    onPointerEnter: (e: React.PointerEvent) => { if (e.pointerType === 'mouse') { setTouch(false); setActive(i) } },
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === 'mouse') return
+      setTouch(true)
+      setActive(a => (a === i ? null : i))
+    },
+    onFocus: () => setActive(i),
+    onBlur: () => { if (!touch) setActive(null) },
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Escape') setActive(null) },
+  })
+  return { active, rootProps, columnProps }
+}
+
+/** The figures of one column, above it; pinned to the edge for the first and last column so it stays in the panel. */
+function ColumnReadout({ i, n, title, rows }: { i: number; n: number; title: string; rows: Array<{ cls: string; text: string }> }) {
+  const align = n > 2 && i === 0 ? 'start' : n > 2 && i === n - 1 ? 'end' : 'mid'
+  return (
+    <div className={`au-day-tip au-day-tip-${align}`} aria-hidden="true" data-testid="audit-day-readout">
+      <span className="au-day-tip-title">{title}</span>
+      {rows.map(r => <span key={r.cls} className="au-day-tip-row"><i className={r.cls} />{r.text}</span>)}
+    </div>
+  )
+}
+
 /** MintRadar's own count of the stored swaps per UTC day. Nothing renders while no day has a swap. Shown on the 7-day view. */
 export function AuditDays({ daily }: { daily: AuditDay[] }) {
+  const { active, rootProps, columnProps } = useColumnReadout()
   const max = Math.max(0, ...daily.map(d => d.ok + d.failed))
   if (max === 0) return null
   const unit = 64 / max
   return (
     <div className="au-days-wrap" data-testid="audit-days">
       <div className="au-days-title">Swaps per day <span>UTC, as stored by MintRadar</span></div>
-      <div className="au-days">
-        {daily.map(d => {
+      <div className="au-days" {...rootProps}>
+        {daily.map((d, i) => {
           const t = new Date(`${d.day}T00:00:00Z`)
           const label = `${WEEKDAYS[t.getUTCDay()]} ${t.getUTCDate()} ${DATE_MONTHS[t.getUTCMonth()]}`
           const count = d.ok + d.failed
           return (
-            <div className="au-day" key={d.day} role="img" aria-label={`${label}: ${d.ok} succeeded, ${d.failed} failed`}>
+            <div className="au-day" key={d.day} role="img" aria-label={`${label}: ${d.ok} succeeded, ${d.failed} failed`} {...columnProps(i)}>
+              {active === i && (
+                <ColumnReadout i={i} n={daily.length} title={label} rows={[
+                  { cls: 'au-seg-ok', text: `${d.ok} succeeded` },
+                  { cls: 'au-seg-fail', text: `${d.failed} failed` },
+                ]} />
+              )}
               <span className="au-day-count">{count > 0 ? count : ''}</span>
               <div className="au-day-col">
                 {d.failed > 0 && <i className="au-seg-fail" style={{ height: `${Math.max(2, d.failed * unit)}px` }} />}
@@ -157,6 +214,7 @@ function weekStack(w: AuditCzWeek): { ok: number; elsewhere: number; blamed: num
  * Only weeks that exist are drawn — missing weeks are not shown as empty columns.
  */
 export function AuditWeeks({ weeks }: { weeks: AuditCzWeek[] }) {
+  const { active, rootProps, columnProps } = useColumnReadout()
   const shown = auditWeeksForChart(weeks)
   const stacks = shown.map(weekStack)
   const max = Math.max(0, ...stacks.map(s => s.ok + s.elsewhere + s.blamed))
@@ -166,7 +224,7 @@ export function AuditWeeks({ weeks }: { weeks: AuditCzWeek[] }) {
   return (
     <div className="au-days-wrap au-weeks-wrap" data-testid="audit-weeks">
       <div className="au-days-title">Swaps per week <span>Last four stored 7-day windows from cashu.info</span></div>
-      <div className="au-days au-weeks" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }}>
+      <div className="au-days au-weeks" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }} {...rootProps}>
         {shown.map((w, i) => {
           const s = stacks[i]!
           const label = auditWeekLabel(w.start, w.end)
@@ -175,7 +233,17 @@ export function AuditWeeks({ weeks }: { weeks: AuditCzWeek[] }) {
             ? `${label}: ${s.ok} succeeded, ${s.elsewhere} failed elsewhere, ${s.blamed} caused by this mint`
             : `${label}: ${s.ok} succeeded, ${s.elsewhere} failed`
           return (
-            <div className="au-day" key={`${w.start}-${w.end}`} role="img" aria-label={aria}>
+            <div className="au-day" key={`${w.start}-${w.end}`} role="img" aria-label={aria} {...columnProps(i)}>
+              {active === i && (
+                <ColumnReadout i={i} n={shown.length} title={label} rows={s.split ? [
+                  { cls: 'au-seg-ok', text: `${s.ok.toLocaleString('en-US')} succeeded` },
+                  { cls: 'au-seg-else', text: `${s.elsewhere.toLocaleString('en-US')} failed elsewhere` },
+                  { cls: 'au-seg-mint', text: `${s.blamed.toLocaleString('en-US')} caused by this mint` },
+                ] : [
+                  { cls: 'au-seg-ok', text: `${s.ok.toLocaleString('en-US')} succeeded` },
+                  { cls: 'au-seg-fail', text: `${s.elsewhere.toLocaleString('en-US')} failed` },
+                ]} />
+              )}
               <span className="au-day-count">{count > 0 ? count.toLocaleString('en-US') : ''}</span>
               <div className="au-day-col">
                 {s.split ? (

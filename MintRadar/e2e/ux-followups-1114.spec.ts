@@ -15,7 +15,7 @@ test('list view: Reviews is a column, Reliability the last one (default sort)', 
   await page.setViewportSize({ width: 1024, height: 844 })
   await page.goto('/')
   const header = page.locator('.mint-list-table thead th:visible')
-  await expect(header).toHaveText(['Mint', 'Last 30 days', 'Latency', 'Uptime 30 d', 'Reviews', 'Software', 'Reliability'])
+  await expect(header).toHaveText(['Mint', 'Last 24 h', 'Latency', 'Uptime 24 h', 'Reviews', 'Software', 'Reliability'])
   const alpha = page.locator('.mint-list-row', { hasText: 'Alpha Mint' })
   await expect(alpha.locator('td.rating-col')).toBeVisible()
   await expect(alpha.locator('td.rating-col')).toContainText('4.2')

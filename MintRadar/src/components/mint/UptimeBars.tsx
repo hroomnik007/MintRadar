@@ -14,16 +14,23 @@ import './UptimeBars.css'
 /** How long a readout opened by a tap stays (ms). */
 export const TOUCH_READOUT_MS = 4000
 
-export function UptimeBars({ days, variant = 'card', className = '', readouts, unit = 'day' }: {
+export function UptimeBars({ days, variant = 'card', className = '', readouts, unit = 'day', selectable, onSelect, selectHint }: {
   days: ReadonlyArray<number | null> | null | undefined
   variant?: 'card' | 'wide'
   className?: string
   readouts?: ReadonlyArray<{ date: string; text: string }>
   /** 'hour': the 24 hourly bars of the home cards (owner 2026-11-22); same colours, same thresholds. */
   unit?: 'day' | 'hour'
+  /** Mint Detail (owner 2026-11-26): the bars with an outage open it in the History tab. A mouse click opens it; on touch
+   *  the first tap shows the readout with `selectHint` ("Tap again to see it in History") and a second tap opens it. */
+  selectable?: ReadonlyArray<boolean>
+  onSelect?: (i: number) => void
+  selectHint?: { mouse: string; touch: string }
 }) {
   const [hover, setHover] = useState<number | null>(null)
   const [touchOpen, setTouchOpen] = useState(false)
+  // The last pointer kind: keeps a touch tap from also counting as a click.
+  const lastPointer = useRef<'mouse' | 'touch'>('mouse')
   const rootRef = useRef<HTMLDivElement | null>(null)
   // A readout opened by touch closes on a tap outside the bars and after TOUCH_READOUT_MS.
   useEffect(() => {
@@ -45,6 +52,8 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts, u
     return Math.min(n - 1, Math.max(0, Math.floor(((clientX - r.left) / r.width) * n)))
   }
   const tip = hover !== null && readouts?.[hover] ? readouts[hover] : null
+  const canSelect = (i: number | null): i is number => i !== null && onSelect !== undefined && selectable?.[i] === true
+  const hint = canSelect(hover) && selectHint ? selectHint[touchOpen ? 'touch' : 'mouse'] : null
   // Near either end the readout is pinned to that edge so it never sticks out of the panel.
   // The hourly readout ("11:00-12:00 UTC  100% uptime") is wider than a card's half, so it pins to an edge from the
   // 40 % / 60 % mark on; the day readout of Mint Detail keeps its 3 bars.
@@ -53,7 +62,7 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts, u
   const tipAlign = hover === null ? 'mid' : hover < edge ? 'start' : hover > n - 1 - edge ? 'end' : 'mid'
   return (
     <div
-      className={`uptime-bars uptime-bars-${variant}${readouts ? ' has-readouts' : ''} ${className}`.trim()}
+      className={`uptime-bars uptime-bars-${variant}${readouts ? ' has-readouts' : ''}${canSelect(hover) ? ' is-selectable' : ''} ${className}`.trim()}
       role="img"
       aria-label={uptimeBarsSummary(days, unit)}
       style={{ ['--n' as string]: n }}
@@ -62,15 +71,25 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts, u
       ref={rootRef}
       onPointerMove={readouts ? e => {
         if (e.pointerType !== 'mouse' && !touchOpen) return
+        if (e.pointerType === 'mouse') lastPointer.current = 'mouse'
         const i = dayAt(e.currentTarget, e.clientX)
         if (i !== null) setHover(i)
       } : undefined}
       onPointerDown={readouts ? e => {
-        if (e.pointerType === 'mouse') return
+        if (e.pointerType === 'mouse') { lastPointer.current = 'mouse'; return }
         const i = dayAt(e.currentTarget, e.clientX)
         if (i === null) return
+        lastPointer.current = 'touch'
+        // A second tap on the same bar while its readout is open opens it (only the bars with an outage).
+        if (touchOpen && hover === i && canSelect(i)) { setTouchOpen(false); setHover(null); onSelect?.(i); return }
         setHover(i)
         setTouchOpen(true)
+      } : undefined}
+      onClick={onSelect ? e => {
+        // Touch is handled on pointerdown (tap, then tap again); a click from a mouse or pen opens the day at once.
+        if (lastPointer.current === 'touch') return
+        const i = dayAt(e.currentTarget, e.clientX)
+        if (canSelect(i)) onSelect(i)
       } : undefined}
       onPointerLeave={readouts ? e => { if (e.pointerType === 'mouse') setHover(null) } : undefined}
     >
@@ -95,6 +114,7 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts, u
         >
           <span className="ub-tip-date">{tip.date}</span>
           <span className="ub-tip-text">{tip.text}</span>
+          {hint && <span className="ub-tip-hint">{hint}</span>}
         </div>
       )}
     </div>

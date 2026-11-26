@@ -7,7 +7,7 @@ import { Fragment, useEffect, useState, useMemo, useCallback, useRef, lazy, Susp
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { UptimeBars } from '@/components/mint/UptimeBars'
-import { uptimeDayReadouts } from '@/utils/uptimeBars'
+import { outageDays, utcDayOfBar, uptimeDayReadouts } from '@/utils/uptimeBars'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcStar } from '@/components/mint/IcStar'
 import { ChangeDate, PendingTag } from '@/components/mint/ChangeDate'
@@ -493,7 +493,11 @@ function MintDetailContent({ url }: { url: string }) {
     return () => clearTimeout(t)
   }, [clientLatency])
   const [activeTab, setActiveTab] = useState<MintTab>('overview')
+  // A daily bar with an outage opens the History tab with that day's outages marked (owner, 2026-11-26). `seq` makes a
+  // second click on the same day scroll to it again.
+  const [historyFocus, setHistoryFocus] = useState<{ start: number; end: number; seq: number } | null>(null)
   const selectTab = (tab: MintTab) => {
+    if (tab !== 'history') setHistoryFocus(null)
     setActiveTab(tab)
     const newHash = `#${tab}`
     if (window.location.hash !== newHash) window.history.replaceState(null, '', newHash)
@@ -1435,7 +1439,18 @@ function MintDetailContent({ url }: { url: string }) {
               </span>
             )}
           </div>
-          <UptimeBars days={knownMint.uptimeDaily30} variant="wide" readouts={uptimeDayReadouts(knownMint.uptimeDaily30, outagesData?.outages, now)} />
+          <UptimeBars
+            days={knownMint.uptimeDaily30}
+            variant="wide"
+            readouts={uptimeDayReadouts(knownMint.uptimeDaily30, outagesData?.outages, now)}
+            selectable={outageDays(knownMint.uptimeDaily30.length, outagesData?.outages, now)}
+            selectHint={{ mouse: 'Click to see it in History', touch: 'Tap again to see it in History' }}
+            onSelect={i => {
+              const day = utcDayOfBar(i, knownMint.uptimeDaily30!.length, now)
+              setHistoryFocus(f => ({ ...day, seq: (f?.seq ?? 0) + 1 }))
+              selectTab('history')
+            }}
+          />
           <div className="uptime-scale" aria-hidden="true">
             <span>{new Date(now - 29 * 86_400_000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
             <span>Today</span>
@@ -1561,6 +1576,8 @@ function MintDetailContent({ url }: { url: string }) {
               outagesData={outagesData}
               lastErrorText={lastErrorText}
               versionHistory={versionHistory}
+              focus={historyFocus}
+              now={now}
             />
           )}
 

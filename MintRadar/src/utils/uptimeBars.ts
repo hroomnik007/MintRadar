@@ -44,6 +44,28 @@ function downText(ms: number): string {
  * outages are cut at midnight UTC, so one that ran over two days counts on each day for its own part. Oldest first, the
  * last entry is today (the same order as `uptimeDaily30`).
  */
+/** The UTC day of daily bar `i` of `n` (the last bar is today): [start, end) in ms. */
+export function utcDayOfBar(i: number, n: number, now: number): { start: number; end: number } {
+  const start = Math.floor(now / DAY_MS) * DAY_MS - (n - 1 - i) * DAY_MS
+  return { start, end: start + DAY_MS }
+}
+
+/** Whether an outage overlaps [start, end) (an ongoing one runs to `now`). */
+export function outageOverlaps(o: DayOutage, start: number, end: number, now: number): boolean {
+  const s = Date.parse(o.startedAt)
+  if (!Number.isFinite(s)) return false
+  const e = s + Math.max(0, o.durationMs)
+  return Math.min(e, end, now) - Math.max(s, start) > 0
+}
+
+/** Per daily bar: whether an outage fell on that UTC day (Mint Detail opens it in the History tab, owner 2026-11-26). */
+export function outageDays(n: number, outages: ReadonlyArray<DayOutage> | null | undefined, now: number): boolean[] {
+  return Array.from({ length: n }, (_, i) => {
+    const { start, end } = utcDayOfBar(i, n, now)
+    return (outages ?? []).some(o => outageOverlaps(o, start, end, now))
+  })
+}
+
 export function uptimeDayReadouts(
   days: ReadonlyArray<number | null>,
   outages: ReadonlyArray<DayOutage> | null | undefined,

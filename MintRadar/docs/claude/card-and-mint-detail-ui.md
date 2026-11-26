@@ -615,6 +615,11 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/mint.html`; styles in the
   to the panel edge for the first and last three bars; the hovered bar gets an outline. Mouse only (`pointerType`), not on
   the cards (they are links) and not on touch; `aria-hidden`, the summary sentence stays the accessible name.
   Spec: `e2e/mint-detail-day-readout.spec.ts`.
+  **Outage day opens History (owner, 2026-11-26):** a bar whose UTC day has an outage (`outageDays()`) is clickable:
+  the readout adds "Click to see it in History" (mouse) and a click opens the History tab with that day's outages marked
+  in "What happened" (`.md-ev-focus`, `data-focus`, red wash + red left rule) and scrolled into view. On touch the first
+  tap shows the readout with "Tap again to see it in History", a second tap on the same bar opens it. The mark is cleared
+  when another tab is picked. Spec: `e2e/ui-followups-1126.spec.ts`.
 - **Tabs:** on phones (<=768px) the five tabs are equal grid columns, no sideways scroll (owner, 2026-11-18); 13px below 375px.
 - The Overview sidebar (gauge, breakdown, units, keysets) is unchanged in 4a; phase 4b replaces it.
 
@@ -686,6 +691,10 @@ Styles in the "phase 4b" block of `MintDetail.css`.
   count, attempts it stops before sending are not swaps; same facts as `scoring-and-probing.md`, nothing about amounts or
   frequency, which we do not know) and "Data from cashu.info, synced … Open this mint on cashu.info" (the old "Open on
   cashu.info →" link).
+  **Column readout (owner, 2026-11-26):** in Swaps per day and Swaps per week, hovering a column (mouse), tapping it
+  (touch) or focusing it (keyboard, each column is a tab stop) shows its date and figures above it (`.au-day-tip`,
+  `data-testid="audit-day-readout"`, aria-hidden: the column's aria-label says the same) and dims the other columns. A tap
+  elsewhere, a second tap on the column or Escape closes it. Spec: `e2e/ui-followups-1126.spec.ts`.
 - **Recent swaps** in its own panel; the Result is text, not a chip: "Succeeded" for cashu.info's OK, any other state in
   the source's words (amber), neutral rows muted. The whole tab is `.md-audit` (one grid column `minmax(0, 1fr)`, so the
   swap table never widens the page).
