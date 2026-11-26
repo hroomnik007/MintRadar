@@ -2855,13 +2855,21 @@
 @media (max-width: 768px) {
   .view-toggle { display: none; }
 }
-/* Phones: "Add mint" is the plus alone (its name stays "Add mint"); the status dot sits at the start of the sentence. */
+/* Phones: "Add a mint" keeps its label like on the desktop (it was the plus alone until 2026-11-26); the Sort button gives
+   up the word "Sort:" for a small arrows icon to make room (see SortMenu). At the narrowest phones the label shortens to
+   "Add" (the accessible name stays "Add a mint"); the width is set by the measurement in e2e/addmint-mobile-row.spec.ts.
+   The status dot sits at the start of the sentence. */
 @media (max-width: 600px) {
-  .submit-btn .submit-btn-label { display: none; }
-  .submit-btn { padding-inline: 10px; }
+  .dashboard-controls .submit-btn { padding-inline: 12px; gap: 6px; white-space: nowrap; }
+  .sort-select-prefix { display: none; }
+  .sort-select-icon { display: inline-block; vertical-align: -2px; margin-right: 6px; color: var(--text2); }
+}
+@media (max-width: 330px) {
+  .dashboard-controls .submit-btn .submit-btn-more { display: none; }
   .dash-intro .dash-status-btn { align-items: flex-start; }
   .dash-intro .dash-status-live { margin-top: 6px; transform: none; }
 }
+.sort-select-icon { display: none; }
 /* The status sentence is one run of text at every width (older rules gave the latency note its own row). */
 .dash-intro .dash-status-note,
 .dash-intro .dash-status-time { display: inline; margin: 0; padding: 0; font-size: inherit; color: inherit; flex: none; }
@@ -2961,3 +2969,27 @@
 .dashboard .page-head-desc-line { display: block; }
 .dashboard-controls .submit-btn { border-color: var(--action); color: var(--action); }
 .dashboard-controls .submit-btn:hover { border-color: var(--action); background: var(--action-soft); color: var(--action-ink); }
+
+/* Add a mint / Mint QR polish (2026-11-26).
+   - Touch: the Add a mint button and the sort button reach 44px through an invisible ::before (vertical only, 3px each side of the 38px inside the border; the
+     visible 40px stay, the row gap is 6px so the extensions never meet another control's).
+   - The dialog follows the visible part of the page (--vv-top / --vv-h from useVisualViewportFit): with the on-screen
+     keyboard open it is centred above the keyboard, scrolls inside itself, and its buttons stay at the bottom of the box.
+   - "Already tracked" preview: neutral (not the green of a mint that can be added). */
+@media (pointer: coarse) {
+  .dashboard-controls .submit-btn, .dashboard-controls .sort-menu .sort-select { position: relative; }
+  .dashboard-controls .submit-btn::before, .dashboard-controls .sort-menu .sort-select::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -3px; bottom: -3px;
+  }
+}
+@media (pointer: coarse), (max-width: 600px) {
+  /* 16px stops iOS from zooming the page when the field is tapped (the Single field already has it). */
+  .submit-modal .bulk-textarea { font-size: 16px; }
+}
+.submit-modal-overlay { top: var(--vv-top, 0px); bottom: auto; height: var(--vv-h, 100%); }
+.submit-modal { max-height: calc(var(--vv-h, 100dvh) - 24px); }
+.submit-modal .submit-modal-actions { position: sticky; bottom: -24px; margin: 0 -24px -24px; padding: 8px 24px 24px; background: var(--surface); z-index: 1; }
+.submit-probe-preview.submit-tracked { background: var(--bg3); border-color: var(--border-strong); }
+.submit-tracked .submit-probe-name { color: var(--text); }
+.submit-tracked .submit-probe-meta { color: var(--text2); }
+.submit-tracked .submit-probe-meta a { color: var(--action); text-decoration: underline; text-underline-offset: 2px; font-family: var(--font-body); }

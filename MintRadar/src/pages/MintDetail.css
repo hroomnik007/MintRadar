@@ -3098,3 +3098,14 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 }
 .mint-detail .md-header-bare .md-back .md-back-label { display: inline; }
 .md-not-tracked-body code { display: inline-block; max-width: 100%; vertical-align: bottom; }
+
+/* Mint QR polish (2026-11-26). The URL is shown whole (a wrapping read-only field, was one line cut with an ellipsis) with
+   Copy under it at the full width and 44px tall; the close button gets a 44px touch area through an invisible ::before
+   (the visible 32px stay); the white frame is slimmer because the code carries its own 4-module quiet zone now. */
+.qr-modal-code-frame { padding: 8px; }
+.qr-modal-url-row { flex-direction: column; align-items: stretch; gap: 8px; }
+.qr-modal-url { flex: none; width: 100%; box-sizing: border-box; resize: none; overflow: hidden; line-height: 1.4; font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; text-overflow: clip; }
+.qr-modal-url:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+.qr-modal-copy { width: 100%; min-height: 44px; }
+.qr-modal-close { position: relative; }
+.qr-modal-close::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }

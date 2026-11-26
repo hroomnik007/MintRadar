@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, ChevronDown } from 'lucide-react'
+import { ArrowUpDown, Check, ChevronDown } from 'lucide-react'
 
 /**
  * The Mints page sort control in the site's own style (owner, 2026-11-20: the native list looked like a system window,
@@ -55,7 +55,11 @@ export function SortMenu<T extends string>({ value, options, onChange, label = '
           if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); openAt(selectedIndex) }
         }}
       >
-        <span className="sort-select-text">Sort: {current}</span>
+        <span className="sort-select-text">
+          {/* Phones (<= 600px) drop the word and show the arrows instead, so "Add a mint" fits beside it on one row. */}
+          <ArrowUpDown size={14} aria-hidden="true" className="sort-select-icon" />
+          <span className="sort-select-prefix">Sort: </span>{current}
+        </span>
         <ChevronDown size={16} aria-hidden="true" className="sort-select-chevron" />
       </button>
       {open && (

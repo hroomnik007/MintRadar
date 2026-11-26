@@ -15,6 +15,7 @@ import { LoadError, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { ROUTE_META_BY_PATH } from '@/utils/pageMeta'
 import { useModalFocus } from '@/hooks/useModalFocus'
+import { useVisualViewportFit } from '@/hooks/useVisualViewportFit'
 
 import type { MintStatus } from '@core/mint/api'
 import { SortMenu } from '@/components/SortMenu'
@@ -704,6 +705,13 @@ export default function Dashboard() {
   const [searchFocused, setSearchFocused] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
+  const { data: knownMintsData, isLoading: knownLoading, isError: knownIsError, refetch: refetchKnown } = useKnownMints()
+  // Only when there is nothing to show: a failed background refresh keeps the data already loaded.
+  const knownError = knownIsError && knownMintsData === undefined
+  // Every URL MintRadar already tracks (the same normalised form the Single field submits): the Add a mint preview says
+  // "Already tracked" for these and does not offer to submit them (the server still answers isNew: false for a re-submit).
+  const knownUrlSet = useMemo(() => new Set((knownMintsData ?? []).map(m => m.url)), [knownMintsData])
+
   const submitTrimmed = submitInput.trim()
   const inputClass = useMemo(() => classifySubmitInput(submitInput), [submitInput])
   const lookupPubkey = inputClass.kind === 'npub' ? inputClass.pubkey : null
@@ -711,8 +719,10 @@ export default function Dashboard() {
   const lookupLoading = lookupPubkey !== null && lookupResult === null
   // The one URL the Single tab previews and submits: a typed https URL, or the mint a key's announcement points to.
   const submitUrl = inputClass.kind === 'url' ? inputClass.url : lookupResult?.outcome === 'found' ? lookupResult.url : ''
+  const submitTracked = submitUrl !== '' && knownUrlSet.has(submitUrl)
+  const trackedMint = submitTracked ? (knownMintsData ?? []).find(m => m.url === submitUrl) : undefined
   const probeState: 'idle' | 'loading' | 'success' | 'error' =
-    submitUrl === '' ? 'idle'
+    submitUrl === '' || submitTracked ? 'idle'
     : probe.url === submitUrl ? probe.state
     : 'loading'
   const probeResult = probe.url === submitUrl && probeState === 'success' ? probe.result : null
@@ -720,7 +730,7 @@ export default function Dashboard() {
   // An empty field shows no reason line (the description and the helper above already say it); the Submit button then
   // points assistive technology at those two instead of at the empty status region.
   const submitEmpty = inputClass.kind === 'empty'
-  const submitDisabled = probeState !== 'success' || submitState === 'loading'
+  const submitDisabled = submitTracked || probeState !== 'success' || submitState === 'loading'
 
   // Bulk submit state
   const [bulkInput, setBulkInput] = useState('')
@@ -751,9 +761,6 @@ export default function Dashboard() {
   // "how many mints we track" is /api/mints/known, which is exactly what
   // /api/stats counts too (both are an unfiltered `SELECT ... FROM mints`).
   useNostrDiscovery()
-  const { data: knownMintsData, isLoading: knownLoading, isError: knownIsError, refetch: refetchKnown } = useKnownMints()
-  // Only when there is nothing to show: a failed background refresh keeps the data already loaded.
-  const knownError = knownIsError && knownMintsData === undefined
 
   // Grouped once over every known mint (not just the currently filtered/shown
   // set) so a "Same operator" badge still reflects the full network, not just
@@ -980,6 +987,9 @@ export default function Dashboard() {
     }
   }
 
+  // The on-screen keyboard covers the lower part of the page without resizing it: keep the dialog in what is visible.
+  useVisualViewportFit(showSubmit)
+
   // Single <-> Bulk: focus follows the tab to its field, deliberately (the first mount is handled by useModalFocus).
   const prevSubmitTab = useRef(submitTab)
   const tabKeyNav = useRef(false) // arrow/Home/End on the tabs keeps focus on the tab (roving tabindex)
@@ -1097,7 +1107,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!showSubmit) return
-    if (submitUrl === '') return
+    if (submitUrl === '' || submitTracked) return // a tracked mint needs no probe: the preview says "Already tracked"
     // Same rule as the lookup: the preview belongs to the URL it was probed for; a stale answer is dropped
     // (and the request aborted when the URL changes or the modal closes).
     const ctrl = new AbortController()
@@ -1138,7 +1148,7 @@ export default function Dashboard() {
         })
     }, 600)
     return () => { ctrl.abort(); clearTimeout(timer) }
-  }, [submitUrl, showSubmit])
+  }, [submitUrl, showSubmit, submitTracked])
 
   function handleSubmitMint() {
     // aria-disabled keeps the button clickable, so the guard lives here.
@@ -1281,7 +1291,6 @@ export default function Dashboard() {
   const bulkDuplicate = bulkProgress.filter(p => p.status === 'duplicate').length
   const bulkFailed = bulkProgress.filter(p => p.status === 'failed').length
   const bulkTone: 'success' | 'warning' | 'error' = bulkFailed === 0 ? 'success' : bulkAdded + bulkDuplicate === 0 ? 'error' : 'warning'
-  const knownUrlSet = useMemo(() => new Set((knownMintsData ?? []).map(m => m.url)), [knownMintsData])
   const bulkValidCount = bulkParsed.valid.length
   const bulkAlreadyTracked = knownMintsData ? bulkParsed.valid.filter(u => knownUrlSet.has(u)).length : null
   const bulkOverBy = bulkValidCount - MAX_BULK_URLS
@@ -1407,7 +1416,7 @@ export default function Dashboard() {
           </button>
         )}
         <button type="button" className="submit-btn" ref={submitBtnRef} onClick={openSubmit} aria-label="Add a mint">
-          <IcPlus /> <span className="submit-btn-label">Add a mint</span>
+          <IcPlus /> <span className="submit-btn-label">Add<span className="submit-btn-more"> a mint</span></span>
         </button>
       </div>
 
@@ -1749,7 +1758,7 @@ export default function Dashboard() {
                       onKeyDown={e => { if (e.key === 'Enter' && !submitDisabled) handleSubmitMint() }}
                       aria-describedby="submit-helper submit-status"
                     />
-                    <div className="submit-input-hint" id="submit-helper">https:// is added if missing · 20 per hour.</div>
+                    <div className="submit-input-hint" id="submit-helper">https:// is added to a bare address, http:// is not accepted · 20 per hour.</div>
                     {/* One status region for everything the field produces: the reason for an unusable value, the key
                         lookup and the mint preview. */}
                     <div id="submit-status" className="submit-status-reserve" role="status" aria-live="polite">
@@ -1762,6 +1771,16 @@ export default function Dashboard() {
                         <div className="submit-found">
                           <span>Announced mint:</span>
                           <span className="submit-found-url" title={lookupResult.url}>{lookupResult.url}</span>
+                        </div>
+                      )}
+                      {submitTracked && (
+                        <div className="submit-probe-preview submit-tracked" data-testid="submit-tracked">
+                          <div className="submit-probe-name">Already tracked</div>
+                          <div className="submit-probe-meta">
+                            <span>{trackedMint !== undefined ? mintDisplayName(trackedMint) : getHostname(submitUrl)}</span>
+                            <span>·</span>
+                            <Link to={`/mint/${encodeURIComponent(submitUrl)}`} onClick={() => setShowSubmit(false)}>Open mint page</Link>
+                          </div>
                         </div>
                       )}
                       {probeState === 'loading' && <div className="submit-probe-loading">Checking mint…</div>}
@@ -1823,7 +1842,7 @@ export default function Dashboard() {
                     backend/src/index.ts (no shared workspace between the two
                     packages, so this is a manually-synced number like
                     testMints.ts/auditScore.ts — update both if either changes). */}
-                <div className="submit-input-hint" id="bulk-limits">https:// is added if missing · up to 100 mints · 10 per hour.</div>
+                <div className="submit-input-hint" id="bulk-limits">https:// is added to a bare address, http:// is not accepted · up to 100 mints · 10 per hour.</div>
                 {!bulkRunning && !bulkDone && (
                   <>
                     <label htmlFor="bulk-input" className="sr-only">Mint URLs, one per line</label>
