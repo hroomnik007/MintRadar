@@ -707,7 +707,8 @@ export default function Stats() {
   interface ReliabilityMover { url: string; name: string | null; delta: number }
   interface ReliabilityMoversResponse { period: '7d' | '30d'; risers: ReliabilityMover[]; fallers: ReliabilityMover[] }
 
-  const moversChanges = methodologyChangesInWindow(moversPeriod === '7d' ? 7 : 30)
+  // The note is shown on the 7d view only (owner, 2026-11-26): on 30d it listed five changes in a long line.
+  const moversChanges = moversPeriod === '7d' ? methodologyChangesInWindow(7) : []
   const moversNote = moversMethodologyNote(moversChanges)
 
   const { data: moversData, isPending: moversPending, isFetching: moversFetching } = useQuery({

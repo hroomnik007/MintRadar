@@ -61,11 +61,11 @@ test('watchlist sync never writes the signed-in pubkey to the console', async ({
 })
 
 async function openStats(page: Page, width: number) {
-  await page.clock.setFixedTime(new Date('2026-10-20T12:00:00Z'))
+  // The note is on the 7d view only since 2026-11-26: a date whose 7 days hold v2 and v3.
+  await page.clock.setFixedTime(new Date('2026-10-09T12:00:00Z'))
   await page.setViewportSize({ width, height: 900 })
   await page.goto('/stats')
   await networkQuiet(page)
-  await page.locator('.stats-movers-panel').getByRole('button', { name: '30d', exact: true }).click()
 }
 for (const width of [1440, 390]) {
   test(`${width}px: the movers' methodology note sits under the panel head, above the Risers list`, async ({ page }) => {

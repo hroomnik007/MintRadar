@@ -198,20 +198,21 @@ for (const width of WIDTHS) {
 // text that the live page can show for that count (the dates are day-granular, both ends included).
 const NOTE_CASES = [
   // `note7` = the note of the default 7d view (what the waiting block and the first paint show), `note` = the note of `period`.
+  // The 30d view shows no note since 2026-11-26 (owner), whatever its window holds: those cases pin that it is gone.
   { name: '7d window holds three changes', date: '2026-10-28T12:00:00Z', period: '7d', note7: true, note: true },
   { name: '7d window holds two changes', date: '2026-10-30T12:00:00Z', period: '7d', note7: true, note: true },
   // 21 Nov: the 7d window holds only 15 Nov (v9), the n1 text NOTE_HEIGHTS was measured with (2026-11-19).
   { name: '7d window holds one change', date: '2026-11-21T12:00:00Z', period: '7d', note7: true, note: true },
-  { name: '30d window holds five changes, 7d two', date: '2026-10-30T12:00:00Z', period: '30d', note7: true, note: true },
-  { name: '30d window holds five changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds four changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds three changes, 7d none', date: '2026-11-09T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds five changes, 7d none (v5 to v9)', date: '2026-11-23T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds four changes, 7d none (v6, v7, v8, v9)', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds three changes, 7d none (v7, v8, v9)', date: '2026-11-28T12:00:00Z', period: '30d', note7: false, note: true },
-  { name: '30d window holds two changes, 7d none (v8, v9)', date: '2026-12-11T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds five changes, 7d two', date: '2026-10-30T12:00:00Z', period: '30d', note7: true, note: false },
+  { name: '30d window holds five changes, 7d none', date: '2026-11-05T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds four changes, 7d none', date: '2026-11-08T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds three changes, 7d none', date: '2026-11-09T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds five changes, 7d none (v5 to v9)', date: '2026-11-23T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds four changes, 7d none (v6, v7, v8, v9)', date: '2026-11-27T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds three changes, 7d none (v7, v8, v9)', date: '2026-11-28T12:00:00Z', period: '30d', note7: false, note: false },
+  { name: '30d window holds two changes, 7d none (v8, v9)', date: '2026-12-11T12:00:00Z', period: '30d', note7: false, note: false },
   { name: '7d window holds no change', date: '2026-11-05T12:00:00Z', period: '7d', note7: false, note: false },
-  { name: '30d window holds one change, 7d none (v9)', date: '2026-12-14T12:00:00Z', period: '30d', note7: false, note: true },
+  { name: '30d window holds one change, 7d none (v9)', date: '2026-12-14T12:00:00Z', period: '30d', note7: false, note: false },
   // Methodology 9 went live on 2026-11-15: its 30 days end on 2026-12-15.
   { name: '30d window holds no change', date: '2026-12-17T12:00:00Z', period: '30d', note7: false, note: false },
 ] as const
