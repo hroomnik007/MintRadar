@@ -1775,11 +1775,14 @@ export default function Dashboard() {
                       )}
                       {submitTracked && (
                         <div className="submit-probe-preview submit-tracked" data-testid="submit-tracked">
-                          <div className="submit-probe-name">Already tracked</div>
-                          <div className="submit-probe-meta">
-                            <span>{trackedMint !== undefined ? mintDisplayName(trackedMint) : getHostname(submitUrl)}</span>
-                            <span>·</span>
-                            <Link to={`/mint/${encodeURIComponent(submitUrl)}`} onClick={() => setShowSubmit(false)}>Open mint page</Link>
+                          <MintFavicon url={submitUrl} iconUrl={trackedMint?.iconUrl ?? null} size={36} radius={9} />
+                          <div className="submit-tracked-body">
+                            <div className="submit-probe-name">Already tracked</div>
+                            <div className="submit-probe-meta">
+                              <span>{trackedMint !== undefined ? mintDisplayName(trackedMint) : getHostname(submitUrl)}</span>
+                              <span>·</span>
+                              <Link to={`/mint/${encodeURIComponent(submitUrl)}`} onClick={() => setShowSubmit(false)}>Open mint page</Link>
+                            </div>
                           </div>
                         </div>
                       )}

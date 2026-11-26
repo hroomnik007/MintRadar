@@ -92,15 +92,10 @@ test.describe('Mint Detail copy buttons', () => {
     await expectIconCopy(page, link, `${new URL(page.url()).origin}/mint/${encodeURIComponent(ALPHA)}#review-${REVIEW_ID}`)
   })
 
-  test('QR dialog: the mint URL, the button says Copied and goes back to Copy', async ({ page }) => {
+  test('QR dialog: the mint URL, the copy icon swaps for a check and goes back', async ({ page }) => {
     await openMint(page)
     await page.locator('.md-quick-btn', { hasText: 'Mint QR' }).click()
-    const copy = page.locator('.qr-modal-copy')
-    await expect(copy).toHaveText('Copy')
-    await copy.click()
-    await expect(copy).toHaveText('Copied')
-    expect(await clipboard(page)).toBe(ALPHA)
-    await expect(copy).toHaveText('Copy')
+    await expectIconCopy(page, page.getByRole('button', { name: 'Copy mint URL' }), ALPHA)
   })
 })
 
