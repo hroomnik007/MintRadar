@@ -3105,6 +3105,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .qr-modal-mint { text-wrap: balance; overflow-wrap: anywhere; color: var(--text2); }
 .qr-modal-scan { text-align: center; font-size: 13px; line-height: 1.4; color: var(--text3); margin: -6px 0 12px; }
 .qr-modal-url-row { position: relative; display: flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 44px; padding: 6px 6px 6px 12px; background: rgba(0, 0, 0, 0.22); border: 1px solid var(--border); border-radius: 10px; }
+/* Breaks at slashes and dots first (<wbr> after each one, scheme kept whole); overflow-wrap: anywhere is only the fallback for a single over-long token. */
 .qr-modal-url { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.4; color: var(--text2); overflow-wrap: anywhere; word-break: normal; cursor: text; }
 .qr-modal-copy { position: relative; flex-shrink: 0; width: 32px; height: 32px; min-height: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--text2); cursor: pointer; transition: color var(--transition), background var(--transition); }
 .qr-modal-copy:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); border-color: transparent; }
