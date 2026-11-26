@@ -2724,6 +2724,9 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   scroll-margin: 96px;
 }
 .md-ev.md-ev-focus + .md-ev { border-top-color: transparent; }
+/* It fades out when the mark goes (MintDetail HISTORY_FOCUS_MS). */
+.md-ev { transition: background-color .6s ease, box-shadow .6s ease; }
+@media (prefers-reduced-motion: reduce) { .md-ev { transition: none; } }
 
 @media (max-width: 900px) {
   .mint-detail .md-hist-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); }

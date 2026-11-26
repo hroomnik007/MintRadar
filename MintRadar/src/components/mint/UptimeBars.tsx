@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { dayTone, uptimeBarsSummary } from '@/utils/uptimeBars'
 import './UptimeBars.css'
 
@@ -32,6 +32,7 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts, u
   // The last pointer kind: keeps a touch tap from also counting as a click.
   const lastPointer = useRef<'mouse' | 'touch'>('mouse')
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const tipRef = useRef<HTMLDivElement | null>(null)
   // A readout opened by touch closes on a tap outside the bars and after TOUCH_READOUT_MS.
   useEffect(() => {
     if (!touchOpen) return
@@ -43,6 +44,18 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts, u
     document.addEventListener('pointerdown', outside)
     return () => { window.clearTimeout(t); document.removeEventListener('pointerdown', outside) }
   }, [touchOpen, hover])
+  // The readout's width depends on its text (the History hint makes it much wider), so the edge classes alone let it
+  // stick out of the panel (owner, 2026-11-26). After each render it is centred on the bar and clamped to the bars' box;
+  // it is never wider than the box (CSS max-width, the hint wraps onto a second line).
+  useLayoutEffect(() => {
+    const root = rootRef.current, el = tipRef.current
+    if (!root || !el || hover === null || !days || days.length === 0) return
+    const W = root.clientWidth, w = el.offsetWidth
+    const centre = ((hover + 0.5) / days.length) * W
+    el.style.left = `${Math.min(Math.max(0, W - w), Math.max(0, centre - w / 2))}px`
+    el.style.right = 'auto'
+    el.style.transform = 'none'
+  })
   if (!days || days.length === 0) return null
   const n = days.length
   const dayAt = (el: HTMLElement, clientX: number): number | null => {
@@ -107,6 +120,7 @@ export function UptimeBars({ days, variant = 'card', className = '', readouts, u
       })}
       {tip && hover !== null && (
         <div
+          ref={tipRef}
           className={`ub-tip ub-tip-${tipAlign}`}
           style={{ ['--x' as string]: `${((hover + 0.5) / n) * 100}%` }}
           aria-hidden="true"

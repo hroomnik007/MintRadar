@@ -618,8 +618,11 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/mint.html`; styles in the
   **Outage day opens History (owner, 2026-11-26):** a bar whose UTC day has an outage (`outageDays()`) is clickable:
   the readout adds "Click to see it in History" (mouse) and a click opens the History tab with that day's outages marked
   in "What happened" (`.md-ev-focus`, `data-focus`, red wash + red left rule) and scrolled into view. On touch the first
-  tap shows the readout with "Tap again to see it in History", a second tap on the same bar opens it. The mark is cleared
-  when another tab is picked. Spec: `e2e/ui-followups-1126.spec.ts`.
+  tap shows the readout with "Tap again to see it in History", a second tap on the same bar opens it. The mark fades
+  after 4 s (`HISTORY_FOCUS_MS` in MintDetail, 0.6 s transition, none under reduced motion) and is cleared at once when
+  another tab is picked. The readout (any bar) is centred on its bar and clamped to the bars' box by measurement
+  (`useLayoutEffect` in `UptimeBars`), never wider than the box (the hint wraps onto a second line on phones): with the
+  hint it stuck out of the panel near the right edge. Spec: `e2e/ui-followups-1126.spec.ts`.
 - **Tabs:** on phones (<=768px) the five tabs are equal grid columns, no sideways scroll (owner, 2026-11-18); 13px below 375px.
 - The Overview sidebar (gauge, breakdown, units, keysets) is unchanged in 4a; phase 4b replaces it.
 
