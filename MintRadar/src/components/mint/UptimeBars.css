@@ -43,11 +43,17 @@
   background: var(--elevated);
   box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
   white-space: nowrap;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 2px;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
   pointer-events: none;
 }
 .ub-tip-start { left: 0; transform: none; }
 .ub-tip-end { left: auto; right: 0; transform: none; }
 .ub-tip-date { font-size: var(--fs-xs); color: var(--text3); }
 .uptime-bars.is-selectable { cursor: pointer; }
-.ub-tip-hint { font-size: var(--fs-xs); color: var(--action); }
+.ub-tip-hint { font-size: var(--fs-xs); color: var(--action); flex-basis: auto; }
 .ub-tip-text { font-size: var(--fs-xs); color: var(--text); font-variant-numeric: tabular-nums; }

@@ -64,10 +64,16 @@ test('1440px: clicking an outage day opens History with that outage marked; a fi
   await expect(marked).toHaveCount(1)
   await expect(marked).toContainText('Not answering for 30 min')
   await expect(marked).toBeInViewport()
-  // Leaving History clears the mark.
+  // The mark fades after a few seconds (HISTORY_FOCUS_MS, 4 s), it does not stay on.
+  await expect(marked).toHaveCount(0, { timeout: 8000 })
+  // Picking the day again marks it again; leaving History clears the mark at once.
+  await page.locator('.md-trace').scrollIntoViewIfNeeded()
+  const again = await barPoint(page, 27)
+  await page.mouse.click(again.x, again.y)
+  await expect(marked).toHaveCount(1)
   await page.locator('.md-tab', { hasText: 'Overview' }).click()
   await page.locator('.md-tab', { hasText: 'History' }).click()
-  await expect(page.locator('.md-ev[data-focus="true"]')).toHaveCount(0)
+  await expect(marked).toHaveCount(0)
 })
 
 test.describe('touch', () => {
@@ -118,3 +124,22 @@ test.describe('Swaps per day, touch', () => {
     await expect(tip).toHaveCount(0)
   })
 })
+
+// The readout with the History hint is wider than the 3-bar edge rule assumed and stuck out of the panel (owner,
+// 2026-11-26): it is clamped to the bars' box by measurement, and on narrow screens the hint wraps onto a second line.
+for (const width of [1728, 1440, 900, 478, 390, 320]) {
+  test(`${width}px: the readout of every bar, hint included, stays inside the panel`, async ({ page }) => {
+    await openDetail(page, width)
+    const tip = page.getByTestId('uptime-day-readout')
+    const panel = (await page.locator('.md-trace').boundingBox())!
+    for (const i of [0, 1, 5, 14, 20, 24, 26, 27, 28, 29]) {
+      const p = await barPoint(page, i)
+      await page.mouse.move(p.x, p.y)
+      await expect(tip).toBeVisible()
+      const b = (await tip.boundingBox())!
+      expect(b.x, `bar ${i}`).toBeGreaterThanOrEqual(panel.x)
+      expect(b.x + b.width, `bar ${i}`).toBeLessThanOrEqual(panel.x + panel.width + 0.5)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+}

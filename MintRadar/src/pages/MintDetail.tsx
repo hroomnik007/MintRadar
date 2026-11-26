@@ -78,6 +78,9 @@ import { healthRecordFor } from '@/utils/healthRecord'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { NutsTab } from './mintDetail/NutsTab'
 import { HistoryTab } from './mintDetail/HistoryTab'
+
+/** How long the outage picked on the "Last 30 days" bars stays marked in History (ms). */
+const HISTORY_FOCUS_MS = 4000
 import { AuditTab } from './mintDetail/AuditTab'
 import { ReviewsTab } from './mintDetail/ReviewsTab'
 import { OverviewTab } from './mintDetail/OverviewTab'
@@ -496,6 +499,13 @@ function MintDetailContent({ url }: { url: string }) {
   // A daily bar with an outage opens the History tab with that day's outages marked (owner, 2026-11-26). `seq` makes a
   // second click on the same day scroll to it again.
   const [historyFocus, setHistoryFocus] = useState<{ start: number; end: number; seq: number } | null>(null)
+  // The mark is a pointer, not a state: it fades after HISTORY_FOCUS_MS (owner, 2026-11-26; it stayed on for good).
+  const historyFocusSeq = historyFocus?.seq ?? null
+  useEffect(() => {
+    if (historyFocusSeq === null) return
+    const t = window.setTimeout(() => setHistoryFocus(null), HISTORY_FOCUS_MS)
+    return () => window.clearTimeout(t)
+  }, [historyFocusSeq])
   const selectTab = (tab: MintTab) => {
     if (tab !== 'history') setHistoryFocus(null)
     setActiveTab(tab)

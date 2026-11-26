@@ -70,15 +70,16 @@ test('an empty trend draws no marker', async ({ page }) => {
 test.describe('movers note', () => {
   const note = (page: Page) => page.locator('.stats-movers-panel .stats-movers-note')
 
-  test('30d window holds v2 and v3, 7d window holds none', async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00Z'))
+  test('the 7d view names its changes; the 30d view shows no note (owner, 2026-11-26)', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-09T12:00:00Z')) // both windows hold v2 and v3
     await open(page, 1440)
     const panel = page.locator('.stats-movers-panel')
-    await expect(note(page)).toHaveCount(0)
-    await panel.getByRole('button', { name: '30d', exact: true }).click()
     await expect(note(page)).toHaveText('Includes methodology changes on 8 Oct (v2), 9 Oct (v3).')
-    await panel.getByRole('button', { name: '7d', exact: true }).click()
+    await panel.getByRole('button', { name: '30d', exact: true }).click()
+    await expect(panel.getByRole('button', { name: '30d', exact: true })).toHaveClass(/active/)
     await expect(note(page)).toHaveCount(0)
+    await panel.getByRole('button', { name: '7d', exact: true }).click()
+    await expect(note(page)).toHaveText('Includes methodology changes on 8 Oct (v2), 9 Oct (v3).')
   })
 
   test('a window that holds exactly one change names it in the singular', async ({ page }) => {
@@ -88,9 +89,8 @@ test.describe('movers note', () => {
   })
 
   test('it is a muted line in the size of the panel\'s other muted lines', async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00Z'))
+    await page.clock.setFixedTime(new Date('2026-10-09T12:00:00Z'))
     await open(page, 1440)
-    await page.locator('.stats-movers-panel').getByRole('button', { name: '30d', exact: true }).click()
     await expect(note(page)).toBeVisible()
     expect(await note(page).evaluate(n => getComputedStyle(n).fontSize)).toBe('12px') // 12px text floor since 2026-11-18
   })
