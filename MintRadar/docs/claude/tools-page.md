@@ -444,9 +444,9 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
 
 ## Review fixes (2026-11-27)
 
-- The wizard does not offer the unit TIH (`WIZARD_HIDDEN_UNITS`; owner: MSAT stays). Since 2026-11-28 it offers only real
-  currencies (`utils/wizardUnits.ts` `wizardOffersUnit`: sat, msat, three-letter codes): a mint's own token units such as
-  "chf-employee" / "chf-musician" (mint-f8xsif6.cdv.be-bop.dev) are left out.
+- The wizard does not offer the unit TIH (`WIZARD_HIDDEN_UNITS`; owner: MSAT stays). Since 2026-11-28 it offers only sat, usd,
+  eur and msat (`utils/wizardUnits.ts` `WIZARD_UNITS`, owner): a mint's own units ("chf", "chf-employee", "chf-musician"
+  of mint-f8xsif6.cdv.be-bop.dev, TIH) are left out; a new currency is added there on purpose.
 - "Find my mint" has no "→" (G-C); the same for "Browse tracked mints" and the Learn CTA links.
 - The tool a link opens (`#pick`, `#token`, `#payment-request`; `.tool-anchor-hl`, 2.8 s) is highlighted in copper
   (`--action` border, `--action-soft` ring) and its focus ring is copper too (owner; it was green, the colour of a
