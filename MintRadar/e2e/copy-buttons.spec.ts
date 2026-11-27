@@ -2,6 +2,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import { nip19 } from 'nostr-tools'
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 import { installApiMocks, mockRelays, probePayload, MOCK_MINTS } from './fixtures/mocks'
+import { openFolded } from './fixtures/docPage'
 import { ATTESTATION_NPUB } from '../src/constants/healthAssertionPage'
 import { ATTESTATION_PUBKEY_HEX } from '../src/utils/healthAssertionConstants'
 
@@ -102,6 +103,7 @@ test.describe('Mint Detail copy buttons', () => {
 test.describe('code blocks (/for-wallets)', () => {
   test('every copy button copies exactly the code shown next to it, and says Copied then Copy', async ({ page }) => {
     await page.goto('/for-wallets')
+    await openFolded(page) // the health-assertion format is folded since 2026-11-27
     const blocks = page.locator('.doc-code')
     await expect(blocks.first()).toBeVisible()
     const n = await blocks.count()

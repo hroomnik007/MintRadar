@@ -10,8 +10,9 @@ import { layoutReady } from './fixtures/settle'
 // Findings that are application issues are listed in docs/claude/e2e-conventions.md ("Findings"). Where the app has a known violation
 // the test asserts the CURRENT count as an upper bound (so it can only get better) and says so next to the number.
 
-/** Landmarks per route: [nav landmarks]. The doc pages carry a second nav ("On this page"). main and footer are one everywhere. */
-const NAV_COUNT: Record<string, number> = { about: 2, methodology: 2, 'for-wallets': 2 }
+/** Landmarks per route: [nav landmarks]. The long doc pages carry a second nav ("On this page"; /about has none since
+ *  2026-11-27). main and footer are one everywhere. */
+const NAV_COUNT: Record<string, number> = { methodology: 2, 'for-wallets': 2 }
 
 async function navNames(page: Page): Promise<string[]> {
   return page.evaluate(() => Array.from(document.querySelectorAll('nav, [role=navigation]')).map(n => n.getAttribute('aria-label')?.trim() ?? (n.getAttribute('aria-labelledby') ? document.getElementById(n.getAttribute('aria-labelledby')!)?.textContent?.trim() ?? '' : '')))

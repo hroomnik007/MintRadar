@@ -93,7 +93,8 @@ test('the label carries no verdict wording', async ({ page }) => {
 test.describe('the operator rule is described as it works', () => {
   const SENTENCE = "Reviews from a key that is both listed as the mint's Nostr contact and the author of the mint's NIP-87 announcement"
 
-  test('Methodology and About say contact AND announcement, and that a contact-only key is counted and labelled', async ({ page }) => {
+  // Since 2026-11-27 About says it in one sentence that links to /methodology#reviews, where the full rule is.
+  test('Methodology says contact AND announcement and that a contact-only key is counted and labelled; About links there', async ({ page }) => {
     await mockRelays(page)
     await installApiMocks(page)
     await page.goto('/methodology')
@@ -103,9 +104,8 @@ test.describe('the operator rule is described as it works', () => {
     await expect(meth).not.toContainText(/written by a mint.s own operator/i)
     await page.goto('/about')
     const about = page.locator('main')
-    await expect(about).toContainText(SENTENCE)
-    await expect(about).toContainText('A review from a key the mint lists only as a contact is counted and carries a neutral label.')
-    await expect(about).not.toContainText(/written by a mint.s own operator/i)
+    await expect(about).toContainText("how reviews from a mint's own operator are handled is on the Methodology page")
+    await expect(about.getByRole('link', { name: 'Methodology', exact: true })).toHaveAttribute('href', '/methodology#reviews')
   })
 
   test('the /for-wallets field table describes operatorCount by the same rule', async ({ page }) => {
