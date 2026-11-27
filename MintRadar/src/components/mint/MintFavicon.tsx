@@ -4,13 +4,15 @@ import { hasIconFailedRecently, markIconFailed } from '@/utils/mintIconFailureCa
 
 interface Props {
   url: string
+  /** The mint's name: the monogram takes its initials from it when it has a usable one (mintFaviconInitials). */
+  name?: string | null | undefined
   iconUrl?: string | null
   size?: number
   radius?: number
   className?: string
 }
 
-export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '' }: Props) {
+export function MintFavicon({ url, name, iconUrl, size = 22, radius = 5, className = '' }: Props) {
   const hostname = mintHostname(url)
   // Seeded from the failure cache so a mint whose icon recently failed (204 / error)
   // renders straight to the monogram on this mount — no repeat request. See
@@ -46,10 +48,9 @@ export function MintFavicon({ url, iconUrl, size = 22, radius = 5, className = '
     )
   }
 
-  // No icon (or the proxied one failed): a two-letter monogram derived from the
-  // hostname, so each mint gets a distinct placeholder rather than an identical
-  // generic glyph.
-  const initials = mintFaviconInitials(url)
+  // No icon (or the proxied one failed): a two-letter monogram from the mint's name, else from the hostname, so each
+  // mint gets a distinct placeholder rather than an identical generic glyph.
+  const initials = mintFaviconInitials(url, name)
 
   return (
     <div

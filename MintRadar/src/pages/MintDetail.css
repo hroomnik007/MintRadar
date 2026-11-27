@@ -1771,6 +1771,8 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .md-contact-card > div:nth-child(2) { display: contents; }
 .md-contact-type { font-family: var(--font-body); font-size: 14px; font-weight: 400; color: var(--text3); text-transform: none; letter-spacing: 0; margin: 0; }
 .md-contact-val { font-size: 13.5px; text-align: right; }
+/* N6: a Nostr value that is not a key; the muted note uses the body face like the Contact checks line. */
+.md-contact-unrecognised { color: var(--text3); font-family: var(--font-body); }
 .md-contact-card > button { margin-left: 0 !important; }
 
 /* Keysets: hairline rows instead of boxed cards. */
@@ -3113,3 +3115,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .qr-modal-close { position: relative; }
 .qr-modal-close::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
 .qr-modal-copy.is-copied { color: var(--green-bright); }
+
+/* N5 (2026-11-27): the archived mint's place of "Show my latency": same box, not shown, not focusable. */
+.latency-test-slot { visibility: hidden; pointer-events: none; }

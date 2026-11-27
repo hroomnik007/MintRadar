@@ -1477,3 +1477,9 @@
 @media (max-width: 767px) { .nhi-refresh { display: none; } }
 .snr-nut-tag { white-space: nowrap; flex-shrink: 0; min-width: max-content; }
 .stats-page .stats-nut-row { grid-template-columns: 68px minmax(0, 1fr) auto; }
+
+/* G-D (review 2026-11-27): the 30-day bar strip in a Most reliable row, small and inside the row's own height. The
+   rise animation stays off here (five strips rising at once on the page would be the busiest thing on it). */
+.stats-top5-bars.uptime-bars { flex: none; width: 76px; height: 14px; gap: 1px; margin-inline: 8px 4px; }
+.stats-top5-bars.uptime-bars i { animation: none; border-radius: 1px; }
+@media (max-width: 360px) { .stats-top5-bars.uptime-bars { width: 56px; } }

@@ -64,7 +64,7 @@ export default function Module4() {
       <p>
         MintRadar keeps a plain list of Cashu-compatible wallets — no ranking, no reviews, just the current options so you can pick one and get started.
       </p>
-      <Link to="/wallets" className="learn-cta-btn">Browse Cashu wallets →</Link>
+      <Link to="/wallets" className="learn-cta-btn">Browse Cashu wallets</Link>
     </div>
   )
 }

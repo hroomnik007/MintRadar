@@ -74,7 +74,7 @@ for (const [w, h, clipH] of [[1440, 900, 220], [390, 844, 260]] as const) {
 test('a fresh nsec login in the same page is not cleared and shows no notice', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('.navbar-login-btn')).toBeVisible()
-  await page.getByRole('button', { name: /Login via Nostr/i }).click()
+  await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await page.locator('.nostr-method-card', { hasText: 'Nostr key (nsec)' }).click()
   await page.locator('.nostr-nsec-input').fill('0'.repeat(63) + '1')
   await page.getByRole('button', { name: 'Connect' }).click()

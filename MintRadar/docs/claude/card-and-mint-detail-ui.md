@@ -798,3 +798,36 @@ Blocks "Mockup alignment, 2026-11-19" at the end of `MintDetail.css`; `mint.html
 - **N1:** on touch screens, a tap on the 30-day uptime bars (Mint Detail, where readouts exist) shows the day's readout, and sliding moves it.
   - It closes after 4s or on a tap outside. `touch-action: pan-y` is set, so vertical scrolling still works. Mouse behaviour is unchanged.
 - **N5:** "Browse tracked mints →" and "Add a mint" on a not-tracked mint are router links. "Add a mint" opens the add dialog via `state.openAddMint`.
+
+## Review fixes (2026-11-27)
+
+From the live-site review of 2026-11-27 (ids as in that report):
+- **P-A:** the hour labels of the home cards' readouts are plain arithmetic and the day labels use one module-level
+  `Intl.DateTimeFormat` (`utils/uptimeBars.ts`): a new formatter per bar per card was ~600 ms of main thread on a phone
+  (home TBT 1.6-2.1 s -> 0.85-0.9 s, Lighthouse mobile on a local build).
+- **N1:** "How the N is made", Uptime row: the 30-day figure is `uptimeInputs.uptime30dExactPct` cut down to one decimal
+  (`uptime30dShown` + `formatUptime30d`), the same as the "Last 30 days" panel (99.96 reads 99.9, never a rounded 100 next
+  to a panel that says 99.9). The row's tooltip uses the same figure. Older records without the exact share fall back to
+  `uptime30dPct`.
+- **N5, unavailable mint:** the contact bullet says "This mint listed a contact at its last check; MintRadar has no copy of
+  it." when the stored score counted a contact whose text is not stored (`contactSentence(contacts, listedAtLastCheck)`;
+  it said "lists no contact" next to "Contact: Listed at last check"). A 30-day share below 50 % is red
+  (`uptime30dColor`), 0 reads "0" (`formatUptime30d`). The IP row of an offline mint without an address says
+  "Not resolved" (was "Offline"). An archived mint has no "Show my latency" button.
+- **N6:** a Nostr contact that is not a key (`njumpProfileUrl` gives no link; Minibits lists the placeholder "npub…") shows
+  "· format not recognised" (the Contact checks line's own words) and no copy button.
+- **D-D:** "migrat" is no longer an alert word of the operator message (`isMotdAlert`): a lone "migrated" sat in the
+  ochre warning frame without saying where to; "moved to" / "new url" still match, "closing" and "withdraw" were added.
+  The Audit tab says "synced just now" under a minute (was "synced 0s ago"). The breakdown's long audit window reads
+  "6 / 20 in 14 days" (was "6 / 20 · 14d").
+- **D-C:** the History chart's X axis has 12px right padding at every width (the last date was cut on the desktop too).
+- **A2:** NUTs tab rows have no `aria-label`; their name is their text, so a screen reader hears "Supported" /
+  "Not supported".
+- **G-B:** monogram initials come from the mint's name when it has a usable one (`mintFaviconInitials(url, name)`:
+  generic words mint/cashu/ecash/the skipped, a capital inside a word starts a new word: "Kinda Reckless Mint" KR,
+  "WesternBTC Cashu mint" WB); no name, a host-like name or only generic words fall back to the hostname as before.
+  `MintFavicon` takes an optional `name`.
+- **G-A:** the card's data labels ("Latency", "Uptime 24 h", "Reviews"), the review count and the foot line are 13px
+  (`--fs-label`); "24 h" / "Now" and the chips stay 12px.
+- **G-D:** the 30 daily bars also sit in the Compare table's "Uptime 30d" cell (desktop and phone), without the rise
+  animation.

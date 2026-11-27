@@ -20,11 +20,8 @@ import NotFound from '@/pages/NotFound'
 import { StatsPageHead } from '@/components/stats/StatsPageHead'
 import { Stats, MintDetail, Tools, About, Methodology, ForWallets, Watchlist, MintNaddr } from '@/routerLazy'
 
-const lazyFallback = (
-  <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
-)
-
-// The fallback of the long lazy routes (Stats, Tools, Mint Detail, Watchlist, Nostr mint page) is as tall as the viewport, so the footer is already
+// The fallback of the long lazy routes (Stats, Tools, Mint Detail, Watchlist, Nostr mint page, and since 2026-11-27 also About,
+// Methodology and For wallets: CLS 0.11 on a phone) is as tall as the viewport, so the footer is already
 // below the fold when the first frame is painted and does not jump out of view when the page arrives
 // (docs/claude/stats-dashboard-watchlist-ui.md, "Layout shift rule").
 const viewportFallback = (
@@ -50,9 +47,9 @@ export const router = createBrowserRouter([
       { path: 'watchlist', element: <Suspense fallback={viewportFallback}><Watchlist /></Suspense> },
       { path: 'stats', element: <Suspense fallback={statsFallback}><Stats /></Suspense> },
       { path: 'tools', element: <Suspense fallback={viewportFallback}><Tools /></Suspense> },
-      { path: 'about', element: <Suspense fallback={lazyFallback}><About /></Suspense> },
-      { path: 'methodology', element: <Suspense fallback={lazyFallback}><Methodology /></Suspense> },
-      { path: 'for-wallets', element: <Suspense fallback={lazyFallback}><ForWallets /></Suspense> },
+      { path: 'about', element: <Suspense fallback={viewportFallback}><About /></Suspense> },
+      { path: 'methodology', element: <Suspense fallback={viewportFallback}><Methodology /></Suspense> },
+      { path: 'for-wallets', element: <Suspense fallback={viewportFallback}><ForWallets /></Suspense> },
       { path: 'wallets', element: <Wallets /> },
       { path: 'learn', element: <Learn /> },
       { path: 'learn/:moduleId', element: <LearnModule /> },

@@ -63,7 +63,7 @@ test.describe('phone: "+ Add a mint" beside "Sort: ..."', () => {
         if (tightest) {
           expect(s.textClipped, 'the one known tight case ends in an ellipsis').toBe(true)
           expect(s.textNeeded - s.textBox, 'and is short by no more than 24px').toBeLessThanOrEqual(24)
-          await expect(sort).toHaveAttribute('aria-label', 'Sort by: Most reviewed')
+          await expect(sort).toHaveAccessibleName('Sort: Most reviewed') // the full text, also where the box cuts it
         } else {
           expect(s.textClipped, `Sort label "${s.text}" is not cut`).toBe(false)
         }

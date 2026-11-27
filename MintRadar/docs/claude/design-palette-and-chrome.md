@@ -534,3 +534,8 @@ slightly darker panels look better). Only text contrast rises. The QR code of th
   - Source is `scripts/og-image/og-image-mintradar.html`, rendered with `node scripts/render-og-image.mjs` (Playwright Chromium, no new dependency).
   - It is the new `og:image` / `twitter:image` in `index.html` and `backend/src/og.ts` (a new name because X caches by path).
   - `og-image-radar.png` is frozen from now on (SHA-256 pinned in `brandAssetCacheBust.test.ts`).
+
+## Data-label size (2026-11-27)
+
+`--fs-label: 13px` (G-A of the 2026-11-27 review): on the desktop home 758 of ~1,100 text nodes were 12px. The mint
+card's data labels, review count and foot line use it; 12px (`--fs-xs`) stays for times, axis ends and chips.

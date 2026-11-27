@@ -149,7 +149,7 @@ export function MintCard({
     >
       <div className="card-top">
         <div className="card-name-row">
-          <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={36} radius={9} className={isOfflineDegraded ? 'card-avatar-offline' : ''} />
+          <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl ?? null} size={36} radius={9} className={isOfflineDegraded ? 'card-avatar-offline' : ''} />
           <div className="card-id">
             <div className="card-name-line">
               {/* Stretched link: its ::after covers the whole card (see .card-link in Dashboard.css), so the

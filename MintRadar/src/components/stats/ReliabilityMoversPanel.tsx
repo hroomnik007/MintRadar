@@ -84,7 +84,7 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
       const name = getDisplayName(m)
       return (
         <div key={m.url} className="stats-top5-row" {...clickableProps(() => onMintClick(m.url))}>
-          <MintFavicon url={m.url} iconUrl={getIconUrl(m)} size={22} />
+          <MintFavicon url={m.url} name={name} iconUrl={getIconUrl(m)} size={22} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
             {name !== hostname && (

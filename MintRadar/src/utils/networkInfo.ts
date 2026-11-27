@@ -48,11 +48,14 @@ export interface NetworkRows {
   tor: string | null
 }
 
-/** null when there is nothing to show (the card is not rendered). An offline mint without an address shows "Offline" in the IP row. */
+/**
+ * null when there is nothing to show (the card is not rendered). An offline mint without an address shows "Not resolved"
+ * in the IP row (N5, 2026-11-27: "Offline" there read as a value of the IP).
+ */
 export function networkRows(m: Partial<Pick<KnownMint, 'ipAddress' | 'netAsn' | 'netOrg' | 'netCountry' | 'hasOnion' | 'online'>> | null | undefined): NetworkRows | null {
   const country = countryName(m?.netCountry ?? undefined)
   const rows: NetworkRows = {
-    ip: ipv4Address(m?.ipAddress) ?? (m?.online === false ? 'Offline' : null),
+    ip: ipv4Address(m?.ipAddress) ?? (m?.online === false ? 'Not resolved' : null),
     network: networkLabel(m?.netAsn ?? undefined, m?.netOrg ?? undefined),
     country: country ? { name: country } : null,
     tor: torLabel(m?.hasOnion ?? undefined),

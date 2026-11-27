@@ -3,7 +3,7 @@ import { isMotdAlert } from '@/utils/mintProbeDisplay'
 
 describe('isMotdAlert', () => {
   it('flags migration and maintenance MOTDs', () => {
-    expect(isMotdAlert('migrated')).toBe(true)
+    expect(isMotdAlert('Closing on 1 Dec, please withdraw')).toBe(true)
     expect(isMotdAlert('Scheduled maintenance Friday')).toBe(true)
     expect(isMotdAlert('Mint paused')).toBe(true)
     expect(isMotdAlert('moved to https://new.example')).toBe(true)
@@ -11,6 +11,8 @@ describe('isMotdAlert', () => {
 
   it('leaves greetings and empty as quiet', () => {
     expect(isMotdAlert('welcome')).toBe(false)
+    // A lone "migrated" says nothing actionable (review 2026-11-27); a move with a destination matches "moved to".
+    expect(isMotdAlert('migrated')).toBe(false)
     expect(isMotdAlert('gm')).toBe(false)
     expect(isMotdAlert('')).toBe(false)
     expect(isMotdAlert(null)).toBe(false)

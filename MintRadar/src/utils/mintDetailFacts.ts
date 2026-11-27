@@ -45,7 +45,8 @@ export function formatDuration(ms: number): string {
 export interface StoredPart { points: number; max: number }
 /** The four parts of the uptime component and the 30-day figures they used (methodology 7; backend scoreBreakdown.ts). */
 export interface StoredUptimeParts { last24h: StoredPart; last30d: StoredPart; longestOutage: StoredPart; outageCount: StoredPart }
-export interface StoredUptimeInputs { uptime24hPct: number; uptime30dPct: number; outageCount30d: number; longestOutage30dMs: number; ongoingOutage: boolean }
+/** uptime30dExactPct: the unrounded share (absent in a record stored before 2026-11-11). */
+export interface StoredUptimeInputs { uptime24hPct: number; uptime30dPct: number; uptime30dExactPct?: number; outageCount30d: number; longestOutage30dMs: number; ongoingOutage: boolean }
 export interface StoredScoreBreakdown {
   uptime: StoredPart
   /** Absent in a record stored before methodology 7. */

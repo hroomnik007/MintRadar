@@ -39,3 +39,9 @@
 .cmp-remeasure:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: 3px; }
 @media (hover: hover) { .cmp-remeasure:not(:disabled):hover { text-decoration: underline; } }
 .cmp-muted { color: var(--text3); font-weight: 400; font-size: 13px; }
+
+/* G-D (review 2026-11-27): the 30 daily bars under the 30-day uptime figure; as wide as the cell allows, no rise animation
+   (a dialog that opens should not animate four strips at once). */
+.cmp-uptime-30d { width: 100%; }
+.cmp-bars.uptime-bars { width: 100%; max-width: 160px; height: 12px; gap: 1px; }
+.cmp-bars.uptime-bars i { animation: none; border-radius: 1px; }

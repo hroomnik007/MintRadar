@@ -49,12 +49,12 @@ export function SortMenu<T extends string>({ value, options, onChange, label = '
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? `${id}-list` : undefined}
-        aria-label={`${label}: ${current}`}
         onClick={() => (open ? close() : openAt(selectedIndex))}
         onKeyDown={e => {
           if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); openAt(selectedIndex) }
         }}
       >
+        {/* The name is this text (A3, review 2026-11-27): an aria-label "<label>: <current>" differed from "Sort: <current>". */}
         <span className="sort-select-text">
           Sort: {current}
         </span>

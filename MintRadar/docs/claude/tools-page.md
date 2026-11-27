@@ -441,3 +441,8 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
 
 - Phone/tablet order (M10, 2026-11-22, owner's choice): at ≤900px the one column shows Best mint for me first, then Token inspector and Payment request inspector.
   - This is done with CSS `order` (`.tools-col { display: contents }`, `#pick.tool-anchor { order: -1 }`); the DOM order is unchanged.
+
+## Review fixes (2026-11-27)
+
+- The wizard does not offer the unit TIH (`WIZARD_HIDDEN_UNITS`; owner: MSAT stays).
+- "Find my mint" has no "→" (G-C); the same for "Browse tracked mints" and the Learn CTA links.

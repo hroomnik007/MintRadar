@@ -84,7 +84,7 @@ export default function Module3() {
       <p>
         The fastest way to find a mint that fits what you need is the <strong>Best Mint Wizard</strong> in the Tools section. Tell it what matters most to you — speed, reliability, or feature support — and it'll recommend mints based on live data, not guesswork.
       </p>
-      <Link to="/tools" className="learn-cta-btn">Try the Best Mint Wizard →</Link>
+      <Link to="/tools" className="learn-cta-btn">Try the Best Mint Wizard</Link>
     </div>
   )
 }

@@ -8,7 +8,7 @@ async function openLogin(page: Page) {
   await mockRelays(page)
   await installApiMocks(page)
   await page.goto('/')
-  await page.getByRole('button', { name: /Login via Nostr/i }).click()
+  await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
 }
 const titles = (page: Page) => page.locator('.nostr-method-card .nostr-method-title')
@@ -42,7 +42,7 @@ test('"New to Nostr? Get started" opens plain text with app links and generates 
   await expect(titles(page)).toHaveCount(3)
   // Closing the dialog collapses it again.
   await page.getByRole('button', { name: 'Close' }).click()
-  await page.getByRole('button', { name: /Login via Nostr/i }).click()
+  await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await expect(page.getByTestId('new-to-nostr')).toHaveCount(0)
 })
 

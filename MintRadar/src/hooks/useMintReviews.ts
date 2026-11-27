@@ -20,14 +20,15 @@ type ProfileMap = Record<string, { name?: string; nip05?: string; picture?: stri
 // review source (e.g. MintDetail's DB-backed nostrOnly reviews) so they get
 // the same kind:0 profile lookup as the live-fetched reviews, instead of
 // only ever enriching pubkeys this hook found itself.
-export function useMintReviews(mintUrl: string, extraPubkeys: string[] = []) {
+// `enabled` false: no relay request at all (Mint Detail turns it on when the Reviews tab or the review dialog opens).
+export function useMintReviews(mintUrl: string, extraPubkeys: string[] = [], enabled = true) {
   // Reviews are keyed by the URL they were fetched for, so switching mints
   // never shows stale data and loading state is derived instead of set in the effect.
   const [result, setResult] = useState<{ url: string; reviews: MintReview[] }>({ url: '', reviews: [] })
   const [profilesState, setProfilesState] = useState<{ url: string; profiles: ProfileMap }>({ url: '', profiles: {} })
 
   useEffect(() => {
-    if (!mintUrl) return
+    if (!mintUrl || !enabled) return
     let cancelled = false
 
     // maxWait caps how long querySync waits for slow/stalled relays before
@@ -53,7 +54,7 @@ export function useMintReviews(mintUrl: string, extraPubkeys: string[] = []) {
     })
 
     return () => { cancelled = true }
-  }, [mintUrl])
+  }, [mintUrl, enabled])
 
   // extraPubkeys can be a fresh array reference on every render (e.g. derived
   // from a react-query result), so key the effect below off its actual content

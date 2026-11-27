@@ -1,3 +1,4 @@
+import { UptimeBars } from '@/components/mint/UptimeBars'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { archivedUrlSet, withoutArchivedMovers } from '@/utils/reliabilityMovers'
 import { outdatedSoftwareText, TRACKING_HISTORY_TEXT } from '@/utils/tooltipTexts'
@@ -553,7 +554,8 @@ function NetworkHealthComponentRow({ component: c }: { component: NetworkHealthC
           <span className="nhi-row-weight">{c.weight}%</span>
           <InfoTooltip iconSize={11} width={220} about={c.label} text={c.tooltip} />
         </span>
-        <span className="nhi-row-pts" style={{ color }}>{points} <span className="nhi-row-of">of {c.weight}</span></span>
+        {/* "29/30 pts" (S-A, review 2026-11-27): "29 of 30" next to "47 mints online" read as a count of mints. */}
+        <span className="nhi-row-pts" style={{ color }}>{points}<span className="nhi-row-of">/{c.weight} pts</span></span>
       </div>
       <div className="nhi-row-meter" role="img" aria-label={`${c.label}: ${Math.round(c.value)}%`}>
         <i style={{ width: `${Math.min(100, Math.max(0, c.value))}%`, background: color }} />
@@ -1001,10 +1003,12 @@ export default function Stats() {
                   <div key={mint.url} {...clickableProps(() => navigate(`/mint/${encodeURIComponent(mint.url)}`))} className="stats-top5-row">
                     <span className="stats-top5-rank">{idx+1}</span>
                     {/* The mint's icon, as in the movers rows (logo, else initials). */}
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
+                    <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
                       <div className="stats-top5-name">{displayName(mint, duplicateDisplayNames)}</div>
                     </div>
+                    {/* The mint's last 30 days, the site's own bar strip (G-D, review 2026-11-27): in the row, so its height stays. */}
+                    <UptimeBars days={mint.uptimeDaily30} className="stats-top5-bars" />
                     <span className="stats-top5-value" style={{color}}>{uptime}%</span>
                   </div>
                 )
@@ -1019,10 +1023,12 @@ export default function Stats() {
                   <div key={mint.url} {...clickableProps(() => navigate(`/mint/${encodeURIComponent(mint.url)}`))} className="stats-top5-row">
                     <span className="stats-top5-rank">{idx+1}</span>
                     {/* The mint's icon, as in the movers rows (logo, else initials). */}
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={22} />
+                    <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={22} />
                     <div style={{flex:1,minWidth:0}}>
                       <div className="stats-top5-name">{displayName(mint, duplicateDisplayNames)}</div>
                     </div>
+                    {/* The mint's last 30 days, the site's own bar strip (G-D, review 2026-11-27): in the row, so its height stays. */}
+                    <UptimeBars days={mint.uptimeDaily30} className="stats-top5-bars" />
                     <span className="stats-top5-value" style={{color}}>{score}</span>
                   </div>
                 )

@@ -91,7 +91,7 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/watchlist.html`; styles i
   like the other pages. Left panel: h1 "Watchlist", "Keep the mints you use in one short list, the same on every device.",
   the solid copper **"Log in with Nostr"** (it was green "Login via Nostr") with "Browse mints without logging in" beside
   it, then "What is Nostr?". Right panel: three points with an icon each (star, bell, key). The "Watch this mint" dialogs
-  (MintCard, Mint Detail) say "Log in with Nostr" too; the navbar button keeps its accessible name "Login via Nostr".
+  (MintCard, Mint Detail) say "Log in with Nostr" too; the navbar button's accessible name is its text "Log in" since 2026-11-27 (A1; it was "Login via Nostr").
 - **Logged in:** the Mints page cards (`MintCard` with `showAlerts`) in the usual grid, the summary line and the DM
   explainer above them. A one-panel row layout (WatchlistRow) shipped briefly on 2026-11-19 and was reverted the same
   evening: the owner found the rows did not read as clickable. No "Add a mint" button.
@@ -212,6 +212,7 @@ The NHI breakdown dialog still keys off the JS `isMobile` (768 px and below), no
 
 
 **Lazy route fallbacks (Task X, 2026-10-21).** The footer is part of the layout shift too: when a short fallback ("Loading…") is replaced by a long page, the footer leaves the first screen and counts as a shift (0.104 on `/tools` at 390 x 844, 0.0564 before Task U made the page taller; 0.14 on Mint Detail). `App.tsx` therefore gives Stats, Tools and Mint Detail one `viewportFallback` (`min-height: 100vh`), and Mint Detail's root has `min-height: 100vh / 100dvh` in every state (Task Y M, `card-and-mint-detail-ui.md` "Mint Detail minimum height"; it first was `.mint-detail-pending { min-height: 100vh }`, pending state only). Measured with a layout-shift observer on a production build, 3 loads each (identical every time): `/tools` 390 px 0.104 -> 0, 1440 px 0.003 -> 0.0063 (the footer moves INTO view once: the page is shorter than the viewport there); Mint Detail Overview 390 px 0.178 (with the pending stage) / 0.143 -> 0.0605, 1440 px 0.076 -> 0.060. `/tools` was 0.0564 at `68db837d` (W5a) and `1fbd6c8d` (W7a), 0.104 at `4c44f5e9` (after Task U). What remains on Mint Detail is the About and Get in touch panels, which come with the mint's live `/v1/info` data (description, contacts): their size is the mint's, so it is not reserved. Spec: `e2e/layout-shift-tools-mint.spec.ts` (budgets: `/tools` 0.05 at 390 px and 0.02 at 1440 px, Mint Detail load 0.1, a tab change 0.02); mutation-checked (the Tools fallback back to the short one: 0.104 fails; `.mint-detail-pending` emptied: 0.178 fails).
+**Doc pages and Learn modules (review P-C, 2026-11-27).** About, Methodology and For wallets now use the same `viewportFallback`, and `LearnModule.tsx`'s Suspense fallback of the module text has `min-height: 100vh`. Before, the short "Loading…" left "Next, module N" and the footer in the first screen until the lazy chunk arrived: CLS 0.232 on `/learn/cashu-basics` and 0.111 on `/methodology` (Pixel 7, 4x CPU, slow 4G, layout-shift observer on the live site; the font swap was not the cause, the preload and the metric fallback from P2 already covered it).
 **Rule: any card whose data arrives later reserves its LOADED height** (a `min-height` in its CSS, taken from a measurement of the loaded state at each breakpoint, never from an estimate), so nothing visible moves when the data lands. A reservation is the smallest loaded height of its width band, so it never exceeds the loaded height by more than a few px and never clips. Spec: `e2e/stats-layout-shift.spec.ts` (every endpoint held in turn, plus "all at once" and "known last": layout shift below 0.02 at 1440, 1024, 768, 390 and 320; the reservations against the loaded heights). Fixture: `e2e/fixtures/statsLayout.ts` (50 online mints, 20 geography rows with a CDN row, 5 software families, 3 risers and 3 fallers, a 30 day trend; `mockStatsEndpoints(page, held)` holds an endpoint until the request reached the mock).
 
 What moved, measured on that fixture before the change (phone: Lighthouse reported 0.247 on the live page; the same page measured 1.08 here):
@@ -676,7 +677,7 @@ heights re-measured in `stats-layout-shift.spec.ts` (390: 3514, 320: 3687).
   - Size: 36px tall, 14px/500 text; on phones (≤600px) the text is 12.5px/400 so a row of options fits.
   - Style: transparent options with hairline separators. The chosen option is `--elevated` with an inset 2px copper line. Hover changes only the text colour.
   - Reset and Show are 36px. Touch targets are 52px through the ::before bands.
-- **Filter options (M2):** PayPal and Venmo are not offered as payment methods, and the Software "Unknown" option is gone.
+- **Filter options (M2):** PayPal and Venmo (and since the review of 2026-11-27, M-A, epoch and hashrate) are not offered as payment methods, and the Software "Unknown" option is gone.
   An option already set from a URL (e.g. `/?software=unknown`) still shows, so it can be removed.
 - **Touch (M3):** the "Start with the basics" link in the intro gets 12px vertical padding with negative margin on coarse pointers, so the hit area is ≥ 44px and the line does not move.
 - **Compare picker (M6):** sorted by Reliability Score, highest first, with unscored mints after and test mints last. No autofocus on the search with a coarse pointer, so the keyboard does not cover the list.
@@ -698,3 +699,13 @@ heights re-measured in `stats-layout-shift.spec.ts` (390: 3514, 320: 3687).
 - **"Add a mint" (the plus):** at every width the copper outline and text of "Find a mint for me" (hover: `--action-soft`
   fill). Its accessible name stays "Add a mint".
 - Pinned by `e2e/ui-followups-1122.spec.ts` (1440 and 390).
+
+## Review fixes on Stats (2026-11-27)
+
+- **S-A:** the Network health factors read "29/30 pts" (was "29 of 30", which read as a count of mints beside
+  "47 mints online"). `e2e/stats-nhi-gauge.spec.ts` still reads the number from the first text node.
+- **G-D:** each Most reliable row (both tabs) carries the mint's 30 daily bars (`.stats-top5-bars`, 76 x 14 px, 56 px
+  wide at 360 px and below, no rise animation) between the name and the value; the row height does not change.
+- Sort menu (A3): the trigger has no `aria-label`; its name is the visible "Sort: <current>" (the listbox keeps
+  `aria-label="Sort by"`).
+- Compare picker (G-C): "Compare (N)" is a copper outline like every other action (it was the only green one).

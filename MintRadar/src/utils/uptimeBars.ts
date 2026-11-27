@@ -26,9 +26,13 @@ export interface DayOutage { startedAt: string; durationMs: number; ongoing?: bo
 
 const DAY_MS = 86_400_000
 
+// One formatter for the whole module (P-A, review 2026-11-27): toLocaleDateString / toLocaleTimeString with options
+// build a new Intl.DateTimeFormat on every call, and the readouts of all cards and bars made thousands of them per
+// render (about 600 ms of main thread on a phone for the home cards alone).
+const DAY_LABEL = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+
 /** "21 Nov" of a UTC day (the date under the bars uses the same form). */
-const dayLabel = (dayStart: number): string =>
-  new Date(dayStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+const dayLabel = (dayStart: number): string => DAY_LABEL.format(dayStart)
 
 /** "45 min", "3h 20m": time down within one day (never more than 24 h). */
 function downText(ms: number): string {
@@ -111,7 +115,8 @@ export function uptimeHourReadouts(
 ): Array<{ date: string; text: string }> {
   const current = Math.floor(now / HOUR_MS) * HOUR_MS
   const n = hours.length
-  const clock = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC', hour12: false })
+  // The bars start on whole UTC hours, so "HH:00" is plain arithmetic (no Intl call per bar, see DAY_LABEL).
+  const clock = (t: number) => `${String(new Date(t).getUTCHours()).padStart(2, '0')}:00`
   return hours.map((pct, i) => {
     const start = current - (n - 1 - i) * HOUR_MS
     const range = `${clock(start)}\u2013${clock(start + HOUR_MS)} UTC`

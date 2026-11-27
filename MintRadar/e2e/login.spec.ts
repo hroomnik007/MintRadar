@@ -21,7 +21,7 @@ async function setup(page: Page) {
     socket.onClose(() => { ws.closed++ })
   })
   await page.goto('/')
-  await page.getByRole('button', { name: /Login via Nostr/i }).click()
+  await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await page.waitForSelector('.nostr-modal')
   return ws
 }
@@ -108,7 +108,7 @@ test('closing the modal closes every pairing socket', async ({ page }) => {
   await expect.poll(() => ws.closed, { timeout: 5000 }).toBe(opened)
 
   // reopen: fresh, no dangling QR
-  await page.getByRole('button', { name: /Login via Nostr/i }).click()
+  await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await remoteCard(page).click()
   await page.waitForSelector('.nostr-qr-wrap svg')
 })

@@ -293,6 +293,19 @@ describe('mintFaviconInitials', () => {
     expect(mintFaviconInitials('https://www.mint.example.com')).toBe('EX')
   })
 
+  it('takes the initials from a usable name (G-B, 2026-11-27)', () => {
+    expect(mintFaviconInitials('https://cashu.boats', 'Kinda Reckless Mint')).toBe('KR')
+    expect(mintFaviconInitials('https://mint.westernbtc.com', 'WesternBTC Cashu mint')).toBe('WB')
+    expect(mintFaviconInitials('https://mint.fredix.xyz', 'Mint fredix')).toBe('FR')
+    expect(mintFaviconInitials('https://mint.agorist.space', '"Agorist Cashu Mint"')).toBe('AG')
+  })
+
+  it('falls back to the host for no name, a host-like name or only generic words', () => {
+    expect(mintFaviconInitials('https://mint.sortug.com', null)).toBe('SO')
+    expect(mintFaviconInitials('https://cashu.cz', 'cashu.cz')).toBe('CA')
+    expect(mintFaviconInitials('https://mint.gitvid.net', 'Cashu mint')).toBe('GI')
+  })
+
   it('handles numeric hosts', () => {
     expect(mintFaviconInitials('https://8333.space:3338')).toBe('83')
     expect(mintFaviconInitials('https://8333.space')).toBe('83')

@@ -374,7 +374,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
               <div className="trc-mint">
                 {/* Icon only for a mint we track, via the same proxied MintFavicon as the Dashboard.
                     An untracked token's mint URL is attacker-chosen, so nothing is requested for it. */}
-                {mintInfo && <MintFavicon url={mintInfo.url} iconUrl={mintInfo.iconUrl} size={36} radius={9} className="trc-mint-icon" />}
+                {mintInfo && <MintFavicon url={mintInfo.url} name={mintInfo.name} iconUrl={mintInfo.iconUrl} size={36} radius={9} className="trc-mint-icon" />}
                 <div className="trc-mint-text">
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <div className="trc-name">{mintInfo?.name ?? getHostname(result.mint)}</div>
@@ -641,6 +641,9 @@ interface WizardRec {
   meltLimits: UnitLimits | null
 }
 
+/** Units the wizard does not offer (review 2026-11-27: TIH). */
+const WIZARD_HIDDEN_UNITS: ReadonlySet<string> = new Set(['tih'])
+
 // Collapses a mint's NUT-04/NUT-05 method entries for one unit into a single
 // min/max range — a mint can advertise several methods (bolt11, bolt12, …) per
 // unit, each with its own limits, so the widest usable range is what the user
@@ -750,11 +753,12 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
   // Built from the distinct units the online mints actually advertise, never a
   // hardcoded sat/usd/eur list — a mint offering a new unit shows up here on its
   // own. Ordered like the cards and the filter (sortUnits: SAT, USD, EUR, then others).
+  // TIH is left out (D-D, review 2026-11-27, owner): an unexplained unit few mints offer; MSAT stays.
   const availableUnits = useMemo(() => {
     const set = new Set<string>()
     for (const m of knownMints) {
       if (m.online !== true) continue
-      for (const u of m.units ?? []) set.add(u)
+      for (const u of m.units ?? []) if (!WIZARD_HIDDEN_UNITS.has(u.toLowerCase())) set.add(u)
     }
     return sortUnits([...set])
   }, [knownMints])
@@ -986,7 +990,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
 
       {step === 2 && (
         <button type="button" className="tool-btn-primary find-my-mint-btn" disabled={!ready || finding} onClick={() => void handleFind()}>
-          {finding ? 'Measuring latency…' : 'Find my mint →'}
+          {finding ? 'Measuring latency…' : 'Find my mint'}
         </button>
       )}
       {step === 2 && checks.size === 0 && <div className="wizard-hint">Pick at least one priority</div>}

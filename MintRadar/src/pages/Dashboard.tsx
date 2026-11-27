@@ -46,8 +46,8 @@ import { classifySubmitInput, submitInputReason } from '@/utils/submitInput'
 import { parseBulkInput, bulkFailureMessage, MAX_BULK_URLS } from '@/utils/bulkInput'
 import './Dashboard.css'
 
-/** Payment methods left out of the Method filter (M2, 2026-11-22). */
-const HIDDEN_FILTER_METHODS: ReadonlySet<string> = new Set(['paypal', 'venmo'])
+/** Payment methods left out of the Method filter (M2, 2026-11-22; epoch and hashrate since the review of 2026-11-27, M-A). */
+const HIDDEN_FILTER_METHODS: ReadonlySet<string> = new Set(['paypal', 'venmo', 'epoch', 'hashrate'])
 
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
 // that chunk only loads when a user actually opens Compare, not on every
@@ -477,7 +477,7 @@ function MintListView({
               return (
                 <tr key={mint.url} className="mint-list-row" onClick={e => { if (!(e.target as Element).closest('a')) navigate(`/mint/${encodeURIComponent(mint.url)}`) }} onPointerEnter={() => onMintPointerEnter(mint.url)} onPointerLeave={onMintPointerLeave}>
                   <td className="mint-list-td-name">
-                    <MintFavicon url={mint.url} iconUrl={mint.iconUrl ?? null} size={28} radius={7} />
+                    <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl ?? null} size={28} radius={7} />
                     <div style={{ minWidth: 0 }}>
                       <div className="mint-list-name" title={displayName}>
                         <span className="mint-list-dot" aria-hidden="true" style={{ background: isOnline ? 'var(--accent)' : isArchived ? 'var(--text3)' : 'var(--red)' }} />
@@ -813,7 +813,7 @@ export default function Dashboard() {
   }, [allMints, activeFilters, showDegraded, search, softwareFamilies])
   const activeFilterCount = countActiveFilters(activeFilters)
   // Method filter options: what the tracked mints offer right now (a switched-off NUT-04/05 side does not count), plus the selected one.
-  // M2 (UI/UX report 2026-11-22): PayPal and Venmo are not offered in the Method filter (they cut the row on phones);
+  // M2 (UI/UX report 2026-11-22): PayPal, Venmo (and since 2026-11-27 epoch and hashrate) are not offered in the Method filter (they cut the row on phones);
   // a ?method= already set to one of them stays listed so it can be cleared.
   const methodChoices = useMemo(() => methodOptions(allMints, pendingFilters.method).filter(m => !HIDDEN_FILTER_METHODS.has(m) || m === pendingFilters.method), [allMints, pendingFilters.method])
   // Phone default view: first MOBILE_COLLAPSED_ONLINE online mints + "Show all N" (mobileCollapse.ts).
@@ -1775,7 +1775,7 @@ export default function Dashboard() {
                       )}
                       {submitTracked && (
                         <div className="submit-probe-preview submit-tracked" data-testid="submit-tracked">
-                          <MintFavicon url={submitUrl} iconUrl={trackedMint?.iconUrl ?? null} size={36} radius={9} />
+                          <MintFavicon url={submitUrl} name={trackedMint?.name} iconUrl={trackedMint?.iconUrl ?? null} size={36} radius={9} />
                           <div className="submit-tracked-body">
                             <div className="submit-probe-name">Already tracked</div>
                             <div className="submit-probe-meta">

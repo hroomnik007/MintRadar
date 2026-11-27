@@ -15,8 +15,10 @@ const MODULE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>> = {
   'safe-habits': lazy(() => import('@/pages/learn/Module5')),
 }
 
+// As tall as the viewport, so "Next, module N" and the footer are below the fold before the module text arrives and do
+// not jump out of view (CLS 0.24 on a phone, review 2026-11-27; same rule as App.tsx's viewportFallback).
 const lazyFallback = (
-  <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
+  <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text2)', minHeight: '100vh' }}>Loading…</div>
 )
 
 export default function LearnModule() {

@@ -438,5 +438,7 @@ export function auditCzSyncNote(view: Pick<AuditCzView, 'checkedAt' | 'notRecent
     return { text: AUDIT_CZ_NOT_RECENT_TEXT, stale: true, tip: exact ? `Last synced from cashu.info: ${exact}, more than 90 minutes ago.` : null }
   }
   if (!valid) return null
-  return { text: `synced ${formatTimeAgo(at, now)}`, stale: false, tip: `Last synced from cashu.info: ${exact}.` }
+  // Under a minute: "synced just now", not "synced 0s ago" (D-D, review 2026-11-27).
+  const ago = now - at.getTime() < 60_000 ? 'just now' : formatTimeAgo(at, now)
+  return { text: `synced ${ago}`, stale: false, tip: `Last synced from cashu.info: ${exact}.` }
 }

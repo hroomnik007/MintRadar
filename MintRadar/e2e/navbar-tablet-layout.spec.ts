@@ -34,14 +34,14 @@ for (const loggedIn of [false, true]) {
 }
 
 for (const width of [1280, 768, 700]) {
-  test(`login button shows "Log in" with the bolt icon and keeps the name "Login via Nostr" at ${width}px`, async ({ page }) => {
+  test(`login button shows "Log in" with the key icon and has the name "Log in" at ${width}px`, async ({ page }) => {
     await mockRelays(page)
     await installApiMocks(page)
     await page.setViewportSize({ width, height: 800 })
     await page.goto('/')
     const btn = page.locator('.navbar-login-btn')
-    await expect(page.getByRole('button', { name: /Login via Nostr/ })).toBeVisible()
-    await expect(btn).toHaveAccessibleName('Login via Nostr')
+    await expect(page.getByRole('button', { name: 'Log in', exact: true })).toBeVisible()
+    await expect(btn).toHaveAccessibleName('Log in')
     expect((await btn.innerText()).trim()).toBe('Log in') // visible text since the 2026-11-18 redesign
     await expect(btn.locator('svg')).toHaveCount(1)
     expect(await btn.textContent()).not.toContain('⚡') // line icon (svg), not the emoji
@@ -93,7 +93,7 @@ test('Login button and login modal header use a line icon (svg), no ⚡ characte
   const btn = page.locator('.navbar-login-btn')
   await expect(btn.locator('svg')).toHaveCount(1)
   expect(await btn.textContent()).not.toContain('⚡')
-  await expect(btn).toHaveAccessibleName('Login via Nostr')
+  await expect(btn).toHaveAccessibleName('Log in')
   await btn.click()
   const badge = page.locator('.nostr-modal-icon')
   await expect(badge.locator('svg')).toHaveCount(1)

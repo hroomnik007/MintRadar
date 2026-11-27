@@ -50,6 +50,8 @@ export interface OverviewTabProps {
   scoreText: string
   supportsBackupRestore: boolean
   unavailableContacts: string[]
+  /** The stored score counted a contact that is not stored (contactSentence). */
+  contactListedAtLastCheck: boolean
   motd: string | undefined
   description: string | undefined
   descriptionLong: string | undefined
@@ -86,7 +88,7 @@ export interface OverviewTabProps {
 
 export function OverviewTab({
   url, now, knownMint, data, probeLoading, probeError, refetchProbe,
-  unavailableInfo, lastErrorText, scoreText, supportsBackupRestore, unavailableContacts,
+  unavailableInfo, lastErrorText, scoreText, supportsBackupRestore, unavailableContacts, contactListedAtLastCheck,
   motd, description, descriptionLong, infoLastSeenAt, motdDatesLine, descriptionDates, nameDates, nip87Line, pubkeyDates,
   nut4Disabled, nut5Disabled, name, headingName, version, mintTime, pubkey, healthRecord, tosUrl, urls,
   email, twitter, nostr, operatorNip05, contactsAreLastSeen, lastContactsAt, contactSource,
@@ -108,7 +110,7 @@ export function OverviewTab({
                 <li>{KEEP_WALLET_SENTENCE}</li>
                 <li>{TEMPORARY_SENTENCE}</li>
                 <li>{restoreSentence(supportsBackupRestore)}</li>
-                <li>{contactSentence(unavailableContacts)}</li>
+                <li>{contactSentence(unavailableContacts, contactListedAtLastCheck)}</li>
               </ul>
               <Link to="/learn/understanding-the-risks" className="md-ua-link">Read about the risks of using a mint</Link>
             </div>
@@ -412,10 +414,12 @@ export function OverviewTab({
                       <div className="md-contact-val" style={{wordBreak:'break-all'}}>
                         {njumpProfileUrl(nostr) ? (
                           <a href={njumpProfileUrl(nostr)!} target="_blank" rel="noopener noreferrer">{nostr}</a>
-                        ) : nostr}
+                        ) : <>{nostr}<span className="md-contact-unrecognised"> · format not recognised</span></>}
                       </div>
                     </div>
-                    <button
+                    {/* N6 (review 2026-11-27): a value that is not a Nostr key (Minibits lists the placeholder "npub…")
+                        gets no copy button; the wording is the Contact checks line's own (contactChecks.ts). */}
+                    {njumpProfileUrl(nostr) && <button
                       onClick={(e) => {
                         e.stopPropagation()
                         void navigator.clipboard.writeText(nostr)
@@ -433,7 +437,7 @@ export function OverviewTab({
                       aria-label="Copy"
                     >
                       {copiedContact === 'nostr' ? <Check size={13} /> : <Copy size={13} />}
-                    </button>
+                    </button>}
                   </div>
                 )}
               </div>

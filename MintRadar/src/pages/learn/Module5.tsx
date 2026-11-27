@@ -43,7 +43,7 @@ export default function Module5() {
       <p>
         Your watchlist tracks the mints you actually use, and you can turn on a Nostr DM for each one to hear when it goes down — so "check before you commit" and "pay attention to mint health" happen on their own.
       </p>
-      <Link to="/watchlist" className="learn-cta-btn">Set up your watchlist →</Link>
+      <Link to="/watchlist" className="learn-cta-btn">Set up your watchlist</Link>
     </div>
   )
 }

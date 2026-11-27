@@ -134,7 +134,33 @@ export function shouldShowHostLine(
 // stripped if stacked) since those prefixes carry no distinguishing info —
 // e.g. "www.mint.example.com" and "mint.example.com" would otherwise both
 // render "MI" instead of the more useful "EX".
-export function mintFaviconInitials(url: string): string {
+/** Words that say nothing about which mint it is; skipped when initials come from the name. */
+const GENERIC_NAME_WORDS = new Set(['mint', 'cashu', 'ecash', 'the'])
+
+/**
+ * Initials from the mint's own name (G-B, review 2026-11-27): "Kinda Reckless Mint" -> "KR", "WesternBTC Cashu mint" ->
+ * "WB" (a capital inside one word counts as a new word), "Mint fredix" -> "FR". Null when the name gives none: no name, a
+ * name MintRadar does not show (empty, generic, a duplicate), a host-like name ("cashu.cz") or only generic words.
+ */
+function nameInitials(url: string, name: string | null | undefined): string | null {
+  if (!name) return null
+  const resolved = resolveMintName({ name, url })
+  if (resolved.isFallback) return null
+  const text = resolved.text.trim()
+  if (/^[^\s]+\.[a-z]{2,}$/i.test(text)) return null
+  const words = text
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(w => w !== '' && !GENERIC_NAME_WORDS.has(w.toLowerCase()))
+  if (words.length === 0) return null
+  const first = [...words[0]!]
+  if (words.length === 1) return (first.length >= 2 ? first.slice(0, 2).join('') : first[0]!).toUpperCase()
+  return (first[0]! + [...words[1]!][0]!).toUpperCase()
+}
+
+export function mintFaviconInitials(url: string, name?: string | null): string {
+  const fromName = nameInitials(url, name)
+  if (fromName) return fromName
   const host = mintHostname(url)
     .toLowerCase()
     .replace(/^www\./, '')
@@ -387,13 +413,17 @@ export function uptime30dShown(exact: number | null | undefined, rounded: number
   if (v === null) return null
   return Math.floor(v * 10 + 1e-9) / 10
 }
-/** uptime30dShown as text: one decimal ("99.6", "97.0"), a full 100 without it ("100"). */
+/** uptime30dShown as text: one decimal ("99.6", "97.0"), a full 100 or a zero without it ("100", "0"; N5, 2026-11-27). */
 export function formatUptime30d(shown: number): string {
-  return shown >= 100 ? '100' : shown.toFixed(1)
+  return shown >= 100 ? '100' : shown <= 0 ? '0' : shown.toFixed(1)
 }
-/** Quiet at or above the limit, the warning tone below it (the same token as the 80–95 % band of the 24 h chip). */
+/**
+ * Quiet at or above the limit, the warning tone below it (the same token as the 80–95 % band of the 24 h chip), red
+ * below 50 % like the Uptime tile and the red day bars (N5, 2026-11-27: an archived mint's "0.0%" was ochre).
+ */
 export function uptime30dColor(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return 'var(--t3)'
+  if (pct < 50) return 'var(--red)'
   return isUptime30dLow(pct) ? 'var(--med)' : 'var(--text)'
 }
 

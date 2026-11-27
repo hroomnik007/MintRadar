@@ -76,7 +76,7 @@ describe('networkRows', () => {
     expect(networkRows({ online: true })).toBeNull()
   })
   it('an offline mint without an address says Offline; an address wins; an online one stays hidden', () => {
-    expect(networkRows({ online: false })).toEqual({ ip: 'Offline', network: null, country: null, tor: null })
+    expect(networkRows({ online: false })).toEqual({ ip: 'Not resolved', network: null, country: null, tor: null })
     expect(networkRows({ online: false, ipAddress: '188.166.166.165' })?.ip).toBe('188.166.166.165')
   })
   it('hostile strings stay strings and a hostile country is hidden', () => {

@@ -61,6 +61,7 @@ describe('the warning tone starts where the recommendation gate does', () => {
     expect(uptime30dColor(null)).toBe('var(--t3)')
     expect(uptime30dColor(100)).toBe('var(--text)')
     expect(uptime30dColor(94)).toBe('var(--med)')
+    expect(uptime30dColor(0)).toBe('var(--red)')
   })
 })
 
@@ -108,6 +109,7 @@ describe('uptime30dShown / formatUptime30d', () => {
     expect(formatUptime30d(99.9)).toBe('99.9')
     expect(formatUptime30d(97)).toBe('97.0')
     expect(formatUptime30d(100)).toBe('100')
+    expect(formatUptime30d(0)).toBe('0')
   })
 })
 

@@ -58,8 +58,10 @@ export function NutsTab({ feesLimits, supportsBackupRestore, supportedNuts, disa
             <h3 className="nut-group-title">{g.title}</h3>
             {g.nuts.map(({ nut, name, line }) => {
               const s = state(nut)
+              // No aria-label (A2, review 2026-11-27): it replaced the row's text, so a screen reader never heard
+              // "Supported" / "Not supported". The name is the text: NUT, name, line and state.
               return (
-                <div key={nut} className={`nut-card nut-row ${s}`} {...clickableProps(() => onSelectNut(nut))} aria-label={`${nut}, ${name}`}>
+                <div key={nut} className={`nut-card nut-row ${s}`} {...clickableProps(() => onSelectNut(nut))}>
                   <span className="nut-tag">{nut}</span>
                   <span className="nut-row-name"><b>{name}</b><span>{line}</span></span>
                   <span className={`nut-row-state ${s}`}>

@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts'
+import { UptimeBars } from '@/components/mint/UptimeBars'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { offeredNutKeys } from '@/utils/nutSupport'
@@ -411,7 +412,13 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       keys: mints.map(m => (typeof m.uptimePct30d === 'number' ? String(m.uptimePct30d) : '—')),
       cell: i => {
         const pct = mints[i]!.uptimePct30d ?? null
-        return <span style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{pct !== null ? `${pct}%` : '—'}{best.uptime30d[i] && <BestTag />}</span>
+        // The 30 daily bars under the figure (G-D, review 2026-11-27): the same strip as the cards and Mint Detail.
+        return (
+          <span className="cmp-m-stack cmp-uptime-30d">
+            <span style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{pct !== null ? `${pct}%` : '—'}{best.uptime30d[i] && <BestTag />}</span>
+            <UptimeBars days={mints[i]!.uptimeDaily30} className="cmp-bars" />
+          </span>
+        )
       },
     },
     {
@@ -614,7 +621,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                       return (
                         <th key={mint.url} scope="col" className="cmp-m-mint">
                           <span className="cmp-m-mint-row">
-                            <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={18} />
+                            <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={18} />
                             <span className="cmp-m-mint-name">{d.displayName}</span>
                           </span>
                           <span className="cmp-m-mint-host">{d.hostname}</span>
@@ -649,7 +656,7 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
             const d = allData[i]!
             return (
               <div key={mint.url} className="cmp-val cmp-row-mint" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                <MintFavicon url={mint.url} iconUrl={mint.iconUrl} size={20} />
+                <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={20} />
                 <div style={{ minWidth: 0, width: '100%' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.displayName}</div>
                   <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.hostname}</div>
@@ -740,6 +747,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               <div key={mint.url} className="cmp-val" data-row="uptime-30d" style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
                 {pct !== null ? `${pct}%` : '—'}
                 {best.uptime30d[i] && <BestTag />}
+                {/* The 30 daily bars under the figure, as on the phone table (G-D, review 2026-11-27). */}
+                <UptimeBars days={mint.uptimeDaily30} className="cmp-bars" />
               </div>
             )
           })}

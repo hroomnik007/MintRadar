@@ -2768,7 +2768,7 @@
 .mint-card .card-trace { display: grid; }
 .card-facts { display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: 4px 12px; margin: 0; }
 .card-facts > div { display: grid; gap: 2px; align-content: start; min-width: 0; }
-.card-facts dt, .mint-card .latency-block .latency-label { font-size: var(--fs-xs); color: var(--text2); margin: 0; letter-spacing: 0; }
+.card-facts dt, .mint-card .latency-block .latency-label { font-size: var(--fs-label); color: var(--text2); margin: 0; letter-spacing: 0; }
 .card-facts dd { margin: 0; }
 .mint-card .latency-block { min-width: 0; }
 .mint-card .latency-value, .card-fact-value { font-size: var(--fs-md); font-weight: 560; color: var(--text); font-family: var(--font-body); line-height: 1.25; }
@@ -2777,9 +2777,9 @@
 .card-fact-reviews { justify-items: end; text-align: right; }
 .mint-card .card-reliability-rating { font-family: var(--font-body); font-size: var(--fs-md); font-weight: 560; color: var(--text); min-height: 0; line-height: 1.25; gap: 4px; }
 .mint-card .card-reliability-star { font-size: 14px; color: var(--amber); }
-.mint-card .card-reliability-rating-n { font-size: var(--fs-xs); font-weight: 400; color: var(--text2); }
+.mint-card .card-reliability-rating-n { font-size: var(--fs-label); font-weight: 400; color: var(--text2); }
 .mint-card .card-reliability-no-reviews { font-size: var(--fs-sm); color: var(--text3); min-height: 0; line-height: 1.25; }
-.card-foot { display: flex; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: var(--fs-xs); color: var(--text2); min-width: 0; }
+.card-foot { display: flex; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: var(--fs-label); color: var(--text2); min-width: 0; }
 .card-state { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .card-state .status-dot { width: 7px; height: 7px; }
 .card-units { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

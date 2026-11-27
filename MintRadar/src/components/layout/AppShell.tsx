@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchStats, scheduleStatsWarmup } from '@/core/mint/prefetch'
 import { QRCodeSVG } from 'qrcode.react'
-import { Zap, TriangleAlert, Menu, X } from 'lucide-react'
+import { Zap, KeyRound, TriangleAlert, Menu, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
@@ -443,8 +443,10 @@ export function AppShell() {
 
         <div className="navbar-auth">
           {profile === null ? (
-            <button type="button" className="navbar-login-btn" aria-label="Login via Nostr" onClick={() => setShowLoginModal(true)}>
-              <Zap size={14} strokeWidth={2.2} aria-hidden="true" /> Log in
+            // No aria-label (A1, review 2026-11-27): "Login via Nostr" did not contain the visible "Log in", so voice control
+            // could not find it; the name is the text. A key icon, not the lightning bolt, which means payments here (G-C).
+            <button type="button" className="navbar-login-btn" onClick={() => setShowLoginModal(true)}>
+              <KeyRound size={14} strokeWidth={2.2} aria-hidden="true" /> Log in
             </button>
           ) : (
             <AccountMenu profile={profile} method={authMethod} onLogout={handleLogout} />

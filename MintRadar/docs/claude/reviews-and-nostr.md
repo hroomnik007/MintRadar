@@ -15,6 +15,12 @@ Every event from a relay is checked before it is used: right `kind`, `verifyEven
 
 ## Reviews Feature (Mint Detail)
 
+**Live read only after the Reviews tab opens (P-B, review 2026-11-27).** `useMintReviews(url, extraPubkeys, enabled)`:
+Mint Detail passes `enabled` true once the Reviews tab or the review dialog has been opened for that mint (state
+`liveReviewsFor`). Before, the relay read and the signature check of ~100 events ran on every Mint Detail load, about
+0.8 s of main thread on a phone (4x CPU) for a list the Overview does not show. The rating tile and the counts use the
+stored rollup and `/api/mints/nostr-reviews` as before; the profiles lookup (second effect) waits for the live read too.
+
 All review-related relay lists live in `src/core/nostr/relays.ts`:
 - **REVIEW_READ_RELAYS** (added 2026-08-30) — curated 7-relay fast-path used by `src/hooks/useMintReviews.ts` for the client-side read. `querySync` resolves only once EVERY listed relay EOSEs or times out, so this is deliberately small and only relays measured to connect+EOSE <600ms. Excludes `relay.8333.space` (EHOSTUNREACH), `relay.snort.social` (503 on anon REQ), `nostr.wine` (403), and the slower long-tail. Paired with `{ maxWait: 2000 }` on the querySync call (without it, nostr-tools falls back to a 4400ms per-relay EOSE ceiling — that was the bulk of the old client-side review-load delay).
 - **REVIEW_RELAYS** (= DISCOVERY_RELAYS + `relay.minibits.cash`) — no longer used for the read path; kept only as the base for REVIEW_PUBLISH_RELAYS.

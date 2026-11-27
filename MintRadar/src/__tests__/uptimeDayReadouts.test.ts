@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { uptimeDayReadouts } from '@/utils/uptimeBars'
+import { uptimeDayReadouts, uptimeHourReadouts } from '@/utils/uptimeBars'
 
 // The hover readout of the 30 daily bars on Mint Detail (owner, 2026-11-20).
 const NOW = Date.UTC(2026, 10, 20, 12, 0) // 20 Nov 2026, 12:00 UTC
@@ -35,5 +35,17 @@ describe('uptimeDayReadouts', () => {
   it('an ongoing outage today is marked as still down', () => {
     const r = uptimeDayReadouts(days, [{ startedAt: new Date(NOW - 2 * H).toISOString(), durationMs: 2 * H, ongoing: true }], NOW)
     expect(r[3]!.text).toBe('99.8% uptime, down 2h, still down')
+  })
+})
+
+// The hover readout of the 24 hourly bars on the home cards; the hour labels are built without Intl (P-A, 2026-11-27).
+describe('uptimeHourReadouts', () => {
+  const NOW_H = Date.UTC(2026, 10, 20, 0, 40) // 20 Nov 2026, 00:40 UTC: the oldest bars are on the day before
+
+  it('labels each hour in UTC, the last one is the current hour', () => {
+    const r = uptimeHourReadouts([100, null, 99], NOW_H)
+    expect(r.map(x => x.date)).toEqual(['22:00\u201323:00 UTC', '23:00\u201300:00 UTC', 'Now, 00:00 UTC'])
+    expect(r[1]!.text).toBe('No checks this hour')
+    expect(r[2]!.text).toBe('99% uptime')
   })
 })

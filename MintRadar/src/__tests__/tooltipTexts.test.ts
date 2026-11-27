@@ -230,7 +230,7 @@ describe('uptimeRowTooltip: the four uptime parts from the stored record', () =>
     const p = s.uptimeParts!
     const text = tip(s)!
     expect(text).toBe(
-      `Last ${T.UPTIME_WINDOW_HOURS} h: 100% of probes succeeded (${p.last24h.points} of ${UPTIME_24H_MAX} points). Last ${T.UPTIME_30D_WINDOW_DAYS} days: 77% (${p.last30d.points} of ${UPTIME_30D_MAX}). ` +
+      `Last ${T.UPTIME_WINDOW_HOURS} h: 100% of probes succeeded (${p.last24h.points} of ${UPTIME_24H_MAX} points). Last ${T.UPTIME_30D_WINDOW_DAYS} days: 77.0% (${p.last30d.points} of ${UPTIME_30D_MAX}). ` +
       `Longest outage in ${T.UPTIME_30D_WINDOW_DAYS} days: 6d 18h (${p.longestOutage.points} of ${LONGEST_OUTAGE_MAX}). Outages in ${T.UPTIME_30D_WINDOW_DAYS} days: 8 (${p.outageCount.points} of ${OUTAGE_COUNT_MAX}).`,
     )
     // exactly the points the score used: they add up to the row, and the maxima to the component's weight

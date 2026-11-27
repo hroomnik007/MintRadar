@@ -163,7 +163,7 @@ function FollowRecommendations({ pubkey, watchlistUrls, knownMintsData }: {
             const followerNames = recommenders.slice(0, 3).map(pk => getDisplayName(pk)).join(', ')
             return (
               <div key={url} className="wl-rec-row" onClick={e => { if (!(e.target as Element).closest('a, button')) navigate(`/mint/${encodeURIComponent(url)}`) }}>
-                <MintFavicon url={url} iconUrl={mint?.iconUrl ?? null} size={28} radius={6} />
+                <MintFavicon url={url} name={mint?.name} iconUrl={mint?.iconUrl ?? null} size={28} radius={6} />
                 <div className="wl-rec-body">
                   <div className="wl-rec-name"><Link to={`/mint/${encodeURIComponent(url)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{name}</Link></div>
                   <div className="wl-rec-url">{hostname}</div>

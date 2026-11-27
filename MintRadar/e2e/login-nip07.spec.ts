@@ -24,7 +24,7 @@ async function openModal(page: Page) {
   await mockRelays(page)
   await installApiMocks(page)
   await page.goto('/')
-  await page.getByRole('button', { name: /Login via Nostr/i }).click()
+  await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await page.waitForSelector('.nostr-modal')
 }
 

@@ -169,6 +169,8 @@
 
   /* Type scale: six sizes, nothing below 12px */
   --fs-xs:      12px;
+  /* Data labels on the mint cards ("Latency", "Uptime 24 h", the foot line); 12px stays for times and axis ends (G-A, review 2026-11-27). */
+  --fs-label:   13px;
   --fs-sm:      14px;
   --fs-md:      16px;
   --fs-lg:      20px;

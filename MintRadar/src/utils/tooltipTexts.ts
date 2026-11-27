@@ -18,7 +18,7 @@ import {
 } from './reliabilityScore'
 import { UNKNOWN_SOFTWARE_POINTS, pointsForMinorsBehind } from './versionRule'
 import { pluralize } from './plural'
-import { FRESH_MINT_MONTHS } from './mintFormatting'
+import { FRESH_MINT_MONTHS, formatUptime30d, uptime30dShown } from './mintFormatting'
 import type { StoredPart, StoredScoreBreakdown } from './mintDetailFacts'
 
 // ── Facts that only the backend defines (compared with it by the unit test) ───────────────────────────────────
@@ -120,7 +120,9 @@ export function uptimeRowTooltip(stored: StoredScoreBreakdown | null | undefined
   const i = stored?.uptimeInputs
   const pct = (v: unknown) => (finite(v) ? `${v}%` : null)
   const pct24 = pct(i?.uptime24hPct)
-  const pct30 = pct(i?.uptime30dPct)
+  // The unrounded share cut down to one decimal, as on the "Last 30 days" panel (N1, 2026-11-27).
+  const shown30 = uptime30dShown(i?.uptime30dExactPct, i?.uptime30dPct)
+  const pct30 = shown30 === null ? null : `${formatUptime30d(shown30)}%`
   const count = finite(i?.outageCount30d) ? i.outageCount30d : null
   const longest = finite(i?.longestOutage30dMs) ? i.longestOutage30dMs : null
   const days = UPTIME_30D_WINDOW_DAYS

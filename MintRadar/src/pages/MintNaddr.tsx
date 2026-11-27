@@ -99,7 +99,7 @@ export default function MintNaddr() {
           <h1 className="md-not-tracked-title">Mint link not found</h1>
           <p className="md-not-tracked-body">{failure === 'invalid' ? NADDR_INVALID_TEXT : NADDR_NOT_FOUND_TEXT}</p>
           <p className="md-not-tracked-suggest md-naddr-actions">
-            <button type="button" className="md-not-tracked-link" onClick={() => navigate('/')}>Browse tracked mints →</button>
+            <button type="button" className="md-not-tracked-link" onClick={() => navigate('/')}>Browse tracked mints</button>
             <button type="button" className="md-not-tracked-link" onClick={() => navigate('/', { state: { openAddMint: true } })}>Add a mint</button>
           </p>
         </div>

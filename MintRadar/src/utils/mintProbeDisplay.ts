@@ -51,9 +51,12 @@ export function listHasOnion(urls: string[] | null | undefined): boolean {
   return (urls ?? []).some(urlIsOnion)
 }
 
-/** Operator-notice MOTD (maintenance / move / pause). Not generic disclaimers. */
+/**
+ * Operator-notice MOTD (maintenance / move / pause / closing). Not generic disclaimers. "migrat" alone is not on the list
+ * (D-D, review 2026-11-27): Minibits' one-word "migrated" sat in the warning frame without saying where to; a move with
+ * a destination still matches "moved to" / "new url".
+ */
 const MOTD_ALERT_NEEDLES = [
-  'migrat',
   'offline',
   'mainten',
   'paused',
@@ -61,6 +64,8 @@ const MOTD_ALERT_NEEDLES = [
   'deprecated',
   'moved to',
   'new url',
+  'closing',
+  'withdraw',
 ]
 
 export function isMotdAlert(motd: string | null | undefined): boolean {

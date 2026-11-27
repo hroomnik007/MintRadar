@@ -449,7 +449,15 @@ function MintDetailContent({ url }: { url: string }) {
   // (the server decides from the stored contacts, also for an offline mint). Only a neutral label in the list: it never
   // changes a count, an average or a filter.
   const contactListed = useMemo(() => contactListedKeys(nostrReviewsData), [nostrReviewsData])
-  const { reviews, loading: reviewsLoading, profiles: nostrProfiles } = useMintReviews(url, nostrReviewsPubkeys)
+  const [activeTab, setActiveTab] = useState<MintTab>('overview')
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  // The live relay read of the reviews (and their authors' kind:0 profiles) starts only once the Reviews tab or the
+  // review dialog has been opened for this mint (P-B, review 2026-11-27): verifying ~100 signed events cost about
+  // 0.8 s of main thread on a phone during page load, for a list the Overview does not show. The rating tile reads the
+  // stored rollup and the stored list, which load as before.
+  const [liveReviewsFor, setLiveReviewsFor] = useState('')
+  if ((activeTab === 'reviews' || showReviewModal) && liveReviewsFor !== url) setLiveReviewsFor(url)
+  const { reviews, loading: reviewsLoading, profiles: nostrProfiles } = useMintReviews(url, nostrReviewsPubkeys, liveReviewsFor === url)
   // Shared shape for mergeStoredAndLiveReviews' two input arrays — `source` has
   // to be the same literal-union type on both sides, not narrowed to a single
   // literal on each ('nostr' / 'mintradar'), or TS unifies the generic to
@@ -493,7 +501,6 @@ function MintDetailContent({ url }: { url: string }) {
 
   const [showQr, setShowQr] = useState(false)
   const [showReliabilityBreakdown, setShowReliabilityBreakdown] = useState(false)
-  const [showReviewModal, setShowReviewModal] = useState(false)
   const [reviewsPageState, setReviewsPageState] = useState<{ key: string; page: number }>({ key: '', page: 1 })
   const [reviewFilterState, setReviewFilterState] = useState<{ key: string; type: 'all' | '5star' | 'critical' }>({ key: '', type: 'all' })
   const [reviewHideAnonState, setReviewHideAnonState] = useState<{ key: string; on: boolean }>({ key: '', on: false })
@@ -513,7 +520,6 @@ function MintDetailContent({ url }: { url: string }) {
     const t = setTimeout(() => setClientLatency(null), CLIENT_LATENCY_RESULT_MS)
     return () => clearTimeout(t)
   }, [clientLatency])
-  const [activeTab, setActiveTab] = useState<MintTab>('overview')
   // A daily bar with an outage opens the History tab with that day's outages marked (owner, 2026-11-26). `seq` makes a
   // second click on the same day scroll to it again.
   const [historyFocus, setHistoryFocus] = useState<{ start: number; end: number; seq: number } | null>(null)
@@ -950,7 +956,8 @@ function MintDetailContent({ url }: { url: string }) {
   // Swaps without an attributed failure / all swaps, the same figure as Compare's "No mint fault (7d)" row (it used to show the
   // attributed failures, "0 / 13", next to 25/25, which read as 0 successes).
   const breakdownAuditDisplay = auditState === 'scored' && auditWindow
-    ? `${auditSuccessText(auditWindow.blamed, auditWindow.total) ?? 'neutral'}${auditWindow.days > AUDIT_WINDOW_DAYS ? ` · ${auditWindow.days}d` : ''}`
+    // The long window is named in words ("6 / 20 in 14 days", was "6 / 20 · 14d"; D-D, review 2026-11-27).
+    ? `${auditSuccessText(auditWindow.blamed, auditWindow.total) ?? 'neutral'}${auditWindow.days > AUDIT_WINDOW_DAYS ? ` in ${auditWindow.days} days` : ''}`
     : 'neutral'
   const auditAgeDays = auditAgeH !== null && auditAgeH > 24 && (auditState === 'scored' || auditState === 'too-few') ? Math.floor(auditAgeH / 24) : null
   const auditStaleNote = auditAgeDays !== null ? `data ${auditAgeDays} ${auditAgeDays === 1 ? 'day' : 'days'} old` : undefined
@@ -975,7 +982,10 @@ function MintDetailContent({ url }: { url: string }) {
   // names both windows, and its ⓘ lists each part with the figure it used and its points (they add up to the row's
   // points). Without the stored parts the ⓘ is the general explanation. No line under the row besides the source.
   const storedUptimeInputs = storedBreakdown?.uptimeParts ? storedBreakdown.uptimeInputs : undefined
-  const uptimeRowDisplay = storedUptimeInputs ? `${uptimePct}% · 30d ${storedUptimeInputs.uptime30dPct}%` : `${uptimePct}%`
+  // N1 (review 2026-11-27): the 30-day figure is cut down like the "Last 30 days" panel (99.96 reads 99.9, never a
+  // rounded 100 next to a panel that says 99.9).
+  const stored30dShown = storedUptimeInputs ? uptime30dShown(storedUptimeInputs.uptime30dExactPct, storedUptimeInputs.uptime30dPct) : null
+  const uptimeRowDisplay = storedUptimeInputs ? `${uptimePct}% · 30d ${stored30dShown === null ? '–' : formatUptime30d(stored30dShown)}%` : `${uptimePct}%`
   const uptimeTooltip = uptimeRowTooltip(storedBreakdown, formatDuration) ?? uptimeRowText()
   // U1: the unrounded 30-day share cut down to one decimal (never a rounded-up 100 % with yellow days).
   const uptime30dShownValue = uptime30dShown(knownMint?.uptimePct30dExact, knownMint?.uptimePct30d)
@@ -1223,7 +1233,7 @@ function MintDetailContent({ url }: { url: string }) {
         {/* "All mints" to the list (mockup alignment 2026-11-19; it was "← Back" through the browser history). */}
         <BackLink className="md-back md-back-compact" to="/" label="All mints" />
         <div className="md-dh-main">
-          <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={isMobile ? 48 : 64} radius={isMobile ? 12 : 14} className="md-hdr-favicon" />
+          <MintFavicon url={url} name={data?.info?.name ?? knownMint?.name} iconUrl={data?.info?.icon_url ?? knownMint?.iconUrl ?? null} size={isMobile ? 48 : 64} radius={isMobile ? 12 : 14} className="md-hdr-favicon" />
           <div className="md-namebox">
             <div className="md-name md-dh-title">
               <h1 className="md-name-h1" {...(resolvedNameFull ? { title: resolvedNameFull } : {})}>{displayName}</h1>
@@ -1378,7 +1388,10 @@ function MintDetailContent({ url }: { url: string }) {
           <div className="md-sc-label">Latency</div>
           <div className="md-sc-sub">
             <span>{latencyCaption()}</span>
-            <button
+            {/* No "Show my latency" for an archived mint (N5, 2026-11-27): it has not answered for days, often its DNS is gone.
+                An invisible slot of the same box keeps the strip as tall as for any other mint (mint-detail-hero-offline). */}
+            {isArchived && <span className="latency-test-btn latency-test-slot" aria-hidden="true">{CLIENT_LATENCY_BUTTON_LABEL}</span>}
+            {!isArchived && <button
               type="button"
               onClick={() => { void testClientLatency() }}
               disabled={testingLatency}
@@ -1391,7 +1404,7 @@ function MintDetailContent({ url }: { url: string }) {
                 : typeof clientLatency === 'number' ? `Your latency: ${clientLatency} ms`
                 : clientLatency.startsWith('Unreachable') ? <>Unreachable<span className="sr-only">{clientLatency.slice('Unreachable'.length)}</span></>
                 : clientLatency}
-            </button>
+            </button>}
           </div>
         </div>
         <div className="md-sc md-sc-uptime">
@@ -1534,6 +1547,7 @@ function MintDetailContent({ url }: { url: string }) {
               scoreText={scoreText}
               supportsBackupRestore={supportsBackupRestore}
               unavailableContacts={unavailableContacts}
+              contactListedAtLastCheck={!!storedBreakdown && storedBreakdown.contact.points > 0}
               motd={motd}
               description={description}
               descriptionLong={descriptionLong}
@@ -1721,7 +1735,7 @@ function MintDetailContent({ url }: { url: string }) {
         <div className="qr-modal-overlay" onClick={() => setShowQr(false)}>
           <div className="qr-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="qr-modal-title" ref={dialogRef}>
             <div className="qr-modal-header">
-              <MintFavicon url={url} iconUrl={data?.info?.icon_url ?? null} size={38} radius={9} />
+              <MintFavicon url={url} name={data?.info?.name ?? knownMint?.name} iconUrl={data?.info?.icon_url ?? null} size={38} radius={9} />
               <div className="qr-modal-heading">
                 <div id="qr-modal-title" className="qr-modal-title">Add to wallet</div>
                 <div className="qr-modal-sub qr-modal-mint">{displayName}</div>
@@ -2059,7 +2073,7 @@ function MintNotTracked({ slug, suggestion }: { slug: string; suggestion: string
         )}
         <p className="md-not-tracked-suggest">
           {/* Links, not buttons with navigate() (N5, UI/UX report 2026-11-22): they open in a new tab and can be copied. */}
-          <Link className="md-not-tracked-link" to="/">Browse tracked mints →</Link>
+          <Link className="md-not-tracked-link" to="/">Browse tracked mints</Link>
         </p>
         <p className="md-not-tracked-suggest">
           {/* Opens the Dashboard's "Add a mint" dialog (location state openAddMint); nothing is submitted from here. */}

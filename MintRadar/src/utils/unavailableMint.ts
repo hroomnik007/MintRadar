@@ -43,6 +43,11 @@ export function restoreSentence(supportsNut09: boolean): string {
 
 export const KEEP_WALLET_SENTENCE = 'Keep your wallet and your seed phrase.'
 export const TEMPORARY_SENTENCE = 'An outage can be temporary; once the mint is back, check your tokens in your wallet.'
-export function contactSentence(contacts: readonly string[]): string {
-  return contacts.length > 0 ? `You can contact the operator: ${contacts.join(', ')}.` : 'This mint lists no contact.'
+/**
+ * `listedAtLastCheck`: the stored score counted a contact although its text is not stored (N5, review 2026-11-27: the
+ * sentence said "lists no contact" next to a breakdown row "Contact: Listed at last check").
+ */
+export function contactSentence(contacts: readonly string[], listedAtLastCheck = false): string {
+  if (contacts.length > 0) return `You can contact the operator: ${contacts.join(', ')}.`
+  return listedAtLastCheck ? 'This mint listed a contact at its last check; MintRadar has no copy of it.' : 'This mint lists no contact.'
 }
