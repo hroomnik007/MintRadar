@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchStats, scheduleStatsWarmup } from '@/core/mint/prefetch'
 import { QRCodeSVG } from 'qrcode.react'
-import { Zap, KeyRound, TriangleAlert, Menu, X } from 'lucide-react'
+import { KeyRound, TriangleAlert, Menu, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useWatchlistStore } from '@/stores/watchlist.store'
 import { useWatchlistSync } from '@/hooks/useWatchlistSync'
@@ -462,7 +462,7 @@ export function AppShell() {
             {!methodPicked ? (
               <>
                 <div className="nostr-modal-header">
-                  <div className="nostr-modal-icon"><Zap size={18} strokeWidth={1.75} aria-hidden="true" /></div>
+                  <div className="nostr-modal-icon"><KeyRound size={18} strokeWidth={1.75} aria-hidden="true" /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="nostr-modal-title" id="nostr-modal-title">Connect with Nostr</div>
                     <div className="nostr-modal-subtitle">MintRadar uses your Nostr identity to save watchlists and post reviews. No email, no password.</div>
@@ -655,7 +655,7 @@ export function AppShell() {
                         disabled={isLoading || !bunkerInput.trim()}
                         onClick={() => { void handleModalConnect() }}
                       >
-                        <Zap size={13} strokeWidth={2.4} aria-hidden="true" /> {isLoading ? '…' : 'Connect'}
+                        <KeyRound size={13} strokeWidth={2.4} aria-hidden="true" /> {isLoading ? '…' : 'Connect'}
                       </button>
                     </div>
                     {qrUri && !bunkerError && pairingInfo && (
@@ -697,7 +697,7 @@ export function AppShell() {
                         disabled={isLoading || (loginMethod === 'nip07' && !nip07Available)}
                         onClick={() => { void handleModalConnect() }}
                       >
-                        {isLoading ? 'Connecting…' : (loginMethod === 'nip07' && authError !== null) ? <><Zap size={13} strokeWidth={2.4} aria-hidden="true" /> Retry</> : <><Zap size={13} strokeWidth={2.4} aria-hidden="true" /> Connect</>}
+                        {isLoading ? 'Connecting…' : (loginMethod === 'nip07' && authError !== null) ? <><KeyRound size={13} strokeWidth={2.4} aria-hidden="true" /> Retry</> : <><KeyRound size={13} strokeWidth={2.4} aria-hidden="true" /> Connect</>}
                       </button>
                     </div>
                   )}

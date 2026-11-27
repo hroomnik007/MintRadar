@@ -67,7 +67,7 @@ test('extension rejects the request: focused view surfaces the error with a Retr
   expect(await retry.textContent()).not.toContain('⚡')
 })
 
-test('nsec screen: Connect has a Zap svg (no ⚡), shortened warning has a TriangleAlert svg (no ⚠️)', async ({ page }) => {
+test('nsec screen: Connect has a key svg (no ⚡), shortened warning has a TriangleAlert svg (no ⚠️)', async ({ page }) => {
   await openModal(page)
   await page.locator('.nostr-method-card', { hasText: 'Nostr key (nsec)' }).click()
   await expect(page.locator('.nostr-modal-subtitle')).toHaveText(
