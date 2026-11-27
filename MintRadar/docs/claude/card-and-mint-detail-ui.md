@@ -831,3 +831,6 @@ From the live-site review of 2026-11-27 (ids as in that report):
   (`--fs-label`); "24 h" / "Now" and the chips stay 12px.
 - **G-D:** the 30 daily bars also sit in the Compare table's "Uptime 30d" cell (desktop and phone), without the rise
   animation.
+- **Compare "Uptime 30d" (follow-up, 2026-11-27):** the figure, the Best tag and the "Only differences" key use
+  `uptime30dShown(uptimePct30dExact, uptimePct30d)` + `formatUptime30d`, like the cards and Mint Detail (it showed a rounded
+  100 % next to yellow days). `e2e/compare-best-tag.spec.ts` sets both fields in its fixture.

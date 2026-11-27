@@ -15,7 +15,7 @@ import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
 import { auditLongOf } from '@/utils/auditWindows'
-import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT, mintStatusLabel, uptime30dColor } from '@/utils/mintFormatting'
+import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT, mintStatusLabel, uptime30dColor, uptime30dShown, formatUptime30d } from '@/utils/mintFormatting'
 import { mintStatus } from '@/utils/mintStatus'
 import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -345,7 +345,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       const q = uptime24hQueries[i]
       return !q || q.isLoading ? null : (q.data?.uptimePct ?? null)
     }), 'higher'),
-    uptime30d: bestFlags(mints.map(m => (typeof m.uptimePct30d === 'number' ? m.uptimePct30d : null)), 'higher'),
+    // The unrounded share cut down to one decimal, as on the cards and Mint Detail (review 2026-11-27: Compare showed a
+    // rounded 100 % next to yellow days).
+    uptime30d: bestFlags(mints.map(m => uptime30dShown(m.uptimePct30dExact, m.uptimePct30d)), 'higher'),
     latency: bestFlags(mints.map((_, i) => { const v = browserLatency(i); return typeof v === 'number' ? v : null }), 'lower'),
   }
   const scoreRows = SCORE_PART_ROWS.map(r => ({
@@ -409,13 +411,13 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     },
     {
       id: 'uptime-30d', label: COMPARE_UPTIME_30D_LABEL,
-      keys: mints.map(m => (typeof m.uptimePct30d === 'number' ? String(m.uptimePct30d) : '—')),
+      keys: mints.map(m => { const v = uptime30dShown(m.uptimePct30dExact, m.uptimePct30d); return v === null ? '—' : formatUptime30d(v) }),
       cell: i => {
-        const pct = mints[i]!.uptimePct30d ?? null
+        const pct = uptime30dShown(mints[i]!.uptimePct30dExact, mints[i]!.uptimePct30d)
         // The 30 daily bars under the figure (G-D, review 2026-11-27): the same strip as the cards and Mint Detail.
         return (
           <span className="cmp-m-stack cmp-uptime-30d">
-            <span style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{pct !== null ? `${pct}%` : '—'}{best.uptime30d[i] && <BestTag />}</span>
+            <span style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{pct !== null ? `${formatUptime30d(pct)}%` : '—'}{best.uptime30d[i] && <BestTag />}</span>
             <UptimeBars days={mints[i]!.uptimeDaily30} className="cmp-bars" />
           </span>
         )
@@ -742,10 +744,10 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
           {/* ── Uptime (30 days, the figure stored with the score) ── */}
           <div className="cmp-lbl">{COMPARE_UPTIME_30D_LABEL}</div>
           {mints.map((mint, i) => {
-            const pct = mint.uptimePct30d ?? null
+            const pct = uptime30dShown(mint.uptimePct30dExact, mint.uptimePct30d)
             return (
               <div key={mint.url} className="cmp-val" data-row="uptime-30d" style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                {pct !== null ? `${pct}%` : '—'}
+                {pct !== null ? `${formatUptime30d(pct)}%` : '—'}
                 {best.uptime30d[i] && <BestTag />}
                 {/* The 30 daily bars under the figure, as on the phone table (G-D, review 2026-11-27). */}
                 <UptimeBars days={mint.uptimeDaily30} className="cmp-bars" />

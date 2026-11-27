@@ -10,13 +10,14 @@ import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
 
 const ALPHA = 'https://alpha.mint.example', BRAVO = 'https://bravo.mint.example', DELTA = 'https://delta.mint.example'
 const UPTIME_30D: Record<string, number> = { [ALPHA]: 99.5, [BRAVO]: 99.5, [DELTA]: 97 }
-const KNOWN = MOCK_KNOWN_MINTS.map(m => ({ ...m, uptimePct30d: UPTIME_30D[m.url] ?? null }))
+// The exact share too: Compare shows it cut down to one decimal (review 2026-11-27), the rounded one is only its fallback.
+const KNOWN = MOCK_KNOWN_MINTS.map(m => ({ ...m, uptimePct30d: UPTIME_30D[m.url] ?? null, uptimePct30dExact: UPTIME_30D[m.url] ?? null }))
 const ROWS = ['reliability', 'uptime', 'uptime-30d', 'browser-latency'] as const
 // Browser latency delays (ms): Alpha fastest, then Delta, then Bravo; DELTA_DOWN: Delta does not answer.
 const BROWSER_MS: Record<string, number | null> = { alpha: 30, bravo: 400, delta: 160 }
 const DELTA_DOWN: Record<string, number | null> = { ...BROWSER_MS, delta: null }
 // Delta online but without a stored score, a latency or a 30-day figure (not available: no tag in those rows).
-const KNOWN_MISSING = KNOWN.map(m => (m.url === DELTA ? { ...m, reliabilityScore: null, latencyMs: null, uptimePct30d: null } : m))
+const KNOWN_MISSING = KNOWN.map(m => (m.url === DELTA ? { ...m, reliabilityScore: null, latencyMs: null, uptimePct30d: null, uptimePct30dExact: null } : m))
 
 interface Opts { uptime24h: Record<string, number>; hold?: Promise<void>; known?: typeof KNOWN; browser?: Record<string, number | null> }
 async function openCompare(page: Page, size: [number, number], others: string[], o: Opts) {
