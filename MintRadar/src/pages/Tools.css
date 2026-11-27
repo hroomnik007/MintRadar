@@ -29,12 +29,14 @@
   min-width: 0;
 }
 .tool-anchor:focus-visible {
-  outline: 2px solid var(--accent, var(--border2));
+  outline: 2px solid var(--action);
   outline-offset: 3px;
 }
+/* The tool a link opened (#pick, #token, #payment-request) lights up for 2.8 s: copper like every other action and the
+   site's focus ring (owner, 2026-11-27; it was green, the colour of a mint's health). */
 .tool-anchor-hl .tool-card {
-  border-color: var(--green-bright);
-  box-shadow: 0 0 0 3px var(--green-soft);
+  border-color: var(--action);
+  box-shadow: 0 0 0 3px var(--action-soft);
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 

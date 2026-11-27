@@ -446,3 +446,6 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
 
 - The wizard does not offer the unit TIH (`WIZARD_HIDDEN_UNITS`; owner: MSAT stays).
 - "Find my mint" has no "→" (G-C); the same for "Browse tracked mints" and the Learn CTA links.
+- The tool a link opens (`#pick`, `#token`, `#payment-request`; `.tool-anchor-hl`, 2.8 s) is highlighted in copper
+  (`--action` border, `--action-soft` ring) and its focus ring is copper too (owner; it was green, the colour of a
+  mint's health).
