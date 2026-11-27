@@ -36,11 +36,10 @@ test.describe('Mint Detail — Keysets panel placement (desktop)', () => {
     await expect(overviewPanel.locator('.md-keyset-row')).toHaveCount(2)
     await overviewPanel.getByRole('button', { name: 'Show 1 inactive keyset' }).click()
     await expect(overviewPanel.locator('.md-keyset-row')).toHaveCount(3)
-    await expect(overviewPanel.getByText('100 ppk')).toBeVisible()
-    await expect(overviewPanel.getByText('free')).toBeVisible()
-    await expect(overviewPanel.getByText('250 ppk')).toBeVisible()
-    // Each row shows id / unit / Active-Inactive only — the panel does not
-    // render a per-input fee ("N ppk"/"free") value.
+    // The fee in words (keyset row variant A, 2026-11-27): per coin in the keyset's own unit, "No input fee" for 0.
+    await expect(overviewPanel.getByText('0.1 sat per coin')).toBeVisible()
+    await expect(overviewPanel.getByText('No input fee')).toBeVisible()
+    await expect(overviewPanel.getByText('0.25 cents per coin')).toBeVisible()
     await expect(overviewPanel.getByText('sat', { exact: true })).toHaveCount(2)
     await expect(overviewPanel.getByText('usd', { exact: true })).toHaveCount(1)
     await expect(page.locator('.md-keysets-at-nuts')).toHaveCount(0)
@@ -256,14 +255,14 @@ test.describe('Mint Detail — Keyset final expiry', () => {
     await expect(rows).toHaveCount(5)
 
     const soon = rows.nth(0).getByTestId('keyset-expiry')
-    await expect(soon).toHaveText(/^Expires \d{1,2} [A-Z][a-z]{2} \d{4}$/)
+    await expect(soon).toHaveText(/^expires \d{1,2} [A-Z][a-z]{2} \d{4}$/) // lower case in the keyset row (2026-11-27)
     await expect(soon).toHaveClass(/md-keyset-expiry--soon/)
     await expect(soon).toHaveAttribute('title', /\(your time\) · .* UTC$/)
     // the amber token (--amber: #d3a446), not the muted date colour
     await expect(soon).toHaveCSS('color', 'rgb(211, 164, 70)')
 
     const later = rows.nth(1).getByTestId('keyset-expiry')
-    await expect(later).toHaveText(/^Expires /)
+    await expect(later).toHaveText(/^expires /)
     await expect(later).not.toHaveClass(/md-keyset-expiry--soon/)
     const muted = await rows.nth(1).locator('.md-chg-date').first().evaluate(e => getComputedStyle(e).color)
     expect(await later.evaluate(e => getComputedStyle(e).color)).toBe(muted)
@@ -272,7 +271,7 @@ test.describe('Mint Detail — Keyset final expiry', () => {
     await expect(rows.nth(3).getByTestId('keyset-expiry')).toHaveCount(0)
 
     const past = rows.nth(4).getByTestId('keyset-expiry')
-    await expect(past).toHaveText(/^Expired /)
+    await expect(past).toHaveText(/^expired /)
     await expect(past).toHaveClass(/md-keyset-expiry--soon/)
     await expect(past).toHaveCSS('color', 'rgb(211, 164, 70)')
   })

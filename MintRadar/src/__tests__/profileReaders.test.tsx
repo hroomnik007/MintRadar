@@ -3,14 +3,13 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools'
 import type { NostrEvent } from 'nostr-tools'
 
-// The frontend readers of kind:0 profile events (reviewer profiles and the operator's nip05) accept only a verified
-// kind:0 from a requested pubkey and use the newest one per pubkey.
+// The frontend reader of kind:0 profile events (reviewer profiles; the operator's nip05 line is gone since 2026-11-27) accepts only a verified
+// kind:0 from a requested pubkey and uses the newest one per pubkey.
 
 const pool = vi.hoisted(() => ({ querySync: vi.fn() }))
 vi.mock('@/core/nostr/pool', () => ({ sharedPool: { querySync: pool.querySync } }))
 
 import { useMintReviews } from '@/hooks/useMintReviews'
-import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 
 const MINT = 'https://mint.example.com'
 const skReviewer = generateSecretKey()
@@ -65,37 +64,5 @@ describe('useMintReviews profiles', () => {
     const older = profile(skReviewer, { name: 'old' }, 100)
     const newer = profile(skReviewer, { name: 'new' }, 200)
     expect((await reviewerProfile(newerFirst ? [newer, older] : [older, newer]))?.name).toBe('new')
-  })
-})
-
-describe('useMintOperatorNip05', () => {
-  const nip = (meta: object) => meta
-  async function operatorNip05(events: NostrEvent[]) {
-    pool.querySync.mockResolvedValue(events)
-    const { result } = renderHook(() => useMintOperatorNip05(reviewer))
-    await waitFor(() => expect(pool.querySync).toHaveBeenCalled())
-    await new Promise(r => setTimeout(r, 0))
-    return result.current
-  }
-
-  it('uses a valid profile', async () => {
-    expect(await operatorNip05([profile(skReviewer, nip({ nip05: 'a@example.com' }), 100)])).toBe('a@example.com')
-  })
-
-  it('ignores a tampered profile', async () => {
-    const ev = tampered(profile(skReviewer, nip({ nip05: 'a@example.com' }), 100), { nip05: 'evil@example.com' })
-    expect(await operatorNip05([ev])).toBeNull()
-  })
-
-  it('ignores a profile of another pubkey', async () => {
-    expect(await operatorNip05([profile(skOther, nip({ nip05: 'b@example.com' }), 100)])).toBeNull()
-  })
-
-  it('the newer of two valid events wins whatever the arrival order', async () => {
-    const older = profile(skReviewer, nip({ nip05: 'old@example.com' }), 100)
-    const newer = profile(skReviewer, nip({ nip05: 'new@example.com' }), 200)
-    expect(await operatorNip05([older, newer])).toBe('new@example.com')
-    pool.querySync.mockReset()
-    expect(await operatorNip05([newer, older])).toBe('new@example.com')
   })
 })

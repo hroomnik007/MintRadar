@@ -107,6 +107,23 @@ const settle = async (page: Page) => {
   await networkQuiet(page)
   await layoutReady(page)
 }
+/**
+ * A Mint Detail "#tab" link scrolls the tab row into view once the tab has loaded and the page stopped growing
+ * (MintDetail.tsx scrollTabsWhenSettled, 250 ms quiet). Wait for that scroll before measuring, or it moves the page under
+ * the checks (since 2026-11-27 the page settles sooner: the live review read waits for the Reviews tab). The condition is
+ * the app's own: the tabs are under the navbar and in the upper three quarters of the screen.
+ */
+const tabsInPlace = async (page: Page, tab: string) => {
+  if (tab === 'overview') return // "#overview" is the page as it opens: no scroll
+  await expect.poll(() => page.evaluate(() => {
+    const t = document.querySelector('.mint-detail .md-tabs')
+    if (!t) return false
+    const nav = document.querySelector('.navbar')?.getBoundingClientRect().height ?? 57
+    const top = t.getBoundingClientRect().top
+    return top >= nav - 1 && top <= innerHeight * 0.75
+  }), { message: 'the #tab link has scrolled the tabs into view', timeout: 6000 }).toBe(true)
+  await layoutReady(page)
+}
 const page_ = (id: string, path: string, wait?: (p: Page) => Promise<void>): TooltipState => ({
   id,
   run: async page => {
@@ -124,6 +141,7 @@ const mint = (id: string, url: string, tab: string, extra?: (p: Page) => Promise
     await page.goto(mintPath(url, `#${tab}`))
     await expect(page.locator('.md-tabs')).toBeVisible()
     await settle(page)
+    await tabsInPlace(page, tab)
     if (extra) await extra(page)
     return true
   },
@@ -136,6 +154,7 @@ const feeMint = (tab: string): TooltipState => ({
     await page.goto(mintPath(ALPHA, `#${tab}`))
     await expect(page.locator('.md-tabs')).toBeVisible()
     await settle(page)
+    await tabsInPlace(page, tab)
     return true
   },
 })
@@ -242,6 +261,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await page.goto(mintPath(ALPHA, '#audit'))
       await expect(page.locator('.md-tabs')).toBeVisible()
       await settle(page)
+      await tabsInPlace(page, 'audit')
       return true
     },
   },

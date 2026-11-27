@@ -190,7 +190,7 @@ test.describe('W5b C: a mint that is not online', () => {
     }, { probeOffline: true })
     const rows = page.locator('.md-keysets-at-overview .md-keyset-row')
     await expect(rows).toHaveCount(2)
-    await expect(rows.nth(0).getByTestId('keyset-expiry')).toHaveText(/^Expires \d{1,2} [A-Z][a-z]{2} \d{4}$/)
+    await expect(rows.nth(0).getByTestId('keyset-expiry')).toHaveText(/^expires \d{1,2} [A-Z][a-z]{2} \d{4}$/)
     await expect(rows.nth(0).getByTestId('keyset-expiry')).toHaveClass(/md-keyset-expiry--soon/)
     await expect(rows.nth(1).getByTestId('keyset-expiry')).toHaveCount(0)
   })

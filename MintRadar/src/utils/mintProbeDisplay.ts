@@ -1,6 +1,12 @@
+import { feeUnitLabel, formatFeeRate } from './feesLimits'
 import type { MintKeyset } from '@core/mint/api'
 
 /** Display helpers for live /v1/info + keysets on Mint Detail. */
+
+/** The keyset row's fee in words (2026-11-27): "No input fee", "0.1 sat per coin", "0.25 cents per coin". */
+export function keysetFeeText(ppk: number, unit: string): string {
+  return ppk === 0 ? 'No input fee' : `${formatFeeRate(ppk)} ${feeUnitLabel(unit)} per coin`
+}
 
 export function formatKeysetFee(ppk: number | undefined): string {
   if (typeof ppk !== 'number') return ''

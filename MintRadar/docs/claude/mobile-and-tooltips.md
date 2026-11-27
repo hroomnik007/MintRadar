@@ -364,6 +364,8 @@ only when it applies (all in `tooltipTexts.ts`; `e2e/tooltip-promoted-lines.spec
 
 A1 / G-C of the 2026-11-27 review: no `aria-label` (it was "Login via Nostr", which does not contain the visible "Log in",
 so voice control could not find it; axe `label-content-name-mismatch` on every page); the accessible name is "Log in".
-The icon is lucide `KeyRound` (14px, stroke 2.2): the lightning bolt means payments on this site. The login dialog's
+The icon is lucide `KeyRound` (14px, stroke 2.2): the lightning bolt means payments on this site. Since the same day (owner)
+the button is a copper outline (`--action` text and border, `--action-soft` on hover), the recipe of "Find a mint for me";
+not filled, so it never competes with a page's one filled primary action. The login dialog's
 own icons are unchanged. Specs select the button with `getByRole('button', { name: 'Log in', exact: true })`.
 `BackLink` (M-B): `aria-label` = its label, because the label is hidden on phones and the chevron alone had no name.

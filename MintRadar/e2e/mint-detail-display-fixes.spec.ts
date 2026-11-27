@@ -128,7 +128,8 @@ test.describe('Mint Detail display fixes', () => {
   test('contact checks but no saved contact values: "Contacts not saved yet"', async ({ page }) => {
     await open(page, { known: OFFLINE_KNOWN, probe: { ...OFFLINE, contactChecks: CHECKS } })
     await expect(page.getByTestId('contacts-not-saved')).toHaveText('Contacts not saved yet; stored from the next successful check')
-    await expect(page.getByTestId('contact-checks')).toBeVisible()
+    // The checks themselves are in the Contact row's ⓘ since 2026-11-27, not a line here.
+    await expect(page.getByTestId('contact-checks')).toHaveCount(0)
   })
 })
 

@@ -27,7 +27,6 @@ import { useKnownMints } from '@/hooks/useKnownMints'
 import { LoadError, LoadingNote, MINT_LIST_ERROR } from '@/components/LoadError'
 import { useMintReviews } from '@/hooks/useMintReviews'
 import { mergeStoredAndLiveReviews, visibleReviews, withServerProfileFallback, contactListedKeys, type ServerAuthorProfile } from '@/utils/reviewUtils'
-import { useMintOperatorNip05 } from '@/hooks/useMintOperatorNip05'
 import { useVerifiedNip05 } from '@/hooks/useVerifiedNip05'
 import { usePendingAutoWatch } from '@/hooks/usePendingAutoWatch'
 import { submitMintReview } from '@/hooks/useSubmitReview'
@@ -47,7 +46,7 @@ import { TRACKED_NUTS } from '@/constants/nuts'
 import { isTestMint } from '@/constants/testMints'
 import { operatorPubkeys } from '@/utils/operatorPubkeys'
 import { cleanMintNameDetailed } from '@/utils/cleanMintName'
-import { formatKeysetFee, urlIsOnion, listHasOnion } from '@/utils/mintProbeDisplay'
+import { keysetFeeText, urlIsOnion, listHasOnion } from '@/utils/mintProbeDisplay'
 import { keysetExpiry, keysetExpiryMs } from '@/utils/keysetExpiry'
 import { auditComponent, auditDataState, auditAgeHours, AUDIT_MIN_SAMPLES } from '@/utils/auditScore'
 import { auditLongOf, decidingAuditWindow } from '@/utils/auditWindows'
@@ -70,7 +69,7 @@ import { BackLink } from '@/components/BackLink'
 import { CLIENT_LATENCY_BUTTON_LABEL, CLIENT_LATENCY_RESULT_MS, latencyCaption } from '@/constants/probeLocation'
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, uptimeTileText, type OutagesResponse } from '@/utils/mintDetailFacts'
-import { readContactChecks, scoreContactKindCounts } from '@/utils/contactChecks'
+import { readContactChecks, scoreContactKindCounts, contactChecksLine, contactChecksText } from '@/utils/contactChecks'
 import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
@@ -312,7 +311,6 @@ function MintDetailContent({ url }: { url: string }) {
   const { data: mintChanges } = useMintChanges(url)
   const { data: knownMintsData } = useKnownMints()
   const knownMint = knownMintsData?.find(m => m.url === url) ?? null
-  const operatorNip05 = useMintOperatorNip05(knownMint?.nostrAnnouncePubkey ?? null)
 
   // Computed over the full known-mints list — see Dashboard.tsx's own
   // duplicateDisplayNames for the rationale.
@@ -733,8 +731,16 @@ function MintDetailContent({ url }: { url: string }) {
     if (scrollToTabsSince.current === null) scrollToTabsSince.current = Date.now()
     const waited = Date.now() - scrollToTabsSince.current
     if (tabPanelLoading() && waited < TAB_SCROLL_MAX_WAIT_MS) {
-      const retry = window.setTimeout(() => setScrollRetry(n => n + 1), TAB_SCROLL_MAX_WAIT_MS - waited)
-      return () => window.clearTimeout(retry)
+      // Checked every 100 ms (a DOM read, no render): the placeholder often goes in a child's own render, which does not
+      // come back here, so a single timer at the maximum wait scrolled up to 2.5 s late, after the visitor had started
+      // (2026-11-27). One render once it is gone (or at the maximum wait) runs this effect again.
+      const since = scrollToTabsSince.current
+      const poll = window.setInterval(() => {
+        if (tabPanelLoading() && Date.now() - since < TAB_SCROLL_MAX_WAIT_MS) return
+        window.clearInterval(poll)
+        setScrollRetry(n => n + 1)
+      }, 100)
+      return () => window.clearInterval(poll)
     }
     // Cleared only when the scroll runs: a render before it cancels the wait and the next render starts a new one
     // (clearing it up front lost the scroll whenever a second render followed).
@@ -989,12 +995,16 @@ function MintDetailContent({ url }: { url: string }) {
   const uptimeTooltip = uptimeRowTooltip(storedBreakdown, formatDuration) ?? uptimeRowText()
   // U1: the unrounded 30-day share cut down to one decimal (never a rounded-up 100 % with yellow days).
   const uptime30dShownValue = uptime30dShown(knownMint?.uptimePct30dExact, knownMint?.uptimePct30d)
+  // The Contact checks facts (format recognised, mail records, when checked) are part of the Contact row's ⓘ since
+  // 2026-11-27 (owner): the muted line under "Get in touch" is gone.
+  const contactChecksFacts = contactChecksLine(readContactChecks(data?.contactChecks), now)
+  const contactTooltip = contactChecksFacts ? `${contactRowText()} ${contactChecksText(contactChecksFacts)}.` : contactRowText()
   const reliabilityBreakdownRows = [
     { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : uptimeRowDisplay, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeTooltip },
     { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: rowAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
     { label: NUT_ROW_LABEL, display: `${offeredNuts.length} / ${TRACKED_NUTS.length} NUTs${disabledNuts.length > 0 ? ` · ${disabledNuts.length} disabled` : ''}`, source: infoSource, score: rowNScore, max: NUT_POINTS, color: storedBreakdown ? breakdownPointsColor(rowNScore, NUT_POINTS) : offeredNuts.length >= 12 ? 'var(--accent)' : offeredNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
     { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: rowVScore, max: VERSION_POINTS, color: breakdownPointsColor(rowVScore, VERSION_POINTS), tooltip: versionRowText() },
-    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, source: infoSource, score: rowCScore, max: CONTACT_POINTS, color: breakdownPointsColor(rowCScore, CONTACT_POINTS), tooltip: contactRowText() },
+    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, source: infoSource, score: rowCScore, max: CONTACT_POINTS, color: breakdownPointsColor(rowCScore, CONTACT_POINTS), tooltip: contactTooltip },
   ]
   // The stored new-mint cap correction (0 or negative): one line under the rows, so they still add up to the score.
   const storedCapLine = storedBreakdown && storedBreakdown.newMintCap.points < 0
@@ -1170,9 +1180,20 @@ function MintDetailContent({ url }: { url: string }) {
           <div style={{fontSize:13,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>Keyset data not available.</div>
         ) : (
           <div className="md-keyset-list">
+            {/* One keyset (variant A of the 2026-11-27 keyset mockup, owner): line 1 the unit with a state dot (filled =
+                active, ring = inactive; the word is there for screen readers) and the input fee in words; line 2 the id to
+                copy and the period / expiry. It used to say "Active" twice and "free" without saying what was free. */}
             {shownKeysets?.map(ks => (
-              <div key={ks.id} className="md-keyset-row">
-                <div className="md-keyset-idline">
+              <div key={ks.id} className={`md-keyset-row${ks.active ? '' : ' is-inactive'}`}>
+                <div className="md-ks-top">
+                  <span className={`md-ks-dot${ks.active ? ' is-on' : ''}`} aria-hidden="true" />
+                  <span className="md-ks-unit">{ks.unit}</span>
+                  <span className="sr-only">{ks.active ? 'Active' : 'Inactive'}</span>
+                  {typeof ks.input_fee_ppk === 'number' && (
+                    <InfoTooltip text={KEYSET_FEE_TEXT} width={200} className="md-keyset-fee-tip"><span className="md-ks-fee">{keysetFeeText(ks.input_fee_ppk, ks.unit)}</span></InfoTooltip>
+                  )}
+                </div>
+                <div className="md-ks-bot">
                   <span className="md-keyset-id">{ks.id.slice(0, 8)}…{ks.id.slice(-8)}</span>
                   <button
                     onClick={() => {
@@ -1191,27 +1212,23 @@ function MintDetailContent({ url }: { url: string }) {
                   >
                     {copiedContact === `keyset-${ks.id}` ? <Check size={13} /> : <Copy size={13} />}
                   </button>
-                  {/* On the id line, outlined (2026-11-19 mockup alignment). */}
-                  <span className={`md-keyset-meta md-keyset-state${ks.active ? ' is-active' : ''}`}>{ks.active ? 'Active' : 'Inactive'}</span>
+                  {(() => {
+                    const d = keysetDates(ks.id, ks.active, mintChanges, now)
+                    const p = keysetPending(ks.id, mintChanges, now)
+                    // Only when the mint states a final expiry; highlighted under 30 days or once past.
+                    const x = keysetExpiry(ks.final_expiry, now)
+                    if (!d && !p && !x) return null
+                    return (
+                      <div className="md-keyset-dates" data-testid="keyset-dates">
+                        {/* The dot already says the state: "since 20 Oct", not "Active since 20 Oct"; a keyset already inactive when first
+                            seen reads "inactive by 20 Oct" (the title keeps the full sentence). */}
+                        {d && <span className="md-chg-date" title={d.title}>{d.text.replace(/^Active since /, 'since ').replace(/^inactive, first seen inactive /, 'inactive by ')}</span>}
+                        {x && <span className={`md-chg-date md-keyset-expiry${x.soon ? ' md-keyset-expiry--soon' : ''}`} data-testid="keyset-expiry" title={x.title}>{x.text.charAt(0).toLowerCase() + x.text.slice(1)}</span>}
+                        {p && <PendingTag mark={p} />}
+                      </div>
+                    )
+                  })()}
                 </div>
-                <span className="md-keyset-meta md-keyset-unit">{ks.unit}</span>
-                {typeof ks.input_fee_ppk === 'number' && (
-                  <InfoTooltip text={KEYSET_FEE_TEXT} width={200} className="md-keyset-fee-tip"><span className="md-keyset-meta">{formatKeysetFee(ks.input_fee_ppk)}</span></InfoTooltip>
-                )}
-                {(() => {
-                  const d = keysetDates(ks.id, ks.active, mintChanges, now)
-                  const p = keysetPending(ks.id, mintChanges, now)
-                  // Only when the mint states a final expiry; highlighted under 30 days or once past.
-                  const x = keysetExpiry(ks.final_expiry, now)
-                  if (!d && !p && !x) return null
-                  return (
-                    <div className="md-keyset-dates" data-testid="keyset-dates">
-                      {d && <span className="md-chg-date" title={d.title}>{d.text}</span>}
-                      {x && <span className={`md-chg-date md-keyset-expiry${x.soon ? ' md-keyset-expiry--soon' : ''}`} data-testid="keyset-expiry" title={x.title}>{x.text}</span>}
-                      {p && <PendingTag mark={p} />}
-                    </div>
-                  )
-                })()}
               </div>
             ))}
             {hiddenCount > 0 && (
@@ -1569,7 +1586,6 @@ function MintDetailContent({ url }: { url: string }) {
               email={email}
               twitter={twitter}
               nostr={nostr}
-              operatorNip05={operatorNip05}
               contactsAreLastSeen={contactsAreLastSeen}
               lastContactsAt={lastContactsAt}
               contactSource={contactSource}

@@ -120,7 +120,7 @@ describe('Compare', () => {
     expect(label).toBeTruthy()
     const cells: string[] = []
     for (let el = label.nextElementSibling; el && el.classList.contains('cmp-val'); el = el.nextElementSibling) cells.push(el.textContent ?? '')
-    expect(cells).toEqual(['100%', '77%', '—'])
+    expect(cells).toEqual(['100%', '77.0%', '—'])
   })
   it('mobile table: the same row; it is a difference between a steady mint and one that was down', () => {
     mobile = true
@@ -129,7 +129,7 @@ describe('Compare', () => {
     expect(row).toBeTruthy()
     expect(row.querySelector('th')?.textContent).toBe(COMPARE_UPTIME_30D_LABEL)
     // Two known figures: the higher one carries the "BEST" tag (compareBest.ts); the desktop case above has an unknown one, so no tag.
-    expect(Array.from(row.querySelectorAll('td')).map(td => td.textContent)).toEqual(['100%Best', '77%'])
+    expect(Array.from(row.querySelectorAll('td')).map(td => td.textContent)).toEqual(['100%Best', '77.0%'])
     expect(row.querySelectorAll('td')[0]!.querySelector('.cmp-best')?.textContent).toBe('Best')
   })
 })

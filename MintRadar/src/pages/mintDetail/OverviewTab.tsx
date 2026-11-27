@@ -13,9 +13,7 @@ import { njumpProfileUrl } from '@/utils/nostrLinks'
 import { ChangeDate, PendingTag } from '@/components/mint/ChangeDate'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { LoadError, LIVE_DATA_ERROR } from '@/components/LoadError'
-import { InfoTooltip } from '@/components/InfoTooltip'
 import { MintNetworkCard } from '@/components/MintNetworkCard'
-import { ContactChecksLine } from '@/components/ContactChecksLine'
 import { networkRows } from '@/utils/networkInfo'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { formatTimeAgo } from '@/utils/mintFormatting'
@@ -30,9 +28,6 @@ import type { MintStatus } from '@/core/mint/api'
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 }
-
-// Tooltip for the muted "Profile NIP-05 · not verified" line under Get in Touch.
-const NIP05_TOOLTIP = 'Taken from the Nostr profile of the account that announced this mint. MintRadar has not checked it.'
 
 export interface OverviewTabProps {
   /** Tracked mint URL (marks the active entry of the URLs list). */
@@ -77,7 +72,6 @@ export interface OverviewTabProps {
   email: string | undefined
   twitter: string | undefined
   nostr: string | undefined
-  operatorNip05: string | null | undefined
   contactsAreLastSeen: boolean
   lastContactsAt: string | null | undefined
   contactSource: { method: string; info: string }[] | undefined
@@ -91,7 +85,7 @@ export function OverviewTab({
   unavailableInfo, lastErrorText, scoreText, supportsBackupRestore, unavailableContacts, contactListedAtLastCheck,
   motd, description, descriptionLong, infoLastSeenAt, motdDatesLine, descriptionDates, nameDates, nip87Line, pubkeyDates,
   nut4Disabled, nut5Disabled, name, headingName, version, mintTime, pubkey, healthRecord, tosUrl, urls,
-  email, twitter, nostr, operatorNip05, contactsAreLastSeen, lastContactsAt, contactSource,
+  email, twitter, nostr, contactsAreLastSeen, lastContactsAt, contactSource,
   copiedContact, setCopiedContact,
 }: OverviewTabProps) {
   return (
@@ -339,7 +333,9 @@ export function OverviewTab({
 
       {(() => { const rows = networkRows(knownMint); return rows ? <MintNetworkCard rows={rows} /> : null })()}
 
-      {(email || twitter || nostr || operatorNip05 || (data?.contactChecks?.length ?? 0) > 0) && (
+      {/* The operator's NIP-05 line and the Contact checks line are gone (owner, 2026-11-27): the checks are in the ⓘ of the
+          Contact row of "How the N is made", where they explain the points. */}
+      {(email || twitter || nostr || contactsNotSavedYet(data?.contactChecks, contactSource?.length ?? 0)) && (
         <div className="md-panel">
           {(email || twitter || nostr) && (
             <>
@@ -443,28 +439,12 @@ export function OverviewTab({
               </div>
             </>
           )}
-          {operatorNip05 && (
-            <div className="md-nip05-line">
-              <InfoTooltip
-                className="md-nip05-tip"
-                iconSize={13}
-                width={240}
-                openOnFocus
-                label={NIP05_TOOLTIP}
-                text={NIP05_TOOLTIP}
-              />
-              <span className="md-nip05-text">
-                Profile NIP-05 · not verified: <span className="md-nip05-val">{operatorNip05}</span>
-              </span>
-            </div>
-          )}
           {contactsNotSavedYet(data?.contactChecks, contactSource?.length ?? 0) && (
             <>
               <div className="md-panel-title">Get in touch</div>
               <div className="md-contact-notsaved" data-testid="contacts-not-saved" style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 8 }}>{CONTACTS_NOT_SAVED_TEXT}</div>
             </>
           )}
-          <ContactChecksLine checks={data?.contactChecks} now={now} />
         </div>
       )}
     </>

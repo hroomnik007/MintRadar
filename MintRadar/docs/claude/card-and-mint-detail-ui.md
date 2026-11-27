@@ -834,3 +834,16 @@ From the live-site review of 2026-11-27 (ids as in that report):
 - **Compare "Uptime 30d" (follow-up, 2026-11-27):** the figure, the Best tag and the "Only differences" key use
   `uptime30dShown(uptimePct30dExact, uptimePct30d)` + `formatUptime30d`, like the cards and Mint Detail (it showed a rounded
   100 % next to yellow days). `e2e/compare-best-tag.spec.ts` sets both fields in its fixture.
+- **Keyset row, variant A (owner, 2026-11-27; mockup `~/Claude/refs/mintradar-keyset-mockup-1127/`):** line 1 = state dot
+  (filled `--accent` = active, ring = inactive; the word "Active" / "Inactive" is in an sr-only span) + unit (14.5px, 600)
+  + the input fee in words on the right (`keysetFeeText`: "No input fee", "0.1 sat per coin", "0.25 cents per coin"; the ⓘ
+  keeps `KEYSET_FEE_TEXT`); line 2, indented 16px = id + copy button + period on the right ("since 20 Oct" — the dot
+  already says active — "20 Oct – 3 Nov", "inactive by 20 Oct" for one already inactive when first seen, "expires 4 Dec" in amber
+  when under 30 days). The outlined "Active" badge and the
+  loose "sat free" spans are gone. Classes `.md-ks-top`, `.md-ks-bot`, `.md-ks-dot`, `.md-ks-unit`, `.md-ks-fee`.
+- **Get in touch (owner, 2026-11-27):** the muted "Profile NIP-05 · not verified" line (and `useMintOperatorNip05`, a relay
+  lookup of the announcing account's kind 0) and the "Contact checks" line under the contacts are gone. The checks' facts
+  (`contactChecksLine` / `contactChecksText`, wording unchanged) follow the explanation in the ⓘ of the Contact row of
+  "How the N is made". The panel renders only with an email / Twitter / Nostr contact or "Contacts not saved yet".
+  Spec: `e2e/mint-detail-contact-checks.spec.ts` (rewritten); `mint-detail-nip05-line.spec.ts` was removed.
+

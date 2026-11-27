@@ -77,11 +77,11 @@ test('the History tab no longer renders a Changes panel or its empty line', asyn
 test('keysets: "Active since", inactive ranges and "first seen inactive", local date with the UTC time in the title', async ({ page }) => {
   await open(page)
   const active = keysetRow(page, ACTIVE).getByTestId('keyset-dates')
-  await expect(active).toHaveText(/^Active since \d{1,2} [A-Z][a-z]{2}( \d{4})?$/)
+  await expect(active).toHaveText(/^since \d{1,2} [A-Z][a-z]{2}( \d{4})?$/) // the dot says active (keyset row, 2026-11-27)
   await expect(active.locator('.md-chg-date')).toHaveAttribute('title', /UTC$/)
   await page.getByRole('button', { name: 'Show 2 inactive keysets' }).click()
   await expect(keysetRow(page, OLD).getByTestId('keyset-dates')).toHaveText(/^before \d{1,2} [A-Z][a-z]{2}( \d{4})? – \d{1,2} [A-Z][a-z]{2}( \d{4})?$/)
-  await expect(keysetRow(page, OLDER).getByTestId('keyset-dates')).toHaveText(/^inactive, first seen inactive \d{1,2} [A-Z][a-z]{2}/)
+  await expect(keysetRow(page, OLDER).getByTestId('keyset-dates')).toHaveText(/^inactive by \d{1,2} [A-Z][a-z]{2}/)
 })
 
 test('fees: "since" the last change, the fee history toggle, "unchanged since" without a change', async ({ page }) => {

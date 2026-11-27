@@ -401,10 +401,11 @@
   font-size: 14px;
   font-weight: 500;
   font-family: var(--font-body);
-  /* Neutral outline (phase 2): copper is kept for the one primary action of a page. */
-  color: var(--text);
+  /* Copper outline (owner, 2026-11-27; it was the neutral outline of phase 2), the same recipe as "Find a mint for me":
+     an action, but not filled, so it never competes with a page's one filled primary action. */
+  color: var(--action);
   background: transparent;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--action);
   border-radius: var(--radius-m);
   cursor: pointer;
   transition: all var(--transition);
@@ -412,7 +413,7 @@
   flex-shrink: 0;
 }
 
-.navbar-login-btn:hover { border-color: var(--text3); }
+.navbar-login-btn:hover { border-color: var(--action); background: var(--action-soft); color: var(--action-ink); }
 .navbar-login-btn:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
 
 .navbar-install-link {
