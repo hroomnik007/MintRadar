@@ -18,6 +18,7 @@ import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
 import { weightsFor, reviewsScore, latencyPart, softwarePreferenceCredit, whyBestReasons, whyBestText, type WizardCheck, type SizeOption, type WizardParts } from '@/utils/wizardScoring'
 import { softwareChoices, rankWizardRecs, matchesPreferredSoftware, wizardReasonText, reasonMentionsLatency, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
+import { wizardOffersUnit } from '@/utils/wizardUnits'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -641,8 +642,6 @@ interface WizardRec {
   meltLimits: UnitLimits | null
 }
 
-/** Units the wizard does not offer (review 2026-11-27: TIH). */
-const WIZARD_HIDDEN_UNITS: ReadonlySet<string> = new Set(['tih'])
 
 // Collapses a mint's NUT-04/NUT-05 method entries for one unit into a single
 // min/max range — a mint can advertise several methods (bolt11, bolt12, …) per
@@ -758,7 +757,7 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
     const set = new Set<string>()
     for (const m of knownMints) {
       if (m.online !== true) continue
-      for (const u of m.units ?? []) if (!WIZARD_HIDDEN_UNITS.has(u.toLowerCase())) set.add(u)
+      for (const u of m.units ?? []) if (wizardOffersUnit(u)) set.add(u)
     }
     return sortUnits([...set])
   }, [knownMints])
