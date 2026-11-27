@@ -2805,8 +2805,10 @@
   background: transparent; color: var(--text); font-size: var(--fs-sm); font-weight: 500;
 }
 .dash-intro .dash-action:hover { border-color: var(--text3); background: transparent; color: var(--text); }
-.dash-intro .dash-action-primary { border-color: var(--action); color: var(--action); }
-.dash-intro .dash-action-primary:hover { border-color: var(--action); background: var(--action-soft); color: var(--action-ink); }
+/* The page's one filled action (owner, 2026-11-27): copper fill like "Show N of M" in the filters. "+ Add a mint" and the
+   navbar Log in keep the copper outline; this is the only filled button on the page. */
+.dash-intro .dash-action-primary { border-color: var(--action); background: var(--action); color: var(--bg); font-weight: 650; }
+.dash-intro .dash-action-primary:hover { border-color: var(--action); background: var(--action); color: var(--bg); opacity: 0.9; }
 @media (max-width: 600px) {
   .dash-intro .dash-status, .dash-intro .dash-status-btn { width: 100%; }
   .dash-intro .dash-status-btn { align-items: baseline; }

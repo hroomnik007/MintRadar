@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
 
 // Follow-ups of 2026-11-22 (owner): the status box in two lines, "New to Cashu?" on its own line, the plus ("Add a mint")
-// with the copper outline of "Find a mint for me" at every width, no intro sentence on the History tab, and green rings
+// with a copper outline (and "Find a mint for me" filled with that copper since 2026-11-27) at every width, no intro sentence on the History tab, and green rings
 // for software updates in its timeline.
 
 const ALPHA = MOCK_MINTS[0]!.url
@@ -47,14 +47,18 @@ for (const width of [1440, 390]) {
       expect(lineBox.y).toBeGreaterThan(descBox.y + 4)
     })
 
-    test('the plus has the copper outline of "Find a mint for me" and keeps its name', async ({ page }) => {
+    // Since 2026-11-27 "Find a mint for me" is the page's one filled action (owner); the plus keeps the copper outline,
+    // with the copper border and text that "Find a mint for me" fills with.
+    test('the plus has a copper outline, "Find a mint for me" is filled with the same copper, and the plus keeps its name', async ({ page }) => {
       await home(page, width)
       const add = page.getByRole('button', { name: 'Add a mint' })
       await expect(add).toBeVisible()
       const find = page.getByRole('button', { name: 'Find a mint for me' })
-      const look = (e: Element) => { const cs = getComputedStyle(e); return { border: cs.borderTopColor, color: cs.color } }
+      const look = (e: Element) => { const cs = getComputedStyle(e); return { border: cs.borderTopColor, color: cs.color, bg: cs.backgroundColor } }
       const [a, f] = await Promise.all([add.evaluate(look), find.evaluate(look)])
-      expect(a).toEqual(f)
+      expect(a.border).toBe(f.border)
+      expect(a.color).toBe(f.bg)
+      expect(a.bg).not.toBe(f.bg)
     })
   })
 }

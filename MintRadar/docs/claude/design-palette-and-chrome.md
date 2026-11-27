@@ -539,3 +539,12 @@ slightly darker panels look better). Only text contrast rises. The QR code of th
 
 `--fs-label: 13px` (G-A of the 2026-11-27 review): on the desktop home 758 of ~1,100 text nodes were 12px. The mint
 card's data labels, review count and foot line use it; 12px (`--fs-xs`) stays for times, axis ends and chips.
+
+## One filled action per page (owner, 2026-11-27)
+
+Copper fill (`--action` background, `--bg` text) marks the ONE main action of a page; every other action is a copper or
+neutral outline. Home: "Find a mint for me" is filled; "+ Add a mint" and the navbar Log in keep the copper outline,
+"Inspect a token" the neutral one. The same action may be filled on a page where it is the main step (Watchlist gate
+"Log in with Nostr", Reviews "Log in to write a review") and an outline elsewhere; the navbar Log in is always an outline.
+Spec: `e2e/ui-followups-1122.spec.ts` (the plus's border and text equal the fill of "Find a mint for me").
+
