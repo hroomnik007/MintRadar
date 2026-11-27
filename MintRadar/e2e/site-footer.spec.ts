@@ -25,10 +25,8 @@ test.describe('Site footer', () => {
       'href',
       'https://github.com/hroomnik007/MintRadar',
     )
-    await expect(footer.getByRole('link', { name: 'API' })).toHaveAttribute(
-      'href',
-      'https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md',
-    )
+    // 2026-11-27: "API" opens /for-wallets (the wallet API page), not docs/API.md on GitHub.
+    await expect(footer.getByRole('link', { name: 'API' })).toHaveAttribute('href', '/for-wallets')
 
     await expect(footer.getByText('Reliability is a health signal, not solvency.')).toBeVisible()
     await expect(footer.getByText('Powered by Cashu and NIP-87')).toBeVisible()

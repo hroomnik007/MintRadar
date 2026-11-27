@@ -72,7 +72,10 @@ export async function expectKeyboardOrder(page: Page, skipWithin?: string): Prom
     const main = document.querySelector('main')!
     // Controls that are not rendered (display: none, e.g. the phone-only
     // "On this page" toggle on desktop) are not tab stops.
-    const items = Array.from(main.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex="0"]'))
+    // summary: the toggle of a folded part (<details>, 2026-11-27); the controls inside a closed one have no box and drop out.
+    const items = Array.from(main.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex="0"], summary'))
+      // Inside a closed <details> only its summary is a tab stop (Chromium still gives the hidden content boxes).
+      .filter(el => { const d = el.closest('details'); return !d || d.open || !!el.closest('summary') })
       .filter(el => el.getClientRects().length > 0 && !(skip && el.closest(skip)))
     items.forEach((el, i) => el.setAttribute('data-tab-index', String(i)))
     main.setAttribute('tabindex', '-1')
@@ -99,4 +102,10 @@ export async function expectKeyboardOrder(page: Page, skipWithin?: string): Prom
     expect(got!.focusVisible, `control ${i} :focus-visible`).toBe(true)
     expect(got!.visible, `control ${i} has a visible focus indicator`).toBe(true)
   }
+}
+
+/** Opens every folded part (<details>) of the page's main, so a test can reach what is inside (2026-11-27). */
+export async function openFolded(page: Page): Promise<void> {
+  await page.locator('main details').first().waitFor({ state: 'attached' }) // the lazy page has rendered
+  await page.evaluate(() => { document.querySelectorAll('main details').forEach(d => { (d as HTMLDetailsElement).open = true }) })
 }

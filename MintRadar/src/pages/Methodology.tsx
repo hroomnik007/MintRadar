@@ -8,6 +8,7 @@ import { METHODOLOGY_PAGE as M } from '@/constants/methodologyPage'
 import { CONTACT_NIP05, CONTACT_NPUB, REPO_URL } from '@/constants/contact'
 import { METHODOLOGY_CHANGES, METHODOLOGY_VERSION } from '@/utils/methodology'
 import { PAGE_META } from '@/utils/pageMeta'
+import { formatDate } from '@/utils/formatDate'
 import './About.css'
 import './DocPage.css'
 
@@ -32,6 +33,18 @@ const CHANGES_NEWEST_FIRST = [...METHODOLOGY_CHANGES].sort((a, b) => b.version -
 
 const nutLabel = (key: string): string => `NUT-${key.padStart(2, '0')}`
 
+function ChangeEntry({ c }: { c: (typeof METHODOLOGY_CHANGES)[number] }) {
+  return (
+    <li data-version={c.version}>
+      <span className="doc-changelog-head">
+        <strong>Methodology {c.version}</strong>
+        <time dateTime={c.date}>{formatDate(c.date)}</time>
+      </span>
+      <span className="doc-changelog-text">{c.summary}</span>
+    </li>
+  )
+}
+
 export default function Methodology() {
   useDocumentMeta(PAGE_META['/methodology'].title, PAGE_META['/methodology'].description)
   const { hash } = useLocation()
@@ -53,7 +66,8 @@ export default function Methodology() {
         <h1 className="about-h1">How the Reliability Score is computed</h1>
         <p className="about-updated" data-testid="methodology-version">
           Methodology version {METHODOLOGY_VERSION}
-          {current ? `, last changed ${current.date}` : ''}
+          {/* "15 Nov 2026", the site's date format (was the ISO date, 2026-11-27). */}
+          {current ? `, last changed ${formatDate(current.date)}` : ''}
         </p>
         <p>
           This page is the reference for the number MintRadar shows as a mint&apos;s Reliability Score. It is written
@@ -336,17 +350,19 @@ export default function Methodology() {
             The methodology number goes up whenever the formula changes. Scores from different numbers are not directly
             comparable. Newest first:
           </p>
+          {/* The current version stays open; the earlier ones fold (2026-11-27, owner: the page was long). Both lists carry
+              .doc-changelog, so the entries still read newest first. */}
           <ol className="doc-changelog" aria-label="Methodology change log">
-            {CHANGES_NEWEST_FIRST.map(c => (
-              <li key={c.version} data-version={c.version}>
-                <span className="doc-changelog-head">
-                  <strong>Methodology {c.version}</strong>
-                  <time dateTime={c.date}>{c.date}</time>
-                </span>
-                <span className="doc-changelog-text">{c.summary}</span>
-              </li>
-            ))}
+            {CHANGES_NEWEST_FIRST.slice(0, 1).map(c => <ChangeEntry key={c.version} c={c} />)}
           </ol>
+          {CHANGES_NEWEST_FIRST.length > 1 && (
+            <details className="doc-changelog-more">
+              <summary>Earlier versions ({CHANGES_NEWEST_FIRST.length - 1})</summary>
+              <ol className="doc-changelog" aria-label="Earlier methodology versions">
+                {CHANGES_NEWEST_FIRST.slice(1).map(c => <ChangeEntry key={c.version} c={c} />)}
+              </ol>
+            </details>
+          )}
         </section>
 
         <section aria-labelledby="where-published">

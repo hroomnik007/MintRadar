@@ -1,3 +1,4 @@
+import { formatDate } from '../src/utils/formatDate'
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
 import {
@@ -62,7 +63,7 @@ test.describe('Methodology page', () => {
     await expect(items).toHaveCount(expected.length)
     for (const [i, c] of expected.entries()) {
       await expect(items.nth(i)).toContainText(`Methodology ${c.version}`)
-      await expect(items.nth(i)).toContainText(c.date)
+      await expect(items.nth(i)).toContainText(formatDate(c.date))
       await expect(items.nth(i)).toContainText(c.summary)
     }
     await expect(items.first()).toContainText(`Methodology ${METHODOLOGY_VERSION}`)

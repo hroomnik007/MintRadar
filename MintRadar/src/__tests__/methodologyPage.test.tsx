@@ -1,3 +1,4 @@
+import { formatDate } from '@/utils/formatDate'
 // The /methodology page quotes numbers (constants/methodologyPage.ts). Each of them is compared here with the code
 // that computes the score, so changing a constant without updating the page fails. The change log is compared with
 // METHODOLOGY_CHANGES, the contact card with About.tsx.
@@ -277,7 +278,7 @@ describe('change log and version', () => {
     expect(items.map(li => li.dataset['version'])).toEqual(expected.map(c => String(c.version)))
     items.forEach((li, i) => {
       expect(li.textContent).toContain(`Methodology ${expected[i]!.version}`)
-      expect(li.textContent).toContain(expected[i]!.date)
+      expect(li.textContent).toContain(formatDate(expected[i]!.date))
       expect(li.textContent).toContain(expected[i]!.summary)
     })
   })
@@ -286,7 +287,7 @@ describe('change log and version', () => {
     const text = renderPage().querySelector('[data-testid="methodology-version"]')?.textContent ?? ''
     const entry = METHODOLOGY_CHANGES.find(c => c.version === METHODOLOGY_VERSION)!
     expect(text).toContain(`Methodology version ${METHODOLOGY_VERSION}`)
-    expect(text).toContain(entry.date)
+    expect(text).toContain(formatDate(entry.date))
   })
 
   it('has exactly one h1 and quotes the numbers from the data', () => {

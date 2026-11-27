@@ -734,10 +734,11 @@ export function AppShell() {
         <div className="app-footer-inner">
           <div className="app-footer-links">
             <a href="https://github.com/hroomnik007/MintRadar" target="_blank" rel="noopener noreferrer">© 2026 MintRadar.org</a>
-            <a href="https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md" target="_blank" rel="noopener noreferrer">API</a>
+            {/* "API" opens the wallet API page (2026-11-27, owner): it was a 15,000-word markdown file on GitHub, and a
+                second link "For wallets" led to the same page. */}
+            <Link to="/for-wallets">API</Link>
             <Link to="/about">About</Link>
             <Link to="/methodology">Methodology</Link>
-            <Link to="/for-wallets">For wallets</Link>
           </div>
           <div className="app-footer-note">
             <span>Reliability is a health signal, not solvency.</span>

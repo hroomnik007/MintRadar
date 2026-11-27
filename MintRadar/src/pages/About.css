@@ -17,6 +17,9 @@
   line-height: 1.65;
 }
 
+/* /about has no "On this page" list since 2026-11-27: one column, the text starts at the page edge like the other pages. */
+.about-page--no-toc { grid-template-columns: minmax(0, 780px); }
+
 /* ── On this page ── */
 .about-toc {
   position: sticky;

@@ -50,7 +50,11 @@ const example = (id: string) => {
   return e
 }
 
-function FieldTable({ fields, label }: { fields: readonly WalletField[]; label: string }) {
+// The fields a wallet reads first (2026-11-27, owner: the full table of every field was most of the page). The full
+// table stays on the page, folded under them.
+const KEY_MINT_FIELDS = ['url', 'name', 'status', 'score', 'uptime24hPct', 'uptime30dPct', 'units', 'nuts', 'software', 'outdated', 'reviews', 'eligibleForRecommendation']
+
+function FieldTable({ fields, label, mark = true }: { fields: readonly WalletField[]; label: string; mark?: boolean }) {
   return (
     <div className="doc-table-wrap" tabIndex={0} role="region" aria-label={label}>
       <table className="doc-table doc-table-stack">
@@ -59,7 +63,7 @@ function FieldTable({ fields, label }: { fields: readonly WalletField[]; label: 
         </thead>
         <tbody>
           {fields.map(f => (
-            <tr key={f.name} data-field={f.name}>
+            <tr key={f.name} {...(mark ? { 'data-field': f.name } : {})}>
               <th scope="row" className="doc-nowrap"><code>{f.name}</code></th>
               <td className="doc-nowrap" data-label="Type">{f.type}</td>
               <td className="doc-nowrap" data-label="Null">{f.nullable ? 'yes' : 'no'}</td>
@@ -205,7 +209,11 @@ export default function ForWallets() {
             <strong>Privacy of your request:</strong> download the whole list and filter locally; the single-mint
             endpoint tells MintRadar which mint you asked about.
           </p>
-          <FieldTable fields={WALLET_MINT_FIELDS} label="Mint object fields" />
+          <FieldTable fields={WALLET_MINT_FIELDS.filter(f => KEY_MINT_FIELDS.includes(f.name))} label="Main mint object fields" mark={false} />
+          <details className="doc-more">
+            <summary>All {WALLET_MINT_FIELDS.length} fields of the mint object</summary>
+            <FieldTable fields={WALLET_MINT_FIELDS} label="Mint object fields" />
+          </details>
         </section>
 
         <section aria-labelledby="filters">
@@ -349,6 +357,9 @@ export default function ForWallets() {
           <CodeBlock label="npub" title="MintRadar Health public key (npub)" code={ATTESTATION_NPUB} />
           <CodeBlock label="hex" title="MintRadar Health public key (hex)" code={ATTESTATION_PUBKEY_HEX} />
 
+          {/* The format details fold (2026-11-27, owner): the section was a third of the page. */}
+          <details className="doc-more">
+          <summary>Relays, query, tags and how to verify</summary>
           <h3 className="doc-h3">Relays</h3>
           <ul data-testid="health-relays">
             {ATTESTATION_RELAYS_PUBLIC.map(r => <li key={r}><code>{r}</code></li>)}
@@ -447,12 +458,13 @@ export default function ForWallets() {
             URL normalisation: https, lower-case host, no default port, no trailing slash on a bare host and no fragment.
             Examples for each rule are in the <a href={HEALTH_SPEC_TAGS_URL} target="_blank" rel="noopener noreferrer">tag table of the spec</a>.
           </p>
+          </details>
         </section>
 
         <section aria-labelledby="links">
           <h2 id="links" tabIndex={-1} className="about-h2">Docs and contact</h2>
           <ul>
-            <li><a href={DOCS_API_URL} target="_blank" rel="noopener noreferrer">docs/API.md</a>: the full API description.</li>
+            <li><a href={DOCS_API_URL} target="_blank" rel="noopener noreferrer">docs/API.md</a>: the wallet API in full, with the history of additions.</li>
             <li><a href={DOCS_OPENAPI_URL} target="_blank" rel="noopener noreferrer">docs/openapi/wallets-v1.yaml</a>: the OpenAPI 3.1 file, served by this site (the source file is in the GitHub repository).</li>
             <li><Link to="/methodology">Reliability Score methodology</Link>: how the score is computed, with its change log.</li>
           </ul>

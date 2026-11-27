@@ -3,7 +3,7 @@ import { expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS, MOCK_KNOWN_MINTS } from './mocks'
 
 // Fixtures for the cashu.info branch of the Mint Detail Audit tab. The shapes mirror
-// GET /api/mints/audit-cz (docs/API.md, src/hooks/useAuditCz.ts) and GET /api/mints/swaps.
+// GET /api/mints/audit-cz (docs/API-internal.md, src/hooks/useAuditCz.ts) and GET /api/mints/swaps.
 
 export const ALPHA = MOCK_MINTS[0]!.url
 export const ALPHA_PATH = `/mint/${encodeURIComponent(ALPHA)}`

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays } from './fixtures/mocks'
 import {
   DOC_WIDTHS, recordHosts, expectNoHorizontalOverflow, expectBoxesInsideViewport, expectLinksValid,
-  expectExternalLinksSafe, expectKeyboardOrder,
+  expectExternalLinksSafe, expectKeyboardOrder, openFolded,
 } from './fixtures/docPage'
 import { WALLET_MINT_FIELDS, WALLET_QUERY_PARAMS, WALLET_ERRORS } from '../src/utils/walletFields'
 import { WALLET_EXAMPLES } from '../src/constants/forWalletsPage'
@@ -81,6 +81,7 @@ test.describe('For wallets page', () => {
   test('copy buttons put exactly the code on the clipboard', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await page.goto('/for-wallets')
+    await openFolded(page) // the snippet is in the folded part of the section
     for (const ex of WALLET_EXAMPLES.slice(0, 2)) {
       const button = page.getByRole('button', { name: `Copy: ${ex.title}` })
       await button.click()
@@ -172,6 +173,7 @@ test.describe('Signed health assertions section', () => {
   test('copy buttons of the key blocks and of the snippet put exactly that text on the clipboard', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await page.goto('/for-wallets')
+    await openFolded(page) // the snippet is in the folded part of the section
     for (const [title, text] of [
       ['MintRadar Health public key (npub)', EXPECTED_NPUB],
       ['MintRadar Health public key (hex)', EXPECTED_HEX],
@@ -188,6 +190,7 @@ test.describe('Signed health assertions section', () => {
     test(`the snippet scrolls inside its container without widening the page at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 })
       await page.goto('/for-wallets')
+      await openFolded(page)
       const pre = page.locator('pre.doc-code-pre[aria-label="Verify a health assertion (JavaScript, nostr-tools)"]')
       await pre.scrollIntoViewIfNeeded()
       await expect(pre).toBeVisible()
@@ -207,6 +210,7 @@ test.describe('Signed health assertions section', () => {
   test('links of the section are valid, external ones are safe, and the page contacts only the app', async ({ page }) => {
     const rec = recordHosts(page)
     await page.goto('/for-wallets')
+    await openFolded(page)
     await expectLinksValid(page)
     await expectExternalLinksSafe(page)
     await expect(page.getByRole('link', { name: 'docs/examples/verify-health.mjs' })).toHaveAttribute('href', 'https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/examples/verify-health.mjs')

@@ -13,9 +13,10 @@ test.describe('Footer: Methodology and For wallets', () => {
     await page.goto('/')
     const footer = page.locator('footer.app-footer')
     const names = await footer.locator('.app-footer-links a').allInnerTexts()
-    expect(names).toEqual(['© 2026 MintRadar.org', 'API', 'About', 'Methodology', 'For wallets'])
+    // "API" is the link to /for-wallets since 2026-11-27 (it pointed at docs/API.md on GitHub; "For wallets" was the same page).
+    expect(names).toEqual(['© 2026 MintRadar.org', 'API', 'About', 'Methodology'])
     await expect(footer.getByRole('link', { name: 'Methodology' })).toHaveAttribute('href', '/methodology')
-    await expect(footer.getByRole('link', { name: 'For wallets' })).toHaveAttribute('href', '/for-wallets')
+    await expect(footer.getByRole('link', { name: 'API' })).toHaveAttribute('href', '/for-wallets')
     await expect(page.locator('.navbar').getByRole('link', { name: /methodology|for wallets/i })).toHaveCount(0)
   })
 
@@ -24,7 +25,7 @@ test.describe('Footer: Methodology and For wallets', () => {
     await page.locator('footer.app-footer').getByRole('link', { name: 'Methodology' }).click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/methodology')
     await expect(page.getByRole('heading', { level: 1, name: 'How the Reliability Score is computed' })).toBeVisible()
-    await page.locator('footer.app-footer').getByRole('link', { name: 'For wallets' }).click()
+    await page.locator('footer.app-footer').getByRole('link', { name: 'API' }).click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/for-wallets')
     await expect(page.getByRole('heading', { level: 1, name: 'MintRadar for wallets' })).toBeVisible()
   })
@@ -37,7 +38,7 @@ test.describe('Footer: Methodology and For wallets', () => {
       await expect(footer).toBeVisible()
       await page.evaluate(() => document.fonts.ready)
       const links = footer.locator('.app-footer-links a')
-      await expect(links).toHaveCount(5)
+      await expect(links).toHaveCount(4)
       const boxes = await links.evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, h: r.height } }))
       for (const b of boxes) {
         expect(b.l).toBeGreaterThanOrEqual(0)
@@ -59,7 +60,7 @@ test.describe('Footer: Methodology and For wallets', () => {
     await installApiMocks(page)
     await page.goto('/')
     const links = page.locator('footer.app-footer .app-footer-links a')
-    await expect(links).toHaveCount(5)
+    await expect(links).toHaveCount(4)
     await page.locator('footer.app-footer').scrollIntoViewIfNeeded()
     const areas = await links.evaluateAll(els => els.map(e => {
       const r = e.getBoundingClientRect()

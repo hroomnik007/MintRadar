@@ -15,12 +15,6 @@ const NIP05 = 'wildcitizen7@mintradar.org'
 const PRIVACY_UPDATED = '15 November 2026'
 const RULES_UPDATED = '17 October 2026'
 
-const SECTIONS = [
-  { id: 'about', label: 'What MintRadar is' },
-  { id: 'privacy', label: 'Your data' },
-  { id: 'terms', label: 'Rules' },
-] as const
-
 // Scrolls the element named by the URL hash into view and moves keyboard focus to it. The
 // AppShell resets the scroll to the top on every pathname change from an effect that runs
 // AFTER this page's effects (parent effects run last), so the scroll waits one frame; it is
@@ -68,18 +62,8 @@ export default function About() {
   useHashScroll(hash)
 
   return (
-    <div className="about-page" ref={pageRef}>
-      <nav className="about-toc" aria-label="On this page">
-        <p className="about-toc-title">On this page</p>
-        <ul>
-          {SECTIONS.map(s => (
-            <li key={s.id}>
-              <Link to={{ hash: `#${s.id}` }} className="about-toc-link">{s.label}</Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
+    <div className="about-page about-page--no-toc" ref={pageRef}>
+      {/* No "On this page" list (2026-11-27, owner): three short sections fit on one or two screens. */}
       <div className="about-text">
         <h1 className="about-h1">About MintRadar</h1>
 
@@ -89,9 +73,8 @@ export default function About() {
             MintRadar is a free, independent monitor and directory for Cashu ecash mints. It shows two separate
             signals: how a mint is running (Reliability Score, from uptime, audit results, supported NUTs, software
             version and published contact), and what other people say about it (Community Rating, from NIP-87 reviews
-            posted on Nostr). We do not verify reviewers or what they claim. Reviews from a key that is both listed as the
-            mint's Nostr contact and the author of the mint's NIP-87 announcement are labelled and not counted. A review from a
-            key the mint lists only as a contact is counted and carries a neutral label.
+            posted on Nostr). We do not verify reviewers or what they claim; how reviews from a mint&apos;s own operator are
+            handled is on the <Link to="/methodology#reviews">Methodology</Link> page.
           </p>
           <p>
             A mint can run perfectly and still lose your funds; the <Link to="/learn">Learn section</Link> explains

@@ -249,9 +249,10 @@ describe('error codes and numbers', () => {
     expect(names.filter(n => /naddr|njump|nak/.test(n))).toEqual([])
   })
 
-  it('the API.md link uses the blob URL pattern of the footer API link, the OpenAPI link is the published file, and the source files exist', () => {
+  it('the API.md link is the GitHub blob URL, the footer API link opens this page, the OpenAPI link is the published file, and the source files exist', () => {
     const footer = read('../components/layout/AppShell.tsx')
-    expect(footer).toContain('https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md')
+    // Since 2026-11-27 the footer "API" link is the router link to /for-wallets (it was the API.md blob URL).
+    expect(footer).toContain('<Link to="/for-wallets">API</Link>')
     expect(DOCS_API_URL).toBe('https://github.com/hroomnik007/MintRadar/blob/main/MintRadar/docs/API.md')
     expect(DOCS_OPENAPI_URL).toBe('https://mintradar.org/docs/openapi/wallets-v1.yaml')
     expect(read('../../docs/openapi/wallets-v1.yaml').length).toBeGreaterThan(100)
