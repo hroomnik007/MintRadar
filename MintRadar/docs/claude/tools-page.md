@@ -506,3 +506,8 @@ Testnut mint. Can be paid once." / "Prefers ecash from …; other mints are acce
 only these / others accepted too" (`MINT_LIST_*_TEXT`, the sentence under the mints is gone); every mint with its picture
 (same rule as the token) and its host; "Where to send the payment" with "Give it to the requester directly. The request
 names no Nostr or HTTP address." when there is no transport. R1: `.tool-title` has a 6 px gap before its ⓘ.
+- **Moves to the result (owner, 2026-11-28):** after "Inspect token" (only that click, not later updates) and after a
+  payment request is pasted (`onPaste`; typing does not move the page) the page scrolls so the result card / summary (or
+  the request's error) starts 12 px under the sticky navbar, unless its top is already in the upper 55 % of the screen
+  (`utils/revealResult.ts`, `revealTarget()` pure + unit-tested; smooth, instant with reduced motion). e2e:
+  `e2e/tools-reveal-result.spec.ts`.

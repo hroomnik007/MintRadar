@@ -5,6 +5,8 @@ import { flush } from './fixtures/settle'
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
   await installApiMocks(page)
+  // Inspect moves the page to the result (2026-11-28); without motion that move is instant, so boxes measured after it are stable.
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/tools')
   await expect(page.locator('.tool-title', { hasText: 'Token inspector' })).toBeVisible()
 })

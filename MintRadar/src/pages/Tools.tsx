@@ -20,6 +20,7 @@ import { weightsFor, reviewsScore, latencyPart, softwarePreferenceCredit, whyBes
 import { softwareChoices, rankWizardRecs, matchesPreferredSoftware, wizardReasonText, reasonMentionsLatency, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { wizardOffersUnit } from '@/utils/wizardUnits'
 import { tokenVerdict, signatureState } from '@/utils/tokenVerdict'
+import { revealResult } from '@/utils/revealResult'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -177,6 +178,15 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
   }
   useEffect(() => invalidateRuns, [])
 
+  // After "Inspect token" the page moves to the result card (owner, 2026-11-28); only for that click, not on later updates.
+  const verdictRef = useRef<HTMLElement | null>(null)
+  const revealPending = useRef(false)
+  useEffect(() => {
+    if (!result || !revealPending.current) return
+    revealPending.current = false
+    requestAnimationFrame(() => revealResult(verdictRef.current))
+  }, [result])
+
   const knownMap = useMemo(() => {
     const m = new Map<string, KnownMint>()
     for (const mint of knownMints) m.set(mint.url, mint)
@@ -256,6 +266,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
       return
     }
     setParseError(null)
+    revealPending.current = true
     setResult(info)
 
     // DLEQ needs the mint reachable, so a malformed token above never reaches this —
@@ -392,7 +403,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
           {/* The answer first (review 2026-11-28; second pass, mockup ~/Claude/refs/mintradar-inspectors-mockup-1128):
               the amount once, two states under it (signatures, spent), the test-mint sentence once, the actions, then one
               details table instead of the Decode / Verify parts. */}
-          <section className={`token-verdict tvd-${verdict.tone}`} aria-label="Result" data-testid="token-verdict" data-checked={spentResult ? "true" : "false"}>
+          <section ref={verdictRef} className={`token-verdict tvd-${verdict.tone}`} aria-label="Result" data-testid="token-verdict" data-checked={spentResult ? "true" : "false"}>
             <div className="tvd-top">
               <span className="tvd-amount" data-testid="token-amount">
                 {amountCarriesCurrencySymbol(result.unit)

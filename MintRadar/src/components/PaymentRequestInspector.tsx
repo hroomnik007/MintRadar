@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { InfoTooltip } from '@/components/InfoTooltip'
+import { revealResult } from '@/utils/revealResult'
 import { PAYMENT_REQUEST_PRIVACY_TEXT, TEST_MINT_TEXT } from '@/utils/tooltipTexts'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
@@ -137,11 +138,19 @@ function AcceptedMint({ url, known, list }: { url: string; known: KnownMint | nu
 export function PaymentRequestInspector({ knownMints, list }: { knownMints: KnownMint[]; list: 'ready' | 'loading' | 'error' }) {
   const [input, setInput] = useState('')
   const parsed = useMemo(() => parsePaymentRequest(input), [input])
+  // A paste moves the page to its answer (owner, 2026-11-28): the summary, or the error. Typing does not.
+  const cardRef = useRef<HTMLDivElement | null>(null)
+  const revealPending = useRef(false)
+  useEffect(() => {
+    if (!revealPending.current) return
+    revealPending.current = false
+    requestAnimationFrame(() => revealResult(cardRef.current?.querySelector('[data-testid="pr-summary"], [data-testid="pr-error"]') ?? null))
+  }, [parsed])
   const knownMap = useMemo(() => new Map(knownMints.map(m => [m.url, m] as const)), [knownMints])
   const lookup = (url: string): KnownMint | null => knownMap.get(normalizeMintUrl(url)) ?? knownMap.get(url) ?? null
 
   return (
-    <div className="tool-card" data-testid="payment-request-inspector">
+    <div className="tool-card" data-testid="payment-request-inspector" ref={cardRef}>
       <div className="tool-header">
         <div className="tool-title">Payment request inspector<InfoTooltip label="Where the payment request goes" text={PAYMENT_REQUEST_PRIVACY_TEXT} iconSize={13} width={260} /></div>
         <div className="tool-subtitle">Paste a Cashu payment request (NUT-18 creqA, NUT-26 creqB or a bitcoin: link that contains one) to read what it asks for and which mints it accepts.</div>
@@ -153,6 +162,7 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
         placeholder="creqA…, creqB… or bitcoin:?creq=…"
         value={input}
         onChange={e => setInput(e.target.value)}
+        onPaste={() => { revealPending.current = true }}
         rows={3}
         spellCheck={false}
         autoComplete="off"
