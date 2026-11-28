@@ -136,12 +136,23 @@ async function fetchKnownMints(): Promise<KnownMint[]> {
 // Also read by the Stats idle warm-up (src/core/mint/prefetch.ts), which waits for this query to settle.
 export const KNOWN_MINTS_QUERY_KEY = ['mints-known'] as const
 
+/**
+ * The probes run every 5 minutes, so an open page fetches the list again on that rhythm, in the background (owner,
+ * 2026-11-28: "Last check 51 min ago" until a reload). React Query keeps showing the current data while it fetches and
+ * swaps in the new list with structural sharing, so nothing flickers or reloads: only the values that changed (the
+ * "Last check" time, a status, a score) update in place. Only while the tab is visible (no refetch in the background
+ * tab); coming back to a tab whose list is older than 5 minutes fetches it once.
+ */
+export const KNOWN_MINTS_REFRESH_MS = 5 * 60 * 1000
+
 export function useKnownMints() {
   return useQuery({
     queryKey: KNOWN_MINTS_QUERY_KEY,
     queryFn: fetchKnownMints,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: KNOWN_MINTS_REFRESH_MS,
+    refetchInterval: KNOWN_MINTS_REFRESH_MS,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     refetchOnMount: false,
     retry: 2,
   })
