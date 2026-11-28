@@ -229,6 +229,8 @@ export const TOOLTIP_STATES: TooltipState[] = [
     id: 'tools-token-test-mint',
     run: async page => {
       await installTooltipMocks(page)
+      // Inspect moves the page to the result (2026-11-28); without motion the move is instant, so a tap never lands mid-scroll.
+      await page.emulateMedia({ reducedMotion: 'reduce' })
       await page.goto('/tools')
       await page.locator('textarea').first().fill(makeCashuTokenV4(TEST_MINT, [8, 4, 2, 1]))
       const inspect = page.getByRole('button', { name: /Inspect token|Inspecting|Verifying with mint/ })
@@ -237,6 +239,9 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await expect(page.locator('.token-details')).toBeVisible()
       await expect(inspect).toHaveText('Inspect token')
       await expect(inspect).toBeEnabled()
+      // The click left the mouse where Inspect was; the page then moved to the result (2026-11-28), so an ⓘ could now sit
+      // under that resting mouse and open on hover during a touch run. Park the mouse in the page corner.
+      await page.mouse.move(0, 0)
       await settle(page)
       return true
     },
