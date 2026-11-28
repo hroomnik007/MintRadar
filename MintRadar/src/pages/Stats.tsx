@@ -21,7 +21,8 @@ import { reliabilityColor, reliabilityScoreInfo, displayName, computeDuplicateMi
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
 import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
-import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET } from '@/utils/geoDistribution'
+import { trendScoreDomain } from '@/utils/trendTicks'
+import { computeGeoDistribution, normalizeGeoLoc, geoSummaryText, CDN_BUCKET, GEO_PHONE_ROWS } from '@/utils/geoDistribution'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { StatsPageHead } from '@/components/stats/StatsPageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -672,6 +673,12 @@ export default function Stats() {
   const geoCdn = geoDist.top.find(e => e.loc === CDN_BUCKET) ?? null
   const geoCities = geoDist.top.filter(e => e.loc !== CDN_BUCKET)
   const geoRows = Math.max(1, Math.ceil((geoCities.length + (geoCdn ? 1 : 0)) / 2))
+  // Review 2026-11-28 (S3): one sentence over the list; the CDN row stays in it (owner), with its bar.
+  const geoSummary = geoSummaryText(geoDist)
+  // S4: on a phone the first GEO_PHONE_ROWS cities, the rest behind "Show all N cities" (opens in the card).
+  const [geoAll, setGeoAll] = useState(false)
+  const geoCitiesShown = isMobile && !geoAll ? geoCities.slice(0, GEO_PHONE_ROWS) : geoCities
+  const geoMax = Math.max(1, ...geoCities.map(g => g.count), geoCdn?.count ?? 0)
 
   const cityMints = useMemo(() => {
     if (!cityModal || !knownMintsData) return []
@@ -703,7 +710,7 @@ export default function Stats() {
     const current = vals[vals.length - 1] ?? null
     const high90 = Math.max(...vals)
     const low90 = Math.min(...vals)
-    return { current, high: high90, low: low90 }
+    return { current, high: high90, low: low90, axisFrom: trendScoreDomain(vals).lo }
   }, [trendData])
 
   interface ReliabilityMover { url: string; name: string | null; delta: number }
@@ -1134,16 +1141,17 @@ export default function Stats() {
             </div>
           </div>
           <div className="stats-geo-fill">
+            {geoSummary && <p className="stats-geo-summary" data-testid="geo-summary">{geoSummary}</p>}
             <div className="stats-geo-cols" style={{gridTemplateRows:`repeat(${geoRows}, auto)`}}>
               {geoCdn === null && geoCities.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>
-              ) : geoCities.map(({loc, count}) => {
+              ) : geoCitiesShown.map(({loc, count}) => {
                 const {display, flag} = geoLabel(loc)
                 return (
                   <div key={loc} className="dist-row dist-row-clickable" {...clickableProps(() => setCityModal(loc))}>
                     <span className="stats-geo-flag" aria-hidden="true">{flag}</span>
                     <span className="dist-label dist-label-city">{display}</span>
-                    <span className="stats-meter" aria-hidden="true"><i style={{ width: `${(count / Math.max(1, ...geoCities.map(g => g.count), geoCdn?.count ?? 0)) * 100}%` }} /></span>
+                    <span className="stats-meter" aria-hidden="true"><i style={{ width: `${(count / geoMax) * 100}%` }} /></span>
                     <span className="dist-count">{count}</span>
                   </div>
                 )
@@ -1152,8 +1160,12 @@ export default function Stats() {
                 <div className="dist-row dist-row-clickable stats-geo-cdn" {...clickableProps(() => setCityModal(geoCdn.loc))}>
                   <span className="stats-geo-flag" aria-hidden="true">🌐</span>
                   <span className="dist-label dist-label-city">{CDN_BUCKET}</span>
+                  <span className="stats-meter" aria-hidden="true"><i style={{ width: `${(geoCdn.count / geoMax) * 100}%` }} /></span>
                   <span className="dist-count">{geoCdn.count}</span>
                 </div>
+              )}
+              {isMobile && !geoAll && geoCities.length > GEO_PHONE_ROWS && (
+                <button type="button" className="stats-geo-all" onClick={() => setGeoAll(true)}>Show all {geoCities.length} cities</button>
               )}
             </div>
             {(geoDist.moreCount > 0 || (geoDist.unknownCount > 0 && !geoDist.unknownShownInTop)) && (
@@ -1193,6 +1205,10 @@ export default function Stats() {
           onMintClick={url => navigate(`/mint/${encodeURIComponent(url)}`)}
           getDisplayName={m => displayName(m, duplicateDisplayNames)}
           getIconUrl={m => knownMintsData?.find(km => km.url === m.url)?.iconUrl ?? null}
+          getCurrent={m => {
+            const km = knownMintsData?.find(k => k.url === m.url)
+            return km ? { score: km.reliabilityScore ?? null, online: km.online ?? null } : null
+          }}
           note={moversNote !== '' ? <div className="stats-movers-note" role="note">{moversNote}</div> : undefined}
         />
 
@@ -1217,13 +1233,14 @@ export default function Stats() {
             <div className="trend-summary-row">
               <span className="trend-summary-item"><span className="trend-summary-label">Current</span><span style={{color:'var(--accent)',fontWeight:700}}>{trendSummary.current}</span></span>
               <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d High</span><span style={{color:'var(--accent)'}}>{trendSummary.high}</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d high</span><span style={{color:'var(--accent)'}}>{trendSummary.high}</span></span>
               <span className="trend-summary-sep">·</span>
-              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d Low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}</span></span>
+              <span className="trend-summary-item"><span className="trend-summary-label">{trendPeriod}d low</span><span style={{color:'var(--text2)'}}>{trendSummary.low}</span></span>
+              {trendSummary.axisFrom > 0 && <span className="trend-summary-axis" data-testid="trend-axis-from">Axis from {trendSummary.axisFrom}</span>}
             </div>
           )}
           {trendCoverage && (
-            <div className="trend-coverage" style={{marginTop:6,fontSize:12,color:'var(--text3)',fontFamily:'var(--font-mono)'}}>{trendCoverage}</div>
+            <div className="trend-coverage" style={{marginTop:6,fontSize:12,color:'var(--text3)',fontFamily:'var(--font-body)'}}>{trendCoverage}</div>
           )}
         </div>
       </div>

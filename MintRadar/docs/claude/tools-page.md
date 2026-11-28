@@ -451,3 +451,28 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
 - The tool a link opens (`#pick`, `#token`, `#payment-request`; `.tool-anchor-hl`, 2.8 s) is highlighted in copper
   (`--action` border, `--action-soft` ring) and its focus ring is copper too (owner; it was green, the colour of a
   mint's health).
+
+## Review 2026-11-28 (approved mockup `~/Claude/refs/mintradar-tools-mockup-1128`)
+
+- **T1, result block at the top of the Token inspector** (`.token-verdict`, `data-testid="token-verdict"`, `data-checked` true
+  once the spent check answered): "<amount> · <state>" with the Test mint chip, a sub line, then the actions
+  (Check if spent / Check again, Redeem to Lightning, Open in cashu.me, View Mint Detail; no arrows, no `title`). The
+  wording of every state is in `utils/tokenVerdict.ts` (tests: `review1128ToolsStats.test.ts`): not checked yet (neutral,
+  says the mint will see the check), asking the mint…, ready to redeem (green, only with confirmed signatures,
+  `unspentConfidence`), not spent yet (neutral), already spent (red), partly spent and spent status unknown (amber),
+  pending, not a usable mint. Decode and Verify follow under it; the old `.token-spent` block in Verify is gone.
+- **Spent token:** no Redeem (it was a greyed non-link), no Open in cashu.me, and no Mint fee block (owner).
+- **T4:** no ⓘ / `title` on the action buttons (owner); "Paste your token on the redeem page." is gone; the cashu.me line is
+  one sentence under the actions (`data-testid="token-wallet-note"`), after the "Asked mint … at …" source.
+- **T2:** labels in sentence case in the text face ("Mint status"), the amount with its unit ("21 sat", the unit line is
+  gone), the status as a dot + word; mono only for the token, keyset ids and the host (`.trc-host`).
+- **Phones:** Check if spent and Redeem each take a row, Open in cashu.me and View Mint Detail share one (44 px).
+- **W1:** `whyBestReasons` says "rated by more people (4.9★ from 16 vs 5.0★ from 5)" when #1 has the lower average from
+  more ratings, "better reviews (4.8★ from 30 vs 3.9★ from 8)" otherwise, and adds "Reliability Score nearly the same
+  (98 vs 99)" (within `NEARLY_SAME_SCORE` = 3) or "Reliability Score lower (90 vs 96)" whenever #1 has the lower score.
+- **W2:** a chosen priority's tick is copper (was green). **W3:** each fact of a result's line is one unbreakable piece
+  (`.nw`): "766 ms from your browser · Uptime 24 h 100% · ★ 4.9 (16) · LN".
+- **Payment request inspector (P1, P2):** "Accepted mints", "Transports" as sentence-case section titles; rows in the
+  order Amount (with its unit; the Unit row only for an open amount), Description, Single use ("Yes: can be paid only
+  once", `data-testid="pr-single-use"`; the separate one-shot note is gone), Request id, Locking condition.
+- Not done on purpose: a privacy line in the wizard (W4, owner); the page layout stays (L1 A).

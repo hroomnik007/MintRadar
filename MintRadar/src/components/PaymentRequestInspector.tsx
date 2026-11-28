@@ -4,14 +4,15 @@ import { Info } from 'lucide-react'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { IcShield } from '@/components/mint/IcShield'
-import { formatTokenAmount } from '@/utils/cashuToken'
+import { formatTokenAmount, amountCarriesCurrencySymbol } from '@/utils/cashuToken'
 import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor, statusDotColor } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { parsePaymentRequest, bitcoinLinkNote, mintStatusWord, transportTagLines, mintListType, mintListTypeText, type PaymentRequestView } from '@/utils/paymentRequest'
 
 const NOT_SPECIFIED = 'Not specified'
 const OPEN_AMOUNT = 'Open amount: the sender chooses how much to send.'
-const ONE_SHOT = 'One-shot: this request can be paid only once.'
+/** The Single use value of a one-shot request (2026-11-28: the separate "One-shot" note joined the row). */
+const ONE_SHOT = 'Yes: can be paid only once'
 // NUT-18: the per-method fee applies only to ecash from a mint outside the list (or from any mint if there is no list);
 // the payer owes the lowest fee among the listed methods that its mint supports.
 const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
@@ -24,7 +25,8 @@ function amountText(view: PaymentRequestView): string {
   if (view.amount === null) return NOT_SPECIFIED
   const n = Number(view.amount)
   if (!view.unit || !Number.isSafeInteger(n)) return view.amount
-  return formatTokenAmount(n, view.unit)
+  // With its unit (2026-11-28, the separate Unit row is gone): "100 sat", "$1.00".
+  return amountCarriesCurrencySymbol(view.unit) ? formatTokenAmount(n, view.unit) : `${formatTokenAmount(n, view.unit)} ${view.unit}`
 }
 
 function methodText(m: { method: string; fee: bigint | null }, unit: string | null): string {
@@ -130,11 +132,12 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
       {parsed.ok && (
         <div className="pr-result" data-testid="pr-result">
           <dl className="pr-dl">
-            <Row label="Request id">{parsed.view.id ?? NOT_SPECIFIED}</Row>
+            {/* What a payer looks at first (2026-11-28): amount with its unit, what for, how often; then the technical rows. */}
             <Row label="Amount" testId="pr-amount">{amountText(parsed.view)}</Row>
-            <Row label="Unit">{parsed.view.unit ?? NOT_SPECIFIED}</Row>
-            <Row label="Single use">{parsed.view.singleUse === true ? 'Yes' : NOT_SPECIFIED}</Row>
+            {parsed.view.amount === null && <Row label="Unit">{parsed.view.unit ?? NOT_SPECIFIED}</Row>}
             <Row label="Description">{parsed.view.description ?? NOT_SPECIFIED}</Row>
+            <Row label="Single use" testId="pr-single-use">{parsed.view.singleUse === true ? ONE_SHOT : NOT_SPECIFIED}</Row>
+            <Row label="Request id">{parsed.view.id ?? NOT_SPECIFIED}</Row>
             <Row label="Locking condition (NUT-10)" testId="pr-lock">
               {parsed.view.lock ? (
                 <>
@@ -146,7 +149,6 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
             </Row>
           </dl>
           {parsed.view.amount === null && <div className="pr-note" data-testid="pr-open-amount">{OPEN_AMOUNT}</div>}
-          {parsed.view.singleUse === true && <div className="pr-note" data-testid="pr-one-shot">{ONE_SHOT}</div>}
 
           <div className="pr-section">Accepted mints{parsed.view.mints.length > 0 ? ` (${parsed.view.mints.length})` : ''}</div>
           {parsed.view.mints.length === 0 ? (

@@ -28,6 +28,8 @@ interface ReliabilityMoversPanelProps {
   onMintClick: (url: string) => void
   getDisplayName: (mover: ReliabilityMover) => string
   getIconUrl: (mover: ReliabilityMover) => string | null
+  /** The mint's current score and state from the mint list (review 2026-11-28, S2): "before → now" and the status dot. */
+  getCurrent?: (mover: ReliabilityMover) => { score: number | null; online: boolean | null } | null
   // Optional muted line under the rows.
   footer?: ReactNode
   // Optional note ABOVE the rows, under the panel head: the methodology note (supplied by Stats.tsx). It explains why the
@@ -53,10 +55,6 @@ function SkeletonRows() {
   )
 }
 
-function getHostname(url: string): string {
-  try { return new URL(url).hostname } catch { return url }
-}
-
 // Extracted from Stats.tsx (rather than kept inline like its sibling modals)
 // specifically so the toggle/empty-state/color-differentiation behavior can
 // be unit-tested without mounting the whole Stats page — see
@@ -64,7 +62,7 @@ function getHostname(url: string): string {
 // no path-alias resolution (unlike vite.config.ts), so this component takes
 // all data via props instead of reaching into hooks/utils itself, and imports
 // MintFavicon by relative path.
-export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, refreshing = false, onMintClick, getDisplayName, getIconUrl, footer, note }: ReliabilityMoversPanelProps) {
+export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, refreshing = false, onMintClick, getDisplayName, getIconUrl, getCurrent, footer, note }: ReliabilityMoversPanelProps) {
   // Row markup mirrors .stats-top5-row (Most Reliable, in Stats.tsx) — favicon,
   // name on top with its hostname underneath, value flush right — so the two
   // panels in the same grid row read as one visual family. Only the right-hand
@@ -80,16 +78,25 @@ export function ReliabilityMoversPanel({ period, onPeriodChange, data, loading, 
       return <div className="stats-movers-empty">No significant changes this period</div>
     }
     return movers.map(m => {
-      const hostname = getHostname(m.url)
       const name = getDisplayName(m)
+      // Review 2026-11-28 (S2): no host line (it cut the names off); the score before and now under the name, and the
+      // mint's state as the dot after its name (green online, red offline), the word for screen readers only.
+      const cur = getCurrent?.(m) ?? null
+      const now = cur?.score ?? null
       return (
         <div key={m.url} className="stats-top5-row" {...clickableProps(() => onMintClick(m.url))}>
           <MintFavicon url={m.url} name={name} iconUrl={getIconUrl(m)} size={22} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-            {name !== hostname && (
-              <div className="stats-host-line" style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hostname}</div>
-            )}
+            <div className="stats-movers-name">
+              {name}
+              {cur && cur.online !== null && (
+                <>
+                  <span className={`stats-movers-dot${cur.online ? ' on' : ''}`} aria-hidden="true" />
+                  <span className="sr-only">{cur.online ? 'online' : 'offline'}</span>
+                </>
+              )}
+            </div>
+            {now !== null && <div className="stats-movers-fromto" data-testid="movers-from-to">{now - m.delta} → {now}</div>}
           </div>
           <span className={`stats-movers-delta ${direction}`}>{direction === 'up' ? '+' : ''}{m.delta}</span>
         </div>

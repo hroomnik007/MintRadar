@@ -154,8 +154,17 @@ export function whyBestReasons(best: WhyBestEntry, runnerUp: WhyBestEntry | null
     if (text) out.push(text)
     if (out.length >= max) break
   }
+  // Review 2026-11-28 (W1): when #1 has the lower Reliability Score, the line says so, or the shown scores (98 above
+  // 99) would contradict "Best match".
+  const b = best.mint.reliabilityScore, o = runnerUp.mint.reliabilityScore
+  if (out.length > 0 && b != null && o != null && b < o) {
+    out.push(o - b <= NEARLY_SAME_SCORE ? `Reliability Score nearly the same (${b} vs ${o})` : `Reliability Score lower (${b} vs ${o})`)
+  }
   return out
 }
+
+/** Up to this many Reliability points below #2, the W1 line calls the two scores "nearly the same". */
+export const NEARLY_SAME_SCORE = 3
 
 function reasonText(k: keyof WizardParts, best: WhyBestEntry, other: WhyBestEntry): string | null {
   switch (k) {
@@ -167,7 +176,14 @@ function reasonText(k: keyof WizardParts, best: WhyBestEntry, other: WhyBestEntr
       const n = best.mint.reviewRatedCount ?? best.mint.reviewCount ?? 0
       const usable = best.mint.reviewAvgRating != null && n >= MIN_REVIEWS_FOR_SCORE && !best.mint.reviewSurge
       // A mint without usable ratings is never praised for them (it can only be ahead because #2's are weak).
-      return usable ? `better reviews (${(best.mint.reviewAvgRating as number).toFixed(1)}★ from ${n} ratings)` : null
+      if (!usable) return null
+      const mine = `${(best.mint.reviewAvgRating as number).toFixed(1)}★ from ${n}`
+      const on = other.mint.reviewRatedCount ?? other.mint.reviewCount ?? 0
+      const theirs = other.mint.reviewAvgRating != null && on > 0 ? `${other.mint.reviewAvgRating.toFixed(1)}★ from ${on}` : null
+      // Review 2026-11-28 (W1): a lower average with more ratings wins because many ratings count for more; say that,
+      // not "better reviews" beside a higher average.
+      if (theirs && other.mint.reviewAvgRating! >= best.mint.reviewAvgRating!) return `rated by more people (${mine} vs ${theirs})`
+      return theirs ? `better reviews (${mine} vs ${theirs})` : `better reviews (${mine} ratings)`
     }
     case 'nuts':
       return best.mint.nutCount != null && other.mint.nutCount != null ? `more NUTs supported (${best.mint.nutCount} vs ${other.mint.nutCount})` : null

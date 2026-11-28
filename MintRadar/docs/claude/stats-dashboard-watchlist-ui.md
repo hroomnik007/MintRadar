@@ -738,3 +738,27 @@ heights re-measured in `stats-layout-shift.spec.ts` (390: 3514, 320: 3687).
 - Sort menu (A3): the trigger has no `aria-label`; its name is the visible "Sort: <current>" (the listbox keeps
   `aria-label="Sort by"`).
 - Compare picker (G-C): "Compare (N)" is a copper outline like every other action (it was the only green one).
+
+## Review fixes on Stats (2026-11-28, approved mockup `~/Claude/refs/mintradar-stats-mockup-1128`)
+
+- **S1 trend axis:** `trendScoreDomain()` (`utils/trendTicks.ts`): from the lowest value minus 5 to the highest plus 5,
+  rounded to 5, inside 0 to 100, ticks every 5 (10 over a 40-point span). On 0 to 100 the 30-day average (80 to 85) was a
+  flat line. The summary row adds "Axis from N" (`data-testid="trend-axis-from"`) when the axis does not start at 0;
+  "30d high" / "30d low" in sentence case.
+- **S2 movers:** no host line (it cut the names off); the name may wrap, the mint's status is a dot after it (green
+  online, red otherwise; the word only for screen readers, owner: "len bodkou"), and "before → now" under it
+  (`data-testid="movers-from-to"`, before = the current score from the mint list minus the delta, so no API change).
+- **S3/S4 geography:** one sentence over the list, `geoSummaryText()` (`utils/geoDistribution.ts`): "48 online mints: 32
+  in 19 cities, 16 behind a CDN or anycast (city unknown)."; the CDN / anycast row stays in the list (owner) and now has
+  its bar (same scale as the cities). Phones show the first `GEO_PHONE_ROWS` (8) cities and "Show all 19 cities"
+  (`.stats-geo-all`) opens the rest in the card. Spare height of the card goes under the list.
+- **S5 NUT coverage:** order unchanged (NUT-04 first, owner); the tag, name and "46 of 48" in the mockup's type (12 px
+  mono tag, 14 px name, 15 px number).
+- **S6:** checked: the labels were already the text face (MintRadar Sans, tabular figures); mono is used only for the NUT
+  tags, the Most reliable ranks and the initials avatars. Nothing changed there.
+- **S7:** `.nut-modal-list` grows to `calc(80vh - 150px)` (was 280 px), so all 8 Nutshell versions show without inner
+  scrolling.
+- **Layout-shift reservations re-measured** (fresh loads at the band edges, reservations off): 1440 board 1445 / stack
+  743.7; 1024 board 2212.4 with `boardMin` 2244.4; 768 board 1797.8 / stack 641; 390 board 3336.5 / stack 615; 320 board
+  3526.3 / stack 650. Stack on phones: 650 up to 373 px, 632.5 at 374 to 381, 615 from 382. `Stats.css` and the
+  `LOADED` table of `e2e/stats-layout-shift.spec.ts` follow.

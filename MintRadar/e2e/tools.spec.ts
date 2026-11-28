@@ -49,8 +49,9 @@ test.describe('Tools', () => {
     expect(new URL((await wallet.getAttribute('href'))!).search).toBe('')
     const redeem = page.getByRole('link', { name: /Redeem to Lightning/ })
     await expect(redeem).toHaveAttribute('href', 'https://redeem.cashu.me/')
-    await expect(redeem).toHaveAttribute('title', 'Opens the Cashu redeem page. Paste your token there.')
-    await expect(page.getByText('Paste your token on the redeem page.')).toBeVisible()
+    // Review 2026-11-28: no tooltip (title) on the button and no "Paste your token on the redeem page." line.
+    expect(await redeem.getAttribute('title')).toBeNull()
+    await expect(page.getByText('Paste your token on the redeem page.')).toHaveCount(0)
   })
 
   test('the decoded token appears in the #fragment of exactly one link and in no query string', async ({ page }) => {
@@ -236,7 +237,7 @@ test.describe('Tools', () => {
     await page.locator('.token-input').fill(token)
     await page.getByRole('button', { name: 'Inspect token' }).click()
 
-    await expect(page.locator('.token-result-cell', { hasText: 'Mint Status' })).toContainText('Not in database')
+    await expect(page.locator('.token-result-cell', { hasText: 'Mint status' })).toContainText('Not in database')
     await expect(page.locator('.token-risk-badge')).toHaveCount(0)
     await expect(page.getByRole('button', { name: /View Mint Detail/ })).toHaveCount(0)
   })
@@ -268,7 +269,7 @@ test.describe('Tools', () => {
     await expect(scoreCell).not.toContainText('88')
     await expect(scoreCell).not.toContainText(/(High|Moderate|Low) Reliability/)
     // The rest of the result stays.
-    await expect(grid).toContainText('Mint Status')
+    await expect(grid).toContainText('Mint status')
     await expect(grid).toContainText('21')
   })
 
@@ -301,7 +302,7 @@ test.describe('Tools', () => {
     // settle, then confirm the spent-check result box is still absent —
     // only a click on its own button may produce it.
     await expect(page.locator('.token-verify-result')).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator('.token-spent .token-verify-result')).toHaveCount(0)
+    await expect(page.locator('[data-testid="token-verdict"][data-checked="true"]')).toHaveCount(0)
 
     const spentBtn = page.getByRole('button', { name: /Check if spent/ })
     await expect(spentBtn).toBeVisible()
@@ -326,12 +327,13 @@ test.describe('Tools', () => {
     const spentBtn = page.getByRole('button', { name: /Check if spent|Checking with mint/ })
     await spentBtn.click()
 
-    const spentResult = page.locator('.token-spent .token-verify-result')
+    // Review 2026-11-28 (T1): the result block at the top says it, amber.
+    const spentResult = page.locator('[data-testid="token-verdict"][data-checked="true"]')
     await expect(spentResult).toBeVisible({ timeout: 15_000 })
-    await expect(spentResult).toContainText(/Could not check spent status/)
-    await expect(spentResult).toHaveClass(/tv-unknown/)
+    await expect(spentResult).toContainText('spent status unknown')
+    await expect(spentResult).toHaveClass(/tvd-warn/)
     // the fetch / library error text is not shown, only the fixed sentence
-    await expect(spentResult).toHaveText('Could not check spent status — Could not reach the mint. This says nothing about the token itself.')
+    await expect(page.getByTestId('token-verdict-sub')).toHaveText('Could not reach the mint. We could not ask whether these coins are spent. This says nothing about the token itself.')
 
     // Rest of the inspector stays intact.
     await expect(page.locator('.token-result-grid')).toBeVisible()
@@ -389,8 +391,8 @@ test.describe('Tools', () => {
     // The wallet link's caveat is stated next to the buttons, once the result and its actions are shown.
     await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
     await page.getByRole('button', { name: 'Inspect token' }).click()
-    const walletNote = page.locator('.token-note', { hasText: 'Open in cashu.me puts the token' })
-    await expect(walletNote).toHaveText("Open in cashu.me puts the token in the link's #fragment, which browsers don't send to servers. The wallet may keep it in your address bar and history.")
+    // Review 2026-11-28 (T4): one short sentence under the actions.
+    await expect(page.getByTestId('token-wallet-note')).toHaveText('Open in cashu.me puts the token in the link; the wallet may keep it in its history.')
   })
 
   test('Empty input: Inspect is disabled with a "Paste a token first" hint', async ({ page }) => {
@@ -417,16 +419,18 @@ test.describe('Tools', () => {
       .toHaveAttribute('href', 'https://redeem.cashu.me/')
   })
 
-  test('Check if spent explains itself under the button and is accented; the other actions are quiet', async ({ page }) => {
+  test('Check if spent is explained in the result block above it and is accented; the other actions are quiet', async ({ page }) => {
     await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
     await page.getByRole('button', { name: 'Inspect token' }).click()
     await expect(page.locator('.token-result-grid')).toBeVisible()
 
-    const caption = page.locator('.token-spent-caption')
-    await expect(caption).toHaveText('Asks the mint. It will see that you checked.')
+    // Review 2026-11-28 (T1): the result block says what the check does, right above the actions.
+    const verdict = page.getByTestId('token-verdict')
+    await expect(verdict).toContainText('21 sat · not checked yet')
+    await expect(page.getByTestId('token-verdict-sub')).toHaveText('“Check if spent” asks the mint whether these coins were redeemed. The mint will see that you checked.')
     const spentBox = (await page.getByRole('button', { name: /Check if spent/ }).boundingBox())!
-    const capBox = (await caption.boundingBox())!
-    expect(capBox.y).toBeGreaterThanOrEqual(spentBox.y + spentBox.height)
+    const vBox = (await verdict.boundingBox())!
+    expect(spentBox.y).toBeGreaterThanOrEqual(vBox.y + vBox.height)
     await expect(page.getByRole('button', { name: /Check if spent/ })).toHaveClass(/token-action-accent/)
     await expect(page.getByRole('link', { name: /Redeem to Lightning/ })).not.toHaveClass(/token-action-accent/)
     await expect(page.getByRole('link', { name: /Open in cashu.me/ })).toHaveClass(/token-action-btn/)
@@ -446,37 +450,36 @@ test.describe('Tools', () => {
       await expect(page.locator('.token-result-grid')).toBeVisible()
     }
 
-    test('accent moves from Check to Redeem after an unspent result; caption gives way to the result', async ({ page }) => {
+    test('accent moves from Check to Redeem after an unspent result; the result block says so', async ({ page }) => {
       await inspect(page, 'UNSPENT')
       const check = page.getByRole('button', { name: /Check if spent/ })
       const redeem = page.getByRole('link', { name: /Redeem to Lightning/ })
       await expect(check).toHaveClass(/token-action-accent/)
       await expect(redeem).not.toHaveClass(/token-action-accent/)
-      await expect(page.locator('.token-spent-caption')).toBeVisible()
+      await expect(page.getByTestId('token-verdict')).toContainText('not checked yet')
 
       await check.click()
-      await expect(page.locator('.token-spent .token-verify-result')).toContainText(/unspent/, { timeout: 15_000 })
+      await expect(page.locator('[data-testid="token-verdict"][data-checked="true"]')).toContainText(/ready to redeem|not spent yet/, { timeout: 15_000 })
       const again = page.getByRole('button', { name: 'Check again' })
       await expect(again).not.toHaveClass(/token-action-accent/)
       await expect(redeem).toHaveClass(/token-action-accent/)
-      await expect(page.locator('.token-spent-caption')).toHaveCount(0)
+      await expect(page.getByTestId('token-verdict')).not.toContainText('not checked yet')
     })
 
-    test('all-spent: Redeem is a disabled non-link, Open in cashu.me is hidden, note says nothing left', async ({ page }) => {
+    test('all-spent: no Redeem and no Open in cashu.me, no Mint fee, the result block says nothing left', async ({ page }) => {
       await inspect(page, 'SPENT')
       await page.getByRole('button', { name: /Check if spent/ }).click()
-      await expect(page.locator('.token-spent .token-verify-result')).toContainText(/already spent/, { timeout: 15_000 })
+      await expect(page.locator('[data-testid="token-verdict"][data-checked="true"]')).toContainText('3 sat · already spent', { timeout: 15_000 })
 
-      await expect(page.getByRole('link', { name: /Redeem to Lightning/ })).toHaveCount(0)
-      const redeem = page.locator('.token-actions [aria-disabled="true"]', { hasText: 'Redeem to Lightning' })
-      await expect(redeem).toBeVisible()
-      expect(await redeem.getAttribute('href')).toBeNull()
+      // Review 2026-11-28: Redeem is left out (it was a greyed non-link) and the Mint fee block is gone.
+      await expect(page.locator('.token-actions', { hasText: 'Redeem to Lightning' })).toHaveCount(0)
+      await expect(page.getByTestId('token-claim-fee')).toHaveCount(0)
       await expect(page.getByRole('link', { name: /Open in cashu.me/ })).toHaveCount(0)
       await expect(page.getByRole('button', { name: /View Mint Detail/ })).toBeVisible()
-      await expect(page.getByText('Nothing left to redeem.')).toBeVisible()
+      await expect(page.getByTestId('token-verdict-sub')).toHaveText('All 2 coins were redeemed elsewhere. Nothing left to redeem.')
       await expect(page.getByText('These open cashu.me with your full token in the link.')).toHaveCount(0)
       await expect(page.locator('.token-action-accent')).toHaveCount(0)
-      // View Mint Detail is the only action left and takes the full row.
+      // Check again and View Mint Detail are left; on a phone each takes the full row.
       const cardW = (await page.locator('.token-actions').boundingBox())!.width
       const detailW = (await page.getByRole('button', { name: /View Mint Detail/ }).boundingBox())!.width
       await page.setViewportSize({ width: 390, height: 844 })
@@ -507,16 +510,16 @@ test.describe('Tools', () => {
     await expect(line).toHaveCount(0)
   })
 
-  test('a currency-symbol amount does not repeat the unit label; sat keeps it', async ({ page }) => {
+  test('a currency-symbol amount does not repeat the unit; sat follows the number', async ({ page }) => {
     const amount = page.locator('.token-result-cell', { hasText: 'Amount' })
     await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [1], 'usd'))
     await page.getByRole('button', { name: 'Inspect token' }).click()
-    await expect(amount).toContainText('$0.01')
-    await expect(amount.locator('.trc-sub')).toHaveCount(0)
+    await expect(amount.locator('.trc-value')).toHaveText('$0.01')
 
     await page.locator('.token-input').fill(makeCashuToken(MOCK_MINTS[0]!.url, [21]))
     await page.getByRole('button', { name: 'Inspect token' }).click()
-    await expect(amount.locator('.trc-sub')).toHaveText('sat')
+    // Review 2026-11-28: "21 sat" in one value (the unit was a line under it).
+    await expect(amount.locator('.trc-value')).toHaveText('21 sat')
   })
 
   test('Token Inspector action buttons are content-sized on desktop; Check if spent is full width at 390px', async ({ page }) => {
@@ -583,10 +586,11 @@ test.describe('Tools', () => {
       await expect(page.locator('.token-result-grid')).toBeVisible()
       await page.getByRole('button', { name: /Check if spent/ }).click()
 
-      const spent = page.locator('.token-spent .token-verify-result')
-      await expect(spent).toContainText(/All 2 proofs pending — the mint is still processing them/, { timeout: 15_000 })
-      await expect(spent).not.toContainText(/partially usable/)
-      await expect(spent).toHaveClass(/tv-neutral/)
+      const spent = page.locator('[data-testid="token-verdict"][data-checked="true"]')
+      await expect(spent).toContainText('· pending', { timeout: 15_000 })
+      await expect(page.getByTestId('token-verdict-sub')).toHaveText('The mint is still processing these coins. Check again shortly.')
+      await expect(spent).not.toContainText(/partly spent/)
+      await expect(spent).toHaveClass(/tvd-neutral/)
     })
   })
 
@@ -633,7 +637,7 @@ test.describe('Tools', () => {
 
     await expect(page.locator('.wizard-rec-row')).toHaveCount(2, { timeout: 15_000 })
     await expect(page.locator('.wizard-rec-reason')).toHaveCount(1)
-    await expect(page.locator('.wizard-rec-row').first().locator('.wizard-rec-reason')).toHaveText('Best match: higher Reliability Score (92 vs 78) · better reviews (4.2★ from 12 ratings)')
+    await expect(page.locator('.wizard-rec-row').first().locator('.wizard-rec-reason')).toHaveText('Best match: higher Reliability Score (92 vs 78) · rated by more people (4.2★ from 12 vs 4.8★ from 3)')
     await expect(page.locator('.wizard-rec-row').nth(1).locator('.wizard-rec-reason')).toHaveCount(0)
   })
 
@@ -923,7 +927,7 @@ test.describe('Token Inspector result grid, labels and mobile actions', () => {
     const fx = await run(page)
     await expect(page.getByRole('button', { name: 'Check if spent' })).toBeVisible()
     await page.getByRole('button', { name: 'Check if spent' }).click()
-    await expect(page.locator('.token-spent .token-verify-result')).toContainText(/unspent/, { timeout: 15_000 })
+    await expect(page.locator('[data-testid="token-verdict"][data-checked="true"]')).toContainText(/ready to redeem|not spent yet/, { timeout: 15_000 })
     await expect(page.getByRole('button', { name: 'Check again' })).toBeEnabled()
     await expect(page.getByRole('button', { name: 'Check if spent' })).toHaveCount(0)
 
@@ -974,7 +978,7 @@ test.describe('Token Inspector result grid, labels and mobile actions', () => {
     for (const w of weights) expect(w).toBeLessThan(600)
   })
 
-  test('390px: Redeem is full width; View Mint Detail and Open in cashu.me sit side by side, 44px tall', async ({ page }) => {
+  test('390px: Check if spent and Redeem are full width; View Mint Detail and Open in cashu.me sit side by side, 44px tall', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await run(page)
     const box = async (name: RegExp, role: 'link' | 'button') => (await page.getByRole(role, { name }).boundingBox())!
@@ -1195,7 +1199,7 @@ test.describe('Token Inspector cancellation and timeouts', () => {
 
     // Edit while the request is pending (a trailing newline: a different textarea value, the same token).
     await page.locator('.token-input').fill(mint.token + '\n')
-    await expect(page.locator('.token-spent')).toHaveCount(0)      // initial state for the new text
+    await expect(page.getByTestId('token-verdict')).toHaveCount(0)      // initial state for the new text
     await expect(page.locator('.token-result-grid')).toHaveCount(0)
 
     // Inspect the new text so the spent panel exists again, THEN let the old request finish:
@@ -1205,7 +1209,7 @@ test.describe('Token Inspector cancellation and timeouts', () => {
     mint.releaseAll()
     await flush(page) // the stale response (if the app would still apply it) has been delivered and processed
 
-    await expect(page.locator('.token-spent .token-verify-result')).toHaveCount(0)
+    await expect(page.locator('[data-testid="token-verdict"][data-checked="true"]')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Check if spent' })).toBeEnabled()
     await expect(page.getByRole('button', { name: 'Check again' })).toHaveCount(0)
   })
@@ -1286,7 +1290,7 @@ test.describe('Token Inspector cancellation and timeouts', () => {
     await expect.poll(() => mint.hits.includes('/v1/checkstate')).toBe(true)
     await page.clock.fastForward(11_000)
 
-    const spent = page.locator('.token-spent .token-verify-result')
+    const spent = page.locator('[data-testid="token-verdict"][data-checked="true"]')
     await expect(spent).toContainText("The mint didn't answer in time.")
     await expect(spent).not.toContainText(/aborted|timed out after/i)
     const again = page.getByRole('button', { name: 'Check again' })
@@ -1297,6 +1301,6 @@ test.describe('Token Inspector cancellation and timeouts', () => {
 
     mint.modes['/v1/checkstate'] = 'ok'
     await again.click()
-    await expect(page.locator('.token-spent .token-verify-result')).toContainText(/unspent/, { timeout: 15_000 })
+    await expect(page.locator('[data-testid="token-verdict"][data-checked="true"]')).toContainText(/ready to redeem|not spent yet/, { timeout: 15_000 })
   })
 })

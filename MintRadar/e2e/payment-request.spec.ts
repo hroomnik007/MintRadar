@@ -218,7 +218,9 @@ test('NUT-26 creqB: the example of the spec shows its mint and description, with
   const mints = result(page).getByTestId('pr-mint')
   await expect(mints).toHaveCount(1)
   await expect(mints.first()).toContainText('https://mint.example.com')
-  await expect(result(page).getByTestId('pr-one-shot')).toHaveText('One-shot: this request can be paid only once.')
+  // Review 2026-11-28: the one-shot fact is the Single use value (it was a note under the table); the amount carries its unit.
+  await expect(result(page).getByTestId('pr-single-use')).toContainText('Yes: can be paid only once')
+  await expect(page.getByTestId('pr-amount')).toHaveText(/1,000 sat/)
   await expect(result(page).getByTestId('pr-open-amount')).toHaveCount(0)
   // lower case is accepted too
   await input(page).fill(NUT26_EXAMPLE.toLowerCase())
@@ -229,7 +231,7 @@ test('notes: open amount when no amount is set; nothing about reuse for a reques
   await open(page)
   await input(page).fill(encode())
   await expect(result(page).getByTestId('pr-open-amount')).toHaveText('Open amount: the sender chooses how much to send.')
-  await expect(result(page).getByTestId('pr-one-shot')).toHaveCount(0)
+  await expect(result(page).getByTestId('pr-single-use')).not.toContainText('only once')
   await expect(result(page)).not.toContainText(/reusable/i)
   await input(page).fill(encode({ amount: 21 }))
   await expect(result(page).getByTestId('pr-amount')).toContainText('21')

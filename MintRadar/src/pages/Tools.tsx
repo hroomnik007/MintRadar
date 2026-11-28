@@ -12,13 +12,14 @@ import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { PaymentRequestInspector } from '@/components/PaymentRequestInspector'
 import { PageHead } from '@/components/layout/PageHead'
-import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, Hourglass, ExternalLink, ArrowRight, Info, type LucideIcon } from 'lucide-react'
+import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, ExternalLink, Info, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
 import { weightsFor, reviewsScore, latencyPart, softwarePreferenceCredit, whyBestReasons, whyBestText, type WizardCheck, type SizeOption, type WizardParts } from '@/utils/wizardScoring'
 import { softwareChoices, rankWizardRecs, matchesPreferredSoftware, wizardReasonText, reasonMentionsLatency, latencyLimitNote, latencyLimitEmptyText, LATENCY_LIMITS, type LatencyLimit } from '@/utils/wizardPick'
 import { wizardOffersUnit } from '@/utils/wizardUnits'
+import { tokenVerdict, type VerdictTone } from '@/utils/tokenVerdict'
 import { sortUnits } from '@/utils/sortUnits'
 import { formatDateTimeUtc } from '@/utils/formatDate'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -125,6 +126,8 @@ function ClaimFee({ facts, unit, source, storedAt }: { facts: TokenFeeFacts | nu
   )
 }
 
+const VERDICT_ICON: Record<VerdictTone, LucideIcon> = { ok: CircleCheck, bad: CircleX, warn: TriangleAlert, neutral: CircleMinus, loading: LoaderCircle }
+
 /** Whether MintRadar's known-mints list has loaded: "Not in database" is only true once it has. */
 type ListState = 'ready' | 'loading' | 'error'
 
@@ -180,6 +183,8 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
 
   const actions = tokenActionState(spentResult?.status === 'ok' ? spentResult.data : null)
   const mintOffline = mintInfo != null && mintInfo.online === false
+  // A spent token has nothing left to claim: no Mint fee block (owner, 2026-11-28).
+  const allSpent = spentResult?.status === 'ok' && classifySpentCheck(spentResult.data) === 'all-spent'
   const isTestMintToken = result !== null && isTestMint(mintInfo?.url ?? result.mint)
 
   // When the mint did not answer Verify, the keysets MintRadar last stored for it (kept for mints that are offline)
@@ -200,6 +205,12 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
   const unknownIds = unknownKeysetIds(feeFacts ?? storedFeeFacts)
   const unknownFromStored = !feeFacts && unknownIds.length > 0
   const unspentSure = unspentConfidence(verify?.status ?? null, unknownIds.length > 0) === 'confirmed'
+  const verdict = tokenVerdict({
+    spent: spentResult, checking: checkingSpent, signaturesConfirmed: unspentSure,
+    mintName: mintInfo?.name ?? (result ? getHostname(result.mint) : ''), mintHost: result ? getHostname(result.mint) : '',
+    testMint: isTestMintToken,
+  })
+  const VerdictIcon = VERDICT_ICON[verdict.tone]
 
   const handleInspectAndVerify = async () => {
     const token = cleanToken
@@ -364,6 +375,61 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
 
       {result && (
         <>
+          {/* The answer first (review 2026-11-28, T1): amount, spent state and what to do, then the details below. */}
+          <section className={`token-verdict tvd-${verdict.tone}`} aria-label="Result" data-testid="token-verdict" data-checked={spentResult ? "true" : "false"}>
+            <VerdictIcon size={18} aria-hidden="true" className={`tvd-icon${verdict.tone === 'loading' ? ' tv-spin' : ''}`} />
+            <div className="tvd-text" role="status">
+              <div className="tvd-title">
+                <b>{amountInUnit(result.amount, result.unit)}</b> · {verdict.title}
+                {isTestMintToken && <span className="token-test-chip">Test mint</span>}
+              </div>
+              <div className="tvd-sub" data-testid="token-verdict-sub">{verdict.sub}</div>
+            </div>
+          </section>
+          <div className="token-actions">
+            <button
+              type="button"
+              className={`token-action-btn${actions.accent === 'check' ? ' token-action-accent' : ''}`}
+              onClick={() => void handleCheckSpent()}
+              disabled={checkingSpent}
+            >
+              {checkingSpent
+                ? <><LoaderCircle size={13} aria-hidden="true" className="tv-spin" /> Checking with mint…</>
+                : <><Search size={13} aria-hidden="true" /> {spentResult ? 'Check again' : 'Check if spent'}</>}
+            </button>
+            {/* wallet.cashu.me reads `#token=` verbatim (cashubtc/cashu.me WalletPage.vue), so the raw token goes in the
+                fragment, which browsers never send to a server. redeem.cashu.me does not pre-fill a token without a
+                lightning address (cashubtc/cashu-redeem), so that link carries nothing. A spent token offers neither. */}
+            {!actions.redeemDisabled && (
+              <a
+                className={`token-action-btn${actions.accent === 'redeem' ? ' token-action-accent' : ''}`}
+                href="https://redeem.cashu.me/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Zap size={13} aria-hidden="true" /> Redeem to Lightning
+              </a>
+            )}
+            {actions.showOpenInWallet && (
+              <a className="token-action-btn" href={`https://wallet.cashu.me/#token=${cleanToken}`} target="_blank" rel="noopener noreferrer">
+                Open in cashu.me <ExternalLink size={12} aria-hidden="true" />
+              </a>
+            )}
+            {mintInfo && (
+              <button type="button" className="token-action-btn" onClick={() => navigate(`/mint/${encodeURIComponent(result.mint)}`)}>
+                View Mint Detail
+              </button>
+            )}
+          </div>
+          {(spentResult && spentResult.status !== 'bad-mint-url' && spentAt) || actions.showOpenInWallet ? (
+            <div className="token-source">
+              {spentResult && spentResult.status !== 'bad-mint-url' && spentAt && (
+                <><span data-testid="token-spent-source">Asked mint {getHostname(result.mint)} at {formatDateTimeUtc(spentAt)}</span>{'. '}</>
+              )}
+              {actions.showOpenInWallet && <span data-testid="token-wallet-note">Open in cashu.me puts the token in the link; the wallet may keep it in its history.</span>}
+            </div>
+          ) : null}
+
           <section className="token-part" aria-labelledby="token-decode-title" data-testid="token-decode">
           <div className="token-part-head">
             <div className="token-part-title" id="token-decode-title">Decode</div>
@@ -381,34 +447,29 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
                 <div className="trc-name">{mintInfo?.name ?? getHostname(result.mint)}</div>
                 {isTestMintToken && (
                   <InfoTooltip text={TEST_MINT_TEXT}>
-                    <span
-                      className="token-test-mint-badge"
-                      style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--amber)', background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-strong)', borderRadius: 5, padding: '2px 7px' }}
-                    >
-                      Test mint
-                    </span>
+                    <span className="token-test-mint-badge token-test-chip">Test mint</span>
                   </InfoTooltip>
                 )}
               </div>
-              <div className="trc-sub">{getHostname(result.mint)}</div>
+              <div className="trc-sub trc-host">{getHostname(result.mint)}</div>
                 </div>
               </div>
             </div>
             <div className="token-result-cell">
               <div className="trc-label">Amount</div>
-              <div className="trc-value">{formatTokenAmount(result.amount, result.unit)}</div>
-              {!amountCarriesCurrencySymbol(result.unit) && <div className="trc-sub">{result.unit}</div>}
+              <div className="trc-value">{amountInUnit(result.amount, result.unit)}</div>
             </div>
             <div className="token-result-cell">
-              <div className="trc-label">Mint Status</div>
+              <div className="trc-label">Mint status</div>
               {mintInfo ? (
                 <>
-                  <div className="trc-value" style={{ color: mintInfo.online === true ? 'var(--accent)' : 'var(--red)' }}>
-                    {mintInfo.online === true ? '● Online' : mintInfo.online === false ? '● Offline' : '○ Unknown'}
+                  <div className="trc-value">
+                    <span className="trc-dot" aria-hidden="true" style={{ background: mintInfo.online === true ? 'var(--accent)' : mintInfo.online === false ? 'var(--red)' : 'var(--text3)' }} />
+                    {mintInfo.online === true ? 'Online' : mintInfo.online === false ? 'Offline' : 'Unknown'}
                   </div>
                   {mintInfo.lastCheckedAt && (
                     <div className="trc-sub">
-                      checked {Math.round((now - new Date(mintInfo.lastCheckedAt).getTime()) / 60000)}m ago
+                      checked {Math.round((now - new Date(mintInfo.lastCheckedAt).getTime()) / 60000)} min ago
                     </div>
                   )}
                 </>
@@ -448,7 +509,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
           </div>
 
           {result.keysetIds.length > 0 && (
-            <div className="token-memo-row" data-testid="token-keyset-ids"><span className="tdr-label">Keyset ids</span> {result.keysetIds.join(', ')}</div>
+            <div className="token-memo-row" data-testid="token-keyset-ids"><span className="tdr-label">Keyset ids</span> <span className="token-keyset-id">{result.keysetIds.join(', ')}</span></div>
           )}
           {result.conditions.length > 0 && (
             <div className="token-memo-row" data-testid="token-conditions"><span className="tdr-label">Spending conditions</span> {result.conditions.join(', ')}</div>
@@ -513,7 +574,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
             </div>
           )}
 
-          {verify && verify.status !== 'bad-mint-url' && (
+          {verify && verify.status !== 'bad-mint-url' && !allSpent && (
             feeFacts
               ? <ClaimFee facts={feeFacts} unit={result.unit} source="mint" />
               : storedFeeFacts
@@ -525,97 +586,8 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
             <div className="token-note">This mint didn't answer its last check, so checking or redeeming may not work.</div>
           )}
 
-          <div className="token-spent">
-            <button
-              type="button"
-              className={`token-action-btn${actions.accent === 'check' ? ' token-action-accent' : ''}`}
-              onClick={() => void handleCheckSpent()}
-              disabled={checkingSpent}
-            >
-              {checkingSpent
-                ? <><LoaderCircle size={13} aria-hidden="true" className="tv-spin" /> Checking with mint…</>
-                : <><Search size={13} aria-hidden="true" /> {spentResult ? 'Check again' : 'Check if spent'}</>}
-            </button>
-            {!spentResult && (
-              <span className="token-spent-caption">Asks the mint. It will see that you checked.</span>
-            )}
-
-            {spentResult?.status === 'ok' && (() => {
-              const { total, unspent, spent, pending } = spentResult.data
-              const plural = total === 1 ? '' : 's'
-              switch (classifySpentCheck(spentResult.data)) {
-                case 'all-spent':
-                  return <ResultNote tone="bad" Icon={CircleX}>All {total} proof{plural} already spent — this token has already been redeemed elsewhere.</ResultNote>
-                case 'all-unspent':
-                  // Made-up proofs also come back unspent (the mint only looks up their hash), so the
-                  // reassuring line needs verified signatures from keysets the mint lists.
-                  return unspentSure
-                    ? <ResultNote tone="ok" Icon={CircleCheck}>All {total} proof{plural} unspent — this token has not been redeemed yet.</ResultNote>
-                    : <ResultNote tone="neutral" Icon={CircleMinus}>All {total} proof{plural} unspent: the mint has not marked {total === 1 ? 'it' : 'them'} as spent. Its signatures could not be confirmed, so this does not show the token is genuine.</ResultNote>
-                case 'all-pending':
-                  return <ResultNote tone="neutral" Icon={Hourglass}>All {total} proof{plural} pending — the mint is still processing {total === 1 ? 'it' : 'them'}. Check again shortly.</ResultNote>
-                default:
-                  return (
-                    <ResultNote tone="unknown" Icon={TriangleAlert}>
-                      {unspent}/{total} proofs unspent, {spent} already spent{pending > 0 ? `, ${pending} pending` : ''} — this token is only partially usable.
-                    </ResultNote>
-                  )
-              }
-            })()}
-            {spentResult?.status === 'error' && (
-              <ResultNote tone="unknown" Icon={TriangleAlert}>Could not check spent status — {spentResult.message} This says nothing about the token itself.</ResultNote>
-            )}
-            {spentResult?.status === 'bad-mint-url' && (
-              <ResultNote tone="bad" Icon={CircleX}>{spentResult.message} A legitimate Cashu token points at a public https:// mint.</ResultNote>
-            )}
-            {spentResult && spentResult.status !== 'bad-mint-url' && spentAt && (
-              <div className="token-source" data-testid="token-spent-source">Asked mint {getHostname(result.mint)} at {formatDateTimeUtc(spentAt)}</div>
-            )}
-          </div>
           </section>
 
-          <div className="token-actions">
-            {/* Verified against the tools' own sources, not guessed. wallet.cashu.me reads
-                `#token=` in WalletPage.vue's created() hook (cashubtc/cashu.me) and takes
-                everything after it verbatim — no URL-decoding — so the raw token goes in the
-                fragment, which browsers never send to a server (it never appears in a query
-                string). redeem.cashu.me only pre-fills the token when `lightning`, `ln` or `to`
-                is also present (cashubtc/cashu-redeem), so that link carries nothing and the
-                user pastes the token there. The privacy line under the textarea says so. */}
-            {actions.redeemDisabled ? (
-              <span className="token-action-btn" aria-disabled="true">
-                <Zap size={13} aria-hidden="true" /> Redeem to Lightning
-              </span>
-            ) : (
-              <a
-                className={`token-action-btn${actions.accent === 'redeem' ? ' token-action-accent' : ''}`}
-                href="https://redeem.cashu.me/"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Opens the Cashu redeem page. Paste your token there."
-              >
-                <Zap size={13} aria-hidden="true" /> Redeem to Lightning
-              </a>
-            )}
-            {mintInfo && (
-              <button type="button" className="token-action-btn" onClick={() => navigate(`/mint/${encodeURIComponent(result.mint)}`)}>
-                View Mint Detail <ArrowRight size={12} aria-hidden="true" />
-              </button>
-            )}
-            {actions.showOpenInWallet && (
-              <a
-                className="token-action-btn"
-                href={`https://wallet.cashu.me/#token=${cleanToken}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open in cashu.me <ExternalLink size={12} aria-hidden="true" />
-              </a>
-            )}
-          </div>
-          {!actions.redeemDisabled && <div className="token-note">Paste your token on the redeem page.</div>}
-          {actions.showOpenInWallet && <div className="token-note">Open in cashu.me puts the token in the link's #fragment, which browsers don't send to servers. The wallet may keep it in your address bar and history.</div>}
-          {actions.note === 'nothing-left' && <div className="token-note">Nothing left to redeem.</div>}
         </>
       )}
     </div>
@@ -1041,17 +1013,18 @@ function BestMintWizard({ knownMints }: { knownMints: KnownMint[] }) {
                     {idx === 0 && <div className="wizard-rec-reason" data-testid="wizard-why-best">{whyBestText(whyBestReasons(rec, recs[1] ?? null))}</div>}
                     {reason && <div className="wizard-rec-facts">{reason}</div>}
                     <div className="wizard-rec-meta">
-                      {metaLatency != null && <span>{metaLatency} ms from your browser</span>}
-                      {/* The separator only between two facts: without a latency sample the line began with "· ". */}
-                      {rec.mint.uptimePct24h != null && <span>{metaLatency != null ? ' · ' : ''}{rec.mint.uptimePct24h}% uptime (24h)</span>}
-                      {(rec.mint.reviewCount ?? 0) > 0 && rec.mint.reviewAvgRating != null && (
-                        <span className="wizard-rec-rating">
-                          {' · '}<span className="wizard-rec-star" aria-hidden="true">★</span>
-                          <span>{rec.mint.reviewAvgRating.toFixed(1)}</span>
-                          <span className="wizard-rec-rating-n">({rec.mint.reviewCount})</span>
-                        </span>
-                      )}
-                      {lnLabel && <span className="wizard-rec-ln">{' · '}{lnLabel}</span>}
+                      {/* Review 2026-11-28 (W3): each fact in one piece (.nw), the line breaks only between facts. */}
+                      {[
+                        metaLatency != null && <span key="lat" className="nw">{metaLatency} ms from your browser</span>,
+                        rec.mint.uptimePct24h != null && <span key="up" className="nw">Uptime 24 h {rec.mint.uptimePct24h}%</span>,
+                        (rec.mint.reviewCount ?? 0) > 0 && rec.mint.reviewAvgRating != null && (
+                          <span key="rt" className="wizard-rec-rating nw">
+                            <span className="wizard-rec-star" aria-hidden="true">★</span> {rec.mint.reviewAvgRating.toFixed(1)}{' '}
+                            <span className="wizard-rec-rating-n">({rec.mint.reviewCount})</span>
+                          </span>
+                        ),
+                        lnLabel && <span key="ln" className="wizard-rec-ln nw">{lnLabel}</span>,
+                      ].filter(Boolean).flatMap((el, i) => (i === 0 ? [el] : [' · ', el]))}
                     </div>
                     <div className="wizard-rec-limits">
                       {(mintRange ?? meltRange) !== null ? (

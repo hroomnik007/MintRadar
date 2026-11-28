@@ -88,3 +88,22 @@ export function trendTickLabels(ticks: readonly string[]): Map<string, string> {
   }
   return labels
 }
+
+/**
+ * Y axis of the Stats "Network score over time" chart (review 2026-11-28, S1). On 0 to 100 the 30-day average (80 to 85)
+ * was a flat line; the axis now runs from the lowest value minus 5 to the highest plus 5, rounded out to a multiple of 5
+ * and kept inside 0 to 100, with a tick every 5 points (every 10 when the span is over 40). The lowest tick is labelled,
+ * and the summary under the chart says "Axis from N", so nobody reads the bottom as zero.
+ */
+export function trendScoreDomain(values: readonly number[]): { lo: number; hi: number; ticks: number[] } {
+  const v = values.filter(n => Number.isFinite(n))
+  if (v.length === 0) return { lo: 0, hi: 100, ticks: [0, 25, 50, 75, 100] }
+  let lo = Math.max(0, Math.floor((Math.min(...v) - 5) / 5) * 5)
+  let hi = Math.min(100, Math.ceil((Math.max(...v) + 5) / 5) * 5)
+  if (hi - lo < 10) { if (hi + 5 <= 100) hi += 5; else lo -= 5 }
+  const step = hi - lo > 40 ? 10 : 5
+  const ticks: number[] = []
+  for (let t = lo; t <= hi; t += step) ticks.push(t)
+  if (ticks[ticks.length - 1] !== hi) ticks.push(hi)
+  return { lo, hi, ticks }
+}

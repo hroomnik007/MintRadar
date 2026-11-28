@@ -62,7 +62,7 @@ test('Decode and Verify are two labelled parts, Decode first; Decode holds what 
   await expect(verify(page).locator('.token-verify-result')).toContainText('Verified.')
   // Nothing from Verify leaks into Decode and the other way round.
   await expect(decode(page)).not.toContainText('Signature check')
-  await expect(verify(page)).not.toContainText('Mint Status')
+  await expect(verify(page)).not.toContainText('Mint status')
 })
 
 test('Decode is visible while Verify is pending; the source line appears when the mint has answered', async ({ page }) => {
@@ -115,16 +115,21 @@ test('a DLEQ proof that does not match the keys: the existing message, in Verify
   await expect(decode(page)).toContainText('Alpha Mint')
 })
 
-test('Check if spent lives in Verify, with its own source line', async ({ page }) => {
+// Review 2026-11-28 (T1): Check if spent moved out of Verify into the result block at the top, with the other actions.
+test('Check if spent sits with the result block above Decode, with its own source line', async ({ page }) => {
   const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }])
   await serveMintInPage(page, fx, { checkstate: 'UNSPENT' })
   await open(page)
   await inspect(page, fx.token)
   await expect(verify(page)).toContainText('Verified.', { timeout: 15_000 })
-  await expect(verify(page).getByRole('button', { name: 'Check if spent' })).toBeVisible()
+  const check = page.locator('.token-actions').getByRole('button', { name: 'Check if spent' })
+  await expect(check).toBeVisible()
+  await expect(verify(page).getByRole('button', { name: 'Check if spent' })).toHaveCount(0)
   await expect(decode(page).getByRole('button')).toHaveCount(0)
-  await verify(page).getByRole('button', { name: 'Check if spent' }).click()
-  await expect(verify(page)).toContainText('unspent', { timeout: 15_000 })
+  const box = async (sel: string) => (await page.locator(sel).boundingBox())!
+  expect((await check.boundingBox())!.y).toBeLessThan((await box('[data-testid="token-decode"]')).y)
+  await check.click()
+  await expect(page.getByTestId('token-verdict')).toContainText(/ready to redeem/, { timeout: 15_000 })
   await expect(page.getByTestId('token-spent-source')).toHaveText(/^Asked mint alpha\.mint\.example at .* UTC$/)
 })
 
@@ -156,7 +161,7 @@ for (const w of [320, 390, 1440] as const) {
   })
 }
 
-test('keyboard order: textarea, Inspect, the Signature check help, the Mint fee help, Check if spent, then the actions', async ({ page }) => {
+test('keyboard order: textarea, Inspect, Check if spent and the actions, then the Signature check and Mint fee help', async ({ page }) => {
   const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }])
   await serveMintInPage(page, fx)
   await open(page)
@@ -173,16 +178,17 @@ test('keyboard order: textarea, Inspect, the Signature check help, the Mint fee 
       return (a?.getAttribute('aria-label') ?? a?.textContent ?? '').replace(/\s+/g, ' ').trim()
     }))
   }
-  expect(names[0]).toMatch(/Signature check/i)
-  expect(names[1]).toMatch(/Mint fee/i)
-  expect(names[2]).toMatch(/Check if spent/)
-  expect(names[3]).toMatch(/Redeem to Lightning/)
-  expect(names[4]).toMatch(/View Mint Detail/)
-  expect(names[5]).toMatch(/Open in cashu\.me/)
+  // Review 2026-11-28 (T1): the actions follow the result block at the top, the Verify help comes after them.
+  expect(names[0]).toMatch(/Check if spent/)
+  expect(names[1]).toMatch(/Redeem to Lightning/)
+  expect(names[2]).toMatch(/Open in cashu\.me/)
+  expect(names[3]).toMatch(/View Mint Detail/)
+  expect(names[4]).toMatch(/Signature check/i)
+  expect(names[5]).toMatch(/Mint fee/i)
 })
 
 test.describe('"Not in database" only when the known-mints list really lacks the mint', () => {
-  const statusCell = (page: Page) => page.locator('.token-result-cell', { hasText: 'Mint Status' })
+  const statusCell = (page: Page) => page.locator('.token-result-cell', { hasText: 'Mint status' })
 
   test('pasted before the list has loaded: a neutral lookup line, then the real answer', async ({ page }) => {
     await mockRelays(page)

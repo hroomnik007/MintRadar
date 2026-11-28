@@ -110,8 +110,16 @@ describe('whyBestReasons / whyBestText', () => {
     const best = entry({ reliability: 0.617, reviews: 0.09, nuts: 0.09 }, { reliabilityScore: 98, nutCount: 14, reviewAvgRating: 4.9, reviewRatedCount: 16 })
     const second = entry({ reliability: 0.624, reviews: 0.07, nuts: 0.08, latency: 0.01 }, { reliabilityScore: 99, nutCount: 12, reviewAvgRating: 5, reviewRatedCount: 4 })
     const r = whyBestReasons(best, second)
-    expect(r).toEqual(['better reviews (4.9★ from 16 ratings)', 'more NUTs supported (14 vs 12)'])
-    expect(whyBestText(r)).toBe('Best match: better reviews (4.9★ from 16 ratings) · more NUTs supported (14 vs 12)')
+    // Review 2026-11-28 (W1): a lower average from more people is "rated by more people", and the lower score is said.
+    expect(r).toEqual(['rated by more people (4.9★ from 16 vs 5.0★ from 4)', 'more NUTs supported (14 vs 12)', 'Reliability Score nearly the same (98 vs 99)'])
+    expect(whyBestText(r)).toBe('Best match: rated by more people (4.9★ from 16 vs 5.0★ from 4) · more NUTs supported (14 vs 12) · Reliability Score nearly the same (98 vs 99)')
+  })
+  it('W1: a higher average reads "better reviews" with both; a clearly lower score reads "lower"', () => {
+    const best = entry({ reliability: 0.55, reviews: 0.2 }, { reliabilityScore: 90, reviewAvgRating: 4.8, reviewRatedCount: 30 })
+    const second = entry({ reliability: 0.6, reviews: 0.05 }, { reliabilityScore: 96, reviewAvgRating: 3.9, reviewRatedCount: 8 })
+    expect(whyBestReasons(best, second)).toEqual(['better reviews (4.8★ from 30 vs 3.9★ from 8)', 'Reliability Score lower (90 vs 96)'])
+    // No caveat when #1 also has the higher (or the same) score.
+    expect(whyBestReasons(entry({ reviews: 0.2 }, { reliabilityScore: 96, reviewAvgRating: 4.8, reviewRatedCount: 30 }), entry({ reviews: 0.1 }, { reliabilityScore: 96 }))).toEqual(['better reviews (4.8★ from 30 ratings)'])
   })
   it('a higher Reliability Score, the browser latency and the preferred software', () => {
     const best = entry({ reliability: 0.7, latency: 0.3, software: 0.02 }, { reliabilityScore: 95 }, 120)

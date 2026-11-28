@@ -1104,25 +1104,23 @@
            to 1600 for 1 to 5 changes (docs, "Movers note reservation"). Since the 12px text floor (2026-11-18) the note is
            12px at every width: one line is 32 px, two lines 50 px, three lines 68 px.
            It is added to the board and to the movers card.
-   All values re-measured 2026-11-19 for the phase-5 redesign (readout numbers, factor rows at every width, one-column
-   geography with share bars, the note in the text face): each value = the smallest loaded height of its band, so a
-   reservation never exceeds the loaded height. */
+   All values re-measured 2026-11-28 after the Tools/Stats review (geography sentence over the list and the CDN row with
+   its bar, the first 8 cities on phones, movers "before → now" instead of the host): each value = the smallest loaded
+   height of its band (fresh loads at the band edges, reservations off), so a reservation never exceeds the loaded height.
+   769-855 px: the stack is 762 there (the nhi panel is taller, 354.7). */
 .stats-page {
   --stats-reserve-note: 0px;
-  --stats-reserve-board: 1424px;
+  --stats-reserve-board: 1445px;
   --stats-reserve-nhi: 330px;
-  --stats-reserve-stack: 722px;
+  --stats-reserve-stack: 743px;
 }
-@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 2125px; } }
-@media (max-width: 919px)  { .stats-page { --stats-reserve-stack: 740px; } }
-@media (max-width: 855px)  { .stats-page { --stats-reserve-nhi: 354px; } }
-@media (max-width: 768px)  { .stats-page { --stats-reserve-board: 1858px; --stats-reserve-nhi: 336px; --stats-reserve-stack: 637px; } }
-@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 3438px; --stats-reserve-nhi: 417px; --stats-reserve-stack: 615px; } }
-@media (max-width: 424px)  { .stats-page { --stats-reserve-stack: 632px; } }
+@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 2212px; } }
+@media (max-width: 855px)  { .stats-page { --stats-reserve-nhi: 354px; --stats-reserve-stack: 761px; } }
+@media (max-width: 768px)  { .stats-page { --stats-reserve-board: 1797px; --stats-reserve-nhi: 336px; --stats-reserve-stack: 641px; } }
+@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 3258px; --stats-reserve-nhi: 417px; --stats-reserve-stack: 615px; } }
 @media (max-width: 417px)  { .stats-page { --stats-reserve-nhi: 441px; } }
-@media (max-width: 382px)  { .stats-page { --stats-reserve-stack: 655px; } }
-@media (max-width: 332px)  { .stats-page { --stats-reserve-stack: 677px; } }
-@media (max-width: 324px)  { .stats-page { --stats-reserve-stack: 695px; } }
+@media (max-width: 381px)  { .stats-page { --stats-reserve-stack: 632px; } }
+@media (max-width: 373px)  { .stats-page { --stats-reserve-stack: 650px; } }
 /* The note's height depends on how many lines its text takes, and the text depends on the changes the window holds.
    The change log can only produce one text per count (the window always holds the NEWEST changes), so there are five:
    n1 `15 Nov (v9)`, n2 `13 Nov (v8), 15 Nov (v9)`, n3 `10 Nov (v7)` ... `(v9)`, n4 `28 Oct (v6)` ... `(v9)`, n5 `27 Oct (v5)`
@@ -1483,3 +1481,27 @@
 .stats-top5-bars.uptime-bars { flex: none; width: 76px; height: 14px; gap: 1px; margin-inline: 8px 4px; }
 .stats-top5-bars.uptime-bars i { animation: none; border-radius: 1px; }
 @media (max-width: 360px) { .stats-top5-bars.uptime-bars { width: 56px; } }
+
+/* ── Review 2026-11-28 (approved mockup ~/Claude/refs/mintradar-stats-mockup-1128) ───────────────────────────────────
+   S2 movers: the name may wrap (no host line), the status dot right after it, "before → now" under it. S3/S4 geography:
+   one sentence over the list, the CDN row with its bar, phones show the first 8 cities. S5 NUT rows in the mockup's
+   type. S7 the modal lists grow to most of the window. */
+.stats-movers-name { font-size: 13.5px; font-weight: 560; color: var(--text); line-height: 1.3; overflow-wrap: anywhere; }
+.stats-movers-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 6px; vertical-align: 1px; background: var(--red); }
+.stats-movers-dot.on { background: var(--accent); }
+.stats-movers-fromto { font-size: 12.5px; color: var(--text3); margin-top: 1px; }
+.stats-geo-summary { margin: 0 0 10px; padding: 9px 12px; border-radius: 9px; background: var(--bg3); font-size: 13px; line-height: 1.45; color: var(--text2); }
+.stats-geo-all {
+  justify-self: start; margin: 8px 0 4px; min-height: 36px; padding: 0 14px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text); font: 500 var(--fs-sm) var(--font-body);
+}
+.stats-geo-all:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+.trend-summary-axis { margin-left: auto; font-size: 12px; color: var(--text3); }
+.snr-nut-tag { font: 600 12px var(--font-mono); color: var(--text2); border-color: var(--border-strong); padding: 0 6px; }
+.stats-page .snr-nut-name > span:first-child { font-size: 14px; color: var(--text); }
+.stats-page .snr-nut-count { font-size: 13px; color: var(--text3); }
+.stats-page .snr-nut-count b { font-size: 15px; font-weight: 620; color: var(--text); margin-right: 2px; }
+.nut-modal-list { max-height: calc(80vh - 150px); }
+/* The summary sits right above the list; any spare height goes under the list (before "View others"), not between them. */
+.stats-geo-fill { justify-content: flex-start; }
+.stats-geo-fill > .stats-geo-cols + * { margin-top: auto; }

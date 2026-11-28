@@ -62,3 +62,21 @@ export function computeGeoDistribution(mints: GeoDistMintInput[], topN = 8): Geo
 
   return { top, more, moreCount, moreLocations, unknownCount, unknownShownInTop, total }
 }
+
+/** Stats "Where the servers are" on a phone: this many cities before "Show all N cities" (review 2026-11-28, S4). */
+export const GEO_PHONE_ROWS = 8
+
+/**
+ * The sentence over the Stats geography list (review 2026-11-28, S3): "48 online mints: 32 in 19 cities, 16 behind a CDN
+ * or anycast (city unknown)." Mints without a location (the "Unknown" bucket, a failed lookup) are not counted as a city.
+ * Null without any online mint.
+ */
+export function geoSummaryText(d: GeoDistribution): string | null {
+  if (d.total === 0) return null
+  const all = [...d.top, ...d.more]
+  const cdn = all.find(e => e.loc === CDN_BUCKET)?.count ?? 0
+  const cities = all.filter(e => e.loc !== CDN_BUCKET && e.loc !== 'Unknown')
+  const inCities = cities.reduce((n, e) => n + e.count, 0)
+  const head = `${d.total} online ${d.total === 1 ? 'mint' : 'mints'}: ${inCities} in ${cities.length} ${cities.length === 1 ? 'city' : 'cities'}`
+  return cdn > 0 ? `${head}, ${cdn} behind a CDN or anycast (city unknown).` : `${head}.`
+}

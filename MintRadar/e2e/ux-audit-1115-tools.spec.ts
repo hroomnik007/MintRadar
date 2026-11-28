@@ -24,15 +24,16 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
     await page.getByRole('button', { name: 'Inspect token' }).click()
     await expect(page.getByTestId('token-verify-source')).toBeVisible({ timeout: 15_000 })
     await page.getByRole('button', { name: /Check if spent/ }).click()
-    return page.locator('.token-spent .token-verify-result')
+    // Review 2026-11-28 (T1): the spent answer is the result block at the top.
+    return page.locator('[data-testid="token-verdict"][data-checked="true"]')
   }
 
   test('verified signatures from a listed keyset: the green "not redeemed yet" line, no keyset warning', async ({ page }) => {
     await openTools(page)
     const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }, { amount: 2, dleq: 'valid' }])
     const line = await inspectAndCheck(page, fx, fx.token)
-    await expect(line).toContainText('All 2 proofs unspent — this token has not been redeemed yet.', { timeout: 15_000 })
-    await expect(line).toHaveClass(/tv-ok/)
+    await expect(line).toContainText('3 sat · ready to redeem', { timeout: 15_000 })
+    await expect(line).toHaveClass(/tvd-ok/)
     await expect(page.getByTestId('token-unknown-keyset')).toHaveCount(0)
   })
 
@@ -40,9 +41,10 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
     await openTools(page)
     const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'none' }, { amount: 2, dleq: 'none' }])
     const line = await inspectAndCheck(page, fx, fx.token)
-    await expect(line).toContainText('All 2 proofs unspent: the mint has not marked them as spent.', { timeout: 15_000 })
-    await expect(line).toHaveClass(/tv-neutral/)
-    await expect(line).not.toContainText('not been redeemed')
+    await expect(line).toContainText('3 sat · not spent yet', { timeout: 15_000 })
+    await expect(line).toContainText('The mint has not marked these coins as spent.')
+    await expect(line).toHaveClass(/tvd-neutral/)
+    await expect(line).not.toContainText('ready to redeem')
     await expect(page.getByTestId('token-unknown-keyset')).toHaveCount(0)
   })
 
@@ -54,8 +56,8 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
     const warn = page.getByTestId('token-unknown-keyset')
     await expect(warn).toBeVisible()
     await expect(warn).toContainText('This mint does not list keyset 009a1f293253e41e. The token may not come from this mint, or may be invalid.')
-    await expect(line).toContainText(/unspent: the mint has not marked them as spent/, { timeout: 15_000 })
-    await expect(line).not.toHaveClass(/tv-ok/)
+    await expect(line).toContainText('not spent yet', { timeout: 15_000 })
+    await expect(line).not.toHaveClass(/tvd-ok/)
     // Above the fee block, in the Verify part.
     const wBox = (await warn.boundingBox())!
     const feeBox = (await page.getByTestId('token-claim-fee').boundingBox())!

@@ -3,7 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 import { formatDate } from '@/utils/formatDate'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { trendMarkers, placeMarkerLabels } from '@/utils/methodologyMarkers'
-import { selectTrendTicks, trendTickLabels, DESKTOP_TREND_TICK_STEPS, DESKTOP_TREND_TICK_MIN_SPACING, TREND_TICK_STEPS, TREND_TICK_MIN_SPACING } from '@/utils/trendTicks'
+import { selectTrendTicks, trendTickLabels, trendScoreDomain, DESKTOP_TREND_TICK_STEPS, DESKTOP_TREND_TICK_MIN_SPACING, TREND_TICK_STEPS, TREND_TICK_MIN_SPACING } from '@/utils/trendTicks'
 import type { TrendPoint } from './ReliabilityTrendChart'
 
 // The recharts part of the Reliability Score trend. It lives in its own file so that ReliabilityTrendChart.tsx (and with
@@ -28,6 +28,7 @@ function ReliabilityTrendPlot({ data }: { data: readonly TrendPoint[] }) {
     [dates, width, isMobile],
   )
   const labels = useMemo(() => trendTickLabels(ticks), [ticks])
+  const yAxis = useMemo(() => trendScoreDomain(data.map(d => d.avgReliability)), [data])
   const first = dates[0]
   const last = dates[dates.length - 1]
   const markers = useMemo(() => trendMarkers(dates), [dates])
@@ -60,9 +61,9 @@ function ReliabilityTrendPlot({ data }: { data: readonly TrendPoint[] }) {
           </linearGradient>
         </defs>
         <XAxis dataKey="date" ticks={ticks} interval={0} tick={renderTick} axisLine={false} tickLine={false} />
-        <YAxis domain={[0,100]} tick={AXIS_TICK} axisLine={false} tickLine={false} />
+        <YAxis domain={[yAxis.lo, yAxis.hi]} ticks={yAxis.ticks} allowDataOverflow tick={AXIS_TICK} axisLine={false} tickLine={false} />
         <Tooltip
-          contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:12,fontFamily:'var(--font-mono)'}}
+          contentStyle={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:6,fontSize:12,fontFamily:'var(--font-body)'}}
           labelStyle={{color:'var(--text3)'}}
           labelFormatter={d => formatDate(String(d)) || String(d)}
           formatter={(v) => [v ?? '—', 'Avg Reliability']}
