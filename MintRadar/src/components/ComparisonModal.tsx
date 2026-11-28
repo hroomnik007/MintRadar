@@ -469,7 +469,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     requestAnimationFrame(() => {
       const keyH = modal.querySelector<HTMLElement>('.cx-key')?.offsetHeight ?? 0
       const top = el.getBoundingClientRect().top - modal.getBoundingClientRect().top + modal.scrollTop - headH - keyH - 8
-      modal.scrollTo({ top: Math.max(0, top), behavior: reduce ? 'auto' : 'smooth' })
+      // Element.scrollTo is missing in some environments (jsdom in the unit tests); scrollTop is the plain fallback.
+      if (typeof modal.scrollTo === 'function') modal.scrollTo({ top: Math.max(0, top), behavior: reduce ? 'auto' : 'smooth' })
+      else modal.scrollTop = Math.max(0, top)
     })
   }
 
