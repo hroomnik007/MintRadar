@@ -21,7 +21,7 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
       await page.route('**/api/mints/known', route => route.fulfill({ json: [...MOCK_KNOWN_MINTS, ...EXTRA] }))
       await page.goto('/')
       await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
-      await expect(page.getByText('Compare with...')).toBeVisible()
+      await expect(page.getByText(/^Compare with /)).toBeVisible()
     })
 
     test('lists every candidate without searching (no 50 cap)', async ({ page }) => {
@@ -54,7 +54,9 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
       await expect(options.last()).toHaveAttribute('aria-selected', 'true')
       await page.keyboard.press('Home')
       await expect(options.nth(0)).toBeFocused()
-      await expect(page.locator('.md-picker-count')).toHaveText('2 of 3 selected')
+      // Two picked: two chips beside the base mint, the button names the result (review 2026-11-28, P1 / P5)
+      await expect(page.locator('.md-picker-chip:not(.base)')).toHaveCount(2)
+      await expect(page.locator('.md-picker-confirm')).toHaveText('Compare 3 mints')
       // One Tab stop: the next Tab leaves the list for the Compare button.
       await page.keyboard.press('Tab')
       await expect(page.locator('.md-picker-confirm')).toBeFocused()

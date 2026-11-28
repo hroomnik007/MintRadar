@@ -33,7 +33,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     const header = page.locator('.md-picker-header')
     const headerStyle = await header.evaluate(el => getComputedStyle(el).display)
     expect(headerStyle).toBe('flex')
-    const titleBox = await page.getByText('Compare with...').boundingBox()
+    const titleBox = await page.getByText(/^Compare with /).boundingBox()
     const closeBtn = header.getByRole('button', { name: 'Close' })
     const closeBox = await closeBtn.boundingBox()
     // Side-by-side means roughly the same vertical position, not stacked below.

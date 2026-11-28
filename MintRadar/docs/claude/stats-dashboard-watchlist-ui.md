@@ -792,3 +792,15 @@ panel, `.cx-fold` has no side padding, its content keeps a 16 / 10 px inset). Op
 starts under the header and the name bar (`revealFold`); History scrolls once more when its chart has loaded (it is
 short while "Loading history…"). The overlay fix: `.cmp-modal.cx { position: relative }` (the `.sr-only` texts had the
 fixed overlay as their containing block and stretched its scroll area).
+
+### Compare with… picker, review 2026-11-28 (owner-approved mockup `~/Claude/refs/mintradar-picker-mockup-1128`, P1-P7)
+
+`components/MintComparePicker.tsx`: title "Compare with <base mint>", "Pick up to 3 mints.", then chips of the mints in
+the comparison (`.md-picker-chips`: the base mint with "this mint", each picked one with a × "Remove <name>"), the
+search, the list and the footer. A full pick does not dim the list: the other rows stay readable with a dashed box
+(`aria-disabled`) and the footer says "Up to 3. Remove one to pick another." (`.md-picker-note`, `role="status"`).
+Selection and the search ring are copper; no status dot (every candidate is online). The button reads "Compare" while
+nothing is picked (disabled), then "Compare N mints" with N including the base mint, the title of the dialog it opens.
+B1: the list is the containing block of its `.sr-only` score words and the overlay never scrolls (they had stretched the
+overlay by 2285 px on a phone); the dialog is at most 90dvh. Tests: `mintComparePicker.test.tsx`,
+`e2e/compare-picker-keyboard.spec.ts`, `e2e/compare-mobile-layout.spec.ts` ("picker's overlay").

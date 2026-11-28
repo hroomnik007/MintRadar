@@ -68,15 +68,35 @@ describe('MintComparePicker', () => {
     fireEvent.click(options()[1]!)
     expect(options()[1]!.getAttribute('aria-selected')).toBe('false')
     expect(options()[3]!.hasAttribute('aria-disabled')).toBe(false)
-    fireEvent.click(screen.getByRole('button', { name: 'Compare (2)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Compare 3 mints' }))
     expect(onConfirm).toHaveBeenCalledWith([MINTS[0]!.url, MINTS[2]!.url])
+  })
+
+  it('review 2026-11-28: title with the base mint, chips of the picked mints removable, a sentence when full, no status dot', () => {
+    const { options } = setup()
+    expect(screen.getByText('Compare with Base Mint')).toBeTruthy()
+    expect(screen.getByText('Pick up to 3 mints.')).toBeTruthy()
+    expect(document.querySelectorAll('.md-picker-dot')).toHaveLength(0)
+    const chips = () => Array.from(document.querySelectorAll('.md-picker-chip:not(.base) .md-picker-chip-name')).map(c => c.textContent)
+    expect(screen.getByRole('button', { name: 'Compare' })).toHaveProperty('disabled', true)
+    for (const i of [0, 1, 2]) fireEvent.click(options()[i]!)
+    expect(chips()).toHaveLength(3)
+    expect(document.querySelector('.md-picker-note')!.textContent).toBe('Up to 3. Remove one to pick another.')
+    expect(screen.getByRole('button', { name: 'Compare 4 mints' })).toBeTruthy()
+    // the chip's × removes the mint from the pick and frees the rest of the list
+    const second = chips()[1]!
+    fireEvent.click(screen.getByRole('button', { name: `Remove ${second}` }))
+    expect(chips()).not.toContain(second)
+    expect(options()[1]!.getAttribute('aria-selected')).toBe('false')
+    expect(document.querySelector('.md-picker-note')!.textContent).toBe('')
+    expect(options()[3]!.hasAttribute('aria-disabled')).toBe(false)
   })
 
   it('shows the empty state outside the listbox when the search matches nothing', () => {
     setup()
     fireEvent.change(screen.getByRole('textbox', { name: 'Search mints' }), { target: { value: 'zzz' } })
     expect(screen.queryByRole('listbox')).toBeNull()
-    expect(screen.getByRole('status').textContent).toBe('No mints match your search.')
+    expect(document.querySelector('.md-picker-empty[role="status"]')!.textContent).toBe('No mints match your search.')
   })
 
   it('keeps the Tab stop inside a narrower search result', () => {

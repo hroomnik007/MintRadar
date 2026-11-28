@@ -12,6 +12,11 @@ import './MintComparePicker.css'
 // (base mint already excluded); selection/search state lives here so callers
 // only need to hand back the final URLs via onConfirm.
 //
+// Review 2026-11-28 (owner-approved mockup ~/Claude/refs/mintradar-picker-mockup-1128, P1-P7): the title names the base
+// mint, the picked mints sit as removable chips under it (visible without scrolling), a full pick (3) no longer dims the
+// list (the other rows stay readable, only their box is dashed and a sentence says why), selection is copper (green is
+// health), no status dot (every candidate is online), the button says the result ("Compare 4 mints").
+//
 // Keyboard: the list is a multi-select listbox of real <button role="option"> items with a roving
 // tabindex — one Tab stop for the whole list, ArrowUp/ArrowDown/Home/End move, Enter/Space toggle (native button
 // click), ArrowDown in the search field jumps into the list. Every candidate is listed (no 50-item cap), so a mint
@@ -68,6 +73,9 @@ export function MintComparePicker({
     optionRefs.current[next]?.focus()
   }
 
+  const byUrl = useMemo(() => new Map(candidates.map(m => [m.url, m])), [candidates])
+  const full = selected.size >= maxSelect
+
   const toggle = (url: string, disabled: boolean) => {
     if (disabled) return
     setSelected(prev => {
@@ -88,13 +96,25 @@ export function MintComparePicker({
     <div className="cmp-overlay" onClick={onClose}>
       <div className="md-picker-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="md-picker-title" ref={dialogRef}>
         <div className="md-picker-header">
-          <div id="md-picker-title" className="md-picker-title">Compare with...</div>
+          <div id="md-picker-title" className="md-picker-title">Compare with {baseLabel}</div>
           <button type="button" className="md-picker-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         </div>
         <div className="md-picker-top">
-          <div className="md-picker-hint">
-            Select 1–{maxSelect} mints to compare with <strong>{baseLabel}</strong>
-          </div>
+          <div className="md-picker-hint">Pick up to {maxSelect} mints.</div>
+          {/* P1: the base mint and the picked ones, each removable here without finding it in the list again. */}
+          <ul className="md-picker-chips" aria-label="Mints in the comparison">
+            <li className="md-picker-chip base"><span className="md-picker-chip-name">{baseLabel}</span> <small>this mint</small></li>
+            {[...selected].map(url => {
+              const m = byUrl.get(url)
+              const name = m ? mintDisplayName(m, duplicateDisplayNames) : getHostname(url)
+              return (
+                <li key={url} className="md-picker-chip">
+                  <span className="md-picker-chip-name">{name}</span>
+                  <button type="button" className="md-picker-chip-x" aria-label={`Remove ${name}`} onClick={() => toggle(url, false)}><IcClose size={10} /></button>
+                </li>
+              )
+            })}
+          </ul>
           <input
             className="md-picker-search"
             type="text"
@@ -124,7 +144,6 @@ export function MintComparePicker({
                     onClick={() => toggle(m.url, disabled)}
                   >
                     <span className="md-picker-check" aria-hidden="true">{isChecked && '✓'}</span>
-                    <span className={`md-picker-dot${m.online === true ? '' : ' off'}`} aria-hidden="true" />
                     <span className="md-picker-text">
                       <span className="md-picker-name">{mintDisplayName(m, duplicateDisplayNames)}</span>
                       <span className="md-picker-host">{getHostname(m.url)}</span>
@@ -141,13 +160,14 @@ export function MintComparePicker({
           )}
         </div>
         <div className="md-picker-footer">
-          <span className="md-picker-count">{selected.size} of {maxSelect} selected</span>
+          {/* P2: why the other rows cannot be picked; P5: the button names the result, the same words as the dialog it opens. */}
+          <span className="md-picker-note" role="status">{full ? `Up to ${maxSelect}. Remove one to pick another.` : ''}</span>
           <button
             className="md-picker-confirm"
             disabled={selected.size === 0}
             onClick={() => onConfirm([...selected])}
           >
-            Compare ({selected.size})
+            {selected.size === 0 ? 'Compare' : `Compare ${selected.size + 1} mints`}
           </button>
         </div>
       </div>

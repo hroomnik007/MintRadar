@@ -24,7 +24,7 @@ const TWO_BUCKETS = {
 
 async function compareWith(page: import('@playwright/test').Page, other: string) {
   await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
-  await expect(page.getByText('Compare with...')).toBeVisible()
+  await expect(page.getByText(/^Compare with /)).toBeVisible()
   await page.locator('.md-picker-item', { hasText: other }).click()
   await page.locator('.md-picker-confirm').click()
   await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()

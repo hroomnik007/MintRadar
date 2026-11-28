@@ -31,7 +31,7 @@ async function addExtraOnlineMint(page: Page) {
 
 async function openCompare(page: Page, otherMintNames: string[]) {
   await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
-  await expect(page.getByText('Compare with...')).toBeVisible()
+  await expect(page.getByText(/^Compare with /)).toBeVisible()
   for (const name of otherMintNames) {
     await page.locator('.md-picker-item', { hasText: name }).click()
   }
@@ -215,5 +215,23 @@ for (const vp of [{ width: 390, height: 664 }, { width: 1440, height: 900 }]) {
       await panel.locator('summary').click({ position: { x: s.width - 12, y: s.height / 2 } })
       await expect(panel).toHaveAttribute('open', '')
     }
+  })
+}
+
+// B1 (review 2026-11-28): the picker's screen-reader-only score words stretched the overlay's scroll area (2285 px of plain
+// black under the dialog on a phone). Only the list scrolls now.
+for (const vp of [{ width: 390, height: 664 }, { width: 1440, height: 900 }]) {
+  test(`${vp.width}px: the Compare with picker's overlay never scrolls`, async ({ page }) => {
+    await page.setViewportSize(vp)
+    await addExtraOnlineMint(page)
+    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
+    await expect(page.locator('.md-picker-modal')).toBeVisible()
+    const m = await page.evaluate(() => {
+      const o = document.querySelector('.cmp-overlay')!, d = document.querySelector('.md-picker-modal')!
+      return { extra: o.scrollHeight - o.clientHeight, overflow: getComputedStyle(o).overflowY, bottom: d.getBoundingClientRect().bottom, vh: innerHeight }
+    })
+    expect(m.extra).toBeLessThanOrEqual(1)
+    expect(m.overflow).toBe('hidden')
+    expect(m.bottom).toBeLessThanOrEqual(m.vh + 0.5)
   })
 }
