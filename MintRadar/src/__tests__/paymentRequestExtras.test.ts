@@ -322,9 +322,9 @@ describe('mint list type sentence (creqA and creqB, mp true / false / omitted, w
     expect(mintListType(r.view)).toBe(mp === true ? 'preferred' : 'strict')
     expect(mintListTypeText(r.view)).toBe(mp === true ? MINT_LIST_PREFERRED_TEXT : MINT_LIST_STRICT_TEXT)
   })
-  it('the exact sentences', () => {
-    expect(MINT_LIST_STRICT_TEXT.startsWith('Mint list: strict')).toBe(true)
-    expect(MINT_LIST_PREFERRED_TEXT.startsWith('Mint list: preferred')).toBe(true)
+  it('the exact words after the "Accepted mints" heading (review 2026-11-28, R3)', () => {
+    expect(MINT_LIST_STRICT_TEXT).toBe('only these')
+    expect(MINT_LIST_PREFERRED_TEXT).toBe('others accepted too')
   })
   it('no mint list: no sentence, whatever mp says (creqA and creqB, with and without sm)', () => {
     for (const text of [

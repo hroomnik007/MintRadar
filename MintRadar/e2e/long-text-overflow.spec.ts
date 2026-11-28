@@ -143,7 +143,7 @@ async function mount(page: Page, c: Case, opts: { login?: boolean; width: number
 const CONTENT = [
   '.mint-card', '.mint-list-row', '.degraded-note', '.filter-panel', '.stat-card', '.stats-panel',
   '.md-panel', '.md-sc', '.md-tab', '.md-motd', '.md-mint-alert', '.md-contact-card', '.audit-summary-cell',
-  '.review-card', '.cmp-modal', '.md-picker-item', '.tool-card', '.wizard-rec-row', '.token-result-grid',
+  '.review-card', '.cmp-modal', '.md-picker-item', '.tool-card', '.wizard-rec-row', '.token-details',
 ].join(',')
 
 async function expectNoOverflow(page: Page, where: string) {
@@ -249,7 +249,7 @@ for (const width of WIDTHS) {
         await page.goto('/tools')
         await page.locator('.token-input').fill(makeCashuToken(url, [21, 8]))
         await page.getByRole('button', { name: 'Inspect token' }).click()
-        await expect(page.locator('.token-result-grid')).toBeVisible()
+        await expect(page.locator('.token-details')).toBeVisible()
         await expectNoOverflow(page, `tools-inspect/${key}`)
         await page.reload()
         await page.getByRole('radio', { name: 'SAT', exact: true }).click()

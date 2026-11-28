@@ -12,14 +12,14 @@ async function openTools(page: Page, size: [number, number] = [1280, 900]) {
   await installApiMocks(page)
   await page.setViewportSize({ width: size[0], height: size[1] })
   await page.goto('/tools')
-  await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+  await expect(page.locator('.tool-title', { hasText: 'Token inspector' })).toBeVisible()
 }
 
 test.describe('Token inspector: how sure the spent line sounds', () => {
   const inspectAndCheck = async (page: Page, fx: ReturnType<typeof makeDleqMint>, token: string) => {
     await serveMintInPage(page, { ...fx, token }, { checkstate: 'UNSPENT' })
     await page.reload()
-    await expect(page.locator('.tool-title', { hasText: 'Token Inspector' })).toBeVisible()
+    await expect(page.locator('.tool-title', { hasText: 'Token inspector' })).toBeVisible()
     await page.locator('.token-input').fill(token)
     await page.getByRole('button', { name: 'Inspect token' }).click()
     await expect(page.getByTestId('token-verify-source')).toBeVisible({ timeout: 15_000 })
@@ -32,8 +32,11 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
     await openTools(page)
     const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }, { amount: 2, dleq: 'valid' }])
     const line = await inspectAndCheck(page, fx, fx.token)
-    await expect(line).toContainText('3 sat · ready to redeem', { timeout: 15_000 })
-    await expect(line).toHaveClass(/tvd-ok/)
+    await expect(line).toBeVisible({ timeout: 15_000 })
+    // Second pass 2026-11-28: the spent state is its own chip, green only with confirmed signatures.
+    await expect(page.getByTestId('token-spent-chip')).toHaveText('Not spent')
+    await expect(page.getByTestId('token-spent-chip')).toHaveClass(/tvd-chip-ok/)
+    await expect(page.getByTestId('token-sig-chip')).toHaveText('Signed by Alpha Mint')
     await expect(page.getByTestId('token-unknown-keyset')).toHaveCount(0)
   })
 
@@ -41,10 +44,11 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
     await openTools(page)
     const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'none' }, { amount: 2, dleq: 'none' }])
     const line = await inspectAndCheck(page, fx, fx.token)
-    await expect(line).toContainText('3 sat · not spent yet', { timeout: 15_000 })
+    await expect(line).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('token-spent-chip')).toHaveText('Not spent')
     await expect(line).toContainText('The mint has not marked these coins as spent.')
+    await expect(page.getByTestId('token-spent-chip')).toHaveClass(/tvd-chip-neutral/)
     await expect(line).toHaveClass(/tvd-neutral/)
-    await expect(line).not.toContainText('ready to redeem')
     await expect(page.getByTestId('token-unknown-keyset')).toHaveCount(0)
   })
 
@@ -52,17 +56,17 @@ test.describe('Token inspector: how sure the spent line sounds', () => {
     await openTools(page)
     const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }])
     // Proofs from keyset 009a1f293253e41e, which the fixture mint does not list.
-    const line = await inspectAndCheck(page, fx, makeCashuTokenV4(MINT, [1, 2]))
+    await inspectAndCheck(page, fx, makeCashuTokenV4(MINT, [1, 2]))
     const warn = page.getByTestId('token-unknown-keyset')
     await expect(warn).toBeVisible()
     await expect(warn).toContainText('This mint does not list keyset 009a1f293253e41e. The token may not come from this mint, or may be invalid.')
-    await expect(line).toContainText('not spent yet', { timeout: 15_000 })
-    await expect(line).not.toHaveClass(/tvd-ok/)
-    // Above the fee block, in the Verify part.
+    await expect(page.getByTestId('token-spent-chip')).toHaveText('Not spent', { timeout: 15_000 })
+    await expect(page.getByTestId('token-spent-chip')).not.toHaveClass(/tvd-chip-ok/)
+    // Above the details table with the fee row.
     const wBox = (await warn.boundingBox())!
     const feeBox = (await page.getByTestId('token-claim-fee').boundingBox())!
     expect(wBox.y).toBeLessThan(feeBox.y)
-    await expect(page.getByTestId('token-verify-part')).not.toContainText(/trust/i)
+    await expect(page.getByTestId('token-details')).not.toContainText(/trust/i)
   })
 })
 

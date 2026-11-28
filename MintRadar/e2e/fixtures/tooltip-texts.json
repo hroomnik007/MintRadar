@@ -1026,9 +1026,10 @@
       "Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.",
       "MintRadar",
       "Not for real funds — for testing and development only",
-      "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit."
+      "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit.",
+      "“Check if spent” asks the mint whether these coins were redeemed; the mint will see that you checked. Open in cashu.me puts the token in the link; the wallet may keep it in its history."
     ],
-    "triggers": 5
+    "triggers": 6
   },
   "tools-token-test-mint@390": {
     "texts": [
@@ -1037,9 +1038,10 @@
       "Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.",
       "MintRadar",
       "Not for real funds — for testing and development only",
-      "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit."
+      "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit.",
+      "“Check if spent” asks the mint whether these coins were redeemed; the mint will see that you checked. Open in cashu.me puts the token in the link; the wallet may keep it in its history."
     ],
-    "triggers": 5
+    "triggers": 6
   },
   "tools@1440": {
     "texts": [

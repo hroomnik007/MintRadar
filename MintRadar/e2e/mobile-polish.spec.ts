@@ -101,7 +101,7 @@ for (const phone of PHONES) {
       // A test mint: its chip is part of the result and carries its own size.
       await page.locator('.token-input').fill(makeCashuToken('https://testnut.cashu.space', [21], 'sat', 'a memo'))
       await page.getByRole('button', { name: 'Inspect token' }).click()
-      await expect(page.locator('.token-result-grid')).toBeVisible()
+      await expect(page.locator('.token-details')).toBeVisible()
       await expect(page.locator('.token-verify-result').first()).toBeVisible()
       await expect(page.locator('.token-test-mint-badge')).toBeVisible()
       await page.getByRole('textbox', { name: 'Payment request' }).fill(new PaymentRequest([{ type: PaymentRequestTransportType.POST, target: 'https://pay.example.com/cb' }], 'r1', 5, 'sat', [MOCK_MINTS[0]!.url, 'https://stranger.example'], 'd', true).toEncodedCreqA())

@@ -153,6 +153,9 @@ export function contactRowText(): string {
 
 /** Tools: where a pasted token or payment request goes (the ⓘ next to each inspector's title). */
 export const TOKEN_PRIVACY_TEXT = 'Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.'
+/** Tools, the ⓘ after the token's action buttons (owner, 2026-11-28: these two notes left the visible text). */
+export const CHECK_SPENT_NOTE = '“Check if spent” asks the mint whether these coins were redeemed; the mint will see that you checked.'
+export const OPEN_IN_WALLET_NOTE = 'Open in cashu.me puts the token in the link; the wallet may keep it in its history.'
 export const PAYMENT_REQUEST_PRIVACY_TEXT = 'Decoded in your browser. Nothing you paste here is sent anywhere.'
 
 /** Compare modal, Backup row. */

@@ -1,26 +1,43 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { PAYMENT_REQUEST_PRIVACY_TEXT } from '@/utils/tooltipTexts'
+import { PAYMENT_REQUEST_PRIVACY_TEXT, TEST_MINT_TEXT } from '@/utils/tooltipTexts'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
+import { MintFavicon } from '@/components/mint/MintFavicon'
 import { IcShield } from '@/components/mint/IcShield'
 import { formatTokenAmount, amountCarriesCurrencySymbol } from '@/utils/cashuToken'
-import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor, statusDotColor } from '@/utils/mintFormatting'
+import { normalizeMintUrl, displayName, cardReliabilityLabel, reliabilityColor, statusDotColor, mintHostname } from '@/utils/mintFormatting'
 import { isTestMint } from '@/constants/testMints'
 import { parsePaymentRequest, bitcoinLinkNote, mintStatusWord, transportTagLines, mintListType, mintListTypeText, type PaymentRequestView } from '@/utils/paymentRequest'
 
+// Review 2026-11-28, second pass (owner-approved mockup ~/Claude/refs/mintradar-inspectors-mockup-1128, R1-R5): a
+// summary card on top like the token's (amount large, the description, one sentence about who may pay how), the rows
+// under it without the amount and description again, "Accepted mints · only these", plain words for the lock and the
+// transports, every mint with its picture and its host.
 const NOT_SPECIFIED = 'Not specified'
 const OPEN_AMOUNT = 'Open amount: the sender chooses how much to send.'
 /** The Single use value of a one-shot request (2026-11-28: the separate "One-shot" note joined the row). */
-const ONE_SHOT = 'Yes: can be paid only once'
+const ONE_SHOT = 'Yes, can be paid only once'
 // NUT-18: the per-method fee applies only to ecash from a mint outside the list (or from any mint if there is no list);
 // the payer owes the lowest fee among the listed methods that its mint supports.
 const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
 // NUT-18: with a strict list the sender MUST only send proofs from the listed mints, so the fee (which concerns mints outside the list) does not apply.
 // The list type itself is the "Mint list: strict" sentence under the mints, so this note only adds the fee consequence.
 const STRICT_LIST_NOTE = 'Because the mint list is strict, this fee does not apply.'
-const NO_TRANSPORTS = 'None listed: the payment is returned directly (in-band)'
+const NO_TRANSPORTS = 'Give it to the requester directly. The request names no Nostr or HTTP address.'
+
+/** The sentence under the amount: which mints' ecash it takes, whether once only, whether locked. */
+function summaryLine(view: PaymentRequestView, nameOf: (url: string) => string): string {
+  const n = view.mints.length
+  const type = mintListType(view)
+  const mints = n === 0
+    ? 'Ecash from any mint.'
+    : type === 'preferred'
+      ? (n === 1 ? `Prefers ecash from ${nameOf(view.mints[0]!)}; other mints are accepted too.` : `Prefers ecash from these ${n} mints; other mints are accepted too.`)
+      : (n === 1 ? `Only ecash from ${nameOf(view.mints[0]!)}.` : `Only ecash from these ${n} mints.`)
+  return [mints, view.singleUse === true ? 'Can be paid once.' : null, view.lock ? `Locked to a key (${view.lock.kind}).` : null].filter(Boolean).join(' ')
+}
 
 function amountText(view: PaymentRequestView): string {
   if (view.amount === null) return NOT_SPECIFIED
@@ -48,40 +65,57 @@ function Row({ label, children, testId }: { label: string; children: React.React
 
 /** `list`: the known-mints list is still loading or could not be loaded; nothing is claimed about the mint then. */
 function AcceptedMint({ url, known, list }: { url: string; known: KnownMint | null; list: 'ready' | 'loading' | 'error' }) {
+  // Always a picture (owner, 2026-11-28): the proxied icon for a mint we track, else its initials built locally; a
+  // request's mint URL is chosen by whoever made it, so nothing is requested for an untracked one.
+  const host = mintHostname(url)
+  const icon = <MintFavicon url={known?.url ?? url} name={known ? displayName(known) : host} iconUrl={known ? known.iconUrl : null} size={32} radius={8} className="pr-mint-icon" />
   if (!known && list !== 'ready') {
     return (
-      <li className="pr-mint" data-testid="pr-mint">
+      <li className="pr-mint pr-mint-pic" data-testid="pr-mint">
+        {icon}
+        <div className="pr-mint-body">
+        <div className="pr-mint-name">{host}</div>
         <div className="pr-text">{url}</div>
         <div className="pr-mint-line pr-muted" data-testid="pr-mint-list-state">
           {list === 'loading' ? "Looking it up in MintRadar's list…" : "MintRadar's list could not be loaded, so this mint is not looked up."}
+        </div>
         </div>
       </li>
     )
   }
   if (!known) {
     return (
-      <li className="pr-mint" data-testid="pr-mint">
-        <div className="pr-text">{url}</div>
-        <div className="pr-mint-line pr-muted">Not tracked by MintRadar.</div>
+      <li className="pr-mint pr-mint-pic" data-testid="pr-mint">
+        {icon}
+        <div className="pr-mint-body">
+          <div className="pr-mint-name">{host}</div>
+          <div className="pr-text">{url}</div>
+          <div className="pr-mint-line pr-muted">Not tracked by MintRadar.</div>
+        </div>
       </li>
     )
   }
   const test = isTestMint(known.url)
   const status = mintStatusWord(known)
   return (
-    <li className="pr-mint" data-testid="pr-mint">
+    <li className="pr-mint pr-mint-pic" data-testid="pr-mint">
+      {icon}
+      <div className="pr-mint-body">
       <div className="pr-mint-head">
         <span className="pr-mint-name">{displayName(known)}</span>
+        {test && (
+          <InfoTooltip text={TEST_MINT_TEXT}>
+            <span className="token-test-chip pr-test-chip">Test mint</span>
+          </InfoTooltip>
+        )}
         <span className="pr-mint-status" data-testid="pr-mint-status">
           <span className="pr-mint-dot" data-testid="pr-mint-dot" style={{ background: statusDotColor(status) }} aria-hidden="true" />
           {status}
         </span>
       </div>
-      <div className="pr-text">{url}</div>
       <div className="pr-mint-line">
-        {test ? (
-          <span className="pr-muted">Test mint. Ecash from it has no value.</span>
-        ) : known.reliabilityScore != null ? (
+        <span className="pr-host">{host}</span>
+        {test ? null : known.reliabilityScore != null ? (
           <span className="pr-score" style={{ color: reliabilityColor(known.reliabilityScore) }}>
             <IcShield size={12} /><span>{cardReliabilityLabel(known.reliabilityScore)}</span>
           </span>
@@ -89,6 +123,7 @@ function AcceptedMint({ url, known, list }: { url: string; known: KnownMint | nu
           <span className="pr-muted">{cardReliabilityLabel(null)}</span>
         )}
         <Link className="pr-link" to={`/mint/${encodeURIComponent(known.url)}`}>View Mint Detail</Link>
+      </div>
       </div>
     </li>
   )
@@ -131,35 +166,49 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
 
       {parsed.ok && (
         <div className="pr-result" data-testid="pr-result">
+          {/* R2: what the request asks for at a glance, like the token's result card. */}
+          <section className="pr-summary" aria-label="Summary" data-testid="pr-summary">
+            <div className="tvd-top">
+              <span className="tvd-amount" data-testid="pr-amount">
+                {parsed.view.amount === null ? 'Any amount' : (() => {
+                  const text = amountText(parsed.view)
+                  const unit = parsed.view.unit
+                  return unit && !amountCarriesCurrencySymbol(unit) && text.endsWith(` ${unit}`)
+                    ? <>{text.slice(0, -unit.length - 1)}<small> {unit}</small></>
+                    : text
+                })()}
+              </span>
+              {parsed.view.description && <span className="pr-summary-what" data-testid="pr-description">· {parsed.view.description}</span>}
+            </div>
+            <p className="pr-summary-line" data-testid="pr-summary-line">{summaryLine(parsed.view, u => { const k = lookup(u); return k ? displayName(k) : mintHostname(u) })}</p>
+          </section>
+          {parsed.view.amount === null && <div className="pr-note" data-testid="pr-open-amount">{OPEN_AMOUNT}</div>}
           <dl className="pr-dl">
-            {/* What a payer looks at first (2026-11-28): amount with its unit, what for, how often; then the technical rows. */}
-            <Row label="Amount" testId="pr-amount">{amountText(parsed.view)}</Row>
             {parsed.view.amount === null && <Row label="Unit">{parsed.view.unit ?? NOT_SPECIFIED}</Row>}
-            <Row label="Description">{parsed.view.description ?? NOT_SPECIFIED}</Row>
+            {!parsed.view.description && <Row label="Description">{NOT_SPECIFIED}</Row>}
             <Row label="Single use" testId="pr-single-use">{parsed.view.singleUse === true ? ONE_SHOT : NOT_SPECIFIED}</Row>
             <Row label="Request id">{parsed.view.id ?? NOT_SPECIFIED}</Row>
-            <Row label="Locking condition (NUT-10)" testId="pr-lock">
+            <Row label="Locked to a key" testId="pr-lock">
               {parsed.view.lock ? (
                 <>
-                  <div>{parsed.view.lock.kind}</div>
+                  <div>Yes, {parsed.view.lock.kind}</div>
                   <div className="pr-text">{parsed.view.lock.data}</div>
                   {parsed.view.lock.tags.map((t, i) => <div className="pr-text" key={i}>{t}</div>)}
                 </>
-              ) : NOT_SPECIFIED}
+              ) : 'No'}
             </Row>
           </dl>
-          {parsed.view.amount === null && <div className="pr-note" data-testid="pr-open-amount">{OPEN_AMOUNT}</div>}
 
-          <div className="pr-section">Accepted mints{parsed.view.mints.length > 0 ? ` (${parsed.view.mints.length})` : ''}</div>
+          <div className="pr-section">
+            Accepted mints{parsed.view.mints.length > 1 ? ` (${parsed.view.mints.length})` : ''}
+            {mintListTypeText(parsed.view) !== null && <span className="pr-section-note" data-testid="pr-mint-list-type"> · {mintListTypeText(parsed.view)}</span>}
+          </div>
           {parsed.view.mints.length === 0 ? (
             <div className="pr-note" data-testid="pr-no-mints">No mints specified</div>
           ) : (
           <ul className="pr-list">
             {parsed.view.mints.map((m, i) => <AcceptedMint key={`${i}-${m}`} url={m} known={lookup(m)} list={list} />)}
           </ul>
-          )}
-          {mintListTypeText(parsed.view) !== null && (
-            <div className="pr-note" data-testid="pr-mint-list-type">{mintListTypeText(parsed.view)}</div>
           )}
 
           {parsed.view.supportedMethods !== null && parsed.view.supportedMethods.length > 0 && (
@@ -177,7 +226,7 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
             </>
           )}
 
-          <div className="pr-section">Transports</div>
+          <div className="pr-section">Where to send the payment</div>
           {parsed.view.transports.length === 0 ? (
             <div className="pr-note" data-testid="pr-no-transports">{NO_TRANSPORTS}</div>
           ) : (

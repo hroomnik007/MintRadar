@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, makeDleqMint, serveMintInPage, MOCK_MINTS } from './fixtures/mocks'
 import { resize } from './fixtures/settle'
 
-// Token Inspector, Verify part, "Mint fee": the exact NUT-02 claim fee from the keysets the mint listed, and the
+// Token Inspector, the "Mint fee" row of the details table (it was a block in the Verify part until 2026-11-28): the exact NUT-02 claim fee from the keysets the mint listed, and the
 // status of each keyset the token's coins come from. Fixture mint in the page, constructed tokens (no real funds).
 
 const MINT = MOCK_MINTS[0]!.url
@@ -15,7 +15,7 @@ async function inspect(page: Page, token: string) {
   await page.goto('/tools')
   await page.locator('.token-input').fill(token)
   await page.getByRole('button', { name: /Inspect token/ }).click()
-  await expect(page.getByTestId('token-verify-part').locator('.token-verify-result').first()).not.toContainText('Verifying', { timeout: 15_000 })
+  await expect(page.getByTestId('token-sig-chip')).not.toHaveText('Checking signatures…', { timeout: 15_000 })
 }
 
 test('a fee-charging active keyset: exact fee in sat, keyset active', async ({ page }) => {
@@ -23,9 +23,9 @@ test('a fee-charging active keyset: exact fee in sat, keyset active', async ({ p
   const fx = makeDleqMint(MINT, [{ amount: 1, dleq: 'valid' }, { amount: 2, dleq: 'valid' }, { amount: 4, dleq: 'valid' }], { inputFeePpk: 400 })
   await serveMintInPage(page, fx)
   await inspect(page, fx.token)
-  await expect(fee(page)).toContainText('Claiming this token costs 2 sat in mint fees.')
-  await expect(page.getByTestId('token-keyset-status')).toContainText('3 coins · 0.4 sat per coin')
-  await expect(page.getByTestId('token-keyset-status')).toContainText('Active')
+  await expect(fee(page)).toContainText('2 sat to claim, rounded up')
+  await expect(page.getByTestId('token-keyset-status')).toContainText('3 coins × 0.4 sat · keyset')
+  await expect(page.getByTestId('token-keyset-status')).toContainText('active')
 })
 
 test('no input fee: says so; an inactive keyset suggests swapping soon', async ({ page }) => {
@@ -40,7 +40,7 @@ test('a keyset the mint does not list: fee unknown, keyset unknown', async ({ pa
   const fx = makeDleqMint(MINT, [{ amount: 2, dleq: 'valid' }])
   await serveMintInPage(page, { ...fx, routes: { ...fx.routes, keysets: { keysets: [] }, keys: { keysets: [] } } })
   await inspect(page, fx.token)
-  await expect(fee(page)).toContainText('Mint fee unknown')
+  await expect(fee(page)).toContainText('Unknown:')
 })
 
 test('mint unreachable and no stored keysets: fee unknown, nothing guessed', async ({ page }) => {
@@ -53,6 +53,6 @@ test('mint unreachable and no stored keysets: fee unknown, nothing guessed', asy
     }
   }, fx.mint)
   await inspect(page, fx.token)
-  await expect(fee(page)).toContainText('Mint fee unknown: the mint could not be reached.')
+  await expect(fee(page)).toContainText('Unknown: the mint could not be reached.')
   await expect(page.getByTestId('token-keyset-status')).toHaveCount(0)
 })

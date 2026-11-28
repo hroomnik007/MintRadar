@@ -417,7 +417,8 @@ a.token-action-btn:focus {
   .token-actions { flex-wrap: wrap; }
   .token-actions > .token-action-btn { flex: 1 1 0; min-width: 0; white-space: normal; padding-inline: 10px; }
   /* Review 2026-11-28: Check if spent and Redeem each take a row; Open in cashu.me and View Mint Detail share one. */
-  .token-actions > .token-action-btn:nth-child(-n+2) { flex-basis: 100%; }
+  /* Second pass 2026-11-28: every action takes its own row, leaving room for the ⓘ after the last one. */
+  .token-actions > .token-action-btn { flex-basis: calc(100% - 44px); }
   .token-action-btn { min-height: 44px; }
   .token-spent .token-action-btn { width: 100%; }
   .tools-grid { padding: 12px var(--page-pad); gap: 12px; }
@@ -706,3 +707,73 @@ a.token-action-btn:focus {
   .tvd-title { font-size: 16px; }
   .trc-label, .token-section-label { font-size: 12.5px; }
 }
+
+/* ── Inspectors, second pass 2026-11-28 (owner-approved mockup ~/Claude/refs/mintradar-inspectors-mockup-1128) ──
+   Token: the amount once and large, two state chips under it (signatures, spent), the test-mint sentence once, the
+   actions with an ⓘ for their notes; then one details table (label | value) instead of Decode / Verify. The card stays
+   neutral: the chips carry the colour. Payment request: the same summary card and table. */
+.token-verdict { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 16px; background: var(--bg3); }
+.token-verdict.tvd-ok, .token-verdict.tvd-bad, .token-verdict.tvd-warn { background: var(--bg3); border-color: var(--border-strong); }
+.tvd-top { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 10px; }
+.tvd-amount { font: 700 30px/1 var(--font-body); letter-spacing: -0.01em; color: var(--text); font-variant-numeric: tabular-nums; }
+.tvd-amount small { font-size: 17px; font-weight: 600; color: var(--text2); }
+.tvd-top .token-test-chip { margin-left: 0; vertical-align: 0; }
+.tvd-states { display: flex; flex-wrap: wrap; gap: 8px; }
+.tvd-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 3px 11px; border-radius: 999px; font: 560 14px/1.3 var(--font-body); color: var(--text); border: 1px solid var(--border-strong); background: transparent; }
+.tvd-chip-ok { color: var(--green-bright); background: var(--green-soft); border-color: var(--green-soft-strong); }
+.tvd-chip-bad { color: color-mix(in srgb, var(--red) 70%, var(--text)); background: var(--red-soft); border-color: var(--red-soft-strong); }
+.tvd-chip-warn { color: var(--amber); background: var(--amber-soft); border-color: var(--amber-soft-strong); }
+.tvd-chip-loading { color: var(--text2); }
+.tvd-test { font: 400 14px/1.45 var(--font-body); color: color-mix(in srgb, var(--amber) 70%, var(--text)); }
+.token-verdict .token-actions { align-items: center; margin-top: 2px; }
+.token-details { display: grid; gap: 8px; min-width: 0; }
+.token-details-title { margin: 4px 0 0; font: 600 15px var(--font-body); color: var(--text); }
+.tdt { margin: 0; padding: 2px 14px; border: 1px solid var(--border); border-radius: 12px; background: rgba(0, 0, 0, 0.18); }
+.tdt-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.tdt-row:first-child { border-top: 0; }
+.tdt-label { display: flex; align-items: center; gap: 2px; font: 400 14px/1.4 var(--font-body); color: var(--text3); }
+.tdt-value { margin: 0; display: grid; gap: 3px; min-width: 0; font: 400 14px/1.45 var(--font-body); color: var(--text); overflow-wrap: anywhere; }
+.tdt-sub { display: block; font: 400 13px/1.45 var(--font-body); color: var(--text3); }
+.tdt-sub.trc-host { font-family: var(--font-mono); font-size: 12.5px; }
+.tdt .trc-mint { display: flex; align-items: center; gap: 10px; }
+.tdt .trc-name { font: 560 15px/1.3 var(--font-body); color: var(--text); }
+.tdt .trc-name-link { color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
+.tdt .trc-name-link:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: 3px; }
+.tdt .trc-dot { display: inline-block; margin-right: 7px; vertical-align: 1px; }
+/* The sentences of the checks are plain text in the table (no boxes, T7); only their colour says how it went. */
+.tdt .token-verify-result, .tdt .token-fee-result { display: inline-flex; align-items: baseline; gap: 6px; padding: 0; border: 0; background: none; font: 400 14px/1.45 var(--font-body); }
+.tdt .token-verify-result svg { flex: none; align-self: center; }
+.tdt .tv-ok { color: var(--green-bright); }
+.tdt .tv-neutral, .tdt .tv-loading { color: var(--text); }
+.tdt .tv-unknown { color: var(--copper); }
+.tdt .tv-bad { color: var(--red); }
+.tdt .token-keysets { gap: 2px; }
+.tdt .token-keyset { display: block; font-size: 13px; }
+.tdt .token-keyset-meta, .tdt .token-keyset-id { color: var(--text3); }
+.tdt .tks-active { color: var(--text3); }
+.tdt .token-note { color: var(--amber); }
+.token-details .token-source { margin: 0; }
+@media (max-width: 520px) {
+  .tdt-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .tvd-amount { font-size: 26px; }
+}
+/* R1: a gap between a tool's title and its ⓘ. */
+.tool-title { display: flex; align-items: center; gap: 6px; }
+/* R2: the summary card of a payment request, the same parts as the token's result card. */
+.pr-summary { display: grid; gap: 8px; padding: 16px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--bg3); }
+.pr-summary-what { font: 400 16px/1.3 var(--font-body); color: var(--text2); overflow-wrap: anywhere; }
+.pr-summary-line { margin: 0; font: 400 14px/1.45 var(--font-body); color: var(--text2); }
+.pr-section-note { font-weight: 400; color: var(--text3); }
+/* R5: every accepted mint with its picture; the host instead of the full URL for a tracked mint. */
+.pr-mint.pr-mint-pic { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; }
+.pr-mint-icon { flex: none; margin-top: 2px; }
+.pr-mint-body { display: grid; gap: 4px; min-width: 0; flex: 1 1 auto; }
+.pr-mint-body .pr-mint-head { flex-wrap: wrap; }
+.pr-test-chip { margin-left: 0; }
+.pr-host { font: 400 13px var(--font-body); color: var(--text3); overflow-wrap: anywhere; }
+.pr-mint-line { flex-wrap: wrap; }
+/* R5: the payment request's rows look like the token's details table. */
+.pr-dl { padding: 2px 14px; border: 1px solid var(--border); border-radius: 12px; background: rgba(0, 0, 0, 0.18); }
+.pr-dl .pr-label { font: 400 14px/1.4 var(--font-body); color: var(--text3); }
+.pr-dl .pr-value { font: 400 14px/1.45 var(--font-body); color: var(--text); }
+.pr-dl .pr-label { flex-basis: 150px; }

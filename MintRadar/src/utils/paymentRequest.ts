@@ -237,9 +237,10 @@ export function mintListType(view: Pick<PaymentRequestView, 'mints' | 'mintPrefe
   return view.mintPreferred === true ? 'preferred' : 'strict'
 }
 
-/** The one sentence under "Accepted mints" about the list type; null without a mint list. */
-export const MINT_LIST_STRICT_TEXT = 'Mint list: strict (only ecash from these mints is accepted).'
-export const MINT_LIST_PREFERRED_TEXT = 'Mint list: preferred (ecash from other mints is accepted too).'
+/** The list type after the "Accepted mints" heading ("Accepted mints · only these"); null without a mint list.
+ *  Review 2026-11-28 (R3): it was a sentence under the mints, "Mint list: strict (only ecash from these mints is accepted)." */
+export const MINT_LIST_STRICT_TEXT = 'only these'
+export const MINT_LIST_PREFERRED_TEXT = 'others accepted too'
 export function mintListTypeText(view: Pick<PaymentRequestView, 'mints' | 'mintPreferred'>): string | null {
   const t = mintListType(view)
   return t === null ? null : t === 'preferred' ? MINT_LIST_PREFERRED_TEXT : MINT_LIST_STRICT_TEXT

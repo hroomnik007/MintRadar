@@ -478,3 +478,31 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
   order Amount (with its unit; the Unit row only for an open amount), Description, Single use ("Yes: can be paid only
   once", `data-testid="pr-single-use"`; the separate one-shot note is gone), Request id, Locking condition.
 - Not done on purpose: a privacy line in the wizard (W4, owner); the page layout stays (L1 A).
+
+## Inspectors, second pass 2026-11-28 (owner-approved mockup `~/Claude/refs/mintradar-inspectors-mockup-1128`)
+
+**Token inspector** (`pages/Tools.tsx`, `utils/tokenVerdict.ts`, the "Inspectors, second pass" block of `Tools.css`):
+- The result card (`data-testid="token-verdict"`): the amount once and large (`token-amount`, "21 sat"), the Test mint
+  chip (with `TEST_MINT_TEXT`) once beside it, then TWO state chips: the signature check (`token-sig-chip`,
+  `signatureState()`: "Signed by <mint>", "Checking signatures…", "Signatures not checked", "Signatures don't match
+  this mint", …) and the spent check (`token-spent-chip`, `tokenVerdict().chip`: "Spent: not checked yet", "Not spent",
+  "Already spent", "Partly spent", "Spent: pending", "Spent status unknown"). "not checked yet" above a green "Verified"
+  read as a contradiction; they are two checks. One sentence under them only when needed (`token-verdict-sub`), the
+  test-mint sentence once (`token-test-line`). The actions inside the card (Check if spent, Redeem to Lightning, Open in
+  cashu.me) and an ⓘ "About these buttons" with `CHECK_SPENT_NOTE` (+ `OPEN_IN_WALLET_NOTE` when that link is shown);
+  the visible note lines are gone (owner). No "View Mint Detail" button: the mint's name in the table is the link.
+- One details table (`token-details`, `.tdt`) instead of the Decode / Verify parts: Mint (always a picture: the proxied
+  icon of a tracked mint, otherwise initials built locally with no request; name as link, host), Mint status, Reliability
+  Score ("92 · High Reliability" / "Not scored (test mint)"), Signatures (ⓘ, the full sentence; "All 3 coins signed by
+  this mint" + "Does not show whether they are spent."), Mint fee (ⓘ, "1 sat to claim, rounded up", per keyset "3 coins
+  × 0.1 sat · keyset 017bc604…40fda · active", the full id in a tooltip), Format ("v4 (cashuB) · 3 coins"; "coins"
+  everywhere, no "Proofs"), Spending conditions, Memo. Under it one line: "Read in your browser. Asked <host> about the
+  signatures at <time>; whether spent at <time>." (`token-verify-source`, `token-spent-source`). Phones: one column per row,
+  each action its own row with the ⓘ after the last.
+**Payment request inspector** (`components/PaymentRequestInspector.tsx`): a summary card (`pr-summary`) with the amount
+large (`pr-amount`, "Any amount" without one), "· <description>" and one sentence (`pr-summary-line`: "Only ecash from
+Testnut mint. Can be paid once." / "Prefers ecash from …; other mints are accepted too." / "Ecash from any mint.", plus
+"Locked to a key (P2PK)."); the rows no longer repeat the amount and description; "Locked to a key: No"; "Accepted mints ·
+only these / others accepted too" (`MINT_LIST_*_TEXT`, the sentence under the mints is gone); every mint with its picture
+(same rule as the token) and its host; "Where to send the payment" with "Give it to the requester directly. The request
+names no Nostr or HTTP address." when there is no transport. R1: `.tool-title` has a 6 px gap before its ⓘ.

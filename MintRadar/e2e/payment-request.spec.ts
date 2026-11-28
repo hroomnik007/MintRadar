@@ -36,8 +36,8 @@ const A_SM_STRICT = 'creqAo2FpZWV4dC00YW2BeBpodHRwczovL2FscGhhLm1pbnQuZXhhbXBsZW
 const A_SM_NO_MINTS = 'creqAo2FpZWV4dC01YXVjc2F0YnNtgaJibW5nb25jaGFpbmJtZhgy'
 const A_MP_NO_MINTS = 'creqAomFpZWV4dC0zYm1w9Q'
 const B_MP_SM = 'CREQB1QYQQ2ETCWSKNZQSQPQQQQQQQQQQQQ9GRQQQSQPGQRF58GARSWVAZ7TMPD3CXSCFWD45KUAPWV4UXZMTSD3JSJQQPQY9QQZGPQQRXYMMVWSCNZZSQZ5QSQPM0DE3KSCTFDCPQQZQQQQQQQQQQQQEQ4HJCD4'
-const MINT_PREFERRED = 'Mint list: preferred (ecash from other mints is accepted too).'
-const MINT_STRICT = 'Mint list: strict (only ecash from these mints is accepted).'
+const MINT_PREFERRED = '· others accepted too' // after the "Accepted mints" heading since 2026-11-28 (R3)
+const MINT_STRICT = '· only these'
 const STRICT_LIST_NOTE = 'Because the mint list is strict, this fee does not apply.'
 const OTHER_MINTS_NOTE = 'A fee applies only to ecash from a mint outside the accepted mints list, or from any mint if no list is given. The payer owes the lowest fee among the listed methods its mint supports.'
 const PREFIX_ERROR = 'Not a payment request: expected creqA, creqB or a bitcoin: link with a creq parameter.'
@@ -95,17 +95,19 @@ test('a request with nothing in it at all shows "Not specified" everywhere and i
   await expect(errorBox(page)).toHaveCount(0)
   await expect(result(page)).toBeVisible()
   await expect(result(page).getByTestId('pr-no-mints')).toHaveText('No mints specified')
-  await expect(result(page).locator('.pr-value')).toHaveText(Array(6).fill('Not specified'))
-  await expect(result(page).getByText('Transports')).toBeVisible()
-  await expect(result(page).getByTestId('pr-no-transports')).toHaveText('None listed: the payment is returned directly (in-band)')
+  // Second pass 2026-11-28: the amount is in the summary ("Any amount"); the lock row says "No".
+  await expect(page.getByTestId('pr-amount')).toHaveText('Any amount')
+  await expect(result(page).locator('.pr-value')).toHaveText([...Array(4).fill('Not specified'), 'No'])
+  await expect(result(page).getByText('Where to send the payment')).toBeVisible()
+  await expect(result(page).getByTestId('pr-no-transports')).toHaveText('Give it to the requester directly. The request names no Nostr or HTTP address.')
   await expect(result(page).locator('.pr-note', { hasText: 'Not specified' })).toHaveCount(0)
 })
 
 test('amount absent reads "Not specified"; nothing else is invented', async ({ page }) => {
   await open(page)
   await input(page).fill(encode())
-  await expect(page.getByTestId('pr-amount')).toHaveText(/Not specified/)
-  await expect(page.getByTestId('pr-lock')).toHaveText(/Not specified/)
+  await expect(page.getByTestId('pr-amount')).toHaveText('Any amount')
+  await expect(page.getByTestId('pr-lock').locator('.pr-value')).toHaveText('No')
   await expect(result(page)).not.toContainText(/safe|trusted|recommended|scam|dead/i)
 })
 
@@ -219,7 +221,9 @@ test('NUT-26 creqB: the example of the spec shows its mint and description, with
   await expect(mints).toHaveCount(1)
   await expect(mints.first()).toContainText('https://mint.example.com')
   // Review 2026-11-28: the one-shot fact is the Single use value (it was a note under the table); the amount carries its unit.
-  await expect(result(page).getByTestId('pr-single-use')).toContainText('Yes: can be paid only once')
+  await expect(result(page).getByTestId('pr-single-use')).toContainText('Yes, can be paid only once')
+  // R2: the summary says it in one sentence.
+  await expect(result(page).getByTestId('pr-summary-line')).toContainText('Can be paid once.')
   await expect(page.getByTestId('pr-amount')).toHaveText(/1,000 sat/)
   await expect(result(page).getByTestId('pr-open-amount')).toHaveCount(0)
   // lower case is accepted too
@@ -529,15 +533,15 @@ test.describe('the known-mints list is not there (yet): nothing is claimed about
 
 // Task Q1: transports wording and the status dot.
 const NO_TRANSPORT_REQUEST = 'creqApGFpaHRlc3QwMDAyYWEYZGF1Y3NhdGFkb05vIG1pbnRzIGxpc3RlZA'
-const NO_TRANSPORTS_TEXT = 'None listed: the payment is returned directly (in-band)'
+const NO_TRANSPORTS_TEXT = 'Give it to the requester directly. The request names no Nostr or HTTP address.'
 
 test('no transports: the Transports section explains in-band return; a request with a transport does not show it', async ({ page }) => {
   await open(page)
   await input(page).fill(NO_TRANSPORT_REQUEST)
   await expect(result(page)).toBeVisible()
   await expect(result(page).getByTestId('pr-no-transports')).toHaveText(NO_TRANSPORTS_TEXT)
-  // The other rows keep "Not specified" (Single use, Locking condition): the new sentence is only for transports.
-  await expect(page.getByTestId('pr-lock')).toHaveText(/Not specified/)
+  // The other rows keep their own words (Single use "Not specified", the lock "No"): the sentence is only for transports.
+  await expect(page.getByTestId('pr-lock').locator('.pr-value')).toHaveText('No')
   await expect(result(page).locator('.pr-value', { hasText: 'Not specified' }).first()).toBeVisible()
 
   await input(page).fill(encode({ transports: [{ type: PaymentRequestTransportType.POST, target: POST_URL }] }))
@@ -562,4 +566,43 @@ test('the status dot of an online mint in the inspector has the same computed co
   await expect(dot).toBeVisible()
   expect(await dot.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(cardColor)
   expect(cardColor).not.toBe('rgba(0, 0, 0, 0)')
+})
+
+// Review 2026-11-28, second pass (owner-approved mockup ~/Claude/refs/mintradar-inspectors-mockup-1128, R1-R5).
+test('summary on top: the amount large, the description, one sentence about who may pay how; the rows do not repeat them', async ({ page }) => {
+  await open(page)
+  await input(page).fill(new PaymentRequest([], 'r9', 21, 'sat', [MOCK_MINTS[0]!.url], 'MintRadar test', true).toEncodedCreqA())
+  await expect(page.getByTestId('pr-amount')).toHaveText('21 sat')
+  await expect(page.getByTestId('pr-description')).toHaveText('· MintRadar test')
+  await expect(page.getByTestId('pr-summary-line')).toHaveText('Only ecash from Alpha Mint. Can be paid once.')
+  await expect(result(page).locator('.pr-label')).toHaveText(['Single use', 'Request id', 'Locked to a key'])
+  await expect(result(page).getByTestId('pr-mint-list-type')).toHaveText('· only these')
+})
+
+test('every accepted mint has a picture: the proxied icon of a tracked mint, initials (no request) for any other; the host, not the URL, for a tracked one', async ({ page }) => {
+  const requests: string[] = []
+  page.on('request', r => requests.push(r.url()))
+  await open(page)
+  await input(page).fill(encode({ mints: [MOCK_MINTS[0]!.url, 'https://stranger.example'] }))
+  const mints = result(page).getByTestId('pr-mint')
+  await expect(mints).toHaveCount(2)
+  await expect(mints.nth(0).locator('.pr-mint-icon')).toBeVisible()
+  await expect(mints.nth(1).locator('div.pr-mint-icon')).toBeVisible()
+  await expect(mints.nth(1).locator('img')).toHaveCount(0)
+  await expect(mints.nth(0).locator('.pr-host')).toHaveText('alpha.mint.example')
+  await expect(mints.nth(0)).not.toContainText('https://')
+  expect(requests.filter(u => u.includes('stranger.example'))).toEqual([])
+})
+
+test('R1: a gap between each inspector title and its ⓘ', async ({ page }) => {
+  await open(page)
+  for (const title of ['Token inspector', 'Payment request inspector']) {
+    const t = page.locator('.tool-title', { hasText: title })
+    const gap = await t.evaluate(el => {
+      const trig = el.querySelector('[data-tooltip-trigger] svg')!.getBoundingClientRect() // the icon, not its padded hit area
+      const range = document.createRange(); range.selectNodeContents(el.firstChild!)
+      return trig.left - range.getBoundingClientRect().right
+    })
+    expect(gap).toBeGreaterThanOrEqual(2)
+  }
 })
