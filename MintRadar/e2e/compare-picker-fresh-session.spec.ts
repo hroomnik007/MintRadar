@@ -60,7 +60,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
     // Full flow still works end to end.
     await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
     await page.locator('.md-picker-confirm').click()
-    await expect(page.getByText('Mint Comparison')).toBeVisible()
+    await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
   })
 
   test('picker is fully styled on mobile viewport (incl. Chrome DevTools-style emulation)', async ({ page }) => {
@@ -90,7 +90,7 @@ test.describe('Compare picker styling — fresh session, no prior /mint/:url vis
 
     await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
     await page.locator('.md-picker-confirm').click()
-    await expect(page.getByText('Mint Comparison')).toBeVisible()
+    await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
   })
 
   test('same picker styling from MintDetail matches Dashboard (no visual drift between the two call sites)', async ({ page }) => {

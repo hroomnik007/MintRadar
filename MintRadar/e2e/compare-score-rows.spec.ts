@@ -1,8 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
+import { cmpValues, cmpLabel } from './fixtures/compare'
 
-// Compare modal rows after "No mint fault (7d)": the five score components with their points, the contact methods (kinds only)
-// and the NIP-87 announcement. src/utils/compareScoreRows.ts, ComparisonModal.tsx.
+// Compare modal: the five score components with their points (folded panel "How each score is made"), and in the
+// Operator section the contact methods (kinds only) and the NIP-87 announcement. src/utils/compareScoreRows.ts,
+// ComparisonModal.tsx (one layout on every width since the 2026-11-28 redesign).
 
 const [ALPHA, BRAVO, , DELTA] = MOCK_MINTS.map(m => m.url) as [string, string, string, string]
 const parts = (u: number, n: number, v: number) => ({ uptime: { points: u, max: 40 }, audit: { points: 25, max: 25 }, nuts: { points: n, max: 15 }, version: { points: v, max: 15 }, contact: { points: 3, max: 5 }, newMintCap: { points: 0, cap: 70 }, sum: 0 })
@@ -18,7 +20,8 @@ const CONTACTS: Record<string, { method: string; info: string }[]> = {
   [DELTA]: [],
 }
 const ORDER = ['uptime-points', 'audit-points', 'nut-points', 'version-points', 'contact-points', 'contact-methods', 'nip87']
-const LABELS = ['Uptime points', 'Audit points', 'NUT support points', 'Version points', 'Contact points', 'Contact methods', 'NIP-87 announcement']
+const POINTS = ORDER.slice(0, 5)
+const POINT_LABELS = ['Uptime points', 'Audit points', 'NUT support points', 'Version points', 'Contact points']
 
 async function openCompare(page: Page, size: [number, number], others: string[], hold?: { release: () => void; promise: Promise<void> }) {
   await mockRelays(page)
@@ -39,29 +42,25 @@ async function openCompare(page: Page, size: [number, number], others: string[],
   // probe included (useMintHoverPrefetch). That request belongs to the hover, not to the Compare rows counted below.
   await page.mouse.move(1, 1)
   await page.locator('.md-picker-confirm').press('Enter')
-  await expect(page.getByText('Mint Comparison')).toBeVisible()
+  await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
 }
 
-// One accessor for both layouts: label list and the values of a row.
 const isPhone = (size: [number, number]) => size[0] <= 768
-const labels = (page: Page, phone: boolean) => phone
-  ? page.locator('table.cmp-m-table tbody tr th[scope="row"]').allInnerTexts()
-  : page.locator('.cmp-grid .cmp-lbl').allInnerTexts()
-const values = async (page: Page, phone: boolean, id: string) => (phone
-  ? await page.locator(`table.cmp-m-table tbody tr[data-row="${id}"] td`).allInnerTexts()
-  : await page.locator(`.cmp-grid .cmp-val[data-row="${id}"]`).allInnerTexts()).map(t => t.trim())
-const rowCount = (page: Page, phone: boolean, id: string) => phone
-  ? page.locator(`table.cmp-m-table tbody tr[data-row="${id}"]`).count()
-  : page.locator(`.cmp-grid .cmp-val[data-row="${id}"]`).count()
+const values = (page: Page, phone: boolean, id: string) => { void phone; return cmpValues(page, id) }
+const rowCount = (page: Page, phone: boolean, id: string) => { void phone; return page.locator(`.cx-row[data-row="${id}"]`).count() }
 
 for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
   const phone = isPhone(size)
   test(`${size[0]}px: the rows follow the audit row in the specified order with the right values (Alpha, Bravo, Delta)`, async ({ page }) => {
     await openCompare(page, size, ['Bravo Mint', 'Delta Mint'])
-    const l = (await labels(page, phone)).map(t => t.trim().replace(/\s+/g, ' '))
-    const at = l.findIndex(t => t.toLowerCase().startsWith('no mint fault'))
-    expect(l.slice(at + 1, at + 8).map(t => t.toLowerCase())).toEqual(LABELS.map(t => t.toLowerCase()))
-    expect(l[at + 8]?.toLowerCase()).toContain('backup')
+    // The points in their folded panel, in order; contact and NIP-87 close the Operator section.
+    const fold = page.locator('details.cx-fold', { has: page.locator('summary', { hasText: 'How each score is made' }) })
+    expect(await fold.locator('.cx-row').evaluateAll(els => els.map(e => e.getAttribute('data-row')))).toEqual(POINTS)
+    for (const [i, id] of POINTS.entries()) expect(await cmpLabel(page, id)).toBe(POINT_LABELS[i])
+    const operator = page.locator('section[aria-labelledby="cx-h-operator"] .cx-row')
+    expect(await operator.evaluateAll(els => els.map(e => e.getAttribute('data-row')))).toEqual(['version', 'contact-methods', 'nip87'])
+    expect(await cmpLabel(page, 'contact-methods')).toBe('Contact listed')
+    expect(await cmpLabel(page, 'nip87')).toBe('Announced on Nostr (NIP-87)')
     expect(await values(page, phone, 'uptime-points')).toEqual(['40 / 40', '30 / 40', '—'])
     expect(await values(page, phone, 'audit-points')).toEqual(['25 / 25', '25 / 25', '—'])
     expect(await values(page, phone, 'nut-points')).toEqual(['12 / 15', '8 / 15', '—'])
@@ -70,7 +69,7 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     expect(await values(page, phone, 'nip87')).toEqual(['Seen · event dated 14 Mar 2026', 'Not seen on our relays', 'Not seen on our relays'])
     await expect.poll(() => values(page, phone, 'contact-methods')).toEqual(['Email · Nostr', 'Twitter', 'None listed'])
     // Kinds only: no address anywhere in the modal.
-    const text = await page.locator('.cmp-modal').innerText()
+    const text = (await page.locator('.cmp-modal').textContent()) ?? ''
     expect(text).not.toMatch(/secretalpha|secretbravo|secret@alpha/)
     // Nothing overflows the page.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -111,7 +110,7 @@ test('the new rows cause no request of their own: one probe per mint, no contact
   await expect.poll(() => values(page, false, 'contact-methods')).toEqual(['Email · Nostr', 'Twitter', 'None listed'])
   await page.waitForLoadState('networkidle')
   const count = (p: string) => seen.filter(x => x === p).length
-  // The modal's existing requests: one probe, 24h history, chart history and version history per mint (3 mints).
+  // The modal's requests: one probe and the 24h history per mint (3 mints); chart and version history wait for History.
   expect(count('/api/mint/probe')).toBe(3)
   const allowed = new Set(['/api/mint/probe', '/api/mints/history', '/api/mints/version-history', '/api/mints/known', '/api/stats', '/api/mints/changes'])
   const extra = [...new Set(seen)].filter(p => !allowed.has(p) && !p.startsWith('/api/mint/icon') && !p.startsWith('/api/stats'))

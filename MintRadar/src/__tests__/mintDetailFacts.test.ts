@@ -108,7 +108,7 @@ describe('small offline fallbacks', () => {
       { id: '00534ab3e6b75ca1', unit: 'sat', active: false, inputFeePpk: 0 },
       { id: '01cbb9af', unit: 'sat', active: true, inputFeePpk: 200 },
     ]
-    expect(pickInputFee(storedKeysetsAsLive(lnpay))).toEqual({ label: '200 ppk', unit: 'sat' })
+    expect(pickInputFee(storedKeysetsAsLive(lnpay))).toMatchObject({ label: '200 ppk', unit: 'sat' })
     expect(storedKeysetsAsLive([{ id: 'a', unit: 'sat', active: true, inputFeePpk: null }])).toEqual([{ id: 'a', unit: 'sat', active: true }])
     expect(storedKeysetsAsLive([])).toBeNull()
     expect(storedKeysetsAsLive(undefined)).toBeNull()
@@ -117,8 +117,9 @@ describe('small offline fallbacks', () => {
 
 describe('honest single-sample labels', () => {
   it('Compare uptime row is the 24h figure; latency is the last check', () => {
-    expect(COMPARE_UPTIME_LABEL).toBe('Uptime 24h')
-    expect(COMPARE_LATENCY_LABEL).toBe('Latency (last check)')
+    // Compare redesign 2026-11-28: the windows and the source are named in words.
+    expect(COMPARE_UPTIME_LABEL).toBe('Uptime 24 h')
+    expect(COMPARE_LATENCY_LABEL).toBe('From Nuremberg, our last check')
     expect(CARD_LATENCY_LABEL).toBe('Latency (last check)')
   })
 })

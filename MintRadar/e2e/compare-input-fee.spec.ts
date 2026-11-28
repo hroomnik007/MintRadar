@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_MINTS } from './fixtures/mocks'
+import { cmpRowIds, cmpValues } from './fixtures/compare'
 
 const SHOTS = process.env.FEE_SHOTS_DIR
 // FEE_W (optional) only exists for taking screenshots at a given width.
@@ -25,41 +26,24 @@ async function openCompare(page: Page) {
   await page.locator('.md-picker-item', { hasText: 'Bravo Mint' }).click()
   await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
   await page.locator('.md-picker-confirm').click()
-  await expect(page.getByText('Mint Comparison')).toBeVisible()
+  await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
 }
 const shot = async (page: Page) => {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/compare-fee-${page.viewportSize()!.width}.png`, fullPage: true })
 }
 
+// One layout on every width since the Compare redesign (2026-11-28): the row sits in "Deposits and withdrawals" after the
+// payment-method rows, says "free" for 0 and the rate per coin otherwise, and the single lowest fee gets BEST
+// (none here: Delta's fee is unknown, and a missing value means no tag in that row, utils/compareBest.ts).
 test.describe('Compare: Input fee row', () => {
-  test('desktop: different fees, free, and n/a for an unknown fee; inactive keyset ignored', async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 1280) <= 768, 'desktop grid only')
+  test('different fees, free, and n/a for an unknown fee; inactive keyset ignored', async ({ page }) => {
     await openCompare(page)
-    const grid = page.locator('.cmp-grid')
-    await expect(grid.locator('.cmp-lbl', { hasText: 'Input fee' })).toBeVisible()
-    const cells = grid.locator('.cmp-input-fee')
-    await expect(cells).toHaveCount(3)
-    await expect(cells.nth(0)).toContainText('100 ppk')
-    await expect(cells.nth(0)).toContainText('sat')
-    await expect(cells.nth(1)).toContainText('free')
-    await expect(cells.nth(2)).toHaveText('n/a')
-    await expect(grid).not.toContainText('999')
-    // Placed right after Latency, before the methods rows (2026-10-27: Deposit methods, …, Units, then NUT Count).
-    const labels = await grid.locator('.cmp-lbl').evaluateAll(els => els.map(e => (e.textContent ?? '').trim()))
-    const i = labels.findIndex(l => l.startsWith('Input fee'))
-    expect(labels[i - 1]).toBe('Latency (last check)')
-    expect(labels[i + 1]).toBe('Deposit methods')
-    await shot(page)
-  })
-
-  test('mobile: the row shows every mint side by side', async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 1280) > 768, 'mobile table only')
-    await openCompare(page)
-    const vals = page.locator('table.cmp-m-table tr[data-row="fee"] td .cmp-input-fee')
-    await expect(vals).toHaveCount(3)
-    await expect(vals.nth(0)).toContainText('100 ppk')
-    await expect(vals.nth(1)).toContainText('free')
-    await expect(vals.nth(2)).toHaveText('n/a')
+    await expect(page.locator('.cmp-input-fee')).toHaveCount(2)
+    await expect.poll(() => cmpValues(page, 'fee')).toEqual(['0.1 sat per coin', 'free', 'n/a'])
+    expect((await cmpValues(page, 'fee')).join(' ')).not.toContain('999')
+    const ids = await cmpRowIds(page)
+    expect(ids[ids.indexOf('fee') + 1]).toBe('units')
+    expect(ids[ids.indexOf('fee') - 1]).toMatch(/^method-/)
     await shot(page)
   })
 })

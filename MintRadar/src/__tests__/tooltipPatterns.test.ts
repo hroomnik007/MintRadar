@@ -96,7 +96,6 @@ describe('title attributes are not used for explanations', () => {
   const ALLOWED: [string, RegExp, string][] = [
     ['components/layout/AppShell.tsx', /title="(MintRadar|Copy pairing link)"/, 'label of a logo link / an icon-only copy button'],
     ['components/layout/AccountMenu.tsx', /title=\{profile\.name \?\? undefined\}|title="Copy full npub"/, 'repeats the visible name / labels a copy button'],
-    ['components/ComparisonModal.tsx', /title=\{mint\.version \?\? undefined\}/, 'the full version string behind an ellipsis'],
     ['components/mint/MintCard.tsx', /title=\{(mint\.nameFull \?\? displayName|isOnline \? 'Online' : 'Offline'|statusWord|hostname|`Compare \$\{displayName\}`|starLabel)\}/, 'repeats the visible name / labels an icon-only button or a status dot'],
     ['components/AuditCzCards.tsx', /title=\{|title: AUDIT_CZ|\{ title: auditCzStateTitle/, 'table row of a grey (not counted) swap and SwapTable props; the State cell itself is an InfoTooltip'],
     ['pages/Watchlist.tsx', /title=\{getDisplayName\(pk\)\}/, 'the name of an avatar'],

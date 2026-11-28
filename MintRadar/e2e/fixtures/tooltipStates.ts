@@ -297,7 +297,7 @@ export const TOOLTIP_STATES: TooltipState[] = [
       await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
       await page.locator('.md-picker-item', { hasText: 'Bravo Mint' }).click()
       await page.locator('.md-picker-confirm').click()
-      await expect(page.getByText('Mint Comparison')).toBeVisible()
+      await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
       await settle(page)
       return true
     },

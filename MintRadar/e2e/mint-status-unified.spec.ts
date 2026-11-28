@@ -72,8 +72,11 @@ test('list view and Compare use the same word for a degraded mint', async ({ pag
   await page.getByRole('button', { name: /Compare/ }).first().click()
   await page.locator('.md-picker-item', { hasText: 'Alpha Mint' }).click()
   await page.locator('.md-picker-confirm').click()
-  await expect(page.getByText('Mint Comparison')).toBeVisible()
-  const cells = page.locator('.cmp-lbl', { hasText: /^Status$/ }).locator('xpath=following-sibling::div[contains(@class,"cmp-val")]')
-  await expect(cells.filter({ hasText: 'Degraded' })).toHaveCount(1)
-  await expect(cells.filter({ hasText: 'Online' })).toHaveCount(1)
+  await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
+  // Since the 2026-11-28 redesign the status is the dot after each card's name; its word is shown when the mint is
+  // not online and read out (sr-only) when it is.
+  const cards = page.locator('[data-testid="cmp-card"]')
+  await expect(cards.filter({ hasText: 'Charlie Mint' }).locator('.cx-status-word')).toHaveText('Degraded')
+  await expect(cards.filter({ hasText: 'Charlie Mint' }).locator('.cx-dot-degraded')).toHaveCount(1)
+  await expect(cards.filter({ hasText: 'Alpha Mint' }).locator('.cx-name .sr-only')).toHaveText('Online')
 })

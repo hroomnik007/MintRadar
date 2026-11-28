@@ -2,6 +2,35 @@
 > Note: references like "see X below" in this file may point into another docs/claude file; the map is the index in CLAUDE.md.
 ## Compare feature — shared picker + mobile layout
 
+> **Current layout: Compare redesign (2026-11-28, owner-approved mockup v4 `~/Claude/refs/mintradar-compare-mockup-1127`,
+> inspired by cashu.info/compare). Supersedes the desktop `.cmp-grid` / phone `table.cmp-m-table` descriptions below.**
+> - **One layout on every width** (`ComparisonModal.tsx` + `ComparisonModal.css`, classes `.cx-*`): title "Compare N mints",
+>   toolbar ("N mints side by side" + the unchanged "Only differences" switch `.cmp-m-switch` + `role=status` text `.cmp-m-status`),
+>   then one panel of **mint cards** (`[data-testid="cmp-card"]`: icon, name with its **status dot right after the last word**
+>   (`.cx-name-tail`, the word is `.sr-only` when online and visible `.cx-status-word` otherwise), New badge, host, big score
+>   `.cx-score[data-row="reliability"]` with BEST; no 30-day strip). Phones get the same columns, tighter; nothing scrolls sideways.
+> - **Width follows the mint count:** `.cmp-modal.cx[data-mints]` 2 → 760 px, 3 → 940 px, 4 → 1100 px (owner: two mints left
+>   the right half empty). Phones (≤767px) keep the bottom sheet.
+> - **Slim name bar** `.cx-key`: sticks under the header once the cards scrolled away (IntersectionObserver on the modal, the
+>   modal is the scroll box); it takes no room of its own.
+> - **Sections as panels**, each row `.cx-row[data-row=id]` = label `.cx-lbl` ABOVE one `.cx-val` per mint (each value starts with
+>   the mint name in `.sr-only`): Reliability (uptime 24 h, uptime 30 days, audit, community rating), Speed (from your browser,
+>   from Nuremberg), Deposits and withdrawals (one `method-*` row per payment method from `utils/compareMethodRows.ts`, built on
+>   `limitTable()`; Input fee; Units), Features (NUT count "N of 14"), Operator (software + Outdated, contact listed, NIP-87).
+>   Labels: `utils/compareLabels.ts`, `COMPARE_CONTACT_LABEL` / `COMPARE_NIP87_LABEL` in `compareScoreRows.ts`.
+> - **BEST** (`bestFlags`, unique best only, none while any value is missing or pending) on: score, uptime 24 h, uptime 30 days,
+>   browser latency, input fee (lower `min` ppk; 0 reads "free", `compareFeeText()` in `mintProbeDisplay.ts`), NUT count.
+>   **Never on the community rating** (owner) nor on the server's last-check latency.
+> - **NUTs:** only the count with BEST; with "Only differences" ON, one extra row per tracked NUT the mints disagree on
+>   (`nut-XX`, "✓ Supported" / "– Not supported", same `offeredNutKeys` rule). The NUT chips, their ⓘ and the Backup row are gone.
+> - **"Measure again" removed:** the browser latency is measured once, when Compare opens.
+> - **Folded panels:** "How each score is made" (the five `*-points` rows) and History (`.md-seg` metric Latency / Uptime / Score and
+>   period 24 h–90 d, ONE Recharts chart on every width with per-mint colours `#6aa6e8 #e8a06a #7fd0d8 #c48ee8` and a legend
+>   `.cx-legend`, then "Software versions" per mint column: the last two + "All versions"). The History requests
+>   (`chart-history`, `version-history`) start only when the panel is first opened; the 24 h uptime row keeps its own query.
+> - Tests: `compareModal.test.tsx`, `compareMethodRows.test.ts`, `pickInputFee.test.ts`; e2e helper `e2e/fixtures/compare.ts`
+>   (`cmpValues`, `cmpRowIds`, `cmpCells`, `cmpNames`, `cmpOpenFold`) used by every `compare-*.spec.ts`.
+
 > **UI review (2026-11-10), Dashboard, Compare, Stats, Watchlist:**
 > - **List view columns** (superseded on 2026-11-19 by the phase-3 redesign, see "Mints page head, sort and list view" below; `utils/listColumns.ts` is removed): Mint · Status · Uptime 24h · Latency · Reliability · **Rating** (new: "★ 4.8 (89)" or "—") · NUTs. On a phone (≤768px) the table shows Mint, a status dot (no header text, `.sr-only-mobile`), Uptime 24h and ONE more column: the one the list is sorted by (`listMobileColumn(sortBy)` in `utils/listColumns.ts`: latency → Latency, rating / most reviewed → Rating, otherwise Reliability). It used to hide the default sort key. **Since 2026-11-14 Rating is always shown on a phone too** (like the cards), next to the sort column (so the default is Uptime 24h · Reliability · Rating; sorted by rating: Uptime 24h · Rating); on a phone the review count "(89)" is hidden (`.rating-count-mobile-hide`), the hostname line is capped at 120px and the cells have 6px side padding so the four columns fit 390px.
 > - **Compare picker:** listed by the shown name (case-insensitive, numeric), test mints last, the Reliability Score as a plain number at the right of each row (`.md-picker-score`, hidden label for assistive tech). The caller's order no longer matters.
@@ -603,7 +632,7 @@ The Dashboard button described here was removed the same day by #204 (see "Reset
 - **Compare, latency from the browser:** a new row "Latency (your browser)" (`data-row="browser-latency"`) sits above
   "Latency (last check)". When the modal opens, each **online** compared mint's `/v1/info` is fetched from the browser
   (`measureMintLatency()`, `src/utils/browserLatency.ts`: https + length guard, 5 s timeout, `credentials: 'omit'`,
-  `cache: 'no-store'`). A "Measure again" button in the label cell runs it again (query key carries a run id, `gcTime: 0`).
+  `cache: 'no-store'`). (A "Measure again" button was removed in the 2026-11-28 redesign; one measurement per open, `gcTime: 0`.)
   Cells: "measuring…", "N ms", "no answer", "—" (offline, not contacted). The BEST latency tag uses this row (`bestFlags`,
   same rule: none while any value is pending or missing); the server's "Latency (last check)" row no longer gets a tag.
   Privacy: About "Your data" (updated 15 November 2026) and `third-party-requests.md` list the new request.

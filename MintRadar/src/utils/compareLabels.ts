@@ -1,18 +1,23 @@
+import { PROBE_LOCATION } from '@/constants/probeLocation'
+import { TRACKED_NUT_KEYS } from '@/constants/nuts'
+
 // Honest labels for single values on the mint card and in Compare (data audit 2026-10-25).
 
 /** The Compare uptime row is the server's 24 h figure (the same window as Mint Detail's header). */
-export const COMPARE_UPTIME_LABEL = 'Uptime 24h'
+export const COMPARE_UPTIME_LABEL = 'Uptime 24 h'
 /** The 30-day figure stored with the score (/api/mints/known uptimePct30d): the window of the score's 30-day part and of the recommendation gate. */
-export const COMPARE_UPTIME_30D_LABEL = 'Uptime 30d'
+export const COMPARE_UPTIME_30D_LABEL = 'Uptime 30 days'
 /** Compare and card latency is one sample: the latest check, not an average. */
-export const COMPARE_LATENCY_LABEL = 'Latency (last check)'
+export const COMPARE_LATENCY_LABEL = `From ${PROBE_LOCATION}, our last check`
 export const COMPARE_LATENCY_TITLE = 'Latency of the last check (one sample)'
 /** The card's latency label while a measured value is shown. */
 export const CARD_LATENCY_LABEL = 'Latency (last check)'
 /** Compare's audit row (renamed 2026-10-25 from "Audit success"): the x / y of swaps WITHOUT a failure attributed to
  *  the mint in cashu.info's 7-day window — the Audit tab's "Without a failure caused by this mint" tile as a ratio, not
  *  its Deposits / Withdrawals success counts (those count every failure). Fits the 160 px desktop label column with ⓘ. */
-export const COMPARE_AUDIT_LABEL = 'No mint fault (7d)'
+export const COMPARE_AUDIT_LABEL = 'Swaps without a mint fault, last 7 days'
 /** Compare's latency row measured from the visitor's browser when the modal opens; the BEST latency tag uses this row. */
-export const COMPARE_BROWSER_LATENCY_LABEL = 'Latency (your browser)'
-export const COMPARE_BROWSER_LATENCY_TITLE = "Measured from your browser when Compare opens: one request to each compared mint's /v1/info. Those mints see your IP address. The Best tag for latency comes from this row."
+export const COMPARE_BROWSER_LATENCY_LABEL = 'From your browser, measured when this opened'
+export const COMPARE_BROWSER_LATENCY_TITLE = "Measured from your browser when Compare opens: one request to each compared mint's /v1/info. Those mints see your IP address."
+/** Compare, Features (redesign 2026-11-28): how many of the tracked NUTs the mint offers. */
+export const COMPARE_NUT_COUNT_LABEL = `Supported NUTs, of the ${TRACKED_NUT_KEYS.length} MintRadar tracks`

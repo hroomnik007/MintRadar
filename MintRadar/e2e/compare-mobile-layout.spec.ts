@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { cmpRowIds, cmpValues } from './fixtures/compare'
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -35,15 +36,11 @@ async function openCompare(page: Page, otherMintNames: string[]) {
     await page.locator('.md-picker-item', { hasText: name }).click()
   }
   await page.locator('.md-picker-confirm').click()
-  await expect(page.getByText('Mint Comparison')).toBeVisible()
+  await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
 }
 
-// The comparison grid used to be a side-by-side table (mint = column) that
-// only ever relied on `overflow-x: auto` on narrow viewports — it never
-// actually fit, so the modal spilled past the screen edge. This checks the
-// mobile side-by-side table instead: no horizontal page overflow, the
-// header stays usable, every mint is a column, and the label column stays
-// pinned while wider comparisons scroll sideways inside their own region.
+// Since the Compare redesign (2026-11-28) phones get the same layout as the desktop: mint cards on top and every row's
+// values in one column per mint, inside the modal. Nothing scrolls sideways, neither the page nor a region of the modal.
 const viewports = [
   { width: 375, height: 800, label: '375px' },
   { width: 390, height: 844, label: '390px' },
@@ -97,29 +94,15 @@ for (const vp of viewports) {
       expect(elAtCenter).toBe(true)
       void headerBox
 
-      // Side-by-side table: one column per mint, no desktop grid, no tabs.
-      await expect(page.locator('.cmp-grid')).toHaveCount(0)
-      await expect(page.locator('.cmp-mobile-tab')).toHaveCount(0)
-      const table = page.locator('table.cmp-m-table')
-      await expect(table).toBeVisible()
-      await expect(table.locator('thead th[scope="col"]:not(.cmp-m-corner)')).toHaveCount(scenario.count)
-      await expect(table.locator('th.cmp-m-lbl', { hasText: 'Reliability Score' })).toBeVisible()
-
-      // The table scrolls inside its own region, never the page; for 3+
-      // mints it is wider than the region (sideways scroll inside the modal).
-      const region = page.getByRole('region', { name: 'Mint comparison table' })
-      const { sw, cw } = await region.evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth }))
-      if (scenario.count > 2) expect(sw).toBeGreaterThan(cw)
-      else expect(sw).toBeLessThanOrEqual(cw + 1)
-
-      // The label column stays put while the values scroll sideways.
-      const lbl = table.locator('th.cmp-m-lbl').first()
-      const before = await lbl.boundingBox()
-      await region.evaluate(el => { el.scrollLeft = el.scrollWidth })
-      const after = await lbl.boundingBox()
-      expect(Math.abs(after!.x - before!.x)).toBeLessThanOrEqual(1)
-      const pageScrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
-      expect(pageScrollWidth).toBeLessThanOrEqual(vp.width + 1)
+      // One card and one value column per mint; no old table or grid; nothing wider than the modal.
+      await expect(page.locator('table.cmp-m-table, .cmp-grid')).toHaveCount(0)
+      await expect(page.locator('[data-testid="cmp-card"]')).toHaveCount(scenario.count)
+      expect(await cmpValues(page, 'nut-count')).toHaveLength(scenario.count)
+      const { sw, cw } = await modal.evaluate(el => ({ sw: el.scrollWidth, cw: el.clientWidth }))
+      expect(sw).toBeLessThanOrEqual(cw + 1)
+      const mBox = (await modal.boundingBox())!
+      const outside = await page.locator('.cx-val, [data-testid="cmp-card"]').evaluateAll((els, right) => els.filter(e => e.getBoundingClientRect().right > right + 0.5).length, mBox.x + mBox.width)
+      expect(outside).toBe(0)
     })
   }
 }
@@ -133,12 +116,10 @@ test('mobile Compare modal is scrollable within the viewport (no page-level hori
   const canScrollX = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
   expect(canScrollX).toBe(false)
 
-  // But the modal content itself must be reachable via vertical scroll —
-  // the "Software Version History" section at the bottom should be visible
-  // after scrolling the modal.
+  // The folded History panel at the bottom is reachable by scrolling the modal.
   const modal = page.locator('.cmp-modal')
   await modal.evaluate(el => el.scrollTo(0, el.scrollHeight))
-  await expect(page.getByText('Software Version History')).toBeVisible()
+  await expect(page.locator('details.cx-fold > summary', { hasText: 'History' })).toBeVisible()
 })
 
 test('mobile: "Only differences" hides rows where every mint has the same value', async ({ page }) => {
@@ -146,39 +127,31 @@ test('mobile: "Only differences" hides rows where every mint has the same value'
   await openCompare(page, ['Delta Mint', 'Bravo Mint'])
   const toggle = page.getByRole('switch', { name: 'Only differences' })
   await expect(toggle).toHaveAttribute('aria-checked', 'false')
-  const rows = page.locator('table.cmp-m-table tbody tr')
-  const total = await rows.count()
-  expect(total).toBeGreaterThan(3)
-
-  // Rows whose cells read differently across mints must stay visible.
-  const differingIds = await rows.evaluateAll(trs => trs
-    .filter(tr => {
-      const vals = [...tr.querySelectorAll('td')].map(td => (td.textContent ?? '').trim())
-      return vals.some(v => v !== vals[0])
-    })
-    .map(tr => tr.getAttribute('data-row')))
-  expect(differingIds.length).toBeGreaterThan(0)
+  const all = await cmpRowIds(page)
+  expect(all.length).toBeGreaterThan(3)
+  // Rows whose values read differently across mints must stay visible.
+  const differing: string[] = []
+  for (const id of all) { const v = await cmpValues(page, id); if (v.some(x => x !== v[0])) differing.push(id) }
+  expect(differing.length).toBeGreaterThan(0)
 
   await toggle.click()
   await expect(toggle).toHaveAttribute('aria-checked', 'true')
   await expect(toggle).toBeFocused()
   await expect(page.locator('.cmp-m-status')).toContainText(/rows differ|same value/)
-  // All three fixture mints are online: the Status row is equal and hidden.
-  await expect(page.locator('table.cmp-m-table tbody tr[data-row="status"]')).toHaveCount(0)
-  for (const id of differingIds) {
-    await expect(page.locator(`table.cmp-m-table tbody tr[data-row="${id}"]`)).toHaveCount(1)
-  }
-  expect(await rows.count()).toBeLessThan(total)
+  // No fixture mint has a 30-day figure ("—" for all): that row is equal and hidden.
+  await expect(page.locator('.cx-row[data-row="uptime-30d"]')).toHaveCount(0)
+  for (const id of differing) await expect(page.locator(`.cx-row[data-row="${id}"]`)).toHaveCount(1)
+  expect((await cmpRowIds(page)).length).toBeLessThan(all.length)
 
   await toggle.press('Space')
   await expect(toggle).toHaveAttribute('aria-checked', 'false')
-  await expect(rows).toHaveCount(total)
+  await expect.poll(() => cmpRowIds(page)).toEqual(all)
 })
 
-test('desktop: the Compare grid is shown (not the phone table) and carries the same switch, off by default', async ({ page }) => {
+test('desktop: the same layout as on the phone, with the switch off by default', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   await openCompare(page, ['Delta Mint', 'Bravo Mint'])
-  await expect(page.locator('.cmp-grid')).toBeVisible()
-  await expect(page.locator('table.cmp-m-table')).toHaveCount(0)
+  await expect(page.locator('[data-testid="cmp-card"]')).toHaveCount(3)
+  await expect(page.locator('table.cmp-m-table, .cmp-grid')).toHaveCount(0)
   await expect(page.getByRole('switch', { name: 'Only differences' })).toHaveAttribute('aria-checked', 'false')
 })

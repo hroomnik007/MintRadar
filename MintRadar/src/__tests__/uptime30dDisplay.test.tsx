@@ -113,24 +113,23 @@ describe('uptime30dShown / formatUptime30d', () => {
   })
 })
 
+// Compare (redesign 2026-11-28): each row's label above, one value per mint column; the hidden mint name is not counted.
+const cmpVals = (root: HTMLElement, id: string) => Array.from(root.querySelectorAll(`.cx-row[data-row="${id}"] .cx-val`)).map(v => {
+  const c = v.cloneNode(true) as HTMLElement
+  c.querySelectorAll('.sr-only').forEach(e => e.remove())
+  return c.textContent ?? ''
+})
 describe('Compare', () => {
-  it('desktop grid: an "Uptime 30d" row with each mint\'s figure, a dash when unknown', () => {
+  it('an "Uptime 30 days" row with each mint\'s figure, a dash when unknown; no BEST while one is unknown', () => {
     const { baseElement } = render(wrap(<ComparisonModal mints={[STEADY, WEEK_DOWN, UNKNOWN]} onClose={() => undefined} />))
-    const label = Array.from(baseElement.querySelectorAll('.cmp-lbl')).find(l => l.textContent === COMPARE_UPTIME_30D_LABEL)!
-    expect(label).toBeTruthy()
-    const cells: string[] = []
-    for (let el = label.nextElementSibling; el && el.classList.contains('cmp-val'); el = el.nextElementSibling) cells.push(el.textContent ?? '')
-    expect(cells).toEqual(['100%', '77.0%', '—'])
+    expect(baseElement.querySelector('.cx-row[data-row="uptime-30d"] .cx-lbl')?.textContent).toBe(COMPARE_UPTIME_30D_LABEL)
+    expect(cmpVals(baseElement, 'uptime-30d')).toEqual(['100%', '77.0%', '—'])
   })
-  it('mobile table: the same row; it is a difference between a steady mint and one that was down', () => {
+  it('on a phone the same row; two known figures: the higher one carries BEST', () => {
     mobile = true
     const { baseElement } = render(wrap(<ComparisonModal mints={[STEADY, WEEK_DOWN]} onClose={() => undefined} />))
-    const row = baseElement.querySelector('table.cmp-m-table tbody tr[data-row="uptime-30d"]')!
-    expect(row).toBeTruthy()
-    expect(row.querySelector('th')?.textContent).toBe(COMPARE_UPTIME_30D_LABEL)
-    // Two known figures: the higher one carries the "BEST" tag (compareBest.ts); the desktop case above has an unknown one, so no tag.
-    expect(Array.from(row.querySelectorAll('td')).map(td => td.textContent)).toEqual(['100%Best', '77.0%'])
-    expect(row.querySelectorAll('td')[0]!.querySelector('.cmp-best')?.textContent).toBe('Best')
+    expect(cmpVals(baseElement, 'uptime-30d')).toEqual(['100%Best', '77.0%'])
+    expect(baseElement.querySelector('.cx-row[data-row="uptime-30d"] .cx-val .cmp-best')?.textContent).toBe('Best')
   })
 })
 

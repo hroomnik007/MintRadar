@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS, MOCK_MINTS } from './fixtures/mocks'
+import { cmpValues } from './fixtures/compare'
 
 // UI/UX audit fixes, Dashboard and Compare (2026-11-15): unrated / unreviewed / unmeasured mints last in both sort directions,
 // two-line mint names, Compare latency measured from the browser (BEST on that row, offline mints not contacted), and a grey
@@ -77,25 +78,26 @@ test.describe('Compare: latency from the browser', () => {
     // A ?compare= link with the offline mint first (the picker itself offers online mints only).
     const list = ['charlie', 'alpha', 'delta'].map(n => `https://${n}.mint.example`).join(',')
     await page.goto(`/?status=all&compare=${encodeURIComponent(list)}`)
-    await expect(page.getByText('Mint Comparison')).toBeVisible()
+    await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
   }
-  const row = (page: Page, id: string) => page.locator(`.cmp-grid .cmp-val[data-row="${id}"]`)
+  const row = (page: Page, id: string) => page.locator(`.cx-val[data-row="${id}"]`)
 
-  test('the row measures online mints only, tags the fastest from the browser, and measures again on request', async ({ page }) => {
+  // "Measure again" was removed in the 2026-11-28 redesign: the row is measured once, when Compare opens.
+  test('the row measures online mints only, once when Compare opens, and tags no one while a value is missing', async ({ page }) => {
     await openCompare(page)
-    await expect(page.locator('.cmp-lbl', { hasText: 'Latency (your browser)' })).toBeVisible()
+    await expect(page.locator('.cx-lbl', { hasText: 'From your browser, measured when this opened' })).toBeVisible()
     await expect(row(page, 'browser-latency').filter({ hasText: 'measuring' })).toHaveCount(0)
     // Charlie (first column) is offline: not contacted, shown as "—".
-    const texts = await row(page, 'browser-latency').allInnerTexts()
-    expect(texts[0]!.trim()).toBe('—')
+    expect((await cmpValues(page, 'browser-latency'))[0]).toBe('—')
     const hits = await page.evaluate(() => (window as unknown as { __hits: string[] }).__hits.slice().sort())
     expect(hits).toEqual(['alpha', 'delta'])
     // A missing value (the offline mint) means no tag, as on every other row.
     await expect(row(page, 'browser-latency').locator('.cmp-best')).toHaveCount(0)
     // The server's last-check row never carries the tag.
     await expect(row(page, 'latency').locator('.cmp-best')).toHaveCount(0)
-    await page.getByTestId('cmp-remeasure').click()
-    await expect.poll(() => page.evaluate(() => (window as unknown as { __hits: string[] }).__hits.length)).toBe(4)
+    await expect(page.getByTestId('cmp-remeasure')).toHaveCount(0)
+    await page.waitForTimeout(500)
+    expect(await page.evaluate(() => (window as unknown as { __hits: string[] }).__hits.length)).toBe(2)
   })
 })
 
@@ -116,7 +118,7 @@ test('Compare of two online mints: BEST latency goes to the faster mint from the
   await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
   await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
   await page.locator('.md-picker-confirm').click()
-  const cells = page.locator('.cmp-grid .cmp-val[data-row="browser-latency"]')
+  const cells = page.locator('.cx-val[data-row="browser-latency"]')
   await expect(cells.nth(1).locator('.cmp-best')).toHaveCount(1)
   await expect(cells.nth(0).locator('.cmp-best')).toHaveCount(0)
 })

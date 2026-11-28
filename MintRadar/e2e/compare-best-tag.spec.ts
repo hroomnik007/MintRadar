@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { cmpCells, cmpNames } from './fixtures/compare'
 
 // Compare modal: per metric row the better value is accent-coloured with a small "BEST" pill (utils/compareBest.ts).
 // Rows with a direction only (Reliability Score, Uptime 24h / 30 days higher, Latency lower); no tag on equal values,
@@ -47,16 +48,13 @@ async function openCompare(page: Page, size: [number, number], others: string[],
   await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
   for (const name of others) await page.locator('.md-picker-item', { hasText: name }).click()
   await page.locator('.md-picker-confirm').click()
-  await expect(page.getByText('Mint Comparison')).toBeVisible()
+  await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
 }
 
+// One layout on every width since the 2026-11-28 redesign; `phone` only names the case.
 const phoneOf = (size: [number, number]) => size[0] <= 768
-const names = async (page: Page, phone: boolean) => (phone
-  ? await page.locator('table.cmp-m-table thead th.cmp-m-mint .cmp-m-mint-name').allInnerTexts()
-  : await page.locator('.cmp-grid .cmp-val.cmp-row-mint > div > div:first-child').allInnerTexts()).map(t => t.trim())
-const cells = (page: Page, phone: boolean, id: string) => phone
-  ? page.locator(`table.cmp-m-table tbody tr[data-row="${id}"] td`)
-  : page.locator(`.cmp-grid .cmp-val[data-row="${id}"]`)
+const cells = (page: Page, phone: boolean, id: string) => { void phone; return cmpCells(page, id) }
+const names = (page: Page, phone: boolean) => { void phone; return cmpNames(page) }
 /** Name of the mint whose cell in row `id` has the tag, or null; fails when more than one cell has it. */
 async function bestOf(page: Page, phone: boolean, id: string): Promise<string | null> {
   const flags = await cells(page, phone, id).evaluateAll(els => els.map(e => e.querySelectorAll('.cmp-best').length))
@@ -78,9 +76,9 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     expect(await bestOf(page, phone, 'browser-latency')).toBe('Alpha Mint')
     expect(await bestOf(page, phone, 'uptime')).toBeNull()
     expect(await bestOf(page, phone, 'uptime-30d')).toBeNull()
-    // No tag on rows without a direction.
-    expect(await page.locator('.cmp-best').count()).toBe(2)
-    // The pill: "BEST" in the accent colour on the soft green fill; the value beside it is accent too.
+    // Never on the community rating or the server's last-check latency.
+    await expect(page.locator('.cx-val[data-row="rating"] .cmp-best, .cx-val[data-row="latency"] .cmp-best')).toHaveCount(0)
+    // The pill: "BEST" in the accent colour on the soft green fill; the value before it is accent too.
     const tag = cells(page, phone, 'browser-latency').filter({ has: page.locator('.cmp-best') }).locator('.cmp-best')
     await expect(tag).toHaveText(/best/i)
     const s = await tag.evaluate(el => {
@@ -88,7 +86,7 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
       probe.style.color = 'var(--accent)'; probe.style.background = 'var(--green-soft)'
       el.parentElement!.appendChild(probe)
       const p = getComputedStyle(probe)
-      const out = { color: c.color, bg: c.backgroundColor, upper: c.textTransform, size: parseFloat(c.fontSize), accent: p.color, soft: p.backgroundColor, value: getComputedStyle(el.parentElement!).color }
+      const out = { color: c.color, bg: c.backgroundColor, upper: c.textTransform, size: parseFloat(c.fontSize), accent: p.color, soft: p.backgroundColor, value: getComputedStyle(el.previousElementSibling!).color }
       probe.remove()
       return out
     })
@@ -100,8 +98,8 @@ for (const size of [[1440, 900], [390, 844]] as [number, number][]) {
     // A losing value keeps its own colour (not accent).
     // The server's last-check row has no tag at all.
     expect(await bestOf(page, phone, 'latency')).toBeNull()
-    const loser = cells(page, phone, 'latency').filter({ hasText: '300ms' })
-    const lose = await (phone ? loser.locator('span').first() : loser).evaluate(el => getComputedStyle(el).color)
+    const loser = cells(page, phone, 'browser-latency').nth(1) // Bravo, the slowest
+    const lose = await loser.locator('span:not(.sr-only)').first().evaluate(el => getComputedStyle(el).color)
     expect(lose).not.toBe(s.accent)
   })
 
@@ -134,10 +132,11 @@ for (const width of [390, 320]) {
   test(`${width}px: the tags do not widen the page or leave their cell`, async ({ page }) => {
     await openCompare(page, [width, 844], ['Bravo Mint', 'Delta Mint'], { uptime24h: { [ALPHA]: 100, [BRAVO]: 97, [DELTA]: 98 } })
     // Reliability, browser latency, 24h uptime: Alpha; 30 days: Alpha and Bravo tie at the top (no tag).
-    await expect(page.locator('.cmp-best')).toHaveCount(3)
+    await expect(page.locator('[data-row="reliability"] .cmp-best, [data-row="browser-latency"] .cmp-best, [data-row="uptime"] .cmp-best')).toHaveCount(3)
+    await expect(page.locator('[data-row="uptime-30d"] .cmp-best')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
     const out = await page.locator('.cmp-best').evaluateAll(els => els.filter(e => {
-      const r = e.getBoundingClientRect(), td = e.closest('td')!.getBoundingClientRect()
+      const r = e.getBoundingClientRect(), td = e.closest('.cx-val, .cx-score')!.getBoundingClientRect()
       return r.left < td.left - 0.5 || r.right > td.right + 0.5
     }).length)
     expect(out).toBe(0)
@@ -154,6 +153,6 @@ test('1440px: three mints with one missing value: every row with a tag has exact
   expect(await bestOf(page, false, 'reliability')).toBeNull()
   expect(await bestOf(page, false, 'browser-latency')).toBeNull()
   expect(await bestOf(page, false, 'uptime-30d')).toBeNull()
-  // Nothing on the mint header row.
-  expect(await page.locator('.cmp-row-mint .cmp-best').count()).toBe(0)
+  // Nothing on the slim name bar.
+  expect(await page.locator('.cx-key .cmp-best').count()).toBe(0)
 })

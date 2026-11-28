@@ -59,7 +59,7 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
       await page.keyboard.press('Tab')
       await expect(page.locator('.md-picker-confirm')).toBeFocused()
       await page.keyboard.press('Enter')
-      await expect(page.getByText('Mint Comparison')).toBeVisible()
+      await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
     })
 
     test('ArrowDown from the search field enters the filtered list', async ({ page }) => {

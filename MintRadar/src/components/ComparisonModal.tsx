@@ -1,18 +1,16 @@
-import { INPUT_FEE_TEXT, compareAuditSuccessText, COMPARE_NUT_SUPPORT_TEXT, COMPARE_BACKUP_TEXT } from '@/utils/tooltipTexts'
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { INPUT_FEE_TEXT, compareAuditSuccessText } from '@/utils/tooltipTexts'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import {
   XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts'
-import { UptimeBars } from '@/components/mint/UptimeBars'
 import { MintFavicon } from '@/components/mint/MintFavicon'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { offeredNutKeys } from '@/utils/nutSupport'
-import { IcShield } from '@/components/mint/IcShield'
 import { type KnownMint } from '@/hooks/useKnownMints'
 import { classifyMintVersion, latestMapFor } from '@/utils/versionRule'
-import { TRACKED_NUT_KEYS } from '@/constants/nuts'
+import { TRACKED_NUT_KEYS, NUT_NAMES } from '@/constants/nuts'
 import { AUDIT_MIN_SAMPLES, auditDataState } from '@/utils/auditScore'
 import { auditLongOf } from '@/utils/auditWindows'
 import { auditReliabilityColor, formatTimeAgo, LOW_RELIABILITY_TEXT, mintStatusLabel, uptime30dColor, uptime30dShown, formatUptime30d } from '@/utils/mintFormatting'
@@ -21,78 +19,60 @@ import { useNow } from '@/hooks/useNow'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { formatDate } from '@/utils/formatDate'
 import { probeMint } from '@core/mint/api'
-import { pickInputFee } from '@/utils/mintProbeDisplay'
+import { pickInputFee, compareFeeText, type CompareInputFee } from '@/utils/mintProbeDisplay'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { IcClose } from '@/components/IcClose'
 import './ComparisonModal.css'
 import { auditSuccessText, storedKeysetsAsLive } from '@/utils/mintDetailFacts'
-import { visibleCompareRows, type CompareKey, type CompareRowKeys } from '@/utils/compareDiff'
-import { compareMethods, limitsKey, type CompareMethods, type MethodsCell } from '@/utils/compareMethods'
+import { visibleCompareRows, type CompareRowKeys } from '@/utils/compareDiff'
+import { compareMethodRows } from '@/utils/compareMethodRows'
+import { sortUnits } from '@/utils/sortUnits'
 import { SCORE_PART_ROWS, COMPARE_CONTACT_LABEL, COMPARE_NIP87_LABEL, scorePointsText, contactMethodsText, nip87RowText } from '@/utils/compareScoreRows'
 import { bestFlags } from '@/utils/compareBest'
-import { COMPARE_UPTIME_LABEL, COMPARE_UPTIME_30D_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL, COMPARE_BROWSER_LATENCY_LABEL, COMPARE_BROWSER_LATENCY_TITLE } from '@/utils/compareLabels'
+import { COMPARE_UPTIME_LABEL, COMPARE_UPTIME_30D_LABEL, COMPARE_LATENCY_LABEL, COMPARE_LATENCY_TITLE, COMPARE_AUDIT_LABEL, COMPARE_BROWSER_LATENCY_LABEL, COMPARE_BROWSER_LATENCY_TITLE, COMPARE_NUT_COUNT_LABEL } from '@/utils/compareLabels'
 import { measureMintLatency } from '@/utils/browserLatency'
 
-function reliabilityScoreInfo(score: number) {
-  if (score >= 70) return { label: 'High Reliability', color: 'var(--accent)', bg: 'var(--green-soft)', border: 'var(--green-soft-strong)' }
-  if (score >= 40) return { label: 'Moderate Reliability', color: 'var(--amber)', bg: 'var(--amber-soft)', border: 'var(--amber-soft-strong)' }
-  return { label: 'Low Reliability', color: LOW_RELIABILITY_TEXT, bg: 'var(--red-soft)', border: 'var(--red-soft-strong)' }
+// Compare, redesign of 2026-11-28 (owner-approved mockup ~/Claude/refs/mintradar-compare-mockup-1127, inspired by
+// cashu.info/compare): mint cards on top (icon, name with its status dot, host, score), a slim bar with the names that
+// sticks once the cards have scrolled away, then sections as panels where each row's label sits ABOVE its values and
+// the values sit in the columns of the cards. One layout for every width: phones get the same columns, nothing scrolls
+// sideways. BEST marks the single best value of a row (not on the community rating). "Only differences" is unchanged
+// and also brings in one row per NUT the mints disagree on. Score points and History are folded.
+
+function scoreColor(score: number): string {
+  if (score >= 70) return 'var(--accent)'
+  if (score >= 40) return 'var(--amber)'
+  return LOW_RELIABILITY_TEXT
 }
 
-function uptimeColor(pct: number | null | undefined): string {
-  if (pct === null || pct === undefined) return 'var(--text3)'
-  if (pct >= 80) return 'var(--accent)'
-  if (pct >= 50) return 'var(--amber)'
-  return 'var(--red)'
-}
-
-// Audit row (COMPARE_AUDIT_LABEL, "No mint fault (7d)"; was "Audit success") — the same cashu.info 7-day window, minimum-sample floor and staleness
-// rule the Reliability Score's audit part scores on (auditDataState() from shared/auditScore.ts), so
-// the row never disagrees with the Mint Detail breakdown. "Successes" here means swaps not
-// attributed to the mint (cashu.info attributes only the failures the mint caused).
+// Audit row (COMPARE_AUDIT_LABEL): the same cashu.info 7-day window, minimum-sample floor and staleness rule the
+// Reliability Score's audit part scores on (auditDataState() from shared/auditScore.ts). "Without a mint fault" means
+// swaps not attributed to the mint (cashu.info attributes only the failures the mint caused).
 function auditSuccessDisplay(mint: KnownMint, now: number): { text: string; color: string } {
   const total = mint.auditCzTotal ?? null
   const blamed = mint.auditCzBlamed ?? null
   const long = auditLongOf(mint)
-  // The row is the 7-day figure (its label says so); the points row below it carries the long window's effect.
   if (auditDataState(blamed, total, mint.auditCzFetchedAt ?? null, now, long) !== 'scored' || total === null || total < AUDIT_MIN_SAMPLES) {
     return { text: 'n/a', color: 'var(--text3)' }
   }
-  return {
-    text: auditSuccessText(blamed, total) ?? 'n/a',
-    color: auditReliabilityColor(total, blamed, AUDIT_MIN_SAMPLES),
-  }
+  return { text: auditSuccessText(blamed, total) ?? 'n/a', color: auditReliabilityColor(total, blamed, AUDIT_MIN_SAMPLES) }
 }
 
-// "BEST" pill after the better value of a metric row (utils/compareBest.ts); the value itself turns accent.
+// "BEST" after the single best value of a row (utils/compareBest.ts); the value itself turns accent.
 function BestTag() {
   return <span className="cmp-best" data-testid="cmp-best">Best</span>
 }
 
-// Deposit / Withdrawal methods cell: a switched-off side is greyed and says so (same words as Mint Detail, #168).
-function MethodsValue({ cell, size }: { cell: MethodsCell; size: number }) {
-  return (
-    <span className={`cmp-methods cmp-methods-${cell.state}`} style={{ fontFamily: 'var(--font-mono)', fontSize: cell.state === 'list' ? size : 12, fontWeight: cell.state === 'list' ? 600 : 400, color: cell.state === 'list' ? 'var(--text)' : 'var(--text3)', overflowWrap: 'anywhere' }}>
-      {cell.state === 'disabled' && <span aria-hidden="true">⊘ </span>}{cell.text}
-    </span>
-  )
-}
+/** A name split before its last word, so the status dot can be held to that word. */
+function nameHead(name: string): string { const i = name.lastIndexOf(' '); return i === -1 ? '' : name.slice(0, i + 1) }
+function nameTail(name: string): string { const i = name.lastIndexOf(' '); return i === -1 ? name : name.slice(i + 1) }
 
-// Limits cell: one "Deposit · bolt11 · sat" line with its "min 1, max 1,000,000" per method and unit (limitRows()).
-function LimitsValue({ m }: { m: CompareMethods }) {
-  return (
-    <span className="cmp-limits">
-      {m.limits.map(r => (
-        <span key={r.key} className="cmp-limit">
-          <span className="cmp-limit-label">{r.label}</span>
-          <span className="cmp-limit-value">{r.value}</span>
-        </span>
-      ))}
-    </span>
-  )
+/** "cdk-mintd/0.18.3" may wrap after the slash on a narrow column, never inside the number (a <wbr>, so the text
+ *  itself stays "cdk-mintd/0.18.3" for find-in-page and copying). */
+function breakAfterSlash(text: string): ReactNode {
+  const parts = text.split('/')
+  return parts.map((p, i) => (i === 0 ? p : <span key={i}>/<wbr />{p}</span>))
 }
-
-const EXTRA_ROW_IDS = new Set([...SCORE_PART_ROWS.map(r => r.id), 'contact-methods', 'nip87'])
 
 function listReliabilityScore(mint: KnownMint): number {
   if (mint.online !== true) return 0
@@ -103,16 +83,22 @@ function getHostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }
 
-// Per-mint line colors for the historical trend overlay — reuses hues already
-// established elsewhere in the app (Reliability Trend green, copper accent, the
-// Fresh/OG badge blue and purple) rather than inventing new ones.
-// Categorical series identity, not semantic status: these stay literal on purpose.
-// [0] is the A-series green (deliberately not --accent); [1] is a real-value copy of
-// var(--copper) and must be kept equal to it.
-const MINT_COLORS = ['#17E87F', '#d98a5a', '#60a5fa', '#a78bfa']
+// Per-mint line colours of the History chart (categorical identity, not health): blue, orange, cyan, violet, none of
+// them the health green / amber / red. The legend under the chart names each.
+const MINT_COLORS = ['#6aa6e8', '#e8a06a', '#7fd0d8', '#c48ee8']
 
 type HistoryPeriod = '24h' | '7d' | '30d' | '90d'
 type HistoryMetric = 'latency' | 'uptime' | 'reliability'
+type SectionId = 'reliability' | 'speed' | 'money' | 'features' | 'operator' | 'points'
+const SECTIONS: ReadonlyArray<{ id: Exclude<SectionId, 'points'>; heading: string }> = [
+  { id: 'reliability', heading: 'Reliability' },
+  { id: 'speed', heading: 'Speed' },
+  { id: 'money', heading: 'Deposits and withdrawals' },
+  { id: 'features', heading: 'Features' },
+  { id: 'operator', heading: 'Operator' },
+]
+/** Versions shown per mint before "All versions". */
+const VERSIONS_SHOWN = 2
 
 interface HistorySegment {
   bucket: string
@@ -142,6 +128,12 @@ interface VersionHistoryResponse {
   latestGlobalVersion: string | null
 }
 
+interface CompareRow extends CompareRowKeys {
+  section: SectionId
+  label: ReactNode
+  cell: (i: number) => ReactNode
+}
+
 const EMPTY_MINT: KnownMint = {
   url: '', name: null, iconUrl: null, degraded: false, online: null,
   latencyMs: null, version: null, nutCount: null, tosUrl: null,
@@ -157,26 +149,22 @@ function useMintCompareData(mint: KnownMint) {
   const displayName = mint.name ?? getHostname(mint.url)
   const hostname = getHostname(mint.url)
   const reliabilityScore = listReliabilityScore(mint)
-  const tsInfo = reliabilityScoreInfo(reliabilityScore)
   const isNew = mint.discoveredAt != null && (now - new Date(mint.discoveredAt).getTime()) < 48 * 3600 * 1000
   const nutsLimits = (mint.nutsLimits ?? {}) as Record<string, unknown>
-  // NUT-13 (deterministic secrets) is wallet-side only — mints never advertise
-  // it in /v1/info. NUT-09 (restore signatures) is the mint-side capability
-  // that actually gates backup/restore — matches MintDetail's supportsBackupRestore.
   // One NUT rule with Mint Detail (utils/nutSupport.ts): absent, null and `supported: false` are not support, and a
   // switched-off NUT-04/05 (`disabled: true`) is not offered.
   const supportedNuts = offeredNutKeys(nutsLimits)
-  const supportsBackupRestore = supportedNuts.has('9')
+  const trackedCount = TRACKED_NUT_KEYS.filter(k => supportedNuts.has(k)).length
   // Same rule and the same "latest" as everywhere else (versionRule.ts + the value the API sends with the mint).
   const isOutdated = classifyMintVersion(mint.version, latestMapFor(mint.version, mint.softwareLatest)).label === 'outdated'
-  // Payment methods, declared limits and units from /v1/info (NUT-04 / NUT-05), with switched-off sides (#168).
-  const methods = compareMethods(mint)
-  return { isOnline, status, statusLabel, displayName, hostname, reliabilityScore, tsInfo, isNew, nutsLimits, supportedNuts, supportsBackupRestore, isOutdated, methods }
+  const units = sortUnits(mint.units)
+  return { isOnline, status, statusLabel, displayName, hostname, reliabilityScore, isNew, supportedNuts, trackedCount, isOutdated, units }
 }
 
 export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClose: () => void }) {
   const dialogRef = useModalFocus()
   const now = useNow()
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -191,19 +179,16 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
   const d3 = useMintCompareData(mints[3] ?? EMPTY_MINT)
   const allData = [d0, d1, d2, d3].slice(0, mints.length)
 
-  // 160px fits the longest label, "Latency (last check)" + its info icon, without running into the values.
-  const gridCols = `160px ${mints.map(() => 'minmax(150px, 1fr)').join(' ')}`
-
-  const isMobile = useIsMobile()
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('7d')
   const [metric, setMetric] = useState<HistoryMetric>('latency')
-  // Both layouts (phone table and desktop .cmp-grid) can hide the rows where every mint has the same value.
-  // One state, so a resize between the two keeps the choice; off every time the modal opens.
+  // The History panel is folded; its requests start the first time it is opened.
+  const [historyOpened, setHistoryOpened] = useState(false)
+  const [allVersions, setAllVersions] = useState<ReadonlySet<number>>(() => new Set())
+  // Off every time the modal opens.
   const [onlyDifferences, setOnlyDifferences] = useState(false)
 
-  // Input fee comes from the existing on-demand probe (/api/mint/probe → live
-  // /v1/keysets), the same source Mint Detail's Keysets panel uses. Own query key
-  // and no IndexedDB history write (unlike useMintProbe).
+  // Input fee and contact kinds come from the existing on-demand probe (/api/mint/probe → live /v1/keysets), the same
+  // source Mint Detail's Keysets panel uses. Own query key and no IndexedDB history write (unlike useMintProbe).
   const probeQueries = useQueries({
     queries: mints.map(m => ({
       queryKey: ['mint', 'compare-probe', m.url],
@@ -212,29 +197,15 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       retry: 1,
     })),
   })
-  const feeCell = (i: number) => {
+  /** The fee and whether it is the stored one; 'pending' while the probe runs. Live keysets first, then the last stored ones. */
+  const feeOf = (i: number): { fee: CompareInputFee; stored: boolean } | null | 'pending' => {
     const q = probeQueries[i]
-    if (!q || q.isLoading) return <span style={{ color: 'var(--text3)' }}>…</span>
-    // Live keysets first; a mint that did not answer falls back to the keysets of its last successful check.
+    if (!q || q.isLoading) return 'pending'
     const live = pickInputFee(q.data?.keysets)
-    const stored = live ? null : pickInputFee(storedKeysetsAsLive(mints[i]?.lastKeysets))
-    const fee = live ?? stored
-    if (!fee) return <span style={{ color: 'var(--text3)' }}>n/a</span>
-    const checkedAt = stored ? mints[i]?.lastKeysetsCheckedAt : null
-    return (
-      <>
-        <span>{fee.label}</span>
-        <span style={{ marginLeft: 6, fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{fee.unit}</span>
-        {stored && (
-          <span className="cmp-fee-lastchecked" style={{ display: 'block', fontSize: 12, color: 'var(--text3)', fontWeight: 400 }}>
-            last checked{checkedAt ? ` ${formatTimeAgo(new Date(checkedAt))}` : ''}
-          </span>
-        )}
-      </>
-    )
+    if (live) return { fee: live, stored: false }
+    const stored = pickInputFee(storedKeysetsAsLive(mints[i]?.lastKeysets))
+    return stored ? { fee: stored, stored: true } : null
   }
-  const feeTooltipText = INPUT_FEE_TEXT
-  const feeLabelInfo = <InfoTooltip iconSize={11} width={200} about="Input fee" text={feeTooltipText} />
 
   const historyQueries = useQueries({
     queries: mints.map(m => ({
@@ -244,13 +215,13 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
         if (!res.ok) throw new Error('Failed to fetch chart history')
         return res.json() as Promise<HistoryResponse>
       },
+      enabled: historyOpened,
       staleTime: 5 * 60 * 1000,
     })),
   })
 
-  // Summary-row Uptime — always the server's 24h figure, independent of the
-  // chart's selected historyPeriod, so it matches Mint Detail's header. Same
-  // queryKey shape as MintDetail's dedicated 24h query, so the two share cache.
+  // Uptime 24 h: always the server's 24 h figure, independent of the chart's period, so it matches Mint Detail's header.
+  // Same queryKey shape as MintDetail's dedicated 24 h query, so the two share cache.
   const uptime24hQueries = useQueries({
     queries: mints.map(m => ({
       queryKey: ['mint', 'history-api', m.url, '24h'],
@@ -271,37 +242,16 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
         if (!res.ok) throw new Error('Failed to fetch version history')
         return res.json() as Promise<VersionHistoryResponse>
       },
+      enabled: historyOpened,
       staleTime: 10 * 60 * 1000,
     })),
   })
 
-  // ── Compare rows: one row per fact, one column per mint. The phone table renders them; the desktop grid only asks which ids stay. ──
-  // `keys` is what "Only differences" compares (utils/compareDiff.ts); null = still loading, the row stays.
-  const nutKey = (i: number) => TRACKED_NUT_KEYS.filter(k => allData[i]!.supportedNuts.has(k)).join(',')
-  const feeKey = (i: number): CompareKey => {
-    const q = probeQueries[i]
-    if (!q || q.isLoading) return null
-    const fee = pickInputFee(q.data?.keysets) ?? pickInputFee(storedKeysetsAsLive(mints[i]?.lastKeysets))
-    return fee ? `${fee.label} ${fee.unit}` : 'n/a'
-  }
-  const uptimeKey = (i: number): CompareKey => {
-    const q = uptime24hQueries[i]
-    if (!q || q.isLoading) return null
-    return String(q.data?.uptimePct ?? '—')
-  }
-  // Contact methods: kinds only, from the probe answer this modal already fetches (same pending / failed states as the Input fee row).
-  const contactText = (i: number): string | null | 'pending' => {
-    const q = probeQueries[i]
-    if (!q || q.isLoading) return 'pending'
-    return q.data ? contactMethodsText(q.data) : null
-  }
-  const contactKey = (i: number): CompareKey => { const t = contactText(i); return t === 'pending' ? null : (t ?? 'n/a') }
-  // Latency from the visitor's browser: measured for every online compared mint when the modal opens (and again on
-  // "Measure again"). Offline / archived mints are not contacted. Never cached across opens (gcTime 0, run id in the key).
-  const [latencyRun, setLatencyRun] = useState(0)
+  // Latency from the visitor's browser: measured for every online compared mint when the modal opens. Offline / archived
+  // mints are not contacted. Never cached across opens (gcTime 0).
   const browserLatencyQueries = useQueries({
     queries: mints.map((m, i) => ({
-      queryKey: ['mint', 'browser-latency', m.url, latencyRun],
+      queryKey: ['mint', 'browser-latency', m.url],
       queryFn: () => measureMintLatency(m.url),
       enabled: allData[i]!.isOnline,
       staleTime: Infinity, gcTime: 0, retry: false, refetchOnWindowFocus: false,
@@ -314,254 +264,195 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     if (!q || q.isPending) return 'pending'
     return q.data ?? null
   }
-  const latencyMeasuring = mints.some((_, i) => browserLatency(i) === 'pending')
-  const browserLatencyKey = (i: number): CompareKey => {
-    const v = browserLatency(i)
-    return v === 'pending' ? null : v === 'offline' ? '—' : v === null ? 'no answer' : String(v)
-  }
-  const browserLatencyLabel = (
-    <>
-      <span>{COMPARE_BROWSER_LATENCY_LABEL}</span>
-      <InfoTooltip iconSize={11} width={220} about={COMPARE_BROWSER_LATENCY_LABEL} text={COMPARE_BROWSER_LATENCY_TITLE} />
-      <button type="button" className="cmp-remeasure" data-testid="cmp-remeasure" disabled={latencyMeasuring}
-        onClick={() => setLatencyRun(n => n + 1)}>
-        {latencyMeasuring ? 'Measuring…' : 'Measure again'}
-      </button>
-    </>
-  )
-  const browserLatencyCell = (i: number, isBest: boolean): ReactNode => {
-    const v = browserLatency(i)
-    if (v === 'pending') return <span className="cmp-muted">measuring…</span>
-    if (v === 'offline') return <span className="cmp-muted">—</span>
-    if (v === null) return <span className="cmp-muted">no answer</span>
-    return <>{`${v}ms`}{isBest && <BestTag />}</>
+
+  const contactText = (i: number): string | null | 'pending' => {
+    const q = probeQueries[i]
+    if (!q || q.isLoading) return 'pending'
+    return q.data ? contactMethodsText(q.data) : null
   }
 
-  // BEST per metric row: only rows with a direction; a missing / pending value or a tie at the top gives no tag.
-  // Latency: the browser measurement (the visitor's own network path), never the probe server's single last check.
+  // BEST per row: only rows with a direction; a missing / pending value or a tie at the top gives no tag
+  // (utils/compareBest.ts). Not on the community rating (owner, 2026-11-28).
+  const feeNumbers = mints.map((_, i) => { const f = feeOf(i); return f && f !== 'pending' ? f.fee.min : null })
   const best = {
     reliability: bestFlags(mints.map((m, i) => (allData[i]!.isOnline && typeof m.reliabilityScore === 'number' ? m.reliabilityScore : null)), 'higher'),
     uptime: bestFlags(mints.map((_, i) => {
       const q = uptime24hQueries[i]
       return !q || q.isLoading ? null : (q.data?.uptimePct ?? null)
     }), 'higher'),
-    // The unrounded share cut down to one decimal, as on the cards and Mint Detail (review 2026-11-27: Compare showed a
-    // rounded 100 % next to yellow days).
+    // The unrounded share cut down to one decimal, as on the cards and Mint Detail.
     uptime30d: bestFlags(mints.map(m => uptime30dShown(m.uptimePct30dExact, m.uptimePct30d)), 'higher'),
     latency: bestFlags(mints.map((_, i) => { const v = browserLatency(i); return typeof v === 'number' ? v : null }), 'lower'),
+    fee: bestFlags(feeNumbers, 'lower'),
+    nuts: bestFlags(allData.map(d => d.trackedCount), 'higher'),
   }
-  const scoreRows = SCORE_PART_ROWS.map(r => ({
-    id: r.id, label: r.label,
-    keys: mints.map(m => scorePointsText(m, r.part, now)),
-    cell: (i: number) => <span className="cmp-fact">{scorePointsText(mints[i]!, r.part, now)}</span>,
-  }))
-  const compareRows: Array<CompareRowKeys & { label: ReactNode; cell: (i: number) => ReactNode }> = [
+  const value = (text: ReactNode, isBest = false, color?: string): ReactNode => (
+    <>
+      <span className={isBest ? 'cx-best-value' : undefined} style={!isBest && color ? { color } : undefined}>{text}</span>
+      {isBest && <BestTag />}
+    </>
+  )
+  const muted = (text: ReactNode) => <span className="cx-muted">{text}</span>
+
+  const methodRows = compareMethodRows(mints)
+  // One row per NUT the mints disagree on, only while "Only differences" is on (owner, 2026-11-28).
+  const nutDiffRows: CompareRow[] = onlyDifferences
+    ? TRACKED_NUT_KEYS.filter(k => new Set(allData.map(d => d.supportedNuts.has(k))).size > 1).map(k => {
+      const tag = `NUT-${k.padStart(2, '0')}`
+      return {
+        id: `nut-${k}`, section: 'features' as const,
+        label: <><span className="cx-nut-tag">{tag}</span> {NUT_NAMES[tag] ?? ''}</>,
+        keys: allData.map(d => (d.supportedNuts.has(k) ? 'yes' : 'no')),
+        cell: (i: number) => (allData[i]!.supportedNuts.has(k)
+          ? <span className="cx-yes">✓ Supported</span>
+          : <span className="cx-no">– Not supported</span>),
+      }
+    })
+    : []
+
+  const rows: CompareRow[] = [
     {
-      id: 'status', label: 'Status',
-      keys: allData.map(d => d.status),
-      cell: i => (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: allData[i]!.isOnline ? 'var(--accent)' : allData[i]!.status === 'archived' ? 'var(--text3)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
-          {allData[i]!.statusLabel}
-        </span>
-      ),
-    },
-    {
-      id: 'reliability', label: 'Reliability Score',
-      keys: allData.map(d => (d.isOnline ? String(d.reliabilityScore) : '—')),
+      id: 'uptime', section: 'reliability', label: COMPARE_UPTIME_LABEL,
+      keys: mints.map((_, i) => { const q = uptime24hQueries[i]; return !q || q.isLoading ? null : String(q.data?.uptimePct ?? '—') }),
       cell: i => {
-        const d = allData[i]!
-        return (
-          <span className="cmp-m-stack">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: best.reliability[i] ? 'var(--accent)' : d.tsInfo.color }}>
-              <IcShield size={12} />
-              <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? d.reliabilityScore : '—'}</span>
-              {best.reliability[i] && <BestTag />}
-            </span>
-            {d.isOnline && (
-              <span style={{ fontSize: 12, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 4px', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>{d.tsInfo.label}</span>
-            )}
-          </span>
-        )
+        const pct = uptime24hQueries[i]?.data?.uptimePct ?? null
+        return pct === null ? muted('—') : value(`${pct}%`, best.uptime[i])
       },
     },
     {
-      id: 'rating', label: 'Community Rating',
+      id: 'uptime-30d', section: 'reliability', label: COMPARE_UPTIME_30D_LABEL,
+      keys: mints.map(m => { const v = uptime30dShown(m.uptimePct30dExact, m.uptimePct30d); return v === null ? '—' : formatUptime30d(v) }),
+      cell: i => {
+        const pct = uptime30dShown(mints[i]!.uptimePct30dExact, mints[i]!.uptimePct30d)
+        return pct === null ? muted('—') : value(`${formatUptime30d(pct)}%`, best.uptime30d[i], uptime30dColor(pct))
+      },
+    },
+    {
+      id: 'audit', section: 'reliability',
+      label: <>{COMPARE_AUDIT_LABEL}<InfoTooltip iconSize={11} width={220} about={COMPARE_AUDIT_LABEL} text={compareAuditSuccessText()} /></>,
+      keys: mints.map(m => auditSuccessDisplay(m, now).text),
+      cell: i => { const a = auditSuccessDisplay(mints[i]!, now); return value(a.text, false, a.color === 'var(--fast)' ? undefined : a.color) },
+    },
+    {
+      id: 'rating', section: 'reliability', label: 'Community rating',
       keys: mints.map(m => ((m.reviewCount ?? 0) > 0 && m.reviewAvgRating != null ? `${m.reviewAvgRating.toFixed(1)}|${m.reviewCount}` : '—')),
       cell: i => {
         const m = mints[i]!
         const count = m.reviewCount ?? 0
-        const avg = m.reviewAvgRating
-        return count > 0 && avg != null ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-            <span style={{ fontSize: 15, lineHeight: 1 }}>★</span>
-            <span style={{ fontSize: 15, fontWeight: 700 }}>{avg.toFixed(1)}</span>
-            <span style={{ fontSize: 12, color: 'var(--text3)' }}>({count})</span>
-          </span>
-        ) : <span style={{ fontSize: 14, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>—</span>
+        return count > 0 && m.reviewAvgRating != null
+          ? <><span className="cx-star" aria-hidden="true">★</span> {m.reviewAvgRating.toFixed(1)} <span className="cx-count">({count})</span></>
+          : muted('—')
       },
     },
     {
-      id: 'uptime', label: COMPARE_UPTIME_LABEL,
-      keys: mints.map((_, i) => uptimeKey(i)),
+      id: 'browser-latency', section: 'speed',
+      label: <>{COMPARE_BROWSER_LATENCY_LABEL}<InfoTooltip iconSize={11} width={220} about={COMPARE_BROWSER_LATENCY_LABEL} text={COMPARE_BROWSER_LATENCY_TITLE} /></>,
+      keys: mints.map((_, i) => { const v = browserLatency(i); return v === 'pending' ? null : v === 'offline' ? '—' : v === null ? 'no answer' : String(v) }),
       cell: i => {
-        const uptimePct = uptime24hQueries[i]?.data?.uptimePct ?? null
-        return <span style={{ color: best.uptime[i] ? 'var(--accent)' : uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{uptimePct !== null ? `${uptimePct}%` : '—'}{best.uptime[i] && <BestTag />}</span>
+        const v = browserLatency(i)
+        if (v === 'pending') return muted('measuring…')
+        if (v === 'offline') return muted('—')
+        if (v === null) return muted('no answer')
+        return value(`${v} ms`, best.latency[i])
       },
     },
     {
-      id: 'uptime-30d', label: COMPARE_UPTIME_30D_LABEL,
-      keys: mints.map(m => { const v = uptime30dShown(m.uptimePct30dExact, m.uptimePct30d); return v === null ? '—' : formatUptime30d(v) }),
-      cell: i => {
-        const pct = uptime30dShown(mints[i]!.uptimePct30dExact, mints[i]!.uptimePct30d)
-        // The 30 daily bars under the figure (G-D, review 2026-11-27): the same strip as the cards and Mint Detail.
-        return (
-          <span className="cmp-m-stack cmp-uptime-30d">
-            <span style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{pct !== null ? `${formatUptime30d(pct)}%` : '—'}{best.uptime30d[i] && <BestTag />}</span>
-            <UptimeBars days={mints[i]!.uptimeDaily30} className="cmp-bars" />
-          </span>
-        )
-      },
-    },
-    {
-      id: 'browser-latency', label: browserLatencyLabel,
-      keys: mints.map((_, i) => browserLatencyKey(i)),
-      cell: i => (
-        <span style={{ color: best.latency[i] ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-          {browserLatencyCell(i, best.latency[i]!)}
-        </span>
-      ),
-    },
-    {
-      id: 'latency', label: <>{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></>,
+      id: 'latency', section: 'speed',
+      label: <>{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about={COMPARE_LATENCY_LABEL} text={COMPARE_LATENCY_TITLE} /></>,
       keys: mints.map((m, i) => (allData[i]!.isOnline && m.latencyMs != null ? String(m.latencyMs) : '—')),
+      cell: i => (allData[i]!.isOnline && mints[i]!.latencyMs != null ? `${mints[i]!.latencyMs} ms` : muted('—')),
+    },
+    ...methodRows.map((r): CompareRow => ({
+      id: r.id, section: 'money', label: r.label, keys: r.keys,
       cell: i => (
-        <span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-          {allData[i]!.isOnline && mints[i]!.latencyMs != null ? `${mints[i]!.latencyMs}ms` : '—'}
+        <span className="cx-lines">
+          {r.cells[i]!.map((l, j) => <span key={j} className={l.muted ? 'cx-muted' : undefined}>{l.text}</span>)}
         </span>
       ),
-    },
+    })),
     {
-      id: 'fee', label: <>Input fee{feeLabelInfo}</>,
-      keys: mints.map((_, i) => feeKey(i)),
-      cell: i => <span className="cmp-input-fee" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{feeCell(i)}</span>,
-    },
-    {
-      id: 'deposit-methods', label: 'Deposit methods',
-      keys: allData.map(d => d.methods.deposit.text),
-      cell: i => <MethodsValue cell={allData[i]!.methods.deposit} size={13} />,
-    },
-    {
-      id: 'withdrawal-methods', label: 'Withdrawal methods',
-      keys: allData.map(d => d.methods.withdrawal.text),
-      cell: i => <MethodsValue cell={allData[i]!.methods.withdrawal} size={13} />,
-    },
-    {
-      id: 'limits', label: 'Limits',
-      keys: allData.map(d => limitsKey(d.methods.limits)),
-      cell: i => <LimitsValue m={allData[i]!.methods} />,
-    },
-    {
-      id: 'units', label: 'Units',
-      keys: allData.map(d => d.methods.units),
-      cell: i => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600 }}>{allData[i]!.methods.units}</span>,
-    },
-    {
-      id: 'nut-count', label: 'NUT Count',
-      keys: mints.map(m => String(m.nutCount ?? 0)),
-      cell: i => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>{mints[i]!.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}</span>,
-    },
-    {
-      id: 'nut-support', label: <>NUT Support<InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} /></>,
-      keys: mints.map((_, i) => nutKey(i)),
-      cell: i => (
-        <span className="cmp-m-chips">
-          {TRACKED_NUT_KEYS.map(key => {
-            const supported = allData[i]!.supportedNuts.has(key)
-            return (
-              <span key={key} style={{ fontSize: 12, fontFamily: 'var(--font-mono)', padding: '1px 4px', borderRadius: 3, background: supported ? 'var(--green-soft)' : 'var(--bg3)', color: supported ? 'var(--accent)' : 'var(--text3)', border: `0.5px solid ${supported ? 'var(--green-soft-strong)' : 'var(--border)'}` }}>
-                {key.padStart(2, '0')}
-              </span>
-            )
-          })}
-        </span>
-      ),
-    },
-    {
-      id: 'version', label: 'Version',
-      keys: mints.map((m, i) => `${m.version ?? '—'}|${allData[i]!.isOutdated ? 'outdated' : ''}`),
+      id: 'fee', section: 'money', label: <>Input fee<InfoTooltip iconSize={11} width={200} about="Input fee" text={INPUT_FEE_TEXT} /></>,
+      keys: mints.map((_, i) => { const f = feeOf(i); return f === 'pending' ? null : f ? compareFeeText(f.fee) : 'n/a' }),
       cell: i => {
-        const mint = mints[i]!
+        const f = feeOf(i)
+        if (f === 'pending') return muted('…')
+        if (!f) return muted('n/a')
+        const checkedAt = f.stored ? mints[i]?.lastKeysetsCheckedAt : null
         return (
-        <span className="cmp-m-stack">
-          <span title={mint.version ?? undefined} style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text)', overflowWrap: 'anywhere' }}>{mint.version ?? '—'}</span>
-          {allData[i]!.isOutdated && (
-            <span style={{ fontSize: 12, color: 'color-mix(in srgb, var(--red) 75%, var(--text))', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-body)' }}>Outdated</span>
-          )}
-        </span>
+          <span className="cmp-input-fee">
+            {value(compareFeeText(f.fee), best.fee[i])}
+            {f.stored && <span className="cx-sub cmp-fee-lastchecked">last checked{checkedAt ? ` ${formatTimeAgo(new Date(checkedAt))}` : ''}</span>}
+          </span>
         )
       },
     },
     {
-      id: 'audit', label: <>{COMPARE_AUDIT_LABEL}<InfoTooltip iconSize={11} width={200} about={COMPARE_AUDIT_LABEL} text={compareAuditSuccessText()} /></>,
-      keys: mints.map(m => auditSuccessDisplay(m, now).text),
-      cell: i => {
-        const audit = auditSuccessDisplay(mints[i]!, now)
-        return <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: audit.color }}>{audit.text}</span>
-      },
-    },
-    ...scoreRows,
-    {
-      id: 'contact-methods', label: COMPARE_CONTACT_LABEL,
-      keys: mints.map((_, i) => contactKey(i)),
-      cell: i => {
-        const t = contactText(i)
-        return t === 'pending' ? <span style={{ color: 'var(--text3)' }}>…</span>
-          : t === null ? <span style={{ color: 'var(--text3)' }}>n/a</span>
-          : <span className="cmp-fact">{t}</span>
-      },
+      id: 'units', section: 'money', label: 'Units',
+      keys: allData.map(d => d.units.join(', ') || '—'),
+      cell: i => (allData[i]!.units.length > 0 ? allData[i]!.units.join(', ') : muted('—')),
     },
     {
-      id: 'nip87', label: COMPARE_NIP87_LABEL,
+      id: 'nut-count', section: 'features', label: COMPARE_NUT_COUNT_LABEL,
+      keys: allData.map(d => String(d.trackedCount)),
+      cell: i => value(`${allData[i]!.trackedCount} of ${TRACKED_NUT_KEYS.length}`, best.nuts[i]),
+    },
+    ...nutDiffRows,
+    {
+      id: 'version', section: 'operator', label: 'Software',
+      keys: mints.map((m, i) => `${m.version ?? '—'}|${allData[i]!.isOutdated ? 'outdated' : ''}`),
+      cell: i => (
+        <span className="cx-lines">
+          <code className="cx-code">{breakAfterSlash(mints[i]!.version ?? '—')}</code>
+          {allData[i]!.isOutdated && <span className="cx-outdated">Outdated</span>}
+        </span>
+      ),
+    },
+    {
+      id: 'contact-methods', section: 'operator', label: COMPARE_CONTACT_LABEL,
+      keys: mints.map((_, i) => { const t = contactText(i); return t === 'pending' ? null : (t ?? 'n/a') }),
+      cell: i => { const t = contactText(i); return t === 'pending' ? muted('…') : t === null ? muted('n/a') : t },
+    },
+    {
+      id: 'nip87', section: 'operator', label: COMPARE_NIP87_LABEL,
       keys: mints.map(m => nip87RowText(m)),
-      cell: i => <span className="cmp-fact">{nip87RowText(mints[i]!)}</span>,
+      cell: i => nip87RowText(mints[i]!),
     },
-    {
-      id: 'backup', label: <>Backup<InfoTooltip iconSize={11} width={200} about="Backup" text={COMPARE_BACKUP_TEXT} /></>,
-      keys: allData.map(d => (d.supportsBackupRestore ? 'yes' : 'no')),
-      cell: i => (allData[i]!.supportsBackupRestore
-        ? <span style={{ fontSize: 12, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>✓ Supported</span>
-        : <span style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 6px', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>No backup</span>),
-    },
+    ...SCORE_PART_ROWS.map((r): CompareRow => ({
+      id: r.id, section: 'points', label: r.label,
+      keys: mints.map(m => scorePointsText(m, r.part, now)),
+      cell: i => scorePointsText(mints[i]!, r.part, now),
+    })),
   ]
-  const shownCompareRows = visibleCompareRows(compareRows, onlyDifferences)
-  const shownIds = new Set(shownCompareRows.map(r => r.id))
-  const showRow = (id: string) => shownIds.has(id)
-  const onlyDiffSwitch = (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={onlyDifferences}
-      className={`cmp-m-switch${onlyDifferences ? ' on' : ''}`}
-      onClick={() => setOnlyDifferences(v => !v)}
-    >
-      <span className="cmp-m-switch-track" aria-hidden="true"><span className="cmp-m-switch-thumb" /></span>
-      Only differences
-    </button>
-  )
+  const shownRows = visibleCompareRows(rows, onlyDifferences)
+  const rowsOf = (section: SectionId) => shownRows.filter(r => r.section === section)
   const onlyDiffStatusText = onlyDifferences
-    ? (shownCompareRows.length === 0
+    ? (shownRows.length === 0
       ? 'Every row has the same value for these mints.'
-      : `${shownCompareRows.length} of ${compareRows.length} rows differ; rows with the same value are hidden.`)
+      : `${shownRows.length} of ${rows.length} rows differ; rows with the same value are hidden.`)
     : ''
 
-  const isLoadingHistory = historyQueries.some(q => q.isLoading)
+  // The slim name bar shows once the cards have scrolled away under the header (the modal itself is the scroll box).
+  const cardsRef = useRef<HTMLDivElement | null>(null)
+  const headerRef = useRef<HTMLDivElement | null>(null)
+  const [cardsGone, setCardsGone] = useState(false)
+  const [headH, setHeadH] = useState(64)
+  useLayoutEffect(() => {
+    const h = headerRef.current?.offsetHeight
+    if (h) setHeadH(h)
+  }, [])
+  useEffect(() => {
+    const cards = cardsRef.current
+    const root = cards?.closest<HTMLElement>('.cmp-modal') ?? null
+    if (!cards || !root || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(e => setCardsGone(!e[0]!.isIntersecting), { root, rootMargin: `-${headH}px 0px 0px 0px`, threshold: 0 })
+    io.observe(cards)
+    return () => io.disconnect()
+  }, [headH])
 
   const loadedHistory = historyQueries.map(q => q.data).filter((d): d is HistoryResponse => d != null)
+  const isLoadingHistory = historyOpened && historyQueries.some(q => q.isLoading)
   const periodDaysValue = loadedHistory[0]?.periodDays ?? null
-  const minDaysAvailable = loadedHistory.length > 0
-    ? Math.min(...loadedHistory.map(d => d.daysOfDataAvailable))
-    : null
+  const minDaysAvailable = loadedHistory.length > 0 ? Math.min(...loadedHistory.map(d => d.daysOfDataAvailable)) : null
   const coverageText = (periodDaysValue !== null && minDaysAvailable !== null && minDaysAvailable < periodDaysValue)
     ? `Showing ${minDaysAvailable} of ${periodDaysValue} days of data (history retention started recently)`
     : null
@@ -582,523 +473,201 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       const row: Record<string, string | number | null> = { label }
       segMaps.forEach((map, i) => {
         const seg = map.get(bucket)
-        const value = !seg ? null
-          : metric === 'latency' ? seg.latencyMs
-          : metric === 'uptime' ? seg.uptimePct
-          : seg.reliabilityScore
-        row[`m${i}`] = value
+        row[`m${i}`] = !seg ? null : metric === 'latency' ? seg.latencyMs : metric === 'uptime' ? seg.uptimePct : seg.reliabilityScore
       })
       return row
     })
   }, [historyQueries, historyPeriod, metric])
+  const chartHasEnoughData = chartData.filter(row => mints.some((_, i) => row[`m${i}`] != null)).length >= 2
+  const unitOf = (v: number) => (metric === 'latency' ? `${Math.round(v)} ms` : metric === 'uptime' ? `${Math.round(v)}%` : `${Math.round(v)}`)
 
-  const chartHasEnoughData = chartData.filter(
-    row => mints.some((_, i) => row[`m${i}`] != null)
-  ).length >= 2
+  const n = mints.length
+  const colsStyle = { '--cx-n': n } as CSSProperties
+  const renderRows = (list: CompareRow[]) => list.map(r => (
+    <div key={r.id} className="cx-row" data-row={r.id}>
+      <div className="cx-lbl">{r.label}</div>
+      <div className="cx-cols" style={colsStyle}>
+        {mints.map((mint, i) => (
+          <div key={mint.url} className="cx-val" data-row={r.id}>
+            <span className="sr-only">{allData[i]!.displayName}: </span>
+            {r.cell(i)}
+          </div>
+        ))}
+      </div>
+    </div>
+  ))
 
   return (
     <div className="cmp-overlay" onClick={onClose}>
-      <div className="cmp-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cmp-modal-title" ref={dialogRef}>
-        <div className="cmp-modal-header">
-          <div id="cmp-modal-title" style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text)' }}>Mint comparison</div>
+      <div
+        className="cmp-modal cx"
+        data-mints={n}
+        style={{ '--cx-head': `${headH}px` } as CSSProperties}
+        onClick={e => e.stopPropagation()}
+        role="dialog" aria-modal="true" aria-labelledby="cmp-modal-title" ref={dialogRef}
+      >
+        <div className="cmp-modal-header" ref={headerRef}>
+          <div id="cmp-modal-title" className="cx-title">Compare {n} mints</div>
           <button type="button" className="cmp-modal-close" onClick={onClose} aria-label="Close"><IcClose /></button>
         </div>
 
-        {isMobile ? (
-          <>
-            <div className="cmp-m-toolbar">
-              <span className="cmp-m-hint" id="cmp-m-hint">
-                {mints.length} mints side by side{mints.length > 2 ? ', scroll sideways for more' : ''}
-              </span>
-              {onlyDiffSwitch}
-            </div>
-            <p className="cmp-m-status" role="status" aria-live="polite">{onlyDiffStatusText}</p>
-            <div className="cmp-m-scroll" role="region" aria-label="Mint comparison table" aria-describedby="cmp-m-hint" tabIndex={0}>
-              <table className="cmp-m-table" style={mints.length > 2 ? { width: 120 + mints.length * 132 } : undefined}>
-                <thead>
-                  <tr>
-                    <th scope="col" className="cmp-m-corner"><span className="sr-only">Metric</span></th>
-                    {mints.map((mint, i) => {
-                      const d = allData[i]!
-                      return (
-                        <th key={mint.url} scope="col" className="cmp-m-mint">
-                          <span className="cmp-m-mint-row">
-                            <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={18} />
-                            <span className="cmp-m-mint-name">{d.displayName}</span>
-                          </span>
-                          <span className="cmp-m-mint-host">{d.hostname}</span>
-                          {d.isNew && <span className="cmp-mobile-badge" style={{ color: 'var(--accent)', background: 'var(--green-soft)', borderColor: 'var(--green-soft-strong)' }}>New</span>}
-                        </th>
-                      )
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {shownCompareRows.map(row => (
-                    <tr key={row.id} data-row={row.id}>
-                      <th scope="row" className="cmp-m-lbl">{row.label}</th>
-                      {mints.map((mint, i) => (
-                        <td key={mint.url} className="cmp-m-val">{row.cell(i)}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : (
-        <>
-        <div className="cmp-d-toolbar">{onlyDiffSwitch}</div>
-        <p className="cmp-m-status cmp-d-status" role="status" aria-live="polite">{onlyDiffStatusText}</p>
-        <div className="cmp-grid" style={{ gridTemplateColumns: gridCols }}>
+        <div className="cx-body">
+          <div className="cx-toolbar">
+            <span className="cx-hint">{n} mints side by side</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={onlyDifferences}
+              className={`cmp-m-switch${onlyDifferences ? ' on' : ''}`}
+              onClick={() => setOnlyDifferences(v => !v)}
+            >
+              <span className="cmp-m-switch-track" aria-hidden="true"><span className="cmp-m-switch-thumb" /></span>
+              Only differences
+            </button>
+          </div>
+          <p className="cmp-m-status cx-status" role="status" aria-live="polite">{onlyDiffStatusText}</p>
 
-          {/* ── Mint ── */}
-          <div className="cmp-lbl cmp-row-mint">Mint</div>
-          {mints.map((mint, i) => {
-            const d = allData[i]!
-            return (
-              <div key={mint.url} className="cmp-val cmp-row-mint" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={20} />
-                <div style={{ minWidth: 0, width: '100%' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.displayName}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.hostname}</div>
-                  {d.isNew && <span style={{ fontSize: 12, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-body)' }}>New</span>}
+          <div className="cx-cards cx-cols" style={colsStyle} ref={cardsRef}>
+            {mints.map((mint, i) => {
+              const d = allData[i]!
+              return (
+                <div key={mint.url} className="cx-card" data-testid="cmp-card">
+                  <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={isMobile ? 24 : 30} radius={7} />
+                  <div className="cx-name">
+                    {/* The status dot right after the name (owner, 2026-11-28), held to its last word so it never wraps
+                        onto a line of its own; its word is read, and shown when the mint is not online. */}
+                    <span className="cx-name-text">
+                      {nameHead(d.displayName)}
+                      <span className="cx-name-tail">{nameTail(d.displayName)}<span className={`cx-dot cx-dot-${d.status}`} aria-hidden="true" /></span>
+                    </span>
+                    <span className={d.isOnline ? 'sr-only' : 'cx-status-word'}>{d.statusLabel}</span>
+                    {d.isNew && <span className="cx-new">New</span>}
+                  </div>
+                  <code className="cx-host">{d.hostname}</code>
+                  <div className="cx-score" data-row="reliability">
+                    <span className="cx-score-num" style={{ color: d.isOnline ? (best.reliability[i] ? 'var(--accent)' : scoreColor(d.reliabilityScore)) : 'var(--text3)' }}>
+                      {d.isOnline ? d.reliabilityScore : '—'}
+                    </span>
+                    <span className="cx-score-lbl">Reliability Score</span>
+                    {best.reliability[i] && <BestTag />}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className={`cx-key cx-cols${cardsGone ? ' on' : ''}`} style={colsStyle} aria-hidden="true">
+            {mints.map((mint, i) => (
+              <span key={mint.url} className="cx-key-cell">
+                <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={18} radius={5} />
+                <span className="cx-key-name">{allData[i]!.displayName}</span>
+              </span>
+            ))}
+          </div>
+
+          <div className="cx-sections">
+            {SECTIONS.map(s => {
+              const list = rowsOf(s.id)
+              if (list.length === 0) return null
+              return (
+                <section key={s.id} className="cx-panel" aria-labelledby={`cx-h-${s.id}`}>
+                  <h3 id={`cx-h-${s.id}`} className="cx-h">{s.heading}</h3>
+                  {renderRows(list)}
+                </section>
+              )
+            })}
+
+            {rowsOf('points').length > 0 && (
+              <details className="cx-panel cx-fold">
+                <summary>How each score is made</summary>
+                {renderRows(rowsOf('points'))}
+              </details>
+            )}
+
+            <details className="cx-panel cx-fold" onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) setHistoryOpened(true) }}>
+              <summary>History</summary>
+              <div className="cx-hist-ctl">
+                <div className="md-seg" role="group" aria-label="Metric">
+                  {([['latency', 'Latency'], ['uptime', 'Uptime'], ['reliability', 'Score']] as const).map(([m, label]) => (
+                    <button key={m} type="button" className={metric === m ? 'on' : ''} aria-pressed={metric === m} onClick={() => setMetric(m)}>{label}</button>
+                  ))}
+                </div>
+                <div className="md-seg" role="group" aria-label="Period">
+                  {(['24h', '7d', '30d', '90d'] as const).map(iv => (
+                    <button key={iv} type="button" className={historyPeriod === iv ? 'on' : ''} aria-pressed={historyPeriod === iv} onClick={() => setHistoryPeriod(iv)}>
+                      {iv.replace(/(\d+)([a-z])/, '$1 $2')}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )
-          })}
-
-          {showRow('status') && (<>
-          {/* ── Status ── */}
-          <div className="cmp-lbl">Status</div>
-          {mints.map((mint, i) => {
-            const d = allData[i]!
-            return (
-              <div key={mint.url} className="cmp-val">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontFamily: 'var(--font-mono)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.isOnline ? 'var(--accent)' : d.status === 'archived' ? 'var(--text3)' : 'var(--red)', display: 'inline-block', flexShrink: 0 }} />
-                  {d.statusLabel}
-                </span>
-              </div>
-            )
-          })}
-          </>)}
-
-          {showRow('reliability') && (<>
-          {/* ── Reliability Score ── */}
-          <div className="cmp-lbl">Reliability Score</div>
-          {mints.map((mint, i) => {
-            const d = allData[i]!
-            return (
-              <div key={mint.url} className="cmp-val" data-row="reliability">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: best.reliability[i] ? 'var(--accent)' : d.tsInfo.color }}>
-                  <IcShield size={12} />
-                  <span style={{ fontSize: 15, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.isOnline ? d.reliabilityScore : '—'}</span>
-                </span>
-                {best.reliability[i] && <BestTag />}
-                {d.isOnline && (
-                  <span style={{ marginLeft: 6, fontSize: 12, color: d.tsInfo.color, background: d.tsInfo.bg, border: `0.5px solid ${d.tsInfo.border}`, borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-body)' }}>{d.tsInfo.label}</span>
-                )}
-              </div>
-            )
-          })}
-          </>)}
-
-          {showRow('rating') && (<>
-          {/* ── Community Rating (NIP-87 reviews, matches the ★ badge on mint cards) ── */}
-          <div className="cmp-lbl">Community Rating</div>
-          {mints.map(mint => {
-            const count = mint.reviewCount ?? 0
-            const avg = mint.reviewAvgRating
-            return (
-              <div key={mint.url} className="cmp-val">
-                {count > 0 && avg != null ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-                    <span style={{ fontSize: 16, lineHeight: 1 }}>★</span>
-                    <span style={{ fontSize: 15, fontWeight: 700 }}>{avg.toFixed(1)}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text3)' }}>({count})</span>
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 14, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>—</span>
-                )}
-              </div>
-            )
-          })}
-          </>)}
-
-          {showRow('uptime') && (<>
-          {/* ── Uptime (24h, matches Mint Detail's header figure) ── */}
-          <div className="cmp-lbl">{COMPARE_UPTIME_LABEL}</div>
-          {mints.map((mint, i) => {
-            const uptimePct = uptime24hQueries[i]?.data?.uptimePct ?? null
-            return (
-              <div key={mint.url} className="cmp-val" data-row="uptime" style={{ color: best.uptime[i] ? 'var(--accent)' : uptimeColor(uptimePct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                {uptimePct !== null ? `${uptimePct}%` : '—'}
-                {best.uptime[i] && <BestTag />}
-              </div>
-            )
-          })}
-          </>)}
-
-          {showRow('uptime-30d') && (<>
-          {/* ── Uptime (30 days, the figure stored with the score) ── */}
-          <div className="cmp-lbl">{COMPARE_UPTIME_30D_LABEL}</div>
-          {mints.map((mint, i) => {
-            const pct = uptime30dShown(mint.uptimePct30dExact, mint.uptimePct30d)
-            return (
-              <div key={mint.url} className="cmp-val" data-row="uptime-30d" style={{ color: best.uptime30d[i] ? 'var(--accent)' : uptime30dColor(pct), fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                {pct !== null ? `${formatUptime30d(pct)}%` : '—'}
-                {best.uptime30d[i] && <BestTag />}
-                {/* The 30 daily bars under the figure, as on the phone table (G-D, review 2026-11-27). */}
-                <UptimeBars days={mint.uptimeDaily30} className="cmp-bars" />
-              </div>
-            )
-          })}
-          </>)}
-
-          {showRow('browser-latency') && (<>
-          {/* ── Latency from the visitor's browser (carries the BEST latency tag) ── */}
-          <div className="cmp-lbl cmp-lbl-browser-latency">{browserLatencyLabel}</div>
-          {mints.map((mint, i) => (
-            <div key={mint.url} className="cmp-val" data-row="browser-latency" style={{ color: best.latency[i] ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-              {browserLatencyCell(i, best.latency[i]!)}
-            </div>
-          ))}
-          </>)}
-
-          {showRow('latency') && (<>
-          {/* ── Latency of the probe server's last check ── */}
-          <div className="cmp-lbl">{COMPARE_LATENCY_LABEL}<InfoTooltip iconSize={11} width={200} about="Latency" text={COMPARE_LATENCY_TITLE} /></div>
-          {mints.map((mint, i) => {
-            const d = allData[i]!
-            return (
-              <div key={mint.url} className="cmp-val" data-row="latency" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-                {d.isOnline && mint.latencyMs != null ? `${mint.latencyMs}ms` : '—'}
-              </div>
-            )
-          })}
-          </>)}
-
-          {showRow('fee') && (<>
-          {/* ── Input fee ── */}
-          <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Input fee{feeLabelInfo}</div>
-          {mints.map((mint, i) => (
-            <div key={mint.url} className="cmp-val cmp-input-fee" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-              {feeCell(i)}
-            </div>
-          ))}
-
-          {/* ── Deposit / Withdrawal methods, Limits, Units (NUT-04 / NUT-05 in /v1/info, utils/compareMethods.ts) ── */}
-          </>)}
-
-          {showRow('deposit-methods') && (<>
-          <div className="cmp-lbl">Deposit methods</div>
-          {mints.map((mint, i) => (
-            <div key={mint.url} className="cmp-val" data-row="deposit-methods"><MethodsValue cell={allData[i]!.methods.deposit} size={14} /></div>
-          ))}
-          </>)}
-
-          {showRow('withdrawal-methods') && (<>
-          <div className="cmp-lbl">Withdrawal methods</div>
-          {mints.map((mint, i) => (
-            <div key={mint.url} className="cmp-val" data-row="withdrawal-methods"><MethodsValue cell={allData[i]!.methods.withdrawal} size={14} /></div>
-          ))}
-          </>)}
-
-          {showRow('limits') && (<>
-          <div className="cmp-lbl">Limits</div>
-          {mints.map((mint, i) => (
-            <div key={mint.url} className="cmp-val" data-row="limits"><LimitsValue m={allData[i]!.methods} /></div>
-          ))}
-          </>)}
-
-          {showRow('units') && (<>
-          <div className="cmp-lbl">Units</div>
-          {mints.map((mint, i) => (
-            <div key={mint.url} className="cmp-val" data-row="units" style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600 }}>{allData[i]!.methods.units}</div>
-          ))}
-          </>)}
-
-          {showRow('nut-count') && (<>
-          {/* ── NUT Count ── */}
-          <div className="cmp-lbl">NUT Count</div>
-          {mints.map(mint => (
-            <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600 }}>
-              {mint.nutCount ?? 0} / {TRACKED_NUT_KEYS.length}
-            </div>
-          ))}
-          </>)}
-
-          {showRow('nut-support') && (<>
-          {/* ── NUT Support ── */}
-          {/* The ⓘ says what green / grey mean. Green = supportedNutKeys (utils/nutSupport.ts), the rule the score
-              and Mint Detail use, so a NUT listed as {supported:false} is grey here too. */}
-          <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            NUT Support
-            <InfoTooltip iconSize={11} width={220} about="NUT Support" text={COMPARE_NUT_SUPPORT_TEXT} />
-          </div>
-          {mints.map((mint, i) => {
-            const d = allData[i]!
-            return (
-              <div key={mint.url} className="cmp-val">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, width: '100%' }}>
-                  {TRACKED_NUT_KEYS.map(key => {
-                    const supported = d.supportedNuts.has(key)
+              {coverageText && <p className="cx-note">{coverageText}</p>}
+              {!historyOpened || isLoadingHistory ? (
+                <p className="cx-note">Loading history…</p>
+              ) : chartData.length === 0 ? (
+                <p className="cx-note">No historical data for this period.</p>
+              ) : !chartHasEnoughData ? (
+                <p className="cx-note">Not enough data for this period</p>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={isMobile ? 170 : 220}>
+                    <LineChart data={chartData} margin={{ top: 6, right: 12, left: 4, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="label" tick={{ fontSize: 12, fill: 'var(--text3)' }} axisLine={false} tickLine={false}
+                        padding={{ left: 0, right: 12 }}
+                        interval={historyPeriod === '24h' ? (isMobile ? 7 : 3) : chartData.length <= 7 ? (isMobile ? 1 : 0) : Math.ceil(chartData.length / (isMobile ? 4 : 7)) - 1}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: 'var(--text3)' }} axisLine={false} tickLine={false} width={52}
+                        domain={metric === 'latency' ? [0, 'auto'] : [0, 100]}
+                        tickFormatter={unitOf}
+                      />
+                      <Tooltip
+                        contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-body)', fontSize: 12 }}
+                        formatter={(v, name) => [typeof v === 'number' ? unitOf(v) : String(v), name]}
+                      />
+                      {mints.map((mint, i) => (
+                        <Line key={mint.url} type="monotone" dataKey={`m${i}`} name={allData[i]!.displayName} stroke={MINT_COLORS[i]!} dot={false} strokeWidth={2} connectNulls />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div className="cx-legend">
+                    {mints.map((mint, i) => (
+                      <span key={mint.url} className="cx-legend-item"><span className="cx-legend-line" style={{ background: MINT_COLORS[i]! }} />{allData[i]!.displayName}</span>
+                    ))}
+                  </div>
+                </>
+              )}
+              <div className="cx-row" data-row="versions">
+                <div className="cx-lbl">Software versions</div>
+                <div className="cx-cols" style={colsStyle}>
+                  {mints.map((mint, i) => {
+                    const history = versionQueries[i]?.data?.history ?? []
+                    const showAll = allVersions.has(i)
+                    const list = showAll ? history : history.slice(0, VERSIONS_SHOWN)
                     return (
-                      <span key={key} style={{ fontSize: 12, fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: 3, background: supported ? 'var(--green-soft)' : 'var(--bg3)', color: supported ? 'var(--accent)' : 'var(--text3)', border: `0.5px solid ${supported ? 'var(--green-soft-strong)' : 'var(--border)'}` }}>
-                        {key.padStart(2, '0')}
-                      </span>
+                      <div key={mint.url} className="cx-val cx-versions">
+                        <span className="sr-only">{allData[i]!.displayName}: </span>
+                        {history.length === 0 ? muted(historyOpened && versionQueries[i]?.isLoading ? '…' : 'No data') : list.map((vh, j) => (
+                          <span key={j} className="cmp-vh-entry">
+                            <code className="cx-code">{breakAfterSlash(vh.version)}</code>
+                            <span className="cx-sub">since {formatDate(vh.firstSeenAt, { local: true })}</span>
+                          </span>
+                        ))}
+                        {history.length > VERSIONS_SHOWN && (
+                          <button type="button" className="cx-more" aria-expanded={showAll}
+                            onClick={() => setAllVersions(prev => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next })}>
+                            {showAll ? 'Fewer versions' : 'All versions'}
+                          </button>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
               </div>
-            )
-          })}
-          </>)}
-
-          {showRow('version') && (<>
-          {/* ── Version ── */}
-          <div className="cmp-lbl">Version</div>
-          {mints.map((mint, i) => {
-            const d = allData[i]!
-            return (
-              <div key={mint.url} className="cmp-val">
-                <span title={mint.version ?? undefined} style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{mint.version ?? '—'}</span>
-                {d.isOutdated && (
-                  <span style={{ marginLeft: 5, fontSize: 12, color: 'color-mix(in srgb, var(--red) 75%, var(--text))', background: 'var(--red-soft)', border: '0.5px solid var(--red-soft-strong)', borderRadius: 3, padding: '0 4px', fontFamily: 'var(--font-body)' }}>Outdated</span>
-                )}
-              </div>
-            )
-          })}
-          </>)}
-
-          {showRow('audit') && (<>
-          {/* ── Audit row, COMPARE_AUDIT_LABEL (cashu.info 7-day window, same fields/threshold as the Reliability Score's audit part) ── */}
-          <div className="cmp-lbl" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {COMPARE_AUDIT_LABEL}
-            <InfoTooltip iconSize={11} width={200} about={COMPARE_AUDIT_LABEL} text={compareAuditSuccessText()} />
-          </div>
-          {mints.map(mint => {
-            const audit = auditSuccessDisplay(mint, now)
-            return (
-              <div key={mint.url} className="cmp-val" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: audit.color }}>
-                {audit.text}
-              </div>
-            )
-          })}
-          </>)}
-
-          {/* ── Score points, Contact methods, NIP-87 announcement: one row each, right after the audit row ── */}
-          {shownCompareRows.filter(r => EXTRA_ROW_IDS.has(r.id)).map(r => (
-            <Fragment key={r.id}>
-              <div className="cmp-lbl">{r.label}</div>
-              {mints.map((mint, i) => (
-                <div key={mint.url} className="cmp-val" data-row={r.id}>{r.cell(i)}</div>
-              ))}
-            </Fragment>
-          ))}
-
-          {showRow('backup') && (<>
-          {/* ── Backup ── */}
-          <div className="cmp-lbl cmp-last" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            Backup
-            <InfoTooltip iconSize={11} width={200} about="Backup" text={COMPARE_BACKUP_TEXT} />
-          </div>
-          {mints.map((mint, i) => {
-            const d = allData[i]!
-            return (
-              <div key={mint.url} className="cmp-val cmp-last">
-                {d.supportsBackupRestore
-                  ? <span style={{ fontSize: 12, color: 'var(--accent)', background: 'var(--green-soft)', border: '0.5px solid var(--green-soft-strong)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-body)' }}>✓ Supported</span>
-                  : <span style={{ fontSize: 12, color: 'var(--text3)', background: 'var(--bg3)', border: '0.5px solid var(--border)', borderRadius: 4, padding: '2px 7px', fontFamily: 'var(--font-body)' }}>No backup</span>
-                }
-              </div>
-            )
-          })}
-          </>)}
-
-        </div>
-        </>
-        )}
-
-        <div style={{ padding: '4px 20px 20px', borderTop: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)', margin: '12px 0 18px', lineHeight: 1.5 }}>
-            The comparison above reflects each mint&apos;s current snapshot only — including NUT Support,
-            which MintRadar does not track over time. The sections below add historical context where it does.
-          </div>
-
-          {/* ── Historical Trends ── */}
-          <div style={{ marginBottom: 26 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>Historical Trends</div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: 2, background: 'var(--bg3)', borderRadius: 6, padding: 2 }}>
-                  {(['latency', 'uptime', 'reliability'] as const).map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setMetric(m)}
-                      style={{
-                        background: metric === m ? 'var(--bg2)' : 'transparent',
-                        border: metric === m ? '1px solid var(--border2)' : '1px solid transparent',
-                        borderRadius: 5, padding: '3px 10px',
-                        fontSize: 12, fontFamily: 'var(--font-mono)',
-                        color: metric === m ? 'var(--text)' : 'var(--text3)',
-                        cursor: 'pointer',
-                      }}
-                    >{m === 'latency' ? 'Latency' : m === 'uptime' ? 'Uptime' : 'Reliability Score'}</button>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', background: 'var(--bg3)', borderRadius: 6, padding: 2, gap: 1 }}>
-                  {(['24h', '7d', '30d', '90d'] as const).map(iv => (
-                    <button
-                      key={iv}
-                      onClick={() => setHistoryPeriod(iv)}
-                      style={{
-                        background: historyPeriod === iv ? 'var(--action)' : 'transparent',
-                        color: historyPeriod === iv ? 'var(--bg)' : 'var(--text2)',
-                        border: 'none', borderRadius: 4, padding: '2px 8px',
-                        fontSize: 12, fontFamily: 'var(--font-mono)',
-                        cursor: 'pointer', fontWeight: historyPeriod === iv ? 700 : 400,
-                      }}
-                    >{iv}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {coverageText && (
-              <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--font-mono)', marginBottom: 8 }}>{coverageText}</div>
-            )}
-
-            {isLoadingHistory ? (
-              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Loading history…</p>
-            ) : chartData.length === 0 ? (
-              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>No historical data for this period.</p>
-            ) : !chartHasEnoughData ? (
-              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Not enough data for this period</p>
-            ) : isMobile ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {mints.map((mint, i) => (
-                  <div key={mint.url}>
-                    <div className="cmp-mobile-chart-name" style={{ fontSize: 12, fontWeight: 600, color: MINT_COLORS[i]!, fontFamily: 'var(--font-mono)', marginBottom: 2 }}>
-                      {allData[i]!.displayName}
-                    </div>
-                    <ResponsiveContainer width="100%" height={90}>
-                      <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                        <XAxis dataKey="label" tick={{ fontSize: 8, fill: 'var(--text3)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                        <YAxis
-                          hide
-                          domain={metric === 'latency'
-                            ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
-                            : [0, 100]}
-                        />
-                        <Tooltip
-                          contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 12 }}
-                          formatter={(value) => [metric === 'latency' ? `${String(value)}ms` : metric === 'uptime' ? `${String(value)}%` : String(value), allData[i]!.displayName]}
-                        />
-                        <Line type="monotone" dataKey={`m${i}`} stroke={MINT_COLORS[i]!} dot={false} strokeWidth={1.5} connectNulls />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={180}>
-                  <LineChart data={chartData} margin={{ top: 4, right: 4, left: 10, bottom: 0 }}>
-                    <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 12, fill: 'var(--text3)' }}
-                      axisLine={false} tickLine={false}
-                      interval={historyPeriod === '24h' ? 3 : chartData.length <= 7 ? 0 : Math.ceil(chartData.length / 7) - 1}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 12, fill: 'var(--text3)' }}
-                      axisLine={false} tickLine={false}
-                      width={44}
-                      domain={metric === 'latency'
-                        ? [(dataMin: number) => dataMin * 0.9, (dataMax: number) => dataMax * 1.1]
-                        : [0, 100]}
-                      tickFormatter={(v: number) => metric === 'latency' ? `${Math.round(v / 100) * 100}ms` : metric === 'uptime' ? `${Math.round(v)}%` : `${Math.round(v)}`}
-                    />
-                    <Tooltip
-                      contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 12 }}
-                      formatter={(value, name) => [metric === 'latency' ? `${String(value)}ms` : metric === 'uptime' ? `${String(value)}%` : String(value), name]}
-                    />
-                    {mints.map((mint, i) => (
-                      <Line
-                        key={mint.url}
-                        type="monotone"
-                        dataKey={`m${i}`}
-                        name={allData[i]!.displayName}
-                        stroke={MINT_COLORS[i]!}
-                        dot={false}
-                        strokeWidth={2}
-                        connectNulls
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
-                  {mints.map((mint, i) => (
-                    <span key={mint.url} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: MINT_COLORS[i]!, display: 'inline-block', flexShrink: 0 }} />
-                      {allData[i]!.displayName}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* ── Software Version History ── */}
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
-              Software Version History
-            </div>
-            {isMobile ? (
-              <div className="cmp-mobile-vh">
-                {mints.map((mint, i) => {
-                  const versionHistory = versionQueries[i]?.data?.history ?? []
-                  return (
-                    <div key={mint.url} className="cmp-mobile-vh-group">
-                      <div className="cmp-mobile-vh-name">{allData[i]!.displayName}</div>
-                      {versionHistory.length === 0 ? (
-                        <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
-                      ) : versionHistory.map((vh, j) => (
-                        <div key={j} className="cmp-vh-entry">
-                          <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
-                          <div className="cmp-vh-since">since {formatDate(vh.firstSeenAt, { local: true })}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="cmp-vh-grid" style={{ gridTemplateColumns: gridCols }}>
-                <div className="cmp-lbl cmp-last">Versions</div>
-                {mints.map((mint, i) => {
-                  const versionHistory = versionQueries[i]?.data?.history ?? []
-                  return (
-                    <div key={mint.url} className="cmp-val cmp-last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, maxHeight: 140, overflowY: 'auto' }}>
-                      {versionHistory.length === 0 ? (
-                        <span className="cmp-vh-entry" style={{ color: 'var(--text3)' }}>No data</span>
-                      ) : versionHistory.map((vh, j) => (
-                        <div key={j} className="cmp-vh-entry">
-                          <div className="cmp-vh-version" style={{ fontWeight: j === 0 ? 700 : 500 }}>{vh.version}</div>
-                          <div className="cmp-vh-since">since {formatDate(vh.firstSeenAt, { local: true })}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+            </details>
           </div>
         </div>
-
       </div>
     </div>
   )

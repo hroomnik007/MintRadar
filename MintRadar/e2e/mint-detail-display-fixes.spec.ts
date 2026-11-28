@@ -134,7 +134,7 @@ test.describe('Mint Detail display fixes', () => {
 })
 
 test.describe('Compare: stored fallbacks and labels', () => {
-  test('input fee from the stored keysets with "last checked"; Uptime 24h and Latency (last check) labels', async ({ page }) => {
+  test('input fee from the stored keysets with "last checked"; Uptime 24 h and last-check latency labels', async ({ page }) => {
     await mockRelays(page)
     await installApiMocks(page)
     const BRAVO = MOCK_MINTS[1]!.url
@@ -150,14 +150,12 @@ test.describe('Compare: stored fallbacks and labels', () => {
     await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
     await page.locator('.md-picker-item', { hasText: 'Bravo Mint' }).click()
     await page.locator('.md-picker-confirm').click()
-    const grid = page.locator('.cmp-grid')
-    await expect(grid).toBeVisible()
-    const cells = grid.locator('.cmp-input-fee')
-    await expect(cells.nth(0)).toContainText('200 ppk')
+    const cells = page.locator('.cmp-input-fee')
+    await expect(cells.nth(0)).toContainText('0.2 sat per coin')
     await expect(cells.nth(0).locator('.cmp-fee-lastchecked')).toContainText('last checked 2h ago')
     await expect(cells.nth(1)).toContainText('free')
     await expect(cells.nth(1).locator('.cmp-fee-lastchecked')).toHaveCount(0)
-    await expect(grid.locator('.cmp-lbl', { hasText: 'Uptime 24h' })).toHaveCount(1)
-    await expect(grid.locator('.cmp-lbl', { hasText: 'Latency (last check)' })).toHaveCount(1)
+    await expect(page.locator('.cx-lbl', { hasText: 'Uptime 24 h' })).toHaveCount(1)
+    await expect(page.locator('.cx-lbl', { hasText: 'From Nuremberg, our last check' })).toHaveCount(1)
   })
 })

@@ -108,7 +108,7 @@ for (const w of [1440, 390]) {
       await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
       await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
       await page.locator('.md-picker-confirm').click()
-      await expect(page.getByText('Mint Comparison')).toBeVisible()
+      await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
       all.push(...(await scan(page)))
       await page.goto('/tools')
       await page.locator('.token-input').fill(makeCashuToken('https://testnut.cashu.space', [21]))

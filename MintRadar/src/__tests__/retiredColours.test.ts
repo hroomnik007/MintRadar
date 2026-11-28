@@ -13,9 +13,6 @@ const RETIRED = [
 
 // Explicit allowlist: file (basename) → retired literal → why a real, literal colour is needed.
 const ALLOWLIST: Record<string, Record<string, string>> = {
-  'ComparisonModal.tsx': {
-    '#17E87F': 'MINT_COLORS[0]: categorical A-series identity colour for the Recharts overlay (real value, not a status colour)',
-  },
   'avatarColors.ts': {
     '#17E87F': 'REVIEW_AVATAR_COLORS: categorical avatar-fallback palette (identity, not status)',
   },

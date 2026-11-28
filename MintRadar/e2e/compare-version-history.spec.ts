@@ -1,20 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
+import { cmpOpenFold } from './fixtures/compare'
 
-// ComparisonModal → "Software Version History" once clipped its entries to
-// "Nu" / "since 6/" because its grid had no overflow handling and forced
-// nowrap. Each entry is now a two-line stack (version, then "since <date>"
-// below it) that grows the column taller instead of wider, so it no longer
-// needs its own scroll wrapper for a normal entry count.
-//
-// Desktop keeps the side-by-side .cmp-vh-grid (mint = column, `overflow-x:
-// auto` for the column-count case). Mobile (≤768px) no longer renders that
-// grid at all — a side-by-side table never fit a phone viewport regardless
-// of scroll handling. Instead it lists each mint's version history in its own
-// group, one under another (.cmp-mobile-vh).
-// These pin: entries render un-clipped at 2/3/4 mints on both desktop and
-// mobile, the desktop section scrolls when it genuinely overflows, and the
-// mobile section never causes horizontal page overflow.
+// Compare → History → "Software versions" (2026-11-28 redesign): one column per mint under the cards, the last two
+// versions of each (version, then "since <date>" below it) and an "All versions" button for the rest. The column grows
+// taller, never wider: entries are not clipped and nothing scrolls sideways, on the desktop or a phone, at 2, 3 and 4
+// mints. A version may wrap after its slash, never inside the number.
 
 const LONG_VH = {
   history: [
@@ -41,7 +32,7 @@ async function openCompare(page: import('@playwright/test').Page, n: number) {
     await page.locator('.md-picker-item', { hasText: name }).click()
   }
   await page.locator('.md-picker-confirm').click()
-  await expect(page.getByText('Mint Comparison')).toBeVisible()
+  await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
 }
 
 for (const n of [2, 3, 4]) {
@@ -53,33 +44,24 @@ for (const n of [2, 3, 4]) {
       await page.setViewportSize(vp.size)
       await openCompare(page, n)
 
-      // Version History entries are fully visible (no text clipping): every
-      // .cmp-vh-entry's scrollWidth must fit its own clientWidth.
-      await page.getByText('Software Version History').scrollIntoViewIfNeeded()
-      const entries = page.locator('.cmp-vh-entry')
-      const count = await entries.count()
-      expect(count).toBeGreaterThan(0)
-      for (let i = 0; i < count; i++) {
-        const el = entries.nth(i)
-        const clipped = await el.evaluate(n => n.scrollWidth > n.clientWidth + 1)
+      await cmpOpenFold(page, 'History')
+      const versions = page.locator('.cx-row[data-row="versions"]')
+      await versions.scrollIntoViewIfNeeded()
+      const entries = versions.locator('.cmp-vh-entry')
+      // The last two per mint until "All versions".
+      await expect(entries).toHaveCount(2 * n)
+      for (let i = 0; i < 2 * n; i++) {
+        const clipped = await entries.nth(i).evaluate(el => el.scrollWidth > el.clientWidth + 1)
         expect(clipped, `entry ${i} clipped`).toBe(false)
       }
-      if (vp.label === 'desktop') {
-        // The section is horizontally scrollable (not dead-clipped) when it overflows.
-        const scroll = page.locator('.cmp-vh-grid')
-        const overflow = await scroll.evaluate(n => ({ sw: n.scrollWidth, cw: n.clientWidth }))
-        if (overflow.sw > overflow.cw) {
-          await scroll.evaluate(n => { n.scrollLeft = n.scrollWidth })
-          expect(await scroll.evaluate(n => n.scrollLeft)).toBeGreaterThan(0)
-        }
-      } else {
-        // Mobile: no side-by-side grid at all — one mint's history at a time,
-        // and the page never scrolls sideways regardless of mint count.
-        await expect(page.locator('.cmp-vh-grid')).toHaveCount(0)
-        await expect(page.locator('.cmp-mobile-vh')).toBeVisible()
-        const canScrollX = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
-        expect(canScrollX).toBe(false)
-      }
+      const more = versions.getByRole('button', { name: 'All versions' })
+      await expect(more).toHaveCount(n)
+      await more.first().click()
+      await expect(entries).toHaveCount(2 * n + 1)
+      await expect(versions.getByRole('button', { name: 'Fewer versions' })).toHaveAttribute('aria-expanded', 'true')
+      const modal = page.locator('.cmp-modal')
+      expect(await modal.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true)
 
       // At least one full "since 29 Sep 2026" string is rendered intact.
       await expect(entries.filter({ hasText: /since \d{1,2} [A-Z][a-z]{2} \d{4}/ }).first()).toBeVisible()

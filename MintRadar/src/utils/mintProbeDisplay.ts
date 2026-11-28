@@ -16,6 +16,15 @@ export function formatKeysetFee(ppk: number | undefined): string {
 export interface CompareInputFee {
   label: string
   unit: string
+  /** The lowest and highest fee (ppk) of the active keysets of that unit (equal when they agree). */
+  min: number
+  max: number
+}
+
+/** The Compare fee in words (redesign 2026-11-28): "free", "0.2 sat per coin", or a ppk range when keysets disagree. */
+export function compareFeeText(fee: CompareInputFee): string {
+  if (fee.min !== fee.max) return `${fee.min}–${fee.max} ppk`
+  return fee.min === 0 ? 'free' : `${formatFeeRate(fee.min)} ${feeUnitLabel(fee.unit)} per coin`
 }
 
 /**
@@ -31,7 +40,7 @@ export function pickInputFee(keysets: MintKeyset[] | null | undefined): CompareI
   const fees = active.filter(k => k.unit === unit).map(k => k.input_fee_ppk as number)
   const min = Math.min(...fees)
   const max = Math.max(...fees)
-  return { label: min === max ? formatKeysetFee(min) : `${min}–${max} ppk`, unit }
+  return { label: min === max ? formatKeysetFee(min) : `${min}–${max} ppk`, unit, min, max }
 }
 
 export function clockDriftLabel(mintUnixSec: number, nowSec = Math.floor(Date.now() / 1000)): {

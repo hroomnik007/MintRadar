@@ -18,8 +18,8 @@ export const SCORE_PART_ROWS: ReadonlyArray<{ id: string; part: BreakdownPart; l
   { id: 'version-points', part: 'version', label: 'Version points', max: VERSION_POINTS },
   { id: 'contact-points', part: 'contact', label: 'Contact points', max: CONTACT_POINTS },
 ]
-export const COMPARE_CONTACT_LABEL = 'Contact methods'
-export const COMPARE_NIP87_LABEL = 'NIP-87 announcement'
+export const COMPARE_CONTACT_LABEL = 'Contact listed'
+export const COMPARE_NIP87_LABEL = 'Announced on Nostr (NIP-87)'
 export const COMPARE_NO_VALUE = '—'
 export const COMPARE_NONE_LISTED = 'None listed'
 export const COMPARE_NIP87_NOT_SEEN = 'Not seen on our relays'

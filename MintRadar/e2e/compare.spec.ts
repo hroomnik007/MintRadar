@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays } from './fixtures/mocks'
+import { cmpOpenFold, cmpValues } from './fixtures/compare'
+
+// Compare modal basics after the 2026-11-28 redesign: the cards and sections, the community rating, and the folded
+// History panel (one chart with a legend naming each mint, on every width, plus the software versions per mint).
 
 test.beforeEach(async ({ page }) => {
   await mockRelays(page)
@@ -8,78 +12,60 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.mint-card')).toHaveCount(4)
 })
 
+const TWO_BUCKETS = {
+  period: '7d',
+  segments: [
+    { bucket: '2026-08-28T00:00:00Z', online: true, latencyMs: 50, total: 12, onlineCount: 12, uptimePct: 100, reliabilityScore: 92 },
+    { bucket: '2026-08-29T00:00:00Z', online: true, latencyMs: 55, total: 12, onlineCount: 12, uptimePct: 100, reliabilityScore: 92 },
+  ],
+  uptimePct: 99, avgLatencyMs: 52, prevUptimePct: 98, prevAvgLatencyMs: 60,
+  earliestCheckedAt: '2026-08-01T00:00:00Z', daysOfDataAvailable: 7, periodDays: 7, prevPeriodInsufficientHistory: false,
+}
+
+async function compareWith(page: import('@playwright/test').Page, other: string) {
+  await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
+  await expect(page.getByText('Compare with...')).toBeVisible()
+  await page.locator('.md-picker-item', { hasText: other }).click()
+  await page.locator('.md-picker-confirm').click()
+  await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
+}
+
 test.describe('Compare (Mint Diff Tool)', () => {
-  test('opens the comparison modal with historical trends and version history', async ({ page }) => {
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
+  test('cards, sections, and a folded History with its controls and the software versions', async ({ page }) => {
+    await compareWith(page, 'Delta Mint')
+    await expect(page.locator('[data-testid="cmp-card"]')).toHaveCount(2)
+    await expect(page.locator('[data-testid="cmp-card"] .cx-score-lbl').first()).toHaveText('Reliability Score')
+    await expect(page.locator('.cx-h')).toHaveText(['Reliability', 'Speed', 'Deposits and withdrawals', 'Features', 'Operator'])
+    // No "Measure again": the browser latency is measured once, when Compare opens.
+    await expect(page.getByTestId('cmp-remeasure')).toHaveCount(0)
 
-    await expect(page.getByText('Compare with...')).toBeVisible()
-    await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
-    await page.locator('.md-picker-confirm').click()
-
-    // Existing current-state comparison (unchanged behavior).
-    await expect(page.getByText('Mint Comparison')).toBeVisible()
-    await expect(page.locator('.cmp-lbl', { hasText: 'Reliability Score' })).toBeVisible()
-
-    // New: Historical Trends section with chart controls.
-    await expect(page.getByText('Historical Trends')).toBeVisible()
-    await expect(page.locator('button', { hasText: 'Uptime' })).toBeVisible()
-    await expect(page.locator('button', { hasText: '90d' })).toBeVisible()
-
-    // New: Software Version History section, per-mint.
-    await expect(page.getByText('Software Version History')).toBeVisible()
-    await expect(page.locator('.cmp-lbl', { hasText: 'Versions' })).toBeVisible()
-
-    // Current-state note clarifying NUT Support isn't tracked historically.
-    await expect(page.getByText(/does not track over time/)).toBeVisible()
+    const history = page.locator('details.cx-fold', { has: page.locator('summary', { hasText: 'History' }) })
+    await expect(history).not.toHaveAttribute('open', '')
+    await cmpOpenFold(page, 'History')
+    for (const name of ['Latency', 'Uptime', 'Score', '24 h', '7 d', '30 d', '90 d']) {
+      await expect(history.getByRole('button', { name, exact: true })).toBeVisible()
+    }
+    await expect(history.getByRole('button', { name: '7 d', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(history.locator('.cx-row[data-row="versions"] .cx-lbl')).toHaveText('Software versions')
   })
 
-  test('shows Reliability Score and Community Rating rows, with a fallback for mints without reviews', async ({ page }) => {
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
-    await page.locator('.md-picker-item', { hasText: 'Bravo Mint' }).click()
-    await page.locator('.md-picker-confirm').click()
-
-    await expect(page.getByText('Mint Comparison')).toBeVisible()
-
-    const grid = page.locator('.cmp-grid')
-    await expect(grid.locator('.cmp-lbl', { hasText: 'Reliability Score' })).toBeVisible()
-    await expect(grid.locator('.cmp-lbl', { hasText: 'Community Rating' })).toBeVisible()
-
-    // Alpha has 12 reviews averaging 4.2 → star badge; Bravo has none → "—".
-    await expect(grid.getByText('4.2')).toBeVisible()
-    await expect(grid.getByText('(12)')).toBeVisible()
-    await expect(grid.locator('.cmp-val', { hasText: '—' }).first()).toBeVisible()
+  test('community rating: stars with the count, "—" for a mint without reviews, never a BEST tag', async ({ page }) => {
+    await compareWith(page, 'Bravo Mint')
+    // Alpha has 12 reviews averaging 4.2; Bravo has none.
+    expect(await cmpValues(page, 'rating')).toEqual(['★ 4.2 (12)', '—'])
+    await expect(page.locator('.cx-val[data-row="rating"] .cmp-best')).toHaveCount(0)
   })
 
-  test('stacks charts vertically instead of overlaying on mobile', async ({ page }) => {
+  test('History on a phone: one chart, its legend names every mint in its line colour', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 })
-    // The shared history fixture has only one bucket, which is below the
-    // 2-bucket floor ComparisonModal requires before it renders a chart at
-    // all ("Not enough data for this period" otherwise) — supply two here so
-    // the chart section actually renders instead of the empty-state message.
-    await page.route('**/api/mints/history**', route => route.fulfill({
-      json: {
-        period: '7d',
-        segments: [
-          { bucket: '2026-08-28T00:00:00Z', online: true, latencyMs: 50, total: 12, onlineCount: 12, uptimePct: 100, reliabilityScore: 92 },
-          { bucket: '2026-08-29T00:00:00Z', online: true, latencyMs: 55, total: 12, onlineCount: 12, uptimePct: 100, reliabilityScore: 92 },
-        ],
-        uptimePct: 99, avgLatencyMs: 52, prevUptimePct: 98, prevAvgLatencyMs: 60,
-        earliestCheckedAt: '2026-08-01T00:00:00Z', daysOfDataAvailable: 7, periodDays: 7,
-        prevPeriodInsufficientHistory: false,
-      },
-    }))
-    await page.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn').click()
-    await page.locator('.md-picker-item', { hasText: 'Delta Mint' }).click()
-    await page.locator('.md-picker-confirm').click()
-
-    await expect(page.getByText('Historical Trends')).toBeVisible()
-    // Mobile layout renders one mini chart per mint with its name as a heading,
-    // rather than a single overlaid multi-line chart. (The mobile side-by-side
-    // comparison table above also renders each mint's name — in its column
-    // header — so scope this to the chart heading specifically.)
+    await page.route('**/api/mints/history**', route => route.fulfill({ json: TWO_BUCKETS }))
+    await compareWith(page, 'Delta Mint')
+    await cmpOpenFold(page, 'History')
     const modal = page.locator('.cmp-modal')
-    await expect(modal.locator('.cmp-mobile-chart-name')).toHaveCount(2)
-    await expect(modal.locator('.cmp-mobile-chart-name', { hasText: 'Alpha Mint' })).toBeVisible()
-    await expect(modal.locator('.cmp-mobile-chart-name', { hasText: 'Delta Mint' })).toBeVisible()
+    await expect(modal.locator('.recharts-responsive-container')).toHaveCount(1)
+    await expect(modal.locator('.cx-legend-item')).toHaveText(['Alpha Mint', 'Delta Mint'])
+    const colours = await modal.locator('.cx-legend-line').evaluateAll(els => els.map(e => getComputedStyle(e).backgroundColor))
+    expect(new Set(colours).size).toBe(2)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true)
   })
 })

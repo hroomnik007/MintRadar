@@ -124,9 +124,9 @@ describe('CopyTextButton accessible name', () => {
 })
 
 describe('Compare audit label and low-reliability badge text', () => {
-  it('names what the ratio counts and stays short enough for the 160 px label column', () => {
-    expect(COMPARE_AUDIT_LABEL).toBe('No mint fault (7d)')
-    expect(COMPARE_AUDIT_LABEL.length).toBeLessThanOrEqual(18)
+  // Since the Compare redesign (2026-11-28) the label sits on its own line above the values: no column width to fit.
+  it('names what the ratio counts and its window', () => {
+    expect(COMPARE_AUDIT_LABEL).toBe('Swaps without a mint fault, last 7 days')
   })
   it('the "Low" reliability badge uses the lifted text colour', () => {
     expect(reliabilityScoreInfo(10).color).toBe(LOW_RELIABILITY_TEXT)

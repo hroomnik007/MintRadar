@@ -33,17 +33,13 @@ async function openCompareFor(page: import('@playwright/test').Page, names: stri
     await page.locator('.md-picker-item', { hasText: name }).click()
   }
   await page.locator('.md-picker-confirm').click()
-  await expect(page.getByText('Mint Comparison')).toBeVisible()
+  await expect(page.getByText(/^Compare [2-4] mints$/)).toBeVisible()
 }
 
-// Locates the "Outdated" badge (if any) within the Version row's column for
-// the mint at the given position (mints render as columns in the order they
-// were selected — first is the card the Compare button was clicked from).
+// The "Outdated" badge (if any) in the Software row for the mint at the given position (cards and value columns follow
+// the order the mints were picked in: first is the card the Compare button was clicked from).
 function versionCellOutdated(page: import('@playwright/test').Page, columnIndex: number) {
-  return page.locator('.cmp-lbl', { hasText: 'Version' })
-    .locator('xpath=following-sibling::div[contains(@class,"cmp-val")]')
-    .nth(columnIndex)
-    .getByText('Outdated')
+  return page.locator('.cx-val[data-row="version"]').nth(columnIndex).getByText('Outdated')
 }
 
 const CDK = { major: 0, minor: 18 }

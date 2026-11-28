@@ -99,7 +99,7 @@ export const CASES: ModalCase[] = [
     dialog: css('.md-picker-modal'), close: '.md-picker-header button',
   },
   {
-    id: 'Comparison modal', name: /mint comparison/i,
+    id: 'Comparison modal', name: /^Compare [2-4] mints$/,
     prepare: p => goto(p, '/?status=all', '.mint-card'),
     trigger: p => p.locator('.mint-card', { hasText: 'Alpha Mint' }).locator('button.card-compare-btn'),
     open: async (p, t) => {
@@ -109,7 +109,7 @@ export const CASES: ModalCase[] = [
     },
     dialog: css('.cmp-modal'), close: '.cmp-modal-header button',
     tooltip: {
-      target: p => p.locator('.cmp-modal .cmp-lbl', { hasText: 'Input fee' }).locator('svg').first(),
+      target: p => p.locator('.cmp-modal .cx-lbl', { hasText: 'Input fee' }).locator('svg').first(),
       popup: p => p.getByText(/Fee per 1000 coins spent/),
     },
   },
