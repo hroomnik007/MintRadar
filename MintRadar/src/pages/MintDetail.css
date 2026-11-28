@@ -3087,6 +3087,21 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .qr-modal-url { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.4; color: var(--text2); overflow-wrap: anywhere; word-break: normal; cursor: text; }
 .qr-modal-copy { width: 100%; min-height: 44px; margin-top: 10px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--action); border: 1px solid var(--action); border-radius: 10px; color: var(--bg); font: 600 15px var(--font-body); cursor: pointer; transition: opacity var(--transition); }
 .qr-modal-copy:hover { opacity: 0.92; }
+.qr-scan-phone { display: none; }
+/* Phones (owner, 2026-11-28, the mockup's phone variant): a phone cannot scan its own screen, so the address and the copper
+   "Copy mint URL" come first and the code follows for another phone. Same elements, reordered (order); 200 px code. */
+@media (max-width: 767px) {
+  .qr-modal { display: flex; flex-direction: column; }
+  .qr-modal-header { order: 0; }
+  .qr-modal-warn { order: 1; }
+  .qr-modal-url-row { order: 2; margin-top: 16px; }
+  .qr-modal-copy { order: 3; }
+  .qr-modal-code { order: 4; margin: 18px 0 8px; }
+  .qr-modal-scan { order: 5; margin: 0; }
+  .qr-modal-code-frame svg { width: 200px !important; height: 200px !important; }
+  .qr-scan-wide { display: none; }
+  .qr-scan-phone { display: inline; }
+}
 .qr-modal-close { position: relative; }
 .qr-modal-close::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
 .qr-modal-copy.is-copied { opacity: 0.92; }

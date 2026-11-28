@@ -295,6 +295,15 @@ test.describe('Mint QR dialog', () => {
       expect(g.h).toBeGreaterThanOrEqual(44)
       expect(g.bg, 'filled copper').toBe('rgb(217, 138, 90)')
       expect(g.boxRadius).not.toBe('0px')
+      // Phone order (owner, 2026-11-28): address, Copy mint URL, then the code "Scan from another phone"
+      const order = await page.evaluate(() => {
+        const top = (sel: string) => document.querySelector(sel)!.getBoundingClientRect().top
+        return { url: top('.qr-modal-url-row'), copy: top('.qr-modal-copy'), code: top('.qr-modal-code'), scan: top('.qr-modal-scan') }
+      })
+      expect(order.url).toBeLessThan(order.copy)
+      expect(order.copy).toBeLessThan(order.code)
+      expect(order.code).toBeLessThan(order.scan)
+      await expect(page.locator('.qr-modal-scan')).toHaveText('Scan from another phone', { useInnerText: true })
       // the close button keeps its 44px area
       const closeArea = await page.locator('.qr-modal-close').evaluate(e => { const b = getComputedStyle(e, '::before'); return { w: parseFloat(b.width), h: parseFloat(b.height) } })
       expect(closeArea.w).toBeGreaterThanOrEqual(44)
@@ -355,6 +364,9 @@ test.describe('Mint QR dialog', () => {
     // The worded button (2026-11-28): its name becomes "Copied" for a moment, so it is held by its class.
     const copy = page.locator('.qr-modal-copy')
     await expect(copy).toHaveText('Copy mint URL')
+    // Desktop order: the code first, "Scan with any Cashu wallet app", then the address and the button
+    await expect(page.locator('.qr-modal-scan')).toHaveText('Scan with any Cashu wallet app', { useInnerText: true })
+    expect(await page.evaluate(() => document.querySelector('.qr-modal-code')!.getBoundingClientRect().top < document.querySelector('.qr-modal-url-row')!.getBoundingClientRect().top)).toBe(true)
     await expect(copy.locator('svg.lucide-check')).toHaveCount(0)
     await copy.click()
     await expect(copy).toHaveText('Copied')

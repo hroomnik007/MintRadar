@@ -1760,7 +1760,8 @@ function MintDetailContent({ url }: { url: string }) {
                 />
               </div>
             </div>
-            <div className="qr-modal-scan">Scan with any Cashu wallet app</div>
+            {/* A phone cannot scan its own screen: there the code is for another phone (CSS shows one of the two). */}
+            <div className="qr-modal-scan"><span className="qr-scan-wide">Scan with any Cashu wallet app</span><span className="qr-scan-phone">Scan from another phone</span></div>
             {/* Plain text, not a field: nothing to focus, no caret. Under it one full-width copper "Copy mint URL" (owner,
                 2026-11-28: the approved desktop variant at every width, the button worded and filled like the phone one). */}
             <div className="qr-modal-url-row">

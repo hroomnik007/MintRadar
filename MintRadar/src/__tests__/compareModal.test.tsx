@@ -173,7 +173,7 @@ describe('Compare modal (redesign 2026-11-28)', () => {
   it('folded score points: values with the max, "—" without a stored score', () => {
     const C: KnownMint = { ...A, url: 'https://gamma.mint.example', name: 'Gamma Mint', reliabilityScore: null, scoreBreakdown: null }
     const { baseElement } = renderModal([A, B, C])
-    const fold = baseElement.querySelector('details.cx-fold')!
+    const fold = baseElement.querySelector('details.cx-fold[data-fold="points"]')!
     expect(fold.querySelector('summary')?.textContent).toBe('How each score is made')
     expect(vals(baseElement, 'uptime-points')).toEqual(['40 / 40', '20 / 40', '—'])
     expect(vals(baseElement, 'contact-points')).toEqual(['3 / 5', '3 / 5', '—'])

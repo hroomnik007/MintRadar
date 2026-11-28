@@ -850,11 +850,13 @@ From the live-site review of 2026-11-27 (ids as in that report):
 
 ## Mint QR dialog, 2026-11-28 (approved mockup `~/Claude/refs/mintradar-compare-mockup-1128`, desktop variant)
 
-The trigger stays "Mint QR" (owner). The dialog (`.qr-modal`, 400 px) is the same at every width: header (icon, "Add to
+The trigger stays "Mint QR" (owner). The dialog (`.qr-modal`, 400 px), desktop order: header (icon, "Add to
 wallet", mint name, close), then, only for a test mint or a mint that did not answer its last check, one amber sentence
 (`.qr-modal-warn`, `data-testid="qr-modal-warn"`: "Test mint: its ecash has no value." / "This mint did not answer its
 last check."), the 240 px code, "Scan with any Cashu wallet app", the URL as plain text in a box and under it one
-full-width copper button "Copy mint URL" (`.qr-modal-copy`, "Copied" with a check for 2 s). The white frame has no padding
+full-width copper button "Copy mint URL" (`.qr-modal-copy`, "Copied" with a check for 2 s). Phones (<= 767 px, the
+mockup's phone variant, owner): the same elements reordered with `order` (header, amber line, address, Copy mint URL,
+then a 200 px code with "Scan from another phone"), since a phone cannot scan its own screen. The white frame has no padding
 of its own: the white around the code is exactly the standard 4-module quiet zone the SVG draws (the owner asked whether
 there was too much white; the extra 8 px are gone). Tests: `e2e/addmint-qr-polish.spec.ts` ("Mint QR dialog"),
 `e2e/copy-buttons.spec.ts`, `e2e/mint-detail-qr-warn.spec.ts`.

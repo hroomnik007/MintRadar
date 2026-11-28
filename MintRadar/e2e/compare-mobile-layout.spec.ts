@@ -175,3 +175,45 @@ for (const vp of [{ width: 390, height: 664 }, { width: 1440, height: 900 }]) {
     expect(m.modalScrolls, 'the long content scrolls inside the modal').toBe(true)
   })
 }
+
+// Owner, 2026-11-28: opening "How each score is made" or History scrolls the modal to it (it used to open below the fold
+// and nothing moved). The panel then starts right under the sticky header and the name bar.
+for (const vp of [{ width: 390, height: 664 }, { width: 1440, height: 900 }]) {
+  for (const fold of ['points', 'history'] as const) {
+    test(`${vp.width}px: opening the ${fold} panel brings it to the top of the modal`, async ({ page }) => {
+      await page.setViewportSize(vp)
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await openCompare(page, ['Delta Mint', 'Bravo Mint'])
+      const panel = page.locator(`.cx-fold[data-fold="${fold}"]`)
+      await panel.locator('summary').click()
+      await expect.poll(async () => page.evaluate(sel => {
+        const m = document.querySelector('.cmp-modal')!, p = document.querySelector(sel)!
+        const head = document.querySelector('.cmp-modal-header')!.getBoundingClientRect().bottom
+        const key = document.querySelector('.cx-key')!.getBoundingClientRect().height
+        const top = p.getBoundingClientRect().top
+        // at the top: right under header + name bar (8 px gap), or as far as the modal can scroll
+        const atEnd = m.scrollTop + m.clientHeight >= m.scrollHeight - 1
+        return (Math.abs(top - (head + key + 8)) <= 4 || atEnd) && m.scrollTop > 0
+      }, `.cx-fold[data-fold="${fold}"]`)).toBe(true)
+    })
+  }
+}
+
+// Owner, 2026-11-28: History comes before "How each score is made", and the whole heading row opens a panel (a click at
+// the far right of the row works, not only on the words).
+for (const vp of [{ width: 390, height: 664 }, { width: 1440, height: 900 }]) {
+  test(`${vp.width}px: History first, then the score points; the full row of a heading opens it`, async ({ page }) => {
+    await page.setViewportSize(vp)
+    await openCompare(page, ['Delta Mint'])
+    await expect(page.locator('details.cx-fold > summary')).toHaveText(['History', 'How each score is made'])
+    for (const fold of ['history', 'points']) {
+      const panel = page.locator(`.cx-fold[data-fold="${fold}"]`)
+      const s = (await panel.locator('summary').boundingBox())!
+      const p = (await panel.boundingBox())!
+      expect(Math.abs(s.width - p.width), 'the summary spans the panel').toBeLessThanOrEqual(2)
+      // a click near the right end of the row, far from the words
+      await panel.locator('summary').click({ position: { x: s.width - 12, y: s.height / 2 } })
+      await expect(panel).toHaveAttribute('open', '')
+    }
+  })
+}

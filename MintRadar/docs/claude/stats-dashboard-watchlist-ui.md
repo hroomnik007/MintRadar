@@ -787,3 +787,8 @@ Words in value cells ("not offered", "no limits declared") have the numbers' wei
 amounts (`compactAmount`: 10k, 5M, 1.5k; 12,345 stays) with a small "in" / "out" prefix (`MethodLine.side`). The modal
 is at most 90dvh (92dvh on phones) with `overscroll-behavior: contain` and the overlay does not scroll, so on a phone
 with the browser bar nothing but the modal scrolls (the "only black" below History).
+History comes before "How each score is made"; each folded panel opens from its whole heading row (the summary spans the
+panel, `.cx-fold` has no side padding, its content keeps a 16 / 10 px inset). Opening one scrolls the modal so the panel
+starts under the header and the name bar (`revealFold`); History scrolls once more when its chart has loaded (it is
+short while "Loading history…"). The overlay fix: `.cmp-modal.cx { position: relative }` (the `.sr-only` texts had the
+fixed overlay as their containing block and stretched its scroll area).

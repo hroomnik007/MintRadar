@@ -454,8 +454,34 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
     return () => io.disconnect()
   }, [headH])
 
+  // Opening a folded panel ("How each score is made", History) scrolls the modal so the panel starts right under the
+  // header and the name bar (owner, 2026-11-28): before, it opened below the fold and nothing moved. Only on opening.
+  // History loads after it opens: while "Loading history…" there may be too little below it to scroll it to the top, so
+  // it is scrolled again once the chart is in (pendingReveal).
+  const pendingReveal = useRef<HTMLDetailsElement | null>(null)
+  const revealFold = (el: HTMLDetailsElement, again = false) => {
+    if (!el.open) { if (pendingReveal.current === el) pendingReveal.current = null; return }
+    // Only while its data is still to come (first opening, or a request still running); otherwise the first scroll is final.
+    if (!again && el.dataset.fold === 'history' && (!historyOpened || isLoadingHistory)) pendingReveal.current = el
+    const modal = el.closest<HTMLElement>('.cmp-modal')
+    if (!modal) return
+    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    requestAnimationFrame(() => {
+      const keyH = modal.querySelector<HTMLElement>('.cx-key')?.offsetHeight ?? 0
+      const top = el.getBoundingClientRect().top - modal.getBoundingClientRect().top + modal.scrollTop - headH - keyH - 8
+      modal.scrollTo({ top: Math.max(0, top), behavior: reduce ? 'auto' : 'smooth' })
+    })
+  }
+
   const loadedHistory = historyQueries.map(q => q.data).filter((d): d is HistoryResponse => d != null)
   const isLoadingHistory = historyOpened && historyQueries.some(q => q.isLoading)
+  useEffect(() => {
+    const el = pendingReveal.current
+    if (!historyOpened || isLoadingHistory || !el) return
+    pendingReveal.current = null
+    revealFold(el, true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the History data has arrived, revealFold reads the latest layout
+  }, [historyOpened, isLoadingHistory])
   const periodDaysValue = loadedHistory[0]?.periodDays ?? null
   const minDaysAvailable = loadedHistory.length > 0 ? Math.min(...loadedHistory.map(d => d.daysOfDataAvailable)) : null
   const coverageText = (periodDaysValue !== null && minDaysAvailable !== null && minDaysAvailable < periodDaysValue)
@@ -593,14 +619,8 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               )
             })}
 
-            {rowsOf('points').length > 0 && (
-              <details className="cx-panel cx-fold">
-                <summary>How each score is made</summary>
-                {renderRows(rowsOf('points'))}
-              </details>
-            )}
-
-            <details className="cx-panel cx-fold" onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) setHistoryOpened(true) }}>
+            {/* History first, then the score points (owner, 2026-11-28). */}
+            <details className="cx-panel cx-fold" data-fold="history" onToggle={e => { const el = e.currentTarget; if (el.open) setHistoryOpened(true); revealFold(el) }}>
               <summary>History</summary>
               <div className="cx-hist-ctl">
                 <div className="md-seg" role="group" aria-label="Metric">
@@ -682,6 +702,13 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                 </div>
               </div>
             </details>
+            {rowsOf('points').length > 0 && (
+              <details className="cx-panel cx-fold" data-fold="points" onToggle={e => revealFold(e.currentTarget)}>
+                <summary>How each score is made</summary>
+                {renderRows(rowsOf('points'))}
+              </details>
+            )}
+
           </div>
         </div>
       </div>
