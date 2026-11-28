@@ -547,8 +547,6 @@
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Alpha Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
@@ -560,8 +558,6 @@
   "mint-alpha-nuts@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "<DATE>",
-      "<DATE>",
       "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Alpha Mint to watchlist",
@@ -685,8 +681,6 @@
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Alpha Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
@@ -700,8 +694,6 @@
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Alpha Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
@@ -714,8 +706,6 @@
   "mint-new-nuts@1440": {
     "texts": [
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Newbie Mint to watchlist",
       "Limits are declared by the mint. Lightning fee reserves depend on the invoice and are known only when a quote is requested, so MintRadar does not show them.",
@@ -726,8 +716,6 @@
   },
   "mint-new-nuts@390": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
       "<DATE>",
       "<LOCAL> · <DATE>",
       "Add Newbie Mint to watchlist",
@@ -1088,32 +1076,40 @@
   "tools-token-test-mint@1440": {
     "texts": [
       "Checks each proof's signature proof (NUT-12 DLEQ), when it has one. A pass means this mint signed it. It does not show the token is unspent or the mint is reliable.",
+      "Decoded in your browser. Nothing you paste here is sent anywhere.",
+      "Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.",
       "MintRadar",
       "Not for real funds — for testing and development only",
       "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit."
     ],
-    "triggers": 3
+    "triggers": 5
   },
   "tools-token-test-mint@390": {
     "texts": [
       "Checks each proof's signature proof (NUT-12 DLEQ), when it has one. A pass means this mint signed it. It does not show the token is unspent or the mint is reliable.",
+      "Decoded in your browser. Nothing you paste here is sent anywhere.",
+      "Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.",
       "MintRadar",
       "Not for real funds — for testing and development only",
       "The mint's input fee for swapping all of this token's coins, as its keysets state it: the per-coin fees added up and rounded up to a whole unit."
     ],
-    "triggers": 3
+    "triggers": 5
   },
   "tools@1440": {
     "texts": [
+      "Decoded in your browser. Nothing you paste here is sent anywhere.",
+      "Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.",
       "MintRadar"
     ],
-    "triggers": 0
+    "triggers": 2
   },
   "tools@390": {
     "texts": [
+      "Decoded in your browser. Nothing you paste here is sent anywhere.",
+      "Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.",
       "MintRadar"
     ],
-    "triggers": 0
+    "triggers": 2
   },
   "wallets@1440": {
     "texts": [

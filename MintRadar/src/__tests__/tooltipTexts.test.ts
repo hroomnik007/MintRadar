@@ -141,7 +141,7 @@ const BUILT: Record<string, string> = {
   scoreFormulaText: T.scoreFormulaText(), uptimeRowText: T.uptimeRowText(), auditRowText: T.auditRowText(), NUT_ROW_TEXT: T.NUT_ROW_TEXT,
   versionRowText: T.versionRowText(), contactRowText: T.contactRowText(), reviewSurgeText: T.reviewSurgeText(),
   HIDE_TEST_MINTS_TEXT: T.HIDE_TEST_MINTS_TEXT, outdatedSoftwareText: T.outdatedSoftwareText(),
-  TRACKING_HISTORY_TEXT: T.TRACKING_HISTORY_TEXT, BACKUP_SUPPORTED_TEXT: T.BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT: T.NO_BACKUP_TEXT,
+  TRACKING_HISTORY_TEXT: T.TRACKING_HISTORY_TEXT,
   REVIEWS_NIP87_TEXT: T.REVIEWS_NIP87_TEXT, SIGNATURE_CHECK_TEXT: T.SIGNATURE_CHECK_TEXT, INPUT_FEE_TEXT: T.INPUT_FEE_TEXT, FEE_PER_COIN_TEXT: T.FEE_PER_COIN_TEXT, KEYSET_FEE_TEXT: T.KEYSET_FEE_TEXT,
   compareAuditSuccessText: T.compareAuditSuccessText(), sameOperatorText: T.sameOperatorText(['alpha.mint.example', 'twin.mint.example']),
   depositsTileText: T.depositsTileText(), withdrawalsTileText: T.withdrawalsTileText(),

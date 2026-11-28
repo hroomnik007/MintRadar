@@ -26,10 +26,10 @@ export const EXPECTED_TOOLTIPS: Record<string, Cell[]> = {
   stats: same([6, 6]),
   // 0 opened: a modal covers the page, its own content (software list) has no ⓘ, the page's triggers are behind the overlay.
   'stats-software-modal': same([6, 0]),
-  // 0: the Tools page has explanatory text only; tooltips appear on a token RESULT (next state).
-  tools: same([0, 0]),
-  // 3 since 2026-10-27: the Verify part's "Mint fee" ⓘ joined the Signature check and the redeem ones.
-  'tools-token-test-mint': same([3, 3]),
+  // 2 since 2026-11-28: the ⓘ next to each inspector's title (where a pasted token or request goes).
+  tools: same([2, 2]),
+  // 5: the two title ⓘ, Signature check, Mint fee and the test-mint chip.
+  'tools-token-test-mint': same([5, 5]),
   // 0 on the content pages: their explanations are visible text (the pages hold no InfoTooltip).
   wallets: same([0, 0]),
   learn: same([0, 0]),

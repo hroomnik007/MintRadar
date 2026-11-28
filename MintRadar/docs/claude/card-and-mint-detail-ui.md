@@ -665,17 +665,17 @@ Styles in the "phase 4b" block of `MintDetail.css`.
 ## Mint Detail NUTs, 2026-11-19 redesign (phase 4d)
 
 `mintDetail/NutsTab.tsx`, styles in the "phase 4d" block of `MintDetail.css`.
-- **Supported features** (left): the 14 tracked NUTs in four groups (`NUT_GROUPS` in `mintDetail/nutCatalog.ts`:
+- **Supported NUTs** (left; "Supported features" until 2026-11-28): the 14 tracked NUTs in four groups (`NUT_GROUPS` in `mintDetail/nutCatalog.ts`:
   Deposits and payments, Safety and privacy, Locked tokens, Wallet experience; `nutGroups.test.ts` pins that they cover
   `TRACKED_NUTS` exactly once). A row (`.nut-card.nut-row`, still opens the NUT dialog) is the tag, a plain name with one
   sentence, and the state word "Supported" / "Disabled by operator" / "Not supported" (an unsupported name is one step
-  dimmer, >= 4.5:1). The summary line under the title: "<n> of the 14 NUTs we track, as declared in the mint's /v1/info,
-  <n> switched off by the operator, checked <time>." The nutzap sentence (`nutzapNote`) is the panel's last line, no verdict.
+  dimmer, >= 4.5:1). The summary line under the title is only "<n> of the 14 NUTs we track" (owner, 2026-11-28: no source, no
+  switched-off count, no nutzap sentence; the rows show "Disabled by operator").
 - **Side column:** Fees and limits first (`MintFeesLimits`; the limits are now a table method | Deposit | Withdrawal from
   `limitTable()` in `utils/feesLimits.ts`: "1 to 1,000,000", "from 1", "up to …", "no limits declared", "—" where a side
   does not offer the method, "Disabled by the mint"; Compare keeps `limitRows`), then **What works with this mint**:
   Nutzaps (NIP-61) (NUT-07, 10, 11, 12), Restore from seed (NUT-09), Live updates (NUT-17), Pay one invoice from several
-  mints (NUT-15), each "Yes, …" / "No, …", and the backup sentence under it. The "Backup supported" pill and the icon grid
+  mints (NUT-15), each "Yes, …" / "No, …" (the NUT-09 backup sentence under it was removed 2026-11-28). The "Backup supported" pill and the icon grid
   are gone. Phones (<=860px): one column.
 
 ## Mint Detail Audit, 2026-11-19 redesign (phase 4e)

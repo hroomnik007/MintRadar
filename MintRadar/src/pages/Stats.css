@@ -1107,17 +1107,20 @@
    All values re-measured 2026-11-28 after the Tools/Stats review (geography sentence over the list and the CDN row with
    its bar, the first 8 cities on phones, movers "before → now" instead of the host): each value = the smallest loaded
    height of its band (fresh loads at the band edges, reservations off), so a reservation never exceeds the loaded height.
-   769-855 px: the stack is 762 there (the nhi panel is taller, 354.7). */
+   769-855 px: the stack is 762 there (the nhi panel is taller, 354.7).
+   Same day, after the geography sentence was removed: 769-1279 px loads at 2178.8 with or without the movers note (at
+   1024 another card in the movers row is taller), so the band reserves 2178.8 minus the tallest note (50): 2128 px, and
+   the waiting block (board + note) is never taller than the loaded board. Up to 767 px: 3211 (the band's smallest). */
 .stats-page {
   --stats-reserve-note: 0px;
   --stats-reserve-board: 1445px;
   --stats-reserve-nhi: 330px;
   --stats-reserve-stack: 743px;
 }
-@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 2212px; } }
+@media (max-width: 1279px) { .stats-page { --stats-reserve-board: 2128px; } }
 @media (max-width: 855px)  { .stats-page { --stats-reserve-nhi: 354px; --stats-reserve-stack: 761px; } }
 @media (max-width: 768px)  { .stats-page { --stats-reserve-board: 1797px; --stats-reserve-nhi: 336px; --stats-reserve-stack: 641px; } }
-@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 3258px; --stats-reserve-nhi: 417px; --stats-reserve-stack: 615px; } }
+@media (max-width: 767px)  { .stats-page { --stats-reserve-board: 3211px; --stats-reserve-nhi: 417px; --stats-reserve-stack: 615px; } }
 @media (max-width: 417px)  { .stats-page { --stats-reserve-nhi: 441px; } }
 @media (max-width: 381px)  { .stats-page { --stats-reserve-stack: 632px; } }
 @media (max-width: 373px)  { .stats-page { --stats-reserve-stack: 650px; } }
@@ -1490,7 +1493,6 @@
 .stats-movers-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 6px; vertical-align: 1px; background: var(--red); }
 .stats-movers-dot.on { background: var(--accent); }
 .stats-movers-fromto { font-size: 12.5px; color: var(--text3); margin-top: 1px; }
-.stats-geo-summary { margin: 0 0 10px; padding: 9px 12px; border-radius: 9px; background: var(--bg3); font-size: 13px; line-height: 1.45; color: var(--text2); }
 .stats-geo-all {
   justify-self: start; margin: 8px 0 4px; min-height: 36px; padding: 0 14px; border-radius: 8px; cursor: pointer;
   border: 1px solid var(--border-strong); background: transparent; color: var(--text); font: 500 var(--fs-sm) var(--font-body);

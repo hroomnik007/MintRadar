@@ -412,7 +412,9 @@ Approved mockup `~/Claude/refs/mintradar-redesign-1118/tools.html`; styles in th
   "Inspecting…" / "Verifying with mint…" phases are unchanged) at its own width at the card's left edge, with "Paste a token
   first." beside it while the field is empty (`.tool-act`). The privacy sentence is its own row with a lock (`.tool-private`):
   "Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it."
-- **Payment request inspector:** the same lock row ("Decoded in your browser. Nothing you paste here is sent anywhere.") and
+  Since 2026-11-28 (owner) both privacy sentences are tooltips: the ⓘ right after each inspector's title (`TOKEN_PRIVACY_TEXT`
+  "Where the token goes", `PAYMENT_REQUEST_PRIVACY_TEXT` "Where the payment request goes"); the visible rows are gone.
+- **Payment request inspector:** the same privacy sentence ("Decoded in your browser. Nothing you paste here is sent anywhere.") and
   "Paste a payment request first." in the text face.
 - **Best mint wizard:** "Step N of 2" over a copper progress bar (`.wizard-step-bar`, `role="progressbar"`; the numbered
   circles are gone); the amounts in words ("under 10,000 sat", "10,000 to 100,000 sat", "over 100,000 sat", and "under about

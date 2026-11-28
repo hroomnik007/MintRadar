@@ -22,7 +22,7 @@ import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
 import { compareMintVersionNumbers, classifyVersion } from '@/utils/versionRule'
 import { trendScoreDomain } from '@/utils/trendTicks'
-import { computeGeoDistribution, normalizeGeoLoc, geoSummaryText, CDN_BUCKET, GEO_PHONE_ROWS } from '@/utils/geoDistribution'
+import { computeGeoDistribution, normalizeGeoLoc, CDN_BUCKET, GEO_PHONE_ROWS } from '@/utils/geoDistribution'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { StatsPageHead } from '@/components/stats/StatsPageHead'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -674,7 +674,6 @@ export default function Stats() {
   const geoCities = geoDist.top.filter(e => e.loc !== CDN_BUCKET)
   const geoRows = Math.max(1, Math.ceil((geoCities.length + (geoCdn ? 1 : 0)) / 2))
   // Review 2026-11-28 (S3): one sentence over the list; the CDN row stays in it (owner), with its bar.
-  const geoSummary = geoSummaryText(geoDist)
   // S4: on a phone the first GEO_PHONE_ROWS cities, the rest behind "Show all N cities" (opens in the card).
   const [geoAll, setGeoAll] = useState(false)
   const geoCitiesShown = isMobile && !geoAll ? geoCities.slice(0, GEO_PHONE_ROWS) : geoCities
@@ -1141,7 +1140,6 @@ export default function Stats() {
             </div>
           </div>
           <div className="stats-geo-fill">
-            {geoSummary && <p className="stats-geo-summary" data-testid="geo-summary">{geoSummary}</p>}
             <div className="stats-geo-cols" style={{gridTemplateRows:`repeat(${geoRows}, auto)`}}>
               {geoCdn === null && geoCities.length === 0 ? (
                 <div style={{color:'var(--text3)',fontSize:12,fontFamily:'var(--font-mono)'}}>No data</div>

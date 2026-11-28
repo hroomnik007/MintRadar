@@ -587,8 +587,6 @@ a.token-action-btn:focus {
 .tool-act { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .tool-act .tool-btn-primary { width: auto; padding: 9px 18px; font-size: var(--fs-sm); font-weight: 600; min-height: 38px; }
 .tool-act .token-hint { text-align: left; font-size: var(--fs-sm); color: var(--text2); }
-.tool-private { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: var(--fs-xs) !important; color: var(--text2) !important; line-height: 1.5; }
-.tool-private svg { flex: none; margin-top: 2px; color: var(--text3); }
 .pr-hint { text-align: left !important; font-size: var(--fs-sm) !important; color: var(--text2) !important; }
 .wizard-steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 4px 0 6px; }
 .wizard-step-text { font-size: var(--fs-sm); color: var(--text2); }

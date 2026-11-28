@@ -39,13 +39,19 @@ describe('offeredMethods / mintMatchesMethod', () => {
 })
 
 describe('methodOptions', () => {
-  it('the methods mints offer, bolt11 / bolt12 / onchain first, then others alphabetically, no duplicates', () => {
+  it('only bolt11 / bolt12 / onchain, in that order, no duplicates; a mint\'s own methods are never options', () => {
     const mints = [
       { mintMethods: [e('zz'), e('bolt11')], meltMethods: [e('onchain')], nutsLimits: {} },
       { mintMethods: [e('bolt12'), e('aa')], meltMethods: [e('BOLT11')], nutsLimits: {} },
       { mintMethods: [e('switched')], meltMethods: [], nutsLimits: { '4': { disabled: true } } },
     ]
-    expect(methodOptions(mints, null)).toEqual(['bolt11', 'bolt12', 'onchain', 'aa', 'zz'])
+    expect(methodOptions(mints, null)).toEqual(['bolt11', 'bolt12', 'onchain'])
+  })
+  it('issuance / transfer / paypal / venmo / epoch / hashrate (live mints, 2026-11-28) are not listed', () => {
+    const odd = ['issuance', 'transfer', 'paypal', 'venmo', 'epoch', 'hashrate']
+    expect(methodOptions([{ mintMethods: odd.map(x => e(x)), meltMethods: [e('bolt11')], nutsLimits: {} }], null)).toEqual(['bolt11'])
+    // A ?method= link to one of them still shows it, so it can be cleared.
+    expect(methodOptions([], 'issuance')).toEqual(['issuance'])
   })
   it('keeps a selected method nobody offers so it can be cleared', () => {
     expect(methodOptions([], 'bolt12')).toEqual(['bolt12'])

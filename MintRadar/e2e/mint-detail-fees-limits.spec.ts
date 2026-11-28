@@ -208,13 +208,13 @@ test('the explanatory sentence is not in the card body; it is in the header tool
   await expect(btn).toBeFocused()
 })
 
-// Since the 2026-11-19 redesign the NUTs tab is "Supported features" with Fees and limits first in the column beside it.
-test('it heads the side column of the NUTs tab, beside Supported features, and is not on the Overview; the old "NUT limits" card is gone', async ({ page }) => {
+// Since the 2026-11-19 redesign the NUTs tab is "Supported NUTs" (renamed 2026-11-28) with Fees and limits first in the column beside it.
+test('it heads the side column of the NUTs tab, beside Supported NUTs, and is not on the Overview; the old "NUT limits" card is gone', async ({ page }) => {
   await open(page, { keysets: KS_FEE })
   await expect(group(page)).toBeVisible()
   const titles = await page.locator('.md-panel-title').allInnerTexts()
   const i = titles.findIndex(t => /^Fees and limits$/i.test(t))
-  const j = titles.findIndex(t => /^Supported features$/i.test(t))
+  const j = titles.findIndex(t => /^Supported NUTs$/i.test(t))
   expect(j).toBe(0)
   expect(i).toBe(1)
   await expect(page.locator('.md-nuts-side > *').first()).toHaveAttribute('data-testid', 'mint-fees-limits')

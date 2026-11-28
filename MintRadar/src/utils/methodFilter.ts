@@ -40,10 +40,16 @@ export function mintMatchesMethod(mint: MethodMint, method: string | null): bool
   return method === null || offeredMethods(mint).has(method)
 }
 
-/** Filter options: every method some mint offers, known ones first. A selected method nobody offers stays listed so it can be cleared. */
+/**
+ * The methods the filter offers (owner decision 2026-11-28): Lightning (bolt11, bolt12) and on-chain only. A mint's own
+ * methods (paypal, venmo, issuance, transfer, epoch, …) are never filter options; a blocklist missed every new one.
+ */
+export const FILTER_METHODS: ReadonlySet<string> = new Set(METHOD_ORDER)
+
+/** Filter options: the FILTER_METHODS some mint offers, in that order. A selected method nobody offers stays listed so it can be cleared. */
 export function methodOptions(mints: readonly MethodMint[], selected: string | null): string[] {
   const all: string[] = selected ? [selected] : []
-  for (const m of mints) all.push(...offeredMethods(m))
+  for (const m of mints) all.push(...[...offeredMethods(m)].filter(x => FILTER_METHODS.has(x)))
   return sortMethods(all)
 }
 

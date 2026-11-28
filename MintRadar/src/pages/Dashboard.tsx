@@ -47,8 +47,6 @@ import { parseBulkInput, bulkFailureMessage, MAX_BULK_URLS } from '@/utils/bulkI
 import './Dashboard.css'
 
 /** Payment methods left out of the Method filter (M2, 2026-11-22; epoch and hashrate since the review of 2026-11-27, M-A). */
-const HIDDEN_FILTER_METHODS: ReadonlySet<string> = new Set(['paypal', 'venmo', 'epoch', 'hashrate'])
-
 // Historical trend charts pull in Recharts (~380 kB chunk) — lazy-load so
 // that chunk only loads when a user actually opens Compare, not on every
 // Dashboard visit. Matches the Stats/MintDetail lazy-loading pattern in App.tsx.
@@ -815,7 +813,7 @@ export default function Dashboard() {
   // Method filter options: what the tracked mints offer right now (a switched-off NUT-04/05 side does not count), plus the selected one.
   // M2 (UI/UX report 2026-11-22): PayPal, Venmo (and since 2026-11-27 epoch and hashrate) are not offered in the Method filter (they cut the row on phones);
   // a ?method= already set to one of them stays listed so it can be cleared.
-  const methodChoices = useMemo(() => methodOptions(allMints, pendingFilters.method).filter(m => !HIDDEN_FILTER_METHODS.has(m) || m === pendingFilters.method), [allMints, pendingFilters.method])
+  const methodChoices = useMemo(() => methodOptions(allMints, pendingFilters.method), [allMints, pendingFilters.method])
   // Phone default view: first MOBILE_COLLAPSED_ONLINE online mints + "Show all N" (mobileCollapse.ts).
   const isPhone = useMediaQuery(MOBILE_COLLAPSE_QUERY)
   const [mobileExpanded, setMobileExpanded] = useState(() => {

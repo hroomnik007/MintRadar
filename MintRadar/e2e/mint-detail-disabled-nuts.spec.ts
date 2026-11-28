@@ -38,7 +38,7 @@ for (const vp of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
       await expect(page.locator('.md-quick-btn', { hasText: 'Mint QR' })).toBeVisible()
 
       await page.locator('.md-tab', { hasText: /^NUTs$/ }).click()
-      await expect(page.locator('.nut-summary-line')).toContainText('2 switched off by the operator')
+      await expect(page.locator('.nut-summary-line')).toHaveText(/^\d+ of the 14 NUTs we track$/)
       for (const nut of ['NUT-04', 'NUT-05']) {
         const card = page.locator('.nut-card', { hasText: nut })
         await expect(card).toHaveClass(/nut-disabled/)

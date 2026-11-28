@@ -21,12 +21,13 @@ const LOADED: Record<number, { head: number; board: number; nhi: number; stack: 
   // Re-measured 2026-11-28 after the Tools/Stats review (geography sentence and CDN bar, first 8 cities on phones, movers
   // "before → now"): fresh loads with the reservations off. The taller geography card raised the stack (row 2) to 743.7.
   1440: { head: 93.6, board: 1445.0, nhi: 330.7, stack: 743.7 },
-  // 1024: the Geography card is taller than the Movers card in their shared row, so a one-line movers note (32 px) does
-  // not make the board taller: 2244.4 with and without it.
-  1024: { head: 93.6, board: 2212.4, nhi: 330.7, stack: 743.7, boardMin: 2244.4 },
+  // 1024: another card in the Movers card's row is taller, so the movers note (32 or 50 px) does not make the board
+  // taller: 2178.8 with and without it (re-measured 2026-11-28 after the geography sentence was removed). `board` is that
+  // minus the tallest note (50), which is also the band's reservation, so board + note never exceeds boardMin.
+  1024: { head: 93.6, board: 2128.8, nhi: 330.7, stack: 743.7, boardMin: 2178.8 },
   768: { head: 93.6, board: 1797.8, nhi: 336.0, stack: 641.0 },
-  390: { head: 104.8, board: 3336.5, nhi: 441.0, stack: 615.0 },
-  320: { head: 104.8, board: 3526.3, nhi: 441.0, stack: 650.0 },
+  390: { head: 104.8, board: 3270.8, nhi: 441.0, stack: 615.0 },
+  320: { head: 104.8, board: 3441.8, nhi: 441.0, stack: 650.0 },
 }
 
 // The REAL height of the movers note (px) by the number of changes it lists, as [from width, to width, height] ranges,

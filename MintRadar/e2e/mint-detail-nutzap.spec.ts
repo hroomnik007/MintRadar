@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test'
 import { installApiMocks, mockRelays, MOCK_KNOWN_MINTS } from './fixtures/mocks'
-import { layoutReady, resize } from './fixtures/settle'
+import { resize } from './fixtures/settle'
 
 type Page = import('@playwright/test').Page
 
-// The "Nutzap-related features" Overview panel is gone. What is left: one muted sentence under the NUT compatibility grid on
-// the NUTs tab (no verdict, no "ready"), and the NUT card grid that follows `supported:false` / presence-only / absent entries.
+// The "Nutzap-related features" Overview panel is gone, and since 2026-11-28 so is the muted nutzap sentence on the NUTs tab
+// (owner: the "What works with this mint" row says it). What is left: the NUT rows that follow `supported:false` / presence-only
+// / absent entries.
 
 const ALPHA = 'https://alpha.mint.example'
 const SENTENCE = "NUT-07, NUT-10, NUT-11 and NUT-12 are the ones nutzaps (NIP-61) rely on · from the mint's /v1/info, checked 5 min ago."
@@ -36,37 +37,16 @@ test('the Overview has no Nutzap-related features panel', async ({ page }) => {
   await expect(note(page)).toHaveCount(0)
 })
 
-test('the NUTs tab has the one muted sentence under the grouped NUTs, with no verdict', async ({ page }) => {
-  await open(page, { '4': {}, '5': {}, '7': {}, '10': {}, '11': {}, '12': {} })
-  await expect(note(page)).toHaveText(SENTENCE)
-  // The last line of the "Supported features" panel since the 2026-11-19 redesign (the grid became groups).
-  await expect(page.locator('.md-nuts-features > .md-nut-nutzap-note:last-child')).toHaveCount(1)
-  await expect(page.locator('.md-nuts-features')).toContainText(SENTENCE)
-  await expect(note(page)).not.toContainText(/ready|safe|recommended|trusted|supported/i)
-  // the same sentence whatever the mint declares
-  await expect(page.getByText(SENTENCE)).toHaveCount(1)
+test('the NUTs tab has no nutzap sentence and no NUT-09 hint (owner, 2026-11-28); "What works" still names them', async ({ page }) => {
+  await open(page, { '4': {}, '5': {}, '7': {}, '9': {}, '10': {}, '11': {}, '12': {} })
+  await expect(page.locator('#md-nuts-title')).toHaveText('Supported NUTs')
+  await expect(page.locator('.nut-summary-line')).toHaveText('7 of the 14 NUTs we track')
+  await expect(note(page)).toHaveCount(0)
+  await expect(page.getByText(SENTENCE)).toHaveCount(0)
+  await expect(page.getByText('NUT-09 lets a wallet restore')).toHaveCount(0)
+  await expect(page.locator('.md-nuts-works')).toContainText('Yes, NUT-07, 10, 11 and 12 are supported')
+  await expect(page.locator('.md-nuts-works')).toContainText('Yes, NUT-09')
 })
-
-test('the sentence is the same for a mint that declares none of the four NUTs', async ({ page }) => {
-  await open(page, { '4': {}, '5': {} })
-  await expect(note(page)).toHaveText(SENTENCE)
-})
-
-for (const w of [320, 390, 768, 1440] as const) {
-  test(`${w}px: the sentence wraps inside the page, no text under 12 px`, async ({ page }) => {
-    await open(page, { '7': {}, '11': {} }, [w, 900])
-    await layoutReady(page)
-    const m = await note(page).evaluate(el => {
-      const vw = document.documentElement.clientWidth
-      const r = el.getBoundingClientRect()
-      return { right: r.right, left: r.left, vw, scroll: document.documentElement.scrollWidth - vw, px: parseFloat(getComputedStyle(el).fontSize) }
-    })
-    expect(m.right).toBeLessThanOrEqual(m.vw + 0.5)
-    expect(m.left).toBeGreaterThanOrEqual(-0.5)
-    expect(m.scroll).toBeLessThanOrEqual(1)
-    expect(m.px).toBeGreaterThanOrEqual(12)
-  })
-}
 
 test('the four shapes of a NUT entry: supported:false is not supported in the NUT card grid and the modal', async ({ page }) => {
   // 7: supported:false, 10: supported:true, 11: presence-only object with settings, 12: absent, 14: null (declared as nothing)

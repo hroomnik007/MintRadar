@@ -2225,7 +2225,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
   .audit-cz-seg-btn { flex: 1 1 0; min-height: 44px; padding: 6px 8px; line-height: 1.25; }
 }
 /* NUTs tab: the one sentence under the NUT compatibility grid */
-.md-nut-nutzap-note { margin-top: 12px; font-size: 12px; line-height: 1.5; color: var(--text3); }
 
 /* Touch hit areas for the small Mint Detail icons (2026-10-25): an invisible ::before reaches 44px on a coarse pointer;
    the 24px visible buttons, the layout and the mouse/desktop look do not change.
@@ -2736,7 +2735,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 .nut-row-state.supported { color: var(--accent); }
 .nut-row-state.nut-disabled { color: color-mix(in srgb, var(--amber) 85%, var(--text)); }
 .nut-row-state.unsupported { color: var(--text3); }
-.mint-detail .md-nut-nutzap-note { margin-top: 14px; font-size: var(--fs-xs); color: var(--text3); }
 .mint-detail .md-nuts-works .md-panel-title { margin-bottom: 8px; }
 .md-works { margin: 0; }
 .md-works dd { margin: 0; }

@@ -1,4 +1,4 @@
-import { SIGNATURE_CHECK_TEXT, CLAIM_FEE_TEXT, TEST_MINT_TEXT } from '@/utils/tooltipTexts'
+import { SIGNATURE_CHECK_TEXT, CLAIM_FEE_TEXT, TEST_MINT_TEXT, TOKEN_PRIVACY_TEXT } from '@/utils/tooltipTexts'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { passesWizardNutChecks } from '@/utils/nutFilters'
 import { Link, useNavigate } from 'react-router-dom'
@@ -12,7 +12,7 @@ import { startTokenRun, classifyRunError, createRunGuard, type TokenRun } from '
 import { normalizeMintUrl, reliabilityColor, reliabilityScoreInfo, displayName as mintDisplayName, cardReliabilityLabel, cardLightningLabel, computeDuplicateMintNames } from '@/utils/mintFormatting'
 import { PaymentRequestInspector } from '@/components/PaymentRequestInspector'
 import { PageHead } from '@/components/layout/PageHead'
-import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, ExternalLink, Info, type LucideIcon } from 'lucide-react'
+import { Zap, Check, ShieldCheck, PlugZap, KeyRound, Lock, Satellite, ChevronDown, Search, LoaderCircle, CircleCheck, CircleX, CircleMinus, TriangleAlert, Coins, ExternalLink, type LucideIcon } from 'lucide-react'
 import { isTestMint } from '@/constants/testMints'
 import { isNotRecommendedMint } from '@/utils/notRecommended'
 import { isEligibleForRecommendation, hasFreshProbe, hasSteadyUptime } from '@/utils/reliabilityScore'
@@ -341,7 +341,7 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
   return (
     <div className="tool-card">
       <div className="tool-header">
-        <div className="tool-title">Token inspector</div>
+        <div className="tool-title">Token inspector<InfoTooltip label="Where the token goes" text={TOKEN_PRIVACY_TEXT} iconSize={13} width={260} /></div>
         <div className="tool-subtitle">Paste a Cashu token (v4 or v3) to see its mint, amount and reliability before you redeem it.</div>
       </div>
 
@@ -367,7 +367,6 @@ function TokenInspector({ knownMints, list }: { knownMints: KnownMint[]; list: L
         </button>
         {!cleanToken && <span className="token-hint">Paste a token first.</span>}
       </div>
-      <p className="token-note tool-private"><Info size={14} aria-hidden="true" /><span>Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.</span></p>
 
       {parseError && inspected && (
         <div className="token-error">{parseError}</div>

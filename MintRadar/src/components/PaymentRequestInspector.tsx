@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Info } from 'lucide-react'
+import { InfoTooltip } from '@/components/InfoTooltip'
+import { PAYMENT_REQUEST_PRIVACY_TEXT } from '@/utils/tooltipTexts'
 import type { KnownMint } from '@/hooks/useKnownMints'
 import { CopyTextButton } from '@/components/mint/CopyTextButton'
 import { IcShield } from '@/components/mint/IcShield'
@@ -107,7 +108,7 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
   return (
     <div className="tool-card" data-testid="payment-request-inspector">
       <div className="tool-header">
-        <div className="tool-title">Payment request inspector</div>
+        <div className="tool-title">Payment request inspector<InfoTooltip label="Where the payment request goes" text={PAYMENT_REQUEST_PRIVACY_TEXT} iconSize={13} width={260} /></div>
         <div className="tool-subtitle">Paste a Cashu payment request (NUT-18 creqA, NUT-26 creqB or a bitcoin: link that contains one) to read what it asks for and which mints it accepts.</div>
       </div>
 
@@ -122,7 +123,6 @@ export function PaymentRequestInspector({ knownMints, list }: { knownMints: Know
         autoComplete="off"
       />
       {parsed.ok === false && parsed.reason === 'empty' && <div className="pr-hint">Paste a payment request first.</div>}
-      <p className="pr-note tool-private"><Info size={14} aria-hidden="true" /><span>Decoded in your browser. Nothing you paste here is sent anywhere.</span></p>
       {parsed.ok && parsed.link && <div className="pr-note" data-testid="pr-link-note">{bitcoinLinkNote(parsed.link)}</div>}
 
       {parsed.ok === false && parsed.reason !== 'empty' && (

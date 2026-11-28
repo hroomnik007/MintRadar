@@ -376,13 +376,17 @@ test.describe('Tools', () => {
   }
 
   test('Token Inspector states what stays local and what contacts the mint, and the cashu.me link note shows with the result', async ({ page }) => {
-    const note = page.locator('.token-note').first()
-    // Its own row with a lock since the 2026-11-19 redesign.
+    // Review 2026-11-28 (second pass): the sentence moved into the ⓘ next to the title, not a visible line.
+    await expect(page.getByText('Decoded in your browser.')).toHaveCount(0)
+    const trigger = page.getByRole('button', { name: 'Where the token goes' })
+    await trigger.click()
+    const note = page.getByRole('tooltip')
     await expect(note).toHaveText('Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.')
     // The facts, pinned individually so a rewrite cannot quietly drop one.
     await expect(note).toContainText('Our server never sees the token')
     await expect(note).toContainText('contacts only the mint named in it')
     await expect(note).not.toContainText('send the full token to cashu.me')
+    await page.keyboard.press('Escape')
     // The separate line under the action buttons is gone — its content lives in the line above.
     await expect(page.getByText('These open cashu.me with your full token in the link.')).toHaveCount(0)
     await expect(page.getByPlaceholder('v4 token (cashuB…) or v3 token (cashuA…)')).toBeVisible()

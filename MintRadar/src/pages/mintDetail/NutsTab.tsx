@@ -5,11 +5,9 @@ import { Ban, Check, Minus } from 'lucide-react'
 import { MintFeesLimits } from '@/components/mint/MintFeesLimits'
 import { TRACKED_NUTS } from '@/constants/nuts'
 import { clickableProps } from '@/utils/clickableProps'
-import { BACKUP_SUPPORTED_TEXT, NO_BACKUP_TEXT } from '@/utils/tooltipTexts'
 import { NUT_GROUPS } from './nutCatalog'
-import { nutzapNote } from '@/utils/mintDetailFacts'
 
-/** The NUTs nutzaps (NIP-61) rely on (NUTZAP_NUTS_NOTE says the same in words). */
+/** The NUTs nutzaps (NIP-61) rely on. */
 const NUTZAP_NUTS = ['NUT-07', 'NUT-10', 'NUT-11', 'NUT-12'] as const
 
 export interface NutsTabProps {
@@ -21,15 +19,11 @@ export interface NutsTabProps {
   /** Tracked NUTs the mint declares but switched off (NUT-04/05 `disabled: true`, live /v1/info else the stored one). */
   disabledNuts: string[]
   onSelectNut: (nut: string) => void
-  /** Latest successful /v1/info time (MintDetail's infoFetchedAt: lastCheckedAt while online, else lastOnlineAt), for the nutzap sentence. */
-  infoFetchedAt: string | null | undefined
-  now: number
 }
 
-export function NutsTab({ feesLimits, supportsBackupRestore, supportedNuts, disabledNuts, onSelectNut, infoFetchedAt, now }: NutsTabProps) {
+export function NutsTab({ feesLimits, supportsBackupRestore, supportedNuts, disabledNuts, onSelectNut }: NutsTabProps) {
   // 2026-11-19 redesign (phase 4d): the tracked NUTs in groups with one plain sentence each, Fees and limits and
   // "What works with this mint" (the NUTs as things a user knows) beside them. No verdict words.
-  const nutzapLine = nutzapNote(infoFetchedAt, now)
   const state = (nut: string): 'nut-disabled' | 'supported' | 'unsupported' =>
     disabledNuts.includes(nut) ? 'nut-disabled' : supportedNuts.includes(nut) ? 'supported' : 'unsupported'
   const has = (nut: string) => state(nut) === 'supported'
@@ -45,11 +39,10 @@ export function NutsTab({ feesLimits, supportsBackupRestore, supportedNuts, disa
       <section className="md-panel md-nuts-features" aria-labelledby="md-nuts-title">
         <div className="md-panel-h">
           <div>
-            <h2 id="md-nuts-title" className="md-panel-title">Supported features</h2>
+            <h2 id="md-nuts-title" className="md-panel-title">Supported NUTs</h2>
+            {/* Owner, 2026-11-28: only the count; the source and the switched-off rows are in the list itself. */}
             <p className="md-panel-sub nut-summary-line">
-              <strong>{supportedNuts.length}</strong> of the {TRACKED_NUTS.length} NUTs we track, as declared in the mint&apos;s /v1/info
-              {disabledNuts.length > 0 && <>, {disabledNuts.length} switched off by the operator</>}
-              {nutzapLine.time ? <>, checked <span title={nutzapLine.time.title}>{nutzapLine.time.label}</span>.</> : '.'}
+              <strong>{supportedNuts.length}</strong> of the {TRACKED_NUTS.length} NUTs we track
             </p>
           </div>
         </div>
@@ -73,11 +66,6 @@ export function NutsTab({ feesLimits, supportsBackupRestore, supportedNuts, disa
             })}
           </div>
         ))}
-        {/* One muted sentence: which NUTs nutzaps (NIP-61) rely on, with the source and time. No verdict. */}
-        <div className="md-nut-nutzap-note">
-          {nutzapLine.lead}
-          {nutzapLine.time ? <>, checked <span title={nutzapLine.time.title}>{nutzapLine.time.label}</span>.</> : '.'}
-        </div>
       </section>
       <div className="md-nuts-side">
         {feesLimits && <MintFeesLimits {...feesLimits} />}
@@ -91,7 +79,6 @@ export function NutsTab({ feesLimits, supportsBackupRestore, supportedNuts, disa
               </div>
             ))}
           </dl>
-          <p className="md-panel-hint">{supportsBackupRestore ? BACKUP_SUPPORTED_TEXT : NO_BACKUP_TEXT}</p>
         </section>
       </div>
     </div>

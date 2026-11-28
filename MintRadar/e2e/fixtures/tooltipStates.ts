@@ -223,7 +223,8 @@ export const TOOLTIP_STATES: TooltipState[] = [
       return true
     },
   },
-  page_('tools', '/tools'),
+  // Waits for the inspectors: the page is lazy-loaded and its two title ⓘ (2026-11-28) are its only triggers.
+  page_('tools', '/tools', async p => { await expect(p.getByRole('button', { name: 'Where the payment request goes' })).toBeVisible() }),
   {
     id: 'tools-token-test-mint',
     run: async page => {

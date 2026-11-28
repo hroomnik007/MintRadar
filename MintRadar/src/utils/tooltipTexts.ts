@@ -151,9 +151,9 @@ export function contactRowText(): string {
   return `Email, Twitter and Nostr contacts the mint lists in a recognised format. ${numberWord(CONTACT_FULL_AT, true)} or more give the full ${CONTACT_POINTS} points.`
 }
 
-/** NUTs tab: the backup chips. */
-export const BACKUP_SUPPORTED_TEXT = 'NUT-09 lets a wallet restore its ecash from a seed phrase after a lost or broken device.'
-export const NO_BACKUP_TEXT = 'This mint does not support NUT-09, so wallets cannot restore ecash from a seed phrase here. Keep your own token backups.'
+/** Tools: where a pasted token or payment request goes (the ⓘ next to each inspector's title). */
+export const TOKEN_PRIVACY_TEXT = 'Decoded in your browser. Our server never sees the token; checking it contacts only the mint named in it.'
+export const PAYMENT_REQUEST_PRIVACY_TEXT = 'Decoded in your browser. Nothing you paste here is sent anywhere.'
 
 /** Compare modal, Backup row. */
 export const COMPARE_BACKUP_TEXT = 'Whether this mint supports NUT-09, letting wallets restore coins after data loss.'

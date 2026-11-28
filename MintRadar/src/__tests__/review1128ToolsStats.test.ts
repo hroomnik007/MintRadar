@@ -1,7 +1,6 @@
-// Review 2026-11-28 (Tools + Stats): the token result block, the Stats geography sentence and the trend chart's axis.
+// Review 2026-11-28 (Tools + Stats): the token result block and the trend chart's axis (the geography sentence was removed on the owner's request).
 import { describe, it, expect } from 'vitest'
 import { tokenVerdict, type TokenVerdictInput } from '@/utils/tokenVerdict'
-import { geoSummaryText, computeGeoDistribution, CDN_BUCKET } from '@/utils/geoDistribution'
 import { trendScoreDomain } from '@/utils/trendTicks'
 
 const base: TokenVerdictInput = { spent: null, checking: false, signaturesConfirmed: false, mintName: 'Minibits mint', mintHost: 'mint.minibits.cash', testMint: false }
@@ -30,19 +29,6 @@ describe('tokenVerdict (T1)', () => {
   })
   it('a test mint adds that its ecash has no value', () => {
     expect(tokenVerdict({ ...base, testMint: true, spent: checked(1, 1, 0) }).sub).toMatch(/Ecash from a test mint has no value\.$/)
-  })
-})
-
-describe('geoSummaryText (S3)', () => {
-  const m = (serverLocation: string | null, online = true) => ({ online, serverLocation })
-  it('mints in cities and behind a CDN; offline mints and unknown locations are not cities', () => {
-    const d = computeGeoDistribution([m('Frankfurt, DE'), m('Frankfurt, DE'), m('Tokyo, JP'), m('Cloudflare CDN'), m('AWS us-east-1'), m(null), m('Paris, FR', false)], 24)
-    expect(d.top.some(e => e.loc === CDN_BUCKET)).toBe(true)
-    expect(geoSummaryText(d)).toBe('6 online mints: 3 in 2 cities, 2 behind a CDN or anycast (city unknown).')
-  })
-  it('without a CDN bucket the clause is left out; nothing online gives null', () => {
-    expect(geoSummaryText(computeGeoDistribution([m('Tokyo, JP')], 24))).toBe('1 online mint: 1 in 1 city.')
-    expect(geoSummaryText(computeGeoDistribution([], 24))).toBeNull()
   })
 })
 
