@@ -40,25 +40,14 @@ async function open(page: Page, url: string, known: Record<string, unknown>, opt
   await layoutReady(page)
 }
 
-const rowOf = (page: Page, label: string) => page.locator('.md-reliability-panel .rb-row', { hasText: label })
 
-test.describe('W5b A: source line under every score row', () => {
-  test('healthy mint: source, window, sample and time on all five rows', async ({ page }) => {
+test.describe('W5b A: the score rows (no source lines since 2026-11-28, owner)', () => {
+  test('no source line under any of the five rows', async ({ page }) => {
     await open(page, ALPHA, { lastCheckedAt: ago(3 * 60_000) })
-    const lines = page.locator('.md-reliability-panel .rb-row-source')
-    await expect(lines).toHaveCount(5)
-    await expect(lines.nth(0)).toHaveText('our probes from Nuremberg · 24 h · 12 checks · last probe 3 min ago')
-    await expect(lines.nth(1)).toHaveText('cashu.info · 7 days · 100 swaps · synced 1h ago')
-    await expect(lines.nth(2)).toHaveText('declared by the mint in /v1/info · fetched 3 min ago')
-    await expect(lines.nth(3)).toHaveText('declared by the mint in /v1/info · compared with the newest stable release · fetched 3 min ago')
-    await expect(lines.nth(4)).toHaveText('declared by the mint in /v1/info · fetched 3 min ago')
-    // The absolute time is the title of the relative one.
-    await expect(lines.nth(1).locator('span[title]')).toHaveAttribute('title', /^\d{1,2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2} UTC$/)
-  })
-
-  test('neutral audit row says why instead of a swaps line', async ({ page }) => {
-    await open(page, ALPHA, { auditCzTotal: 3, auditCzBlamed: 0 })
-    await expect(rowOf(page, 'Audit reliability').locator('.rb-row-source')).toHaveText('cashu.info · 7 days · 3 swaps, fewer than 10 (neutral) · synced 1h ago')
+    await expect(page.locator('.md-reliability-panel .rb-row')).toHaveCount(5)
+    await expect(page.locator('.md-reliability-panel .rb-row-source')).toHaveCount(0)
+    await expect(page.locator('.md-reliability-panel')).not.toContainText('declared by the mint in /v1/info')
+    await expect(page.locator('.md-reliability-panel')).not.toContainText('our probes from')
   })
 
   test('score header links to the methodology with the real version', async ({ page }) => {
@@ -78,18 +67,12 @@ test.describe('W5b A: source line under every score row', () => {
     await expect(page.getByRole('tooltip')).toContainText('The Reliability Score takes the worse result of two cashu.info windows: the last 7 days and up to 28 days. The Audit tab can also show the last 30 days of swaps; that view is not an input to the score.')
   })
 
-  test('320 px: lines wrap inside the panel without clipping', async ({ page }) => {
+  test('320 px: the rows fit the dialog, no source lines there either', async ({ page }) => {
     await open(page, ALPHA, {}, { width: 320, height: 640 })
     await page.locator('.md-sc-score-link').click()
-    const lines = page.locator('.rb-modal .rb-row-source')
-    await expect(lines).toHaveCount(5)
-    for (let i = 0; i < 5; i++) {
-      const box = await lines.nth(i).boundingBox()
-      expect(box!.x).toBeGreaterThanOrEqual(0)
-      expect(box!.x + box!.width).toBeLessThanOrEqual(320)
-      expect(await lines.nth(i).evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
-      expect(await lines.nth(i).evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12)
-    }
+    await expect(page.locator('.rb-modal .rb-row')).toHaveCount(5)
+    await expect(page.locator('.rb-modal .rb-row-source')).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0)
   })
 })
 

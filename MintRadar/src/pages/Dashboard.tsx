@@ -34,6 +34,7 @@ import { trackedCount, onlineCount as countOnline, hiddenByDefaultCount, poolFor
 import { collapseOnline, showingNoteText, mobileCollapseApplies, showLessApplies, MOBILE_COLLAPSED_ONLINE, MOBILE_COLLAPSE_QUERY, MOBILE_EXPANDED_KEY, scrollPageTopAfterCollapse } from '@/utils/mobileCollapse'
 import { useMediaQuery } from '@/hooks/useIsMobile'
 import { TRACKED_NUT_KEYS } from '@/constants/nuts'
+import { sortUnits } from '@/utils/sortUnits'
 import { isNutOffered } from '@/utils/nutSupport'
 import { hasRequiredNuts } from '@/utils/nutFilters'
 import { parseMethodParam, mintMatchesMethod, methodOptions, methodDisplayText } from '@/utils/methodFilter'
@@ -695,7 +696,7 @@ export default function Dashboard() {
   } | null>(null)
   // Probe/lookup results are keyed by the input they were produced for —
   // 'loading' and 'idle' are derived below instead of set synchronously in effects.
-  const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null } | null; errorKind?: ProbeErrorKind; rateLimitMsg?: string }>({ url: '', state: 'error', result: null })
+  const [probe, setProbe] = useState<{ url: string; state: 'success' | 'error'; result: { name: string | null; version: string | null; nutCount: number; latencyMs: number | null; units: string[] } | null; errorKind?: ProbeErrorKind; rateLimitMsg?: string }>({ url: '', state: 'error', result: null })
   // The outcome of one Nostr key lookup, keyed by the input it was run for (derived 'loading' while none matches).
   const [nostrLookup, setNostrLookup] = useState<{ input: string; outcome: 'found' | 'empty' | 'unreachable' | 'nonhttps'; url: string }>({ input: '', outcome: 'empty', url: '' })
   // The reason line follows the input only after a short pause, so the live region does not announce every keystroke.
@@ -729,6 +730,8 @@ export default function Dashboard() {
   // points assistive technology at those two instead of at the empty status region.
   const submitEmpty = inputClass.kind === 'empty'
   const submitDisabled = submitTracked || probeState !== 'success' || submitState === 'loading'
+  // The URL the last successful submit added (the success view's "Open mint page").
+  const [submittedUrl, setSubmittedUrl] = useState('')
 
   // Bulk submit state
   const [bulkInput, setBulkInput] = useState('')
@@ -1134,6 +1137,8 @@ export default function Dashboard() {
                 // The tracked NUTs the mint offers (declared, not switched off), like the Mint detail header (not every key of `nuts`).
                 nutCount: TRACKED_NUT_KEYS.filter(key => isNutOffered(nuts[key])).length,
                 latencyMs: data.latencyMs,
+                // The units of its active keysets, sat first (sortUnits), for the preview line.
+                units: sortUnits([...new Set((data.keysets ?? []).filter(k => k.active !== false && typeof k.unit === 'string').map(k => k.unit.toLowerCase()))]),
               },
             })
           } else {
@@ -1175,11 +1180,14 @@ export default function Dashboard() {
           setSubmitMsg(probeErrorMessage(data.errorKind) ?? data.error ?? 'Submission failed')
         } else {
           setSubmitState('success')
+          // A6: say which mint and when its first check runs; the success view links to its page.
+          const addedName = cleanMintName(data.name ?? probeResult?.name ?? '', '') || getHostname(submitUrl)
           setSubmitMsg(
             data.isNew === false
               ? 'Already tracked — this mint is already known to MintRadar.'
-              : 'Added. It will show up in the list shortly.'
+              : `Added ${addedName}. Its first check runs within 5 minutes.`
           )
+          setSubmittedUrl(submitUrl)
           setSubmitAliasOf(data.aliasOf ?? [])
           void queryClient.invalidateQueries({ queryKey: ['mints-known'] })
           // Already-tracked URLs keep the modal message only — no persistent
@@ -1735,7 +1743,7 @@ export default function Dashboard() {
             {submitTab === 'single' && (
               <div role="tabpanel" id="submit-panel-single" aria-labelledby="submit-tab-single">
                 <div className="submit-modal-desc" id="submit-desc">
-                  Paste a mint URL. We check it before adding. Only public mints are accepted. First checks run within 5 minutes.
+                  Paste the mint&apos;s address, or the npub of its Nostr announcement. We check that it answers as a Cashu mint before adding it.
                 </div>
                 {/* Mirrors SUBMIT_RATE_LIMIT_MAX (20 per hour per IP) in backend/src/index.ts — manually synced like the Bulk limits below. */}
                 {submitState !== 'success' && (
@@ -1750,13 +1758,13 @@ export default function Dashboard() {
                       autoCorrect="off"
                       spellCheck={false}
                       autoComplete="off"
-                      placeholder="mint.example.com"
+                      placeholder="mint.example.com or npub1…"
                       value={submitInput}
                       onChange={e => handleSubmitInputChange(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !submitDisabled) handleSubmitMint() }}
                       aria-describedby="submit-helper submit-status"
                     />
-                    <div className="submit-input-hint" id="submit-helper">https:// is added to a bare address, http:// is not accepted · 20 per hour.</div>
+                    <div className="submit-input-hint" id="submit-helper">https:// is added for you. Up to 20 mints an hour.</div>
                     {/* One status region for everything the field produces: the reason for an unusable value, the key
                         lookup and the mint preview. */}
                     <div id="submit-status" className="submit-status-reserve" role="status" aria-live="polite">
@@ -1775,7 +1783,7 @@ export default function Dashboard() {
                         <div className="submit-probe-preview submit-tracked" data-testid="submit-tracked">
                           <MintFavicon url={submitUrl} name={trackedMint?.name} iconUrl={trackedMint?.iconUrl ?? null} size={36} radius={9} />
                           <div className="submit-tracked-body">
-                            <div className="submit-probe-name">Already tracked</div>
+                            <div className="submit-probe-name">Already on MintRadar</div>
                             <div className="submit-probe-meta">
                               <span>{trackedMint !== undefined ? mintDisplayName(trackedMint) : getHostname(submitUrl)}</span>
                               <span>·</span>
@@ -1786,13 +1794,22 @@ export default function Dashboard() {
                       )}
                       {probeState === 'loading' && <div className="submit-probe-loading">Checking mint…</div>}
                       {probeState === 'success' && probeResult !== null && (
-                        <div className="submit-probe-preview">
-                          <div className="submit-probe-name">{probeResult.name ?? 'Unknown mint'}</div>
-                          <div className="submit-probe-meta">
-                            <span>v{probeResult.version ?? '?'}</span>
-                            <span>·</span>
-                            <span>{probeResult.nutCount} NUTs</span>
-                            {probeResult.latencyMs !== null && (<><span>·</span><span style={{ color: latencyColor(probeResult.latencyMs) }}>{probeResult.latencyMs} ms</span></>)}
+                        // A5 (owner-approved mockup 2026-11-28): initials (an untracked mint's icon is never fetched), the
+                        // name, one line of facts and "Answers as a Cashu mint". A1: the version as the mint sends it,
+                        // without the old "v" in front ("vcdk-mintd/0.18.3").
+                        <div className="submit-probe-preview submit-probe-found" data-testid="submit-preview">
+                          <MintFavicon url={submitUrl} name={probeResult.name} iconUrl={null} size={36} radius={9} />
+                          <div className="submit-tracked-body">
+                            <div className="submit-probe-name">{probeResult.name ?? 'Unknown mint'}</div>
+                            <div className="submit-probe-meta">
+                              {[
+                                probeResult.version ? probeResult.version.replace('/', ' ') : null,
+                                `${probeResult.nutCount} of ${TRACKED_NUT_KEYS.length} NUTs`,
+                                probeResult.units.length > 0 ? probeResult.units.join(', ') : null,
+                              ].filter(Boolean).join(' · ')}
+                              {probeResult.latencyMs !== null && <> · <span style={{ color: latencyColor(probeResult.latencyMs) }}>{probeResult.latencyMs} ms</span></>}
+                            </div>
+                            <div className="submit-probe-ok"><span className="submit-probe-ok-dot" aria-hidden="true" />Answers as a Cashu mint</div>
                           </div>
                         </div>
                       )}
@@ -1825,6 +1842,7 @@ export default function Dashboard() {
                       </div>
                     )}
                     <div className="submit-modal-actions">
+                      <Link className="submit-open-link" to={`/mint/${encodeURIComponent(submittedUrl)}`} onClick={() => setShowSubmit(false)}>Open mint page</Link>
                       {/* The Submit button is gone: focus goes to Close, the next sensible stop after the result. */}
                       <button className="submit-ok-btn" autoFocus onClick={() => setShowSubmit(false)}>Close</button>
                     </div>
@@ -1843,7 +1861,7 @@ export default function Dashboard() {
                     backend/src/index.ts (no shared workspace between the two
                     packages, so this is a manually-synced number like
                     testMints.ts/auditScore.ts — update both if either changes). */}
-                <div className="submit-input-hint" id="bulk-limits">https:// is added to a bare address, http:// is not accepted · up to 100 mints · 10 per hour.</div>
+                <div className="submit-input-hint" id="bulk-limits">https:// is added for you. Up to 100 mints at once, 10 times an hour.</div>
                 {!bulkRunning && !bulkDone && (
                   <>
                     <label htmlFor="bulk-input" className="sr-only">Mint URLs, one per line</label>

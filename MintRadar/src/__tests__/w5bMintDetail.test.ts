@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
-import { auditSourceLine, infoSourceLine, sourceLineText, uptimeSourceLine } from '@/utils/scoreSources'
 import { LAST_ERROR_MAX_CHARS, sanitizeLastError, unavailableHeadline, restoreSentence, contactSentence } from '@/utils/unavailableMint'
-import { PROBE_LOCATION } from '@/constants/probeLocation'
 
 const NOW = Date.UTC(2026, 9, 20, 12, 0, 0)
 const H = 3_600_000
@@ -29,30 +27,6 @@ describe('limitedDataReasons', () => {
     const r = limitedDataReasons({ ...enough, auditTotal: 2, discoveredAt: iso(NOW - 5 * D) })
     expect(r).toHaveLength(2)
     expect(limitedDataText(r)).toBe('Audit based on fewer than 10 swaps; tracked for 5 of 30 days, score capped at 75.')
-  })
-})
-
-describe('score row source lines', () => {
-  it('uptime: our probes from the probe location, 24 h, checks, last probe', () => {
-    const l = uptimeSourceLine({ checks: 288, lastProbeAt: iso(NOW - 3 * 60_000), now: NOW })
-    expect(sourceLineText(l)).toBe(`our probes from ${PROBE_LOCATION} · 24 h · 288 checks · last probe 3 min ago`)
-    expect(l.time?.title).toBe('20 Oct 2026, 11:57 UTC')
-  })
-  it('uptime: leaves out a sample that is not known', () => {
-    expect(sourceLineText(uptimeSourceLine({ checks: null, lastProbeAt: null, now: NOW }))).toBe(`our probes from ${PROBE_LOCATION} · 24 h`)
-  })
-  it('audit: cashu.info, 7 days, swaps, sync time', () => {
-    const t = auditSourceLine({ blamed: 0, total: 14, fetchedAt: iso(NOW - 2 * H), now: NOW })
-    expect(sourceLineText(t)).toBe('cashu.info · 7 days · 14 swaps · synced 2h ago')
-  })
-  it('audit: a neutral row says why instead of the swaps line', () => {
-    expect(sourceLineText(auditSourceLine({ blamed: 0, total: 3, fetchedAt: iso(NOW - H), now: NOW }))).toBe('cashu.info · 7 days · 3 swaps, fewer than 10 (neutral) · synced 1h ago')
-    expect(sourceLineText(auditSourceLine({ blamed: 0, total: 30, fetchedAt: iso(NOW - 9 * D), now: NOW }))).toContain('detail older than 7 days (neutral)')
-    expect(sourceLineText(auditSourceLine({ blamed: null, total: null, fetchedAt: null, now: NOW }))).toBe('cashu.info · 7 days · no data (neutral)')
-  })
-  it('NUTs, version, contact: declared by the mint, with the fetch time; version adds the comparison', () => {
-    expect(sourceLineText(infoSourceLine({ fetchedAt: iso(NOW - 5 * 60_000), now: NOW }))).toBe('declared by the mint in /v1/info · fetched 5 min ago')
-    expect(sourceLineText(infoSourceLine({ fetchedAt: iso(NOW - 5 * 60_000), now: NOW, comparedWithLatest: true }))).toBe('declared by the mint in /v1/info · compared with the newest stable release · fetched 5 min ago')
   })
 })
 

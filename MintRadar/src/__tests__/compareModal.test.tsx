@@ -97,7 +97,7 @@ describe('Compare modal (redesign 2026-11-28)', () => {
   it('sections in order, label above the values, one value per mint', () => {
     const { baseElement } = renderModal([A, B])
     expect(Array.from(baseElement.querySelectorAll('.cx-sections > section .cx-h')).map(h => h.textContent))
-      .toEqual(['Reliability', 'Speed', 'Deposits and withdrawals', 'Features', 'Operator'])
+      .toEqual(['Reliability', 'Latency', 'Deposits and withdrawals', 'Features', 'Operator'])
     expect(rowIds(baseElement)).toEqual(['uptime', 'uptime-30d', 'audit', 'rating', 'browser-latency', 'latency', 'fee', 'units', 'nut-count', 'version', 'contact-methods', 'nip87'])
     expect(label(baseElement, 'uptime-30d')).toBe('Uptime 30 days')
     expect(vals(baseElement, 'latency')).toEqual(['50 ms', '300 ms'])
@@ -165,8 +165,8 @@ describe('Compare modal (redesign 2026-11-28)', () => {
     const { baseElement } = renderModal([withMethods, off])
     expect(rowIds(baseElement)).toEqual(expect.arrayContaining(['method-bolt11', 'method-bolt12']))
     expect(label(baseElement, 'method-bolt11')).toBe('Lightning')
-    expect(vals(baseElement, 'method-bolt11')[0]).toBe('1 to 1,000 sat')
-    expect(vals(baseElement, 'method-bolt11')[1]).toMatch(/in: disabled by the mint/)
+    expect(vals(baseElement, 'method-bolt11')[0]).toBe('1 to 1k sat')
+    expect(vals(baseElement, 'method-bolt11')[1]).toMatch(/in disabled by the mint/)
     expect(vals(baseElement, 'method-bolt12')[1]).toBe('not offered')
   })
 

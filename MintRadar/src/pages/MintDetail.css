@@ -2026,7 +2026,7 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 /* ── New language: Add-to-wallet (QR) and Reliability Score breakdown modals ──
    Moved off inline styles; same shapes as the review modal: surface, 1px hairlines,
    boxed 32px close, 14px sans, no monospace. */
-.qr-modal { max-width: 340px; padding: 20px; }
+.qr-modal { max-width: 400px; padding: 20px; }
 .qr-modal-header { gap: 12px; align-items: flex-start; margin-bottom: 0; }
 .qr-modal-heading { flex: 1; min-width: 0; }
 /* "Add to wallet" (the mint name is the line under it, which may wrap; see the Mint QR polish block at the end). */
@@ -2096,8 +2096,6 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
 
 /* ── W5b: score sources, Limited data, unavailable block, signed health record ─────────────────────────── */
 /* "source · window · sample · time" under a breakdown row; wraps, never clips. */
-.rb-row-source { font-size: 12px; line-height: 1.4; color: var(--text3); margin: -2px 0 6px; overflow-wrap: anywhere; }
-.rb-row-source span[title] { text-decoration: underline dotted; text-underline-offset: 2px; }
 .md-method-ver { margin-left: auto; font-size: 12px; color: var(--text3); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; white-space: nowrap; }
 .md-method-ver:hover { color: var(--text); }
 .rb-method-ver { margin-left: auto; }
@@ -3077,19 +3075,21 @@ button[aria-label^="Copy"] { min-width: 24px; min-height: 24px; display: inline-
    no caret) in a quiet rounded box with a small copy icon inside on the right; the white frame is slimmer because the code
    carries its own 4-module quiet zone; the close and copy buttons keep a 44px touch area through an invisible ::before
    (the visible 32px stay). */
-.qr-modal-code-frame { padding: 8px; }
+/* No padding of its own (owner asked about the white edge, 2026-11-28): the white around the code is exactly the
+   standard 4-module quiet zone the SVG draws; the frame only rounds its corners. */
+.qr-modal-code-frame { padding: 0; overflow: hidden; line-height: 0; }
+.qr-modal-warn { margin: 14px 0 0; padding: 9px 12px; border-radius: 10px; font-size: 14px; line-height: 1.45; color: color-mix(in srgb, var(--amber) 55%, var(--text)); background: var(--amber-soft); border: 1px solid var(--amber-soft-strong); }
 .qr-modal-title { white-space: nowrap; }
 .qr-modal-mint { text-wrap: balance; overflow-wrap: anywhere; color: var(--text2); }
 .qr-modal-scan { text-align: center; font-size: 13px; line-height: 1.4; color: var(--text3); margin: -6px 0 12px; }
-.qr-modal-url-row { position: relative; display: flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 44px; padding: 6px 6px 6px 12px; background: rgba(0, 0, 0, 0.22); border: 1px solid var(--border); border-radius: 10px; }
+.qr-modal-url-row { position: relative; display: flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 44px; padding: 10px 12px; background: rgba(0, 0, 0, 0.22); border: 1px solid var(--border); border-radius: 10px; }
 /* Breaks at slashes and dots first (<wbr> after each one, scheme kept whole); overflow-wrap: anywhere is only the fallback for a single over-long token. */
 .qr-modal-url { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.4; color: var(--text2); overflow-wrap: anywhere; word-break: normal; cursor: text; }
-.qr-modal-copy { position: relative; flex-shrink: 0; width: 32px; height: 32px; min-height: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--text2); cursor: pointer; transition: color var(--transition), background var(--transition); }
-.qr-modal-copy:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); border-color: transparent; }
-.qr-modal-copy::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+.qr-modal-copy { width: 100%; min-height: 44px; margin-top: 10px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--action); border: 1px solid var(--action); border-radius: 10px; color: var(--bg); font: 600 15px var(--font-body); cursor: pointer; transition: opacity var(--transition); }
+.qr-modal-copy:hover { opacity: 0.92; }
 .qr-modal-close { position: relative; }
 .qr-modal-close::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
-.qr-modal-copy.is-copied { color: var(--green-bright); }
+.qr-modal-copy.is-copied { opacity: 0.92; }
 
 /* N5 (2026-11-27): the archived mint's place of "Show my latency": same box, not shown, not focusable. */
 .latency-test-slot { visibility: hidden; pointer-events: none; }

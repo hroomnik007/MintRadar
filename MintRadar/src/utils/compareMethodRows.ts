@@ -6,7 +6,8 @@ import type { KnownMint } from '@/hooks/useKnownMints'
 import { limitTable, paymentMethodWord } from '@/utils/feesLimits'
 import { disabledSides } from '@/utils/compareMethods'
 
-export interface MethodLine { text: string; muted: boolean }
+/** One line of a cell. `side` is set when deposits and withdrawals differ ("in" / "out", shown as a small prefix). */
+export interface MethodLine { text: string; muted: boolean; side?: 'in' | 'out' }
 export interface CompareMethodRow {
   /** "method-bolt11" */
   id: string
@@ -22,12 +23,29 @@ const METHOD_ORDER = ['bolt11', 'bolt12', 'onchain']
 const NOT_OFFERED = 'not offered'
 const NO_SIDE = '—'
 
-/** "1 to 1,000,000" -> "1 to 1,000,000 sat"; words ("no limits declared", "Disabled by the mint") stay as they are. */
+/**
+ * An amount in a short form so a narrow column does not break inside it (owner-approved mockup 2026-11-28, C5): 10,000 ->
+ * "10k", 5,000,000 -> "5M", 1,500 -> "1.5k". Only when it stays exact with at most one decimal; any other amount keeps
+ * its full digits (12,345 stays "12,345"). The exact values are on Mint Detail.
+ */
+export function compactAmount(n: number): string {
+  for (const [div, suffix] of [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']] as const) {
+    if (n >= div) {
+      const v = n / div
+      if (Math.round(v * 10) === v * 10) return `${Number.isInteger(v) ? v : v.toFixed(1)}${suffix}`
+      return n.toLocaleString('en-US')
+    }
+  }
+  return String(n)
+}
+const compactAll = (text: string) => text.replace(/\d{1,3}(?:,\d{3})+|\d+/g, d => compactAmount(Number(d.replace(/,/g, ''))))
+
+/** "1 to 1,000,000" -> "1 to 1M sat"; words ("no limits declared", "Disabled by the mint") stay as they are. */
 function withUnit(text: string, unit: string): string {
-  return /\d/.test(text) ? `${text} ${unit}` : text
+  return /\d/.test(text) ? `${compactAll(text)} ${unit}` : text
 }
 
-/** The lines of one mint's cell for one method: one line when deposits and withdrawals say the same, else "in …" / "out …". */
+/** The lines of one mint's cell for one method: one line when deposits and withdrawals say the same, else an "in" and an "out" line. */
 function cellLines(rows: ReturnType<typeof limitTable>, method: string): MethodLine[] {
   const mine = rows.filter(r => r.key.split('|')[0] === method)
   if (mine.length === 0) return [{ text: NOT_OFFERED, muted: true }]
@@ -43,7 +61,7 @@ function cellLines(rows: ReturnType<typeof limitTable>, method: string): MethodL
     }
     for (const [side, value] of [['in', r.deposit], ['out', r.withdrawal]] as const) {
       const v = value === NO_SIDE ? NOT_OFFERED : value
-      lines.push(/\d/.test(v) ? { text: `${side} ${say(v)}`, muted: false } : { text: `${side}: ${say(v)}`, muted: true })
+      lines.push({ side, text: say(v), muted: !/\d/.test(v) })
     }
   }
   return lines
@@ -60,7 +78,7 @@ export function compareMethodRows(mints: ReadonlyArray<Pick<KnownMint, 'mintMeth
       id: `method-${method}`,
       label: paymentMethodWord(method),
       cells,
-      keys: cells.map(lines => lines.map(l => l.text).join(' / ')),
+      keys: cells.map(lines => lines.map(l => (l.side ? `${l.side} ${l.text}` : l.text)).join(' / ')),
     }
   })
 }

@@ -3005,3 +3005,17 @@
   .dashboard-controls .submit-btn { padding-inline: 12px; }
   .dashboard-controls .sort-menu .sort-select { padding-inline: 10px; gap: 8px; }
 }
+
+/* ── Add a mint, 2026-11-28 (owner-approved mockup ~/Claude/refs/mintradar-compare-mockup-1128, A1-A6) ──
+   A4: one copper ring while typing (the field's own border, no second outline). A5: the preview of a mint that answers
+   (initials, name, facts, "Answers as a Cashu mint"). A6: "Open mint page" beside Close after adding. */
+.submit-modal-input:focus, .submit-modal-input:focus-visible,
+.bulk-textarea:focus, .bulk-textarea:focus-visible { outline: none; border-color: var(--action); box-shadow: 0 0 0 1px var(--action); }
+.submit-probe-preview.submit-probe-found { display: flex; align-items: center; gap: 12px; }
+.submit-probe-ok { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 13px; color: var(--accent); }
+.submit-probe-ok-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+.submit-open-link { margin-right: auto; font-size: 14px; color: var(--action); text-decoration: underline; text-underline-offset: 3px; }
+.submit-open-link:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; border-radius: 3px; }
+.submit-probe-preview.submit-probe-found { background: var(--bg3); border-color: var(--border); }
+.submit-probe-found .submit-probe-name { margin-bottom: 2px; font-size: 15px; }
+.submit-probe-found .submit-probe-meta { display: block; color: var(--text2); font-family: var(--font-body); overflow-wrap: anywhere; }

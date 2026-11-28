@@ -9,19 +9,19 @@
 .cmp-best {
   display: inline-block;
   margin-left: 6px;
-  padding: 0 4px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.5;
+  padding: 1px 5px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   vertical-align: middle;
   white-space: nowrap;
   color: var(--accent);
   background: var(--green-soft);
-  border: 0.5px solid var(--green-soft-strong);
-  border-radius: 3px;
+  border: 1px solid var(--green-soft-strong);
+  border-radius: 4px;
 }
 .cmp-val .cmp-best { margin-left: 2px; }
 @media (max-width: 767px) {
@@ -50,23 +50,29 @@
    .cmp-overlay / .cmp-modal / .cmp-modal-header / .cmp-m-switch; everything inside is .cx-*. Width follows the number of
    mints, so two mints do not leave the right half empty. ── */
 .cmp-modal.cx { --cx-max: 1100px; min-width: min(var(--cx-max), 94vw); max-width: min(var(--cx-max), 94vw); }
+/* C7, the "only black" below History: the screen-reader-only texts (.sr-only, position: absolute) far down the modal had
+   the fixed overlay as their containing block, so they stretched the OVERLAY's scroll area by ~600 px past the modal and
+   the page behind could be scrolled into plain black. position: relative keeps them inside the modal's own scroll box;
+   the height is what is really visible (dvh) and the overlay itself never scrolls. */
+.cmp-modal.cx { position: relative; max-height: 90vh; max-height: 90dvh; overscroll-behavior: contain; }
+.cmp-overlay:has(> .cmp-modal.cx) { overflow: hidden; overscroll-behavior: contain; }
 .cmp-modal.cx[data-mints="2"] { --cx-max: 760px; }
 .cmp-modal.cx[data-mints="3"] { --cx-max: 940px; }
-@media (max-width: 767px) {
-  .cmp-modal.cx { min-width: 0; max-width: 100%; }
+@media (max-width: 768px) {
+  .cmp-modal.cx { min-width: 0; max-width: 100%; max-height: 92vh; max-height: 92dvh; }
 }
 .cx-title { font-size: 17px; font-weight: 620; letter-spacing: -0.01em; color: var(--text); }
 .cx-body { padding: 0 20px 18px; }
-.cx-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0 0; }
-.cx-hint { font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
-.cx-status { padding: 6px 0 0 !important; text-align: right; }
+.cx-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 12px 0 0; }
 .cx-cols { display: grid; grid-template-columns: repeat(var(--cx-n, 2), minmax(0, 1fr)); column-gap: 16px; }
 
-/* Mint cards: one panel, the mints in its columns. */
-.cx-cards { margin-top: 12px; padding: 14px 17px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; grid-template-rows: auto auto auto auto; row-gap: 4px; }
-/* Subgrid: icon, name, host and score sit on the same lines in every column, also when a name wraps on a phone. */
-.cx-card { display: grid; grid-row: span 4; grid-template-rows: subgrid; align-items: start; min-width: 0; }
-.cx-name { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; min-width: 0; margin-top: 6px; align-self: end; }
+/* Mint cards (C1): one card per mint in the columns of the rows. The icon is always the first line and the name follows
+   it at once; the score and the 30-day bars sit at the bottom (margin-top: auto), so they line up across the cards even
+   when a name wraps onto two lines (no gap between the icon and a short name). */
+.cx-cards { margin-top: 12px; column-gap: 10px; }
+.cx-card { display: flex; flex-direction: column; align-items: stretch; min-width: 0; padding: 12px 14px; background: var(--elevated); border: 1px solid var(--border); border-radius: 12px; }
+.cx-card > :first-child { align-self: flex-start; }
+.cx-name { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; min-width: 0; margin-top: 10px; }
 .cx-name-text { font-size: 15px; font-weight: 620; color: var(--text); min-width: 0; overflow-wrap: break-word; }
 .cx-name-tail { white-space: nowrap; }
 .cx-dot { display: inline-block; width: 8px; height: 8px; margin-left: 6px; vertical-align: 2px; border-radius: 50%; background: var(--red); }
@@ -75,9 +81,15 @@
 .cx-status-word { font-size: 12px; color: var(--text2); }
 .cx-new { font-size: 12px; color: var(--accent); background: var(--green-soft); border: 0.5px solid var(--green-soft-strong); border-radius: 3px; padding: 0 4px; }
 .cx-host { font-family: var(--font-mono); font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cx-score { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 6px; margin-top: 6px; }
+.cx-host { margin-top: 2px; }
+.cx-score { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 3px; margin-top: auto; padding-top: 12px; }
 .cx-score-num { font-size: 34px; font-weight: 700; font-stretch: 85%; line-height: 1; font-variant-numeric: tabular-nums; }
-.cx-score-lbl { font-size: 12px; color: var(--text3); }
+.cx-score-lbl { font-size: 13px; color: var(--text3); }
+.cx-score .cmp-best { margin-left: 6px; align-self: center; }
+.cx-days { margin-top: 10px; }
+.cx-bars.uptime-bars { height: 18px; }
+.cx-bars.uptime-bars i { animation: none; }
+.cx-days-lbl { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: var(--text3); }
 
 /* The slim bar with the names: stuck under the header, visible once the cards have scrolled away. It takes no room of
    its own (negative margin), so nothing moves when it appears. */
@@ -86,18 +98,23 @@
 .cx-key-cell { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .cx-key-name { font-size: 13px; font-weight: 620; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Sections: panels, the label of each row above its values. */
+/* Sections: panels, the label of each row above its values. The heading is a band with its own background (C2), so it
+   reads apart from the row labels. */
 .cx-sections { display: grid; gap: 12px; margin-top: 12px; }
 .cx-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 6px 16px 4px; }
-.cx-h { margin: 10px 0 2px; font-size: 14px; font-weight: 650; color: var(--text); }
-.cx-row { border-top: 1px solid var(--border); padding: 9px 0; }
-.cx-h + .cx-row, summary + .cx-row { border-top: 0; }
+section.cx-panel { padding: 0; overflow: hidden; }
+.cx-h { margin: 0; padding: 10px 16px; background: var(--raised); border-bottom: 1px solid var(--border2); font-size: 16px; font-weight: 650; letter-spacing: -0.005em; color: var(--text); }
+.cx-panel-body { padding: 0 16px 2px; }
+.cx-row { border-top: 1px solid var(--border); padding: 10px 0; }
+.cx-panel-body > .cx-row:first-child, summary + .cx-row { border-top: 0; }
 .cx-lbl { display: flex; align-items: center; gap: 4px; color: var(--text3); font-size: 13px; margin-bottom: 3px; }
 .cx-val { font-family: var(--font-body); font-size: 15px; font-weight: 560; color: var(--text); min-width: 0; overflow-wrap: break-word; font-variant-numeric: tabular-nums; }
 .cx-best-value { color: var(--accent); }
 .cx-val .cmp-best { margin-left: 4px; vertical-align: 1px; }
-.cx-muted { color: var(--text3); font-weight: 500; }
+/* C5: words in a value cell ("not offered", "no limits declared", "—") have the weight of the numbers, a tone quieter. */
+.cx-muted { color: var(--text2); font-weight: inherit; }
 .cx-lines { display: grid; gap: 2px; }
+.cx-side { color: var(--text3); font-weight: 450; }
 .cx-sub { display: block; font-size: 12px; font-weight: 400; color: var(--text3); }
 .cx-star { color: var(--amber); }
 .cx-count { font-size: 0.85em; color: var(--text3); font-weight: 500; }
@@ -125,14 +142,22 @@
 @media (max-width: 767px) {
   .cx-body { padding: 0 12px 14px; }
   .cx-cols { column-gap: 8px; }
-  .cx-cards { padding: 10px 11px; }
+  .cx-cards { column-gap: 8px; }
+  .cx-card { padding: 10px; }
   .cx-key { padding: 9px 11px 8px; }
   .cx-panel { padding: 4px 10px 2px; }
-  .cx-name-text { font-size: 13px; }
-  .cx-host { font-size: 10.5px; }
+  section.cx-panel { padding: 0; }
+  .cx-h { padding: 9px 10px; font-size: 15px; }
+  .cx-panel-body { padding: 0 10px 2px; }
+  .cx-name-text { font-size: 14px; }
+  .cx-host { font-size: 11px; }
   .cx-score-num { font-size: 26px; }
-  .cx-score-lbl { display: none; }
-  .cx-val { font-size: 13.5px; }
+  .cx-val { font-size: 14px; }
   .cx-key-name { font-size: 12px; }
+  /* Three or four mints: a column is about 80 px, so the card keeps icon, name and score, and BEST goes under its value. */
   .cmp-modal.cx[data-mints="4"] .cx-val, .cmp-modal.cx[data-mints="3"] .cx-val { font-size: 13px; }
+  .cmp-modal.cx:is([data-mints="3"], [data-mints="4"]) .cx-name-text { font-size: 13px; }
+  .cmp-modal.cx:is([data-mints="3"], [data-mints="4"]) .cx-score-num { font-size: 22px; }
+  .cmp-modal.cx:is([data-mints="3"], [data-mints="4"]) :is(.cx-host, .cx-days, .cx-score-lbl) { display: none; }
+  .cmp-modal.cx:is([data-mints="3"], [data-mints="4"]) .cx-val .cmp-best { display: block; width: fit-content; margin: 3px 0 0; }
 }

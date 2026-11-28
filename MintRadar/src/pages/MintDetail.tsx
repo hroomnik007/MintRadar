@@ -70,7 +70,6 @@ import { CLIENT_LATENCY_BUTTON_LABEL, CLIENT_LATENCY_RESULT_MS, latencyCaption }
 import { METHODOLOGY_VERSION } from '@/utils/methodology'
 import { auditSuccessText, uptime30dOutageNote, breakdownRowScore, breakdownPointsColor, contactKindsText, infoTextFor, averageReliability, latencyPercentilesText, showTorFor, formatDuration, uptimeTileText, type OutagesResponse } from '@/utils/mintDetailFacts'
 import { readContactChecks, scoreContactKindCounts, contactChecksLine, contactChecksText } from '@/utils/contactChecks'
-import { auditSourceLine, infoSourceLine, uptimeSourceLine, type SourceLine } from '@/utils/scoreSources'
 import { limitedDataReasons, limitedDataText } from '@/utils/limitedData'
 import { LAST_SCORE_CAPTION, sanitizeLastError, unavailableHeadline } from '@/utils/unavailableMint'
 import { healthRecordFor } from '@/utils/healthRecord'
@@ -82,7 +81,7 @@ import { HistoryTab } from './mintDetail/HistoryTab'
 const HISTORY_FOCUS_MS = 4000
 // Mint QR: the QR standard asks for a quiet zone of 4 modules around the code (it was 1); error correction M survives a
 // scratched or glared screen better than L at the same URL length. 200px keeps each module above 5px for a typical URL.
-const QR_SIZE = 200
+const QR_SIZE = 240
 const QR_QUIET_ZONE_MODULES = 4
 
 import { AuditTab } from './mintDetail/AuditTab'
@@ -134,17 +133,7 @@ const RATING_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
 // One row of the Reliability Score breakdown (label + info tooltip + measured
 // value + score bar). Rendered both inline on the Overview sidebar panel and
 // inside the "Reliability Score Breakdown" modal; each usage has its own tooltip.
-// "source · window · sample · time" under a row; the time carries its absolute value in the title attribute.
-function SourceLineView({ line }: { line: SourceLine }) {
-  return (
-    <div className="rb-row-source">
-      {line.parts.join(' · ')}
-      {line.time && <>{' · '}<span title={line.time.title}>{line.time.verb} {line.time.label}</span></>}
-    </div>
-  )
-}
-
-function ReliabilityBreakdownRow({ label, display, displayLabel, score, max, color, tooltip, note, detail, source }: {
+function ReliabilityBreakdownRow({ label, display, displayLabel, score, max, color, tooltip, note, detail }: {
   label: string
   display: string
   // aria-label of a placeholder display ("—"), so it is announced as "not available yet".
@@ -152,8 +141,6 @@ function ReliabilityBreakdownRow({ label, display, displayLabel, score, max, col
   note?: string
   // Full-width explanation under the row (wraps; `display` is ellipsized at 170px).
   detail?: string
-  // Where the number comes from: source, window, sample, time.
-  source?: SourceLine
   // null = not known yet: shown as "—/max" with an empty bar.
   score: number | null
   max: number
@@ -174,7 +161,6 @@ function ReliabilityBreakdownRow({ label, display, displayLabel, score, max, col
         </div>
       </div>
       {detail && <div className="rb-row-detail">{detail}</div>}
-      {source && <SourceLineView line={source} />}
       <div className="rb-row-bar">
         <div style={{ height: '100%', width: `${((score ?? 0) / max) * 100}%`, background: color, borderRadius: 2, transition: 'width 0.3s ease' }} />
       </div>
@@ -975,10 +961,6 @@ function MintDetailContent({ url }: { url: string }) {
 
   // Latest successful /v1/info fetch: the latest probe while the mint is online, else the last time it was seen online.
   const infoFetchedAt = isOnline ? knownMint?.lastCheckedAt : knownMint?.lastOnlineAt
-  const uptimeSource = uptimeSourceLine({ checks: uptime24hData ? headerTotalChecks : null, lastProbeAt: knownMint?.lastCheckedAt, now })
-  const auditRowSource = auditSourceLine({ blamed: auditCzBlamed, total: auditCzTotal, fetchedAt: auditCzFetchedAt, now, long: auditLong })
-  const infoSource = infoSourceLine({ fetchedAt: infoFetchedAt, now })
-  const versionSource = infoSourceLine({ fetchedAt: infoFetchedAt, now, comparedWithLatest: true })
   const rowUScore = breakdownRowScore(storedBreakdown, 'uptime', uptimeRowPending ? null : breakdownUScore)
   const rowAScore = breakdownRowScore(storedBreakdown, 'audit', breakdownAScore)
   const rowNScore = breakdownRowScore(storedBreakdown, 'nuts', breakdownNScore)
@@ -1000,11 +982,11 @@ function MintDetailContent({ url }: { url: string }) {
   const contactChecksFacts = contactChecksLine(readContactChecks(data?.contactChecks), now)
   const contactTooltip = contactChecksFacts ? `${contactRowText()} ${contactChecksText(contactChecksFacts)}.` : contactRowText()
   const reliabilityBreakdownRows = [
-    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : uptimeRowDisplay, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), source: uptimeSource, score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeTooltip },
-    { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, source: auditRowSource, ...(auditDetailText ? { detail: auditDetailText } : {}), score: rowAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
-    { label: NUT_ROW_LABEL, display: `${offeredNuts.length} / ${TRACKED_NUTS.length} NUTs${disabledNuts.length > 0 ? ` · ${disabledNuts.length} disabled` : ''}`, source: infoSource, score: rowNScore, max: NUT_POINTS, color: storedBreakdown ? breakdownPointsColor(rowNScore, NUT_POINTS) : offeredNuts.length >= 12 ? 'var(--accent)' : offeredNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
-    { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', source: versionSource, score: rowVScore, max: VERSION_POINTS, color: breakdownPointsColor(rowVScore, VERSION_POINTS), tooltip: versionRowText() },
-    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, source: infoSource, score: rowCScore, max: CONTACT_POINTS, color: breakdownPointsColor(rowCScore, CONTACT_POINTS), tooltip: contactTooltip },
+    { label: UPTIME_ROW_LABEL, display: uptimeRowPending ? SCORE_PENDING_TEXT : uptimeRowDisplay, ...(uptimeRowPending ? { displayLabel: UPTIME_PENDING_ARIA_LABEL } : {}), score: rowUScore, max: UPTIME_POINTS, color: storedBreakdown ? breakdownPointsColor(rowUScore, UPTIME_POINTS) : uptimeRowPending ? 'var(--text3)' : uptimeColor(uptimePct), tooltip: uptimeTooltip },
+    { label: AUDIT_ROW_LABEL, display: breakdownAuditDisplay, ...(auditDetailText ? { detail: auditDetailText } : {}), score: rowAScore, max: AUDIT_POINTS, color: auditRowColor, tooltip: auditRowText(), ...(auditStaleNote ? { note: auditStaleNote } : {}) },
+    { label: NUT_ROW_LABEL, display: `${offeredNuts.length} / ${TRACKED_NUTS.length} NUTs${disabledNuts.length > 0 ? ` · ${disabledNuts.length} disabled` : ''}`, score: rowNScore, max: NUT_POINTS, color: storedBreakdown ? breakdownPointsColor(rowNScore, NUT_POINTS) : offeredNuts.length >= 12 ? 'var(--accent)' : offeredNuts.length >= 8 ? 'var(--amber)' : 'var(--red)', tooltip: NUT_ROW_TEXT },
+    { label: VERSION_ROW_LABEL, display: version ?? 'Unknown', score: rowVScore, max: VERSION_POINTS, color: breakdownPointsColor(rowVScore, VERSION_POINTS), tooltip: versionRowText() },
+    { label: CONTACT_ROW_LABEL, display: breakdownContactDisplay, score: rowCScore, max: CONTACT_POINTS, color: breakdownPointsColor(rowCScore, CONTACT_POINTS), tooltip: contactTooltip },
   ]
   // The stored new-mint cap correction (0 or negative): one line under the rows, so they still add up to the score.
   const storedCapLine = storedBreakdown && storedBreakdown.newMintCap.points < 0
@@ -1756,6 +1738,13 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
               <button type="button" className="qr-modal-close" onClick={() => setShowQr(false)} aria-label="Close"><IcClose /></button>
             </div>
+            {/* Q4 (owner, 2026-11-28): one amber sentence above the code only when adding this mint needs a second
+                thought; a healthy mint gets nothing extra. */}
+            {(isTestMint(url) || !isOnline) && (
+              <p className="qr-modal-warn" data-testid="qr-modal-warn">
+                {[isTestMint(url) ? 'Test mint: its ecash has no value.' : null, !isOnline ? 'This mint did not answer its last check.' : null].filter(Boolean).join(' ')}
+              </p>
+            )}
             <div className="qr-modal-code">
               <div className="qr-modal-code-frame">
                 <QRCodeSVG
@@ -1772,19 +1761,20 @@ function MintDetailContent({ url }: { url: string }) {
               </div>
             </div>
             <div className="qr-modal-scan">Scan with any Cashu wallet app</div>
+            {/* Plain text, not a field: nothing to focus, no caret. Under it one full-width copper "Copy mint URL" (owner,
+                2026-11-28: the approved desktop variant at every width, the button worded and filled like the phone one). */}
             <div className="qr-modal-url-row">
-              {/* Plain text, not a field: nothing to focus, no caret; the icon button copies it. */}
               <div className="qr-modal-url" data-testid="qr-modal-url"><UrlBreaks url={url} /></div>
-              <button
-                type="button"
-                className={`qr-modal-copy${copiedUrl ? ' is-copied' : ''}`}
-                aria-label="Copy mint URL"
-                onClick={() => { void navigator.clipboard.writeText(url); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) }}
-              >
-                {copiedUrl ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
-              </button>
-              <span className="sr-only" role="status">{copiedUrl ? 'Copied' : ''}</span>
             </div>
+            <button
+              type="button"
+              className={`qr-modal-copy${copiedUrl ? ' is-copied' : ''}`}
+              onClick={() => { void navigator.clipboard.writeText(url); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000) }}
+            >
+              {copiedUrl ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+              <span className="qr-modal-copy-text">{copiedUrl ? 'Copied' : 'Copy mint URL'}</span>
+            </button>
+            <span className="sr-only" role="status">{copiedUrl ? 'Copied' : ''}</span>
           </div>
         </div>
       )}

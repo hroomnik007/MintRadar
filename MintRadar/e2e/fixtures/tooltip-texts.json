@@ -570,11 +570,6 @@
   "mint-alpha-overview@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -594,11 +589,6 @@
   "mint-alpha-overview@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -642,11 +632,6 @@
   "mint-alpha-score-dialog@1440": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Email, Twitter and Nostr contacts the mint lists in a recognised format. Three or more give the full 5 points.",
@@ -661,11 +646,6 @@
   "mint-alpha-score-dialog@390": {
     "texts": [
       "10 or more new reviews in about a week, or at least double the count from a base of 5 or more. Ratings can be gamed, so read this one with care.",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Alpha Mint to watchlist",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
       "Email, Twitter and Nostr contacts the mint lists in a recognised format. Three or more give the full 5 points.",
@@ -727,11 +707,6 @@
   },
   "mint-new-overview@1440": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Newbie Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Audit based on fewer than 10 swaps; tracked for 3 of 30 days, score capped at 75.",
@@ -750,11 +725,6 @@
   },
   "mint-new-overview@390": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Newbie Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Audit based on fewer than 10 swaps; tracked for 3 of 30 days, score capped at 75.",
@@ -774,8 +744,6 @@
   "mint-offline-overview@1440": {
     "texts": [
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Charlie Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -794,8 +762,6 @@
   "mint-offline-overview@390": {
     "texts": [
       "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Charlie Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -813,11 +779,6 @@
   },
   "mint-operator-overview@1440": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Operator Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -836,11 +797,6 @@
   },
   "mint-operator-overview@390": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Operator Mint to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -905,11 +861,6 @@
   },
   "mint-test-overview@1440": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Test Nut to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",
@@ -927,11 +878,6 @@
   },
   "mint-test-overview@390": {
     "texts": [
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
-      "<DATE>",
       "Add Test Nut to watchlist",
       "Already there when MintRadar started tracking this mint on <LOCAL> · <DATE>",
       "Compared with the newest stable release of the same software. 0-1 minor versions behind = 15 points; 2 = 9 (Outdated), 3 = 6, 4 = 3, 5 or more = 0. Other software = 4.",

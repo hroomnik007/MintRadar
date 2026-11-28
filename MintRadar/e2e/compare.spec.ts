@@ -34,8 +34,14 @@ test.describe('Compare (Mint Diff Tool)', () => {
   test('cards, sections, and a folded History with its controls and the software versions', async ({ page }) => {
     await compareWith(page, 'Delta Mint')
     await expect(page.locator('[data-testid="cmp-card"]')).toHaveCount(2)
-    await expect(page.locator('[data-testid="cmp-card"] .cx-score-lbl').first()).toHaveText('Reliability Score')
-    await expect(page.locator('.cx-h')).toHaveText(['Reliability', 'Speed', 'Deposits and withdrawals', 'Features', 'Operator'])
+    // C1 (2026-11-28): "97 /100" (the words for screen readers), the 30-day bars at the bottom of each card
+    await expect(page.locator('[data-testid="cmp-card"] .cx-score-lbl [aria-hidden="true"]').first()).toHaveText('/100')
+    await expect(page.locator('[data-testid="cmp-card"] .cx-score-lbl .sr-only').first()).toHaveText('Reliability Score out of 100')
+    await expect(page.locator('[data-testid="cmp-card"]').first().getByTestId('cmp-days')).toBeVisible()
+    // C4: no "N mints side by side", the differences sentence only for screen readers
+    await expect(page.getByText(/mints side by side/)).toHaveCount(0)
+    await expect(page.locator('.cmp-m-status')).toHaveClass(/sr-only/)
+    await expect(page.locator('.cx-h')).toHaveText(['Reliability', 'Latency', 'Deposits and withdrawals', 'Features', 'Operator'])
     // No "Measure again": the browser latency is measured once, when Compare opens.
     await expect(page.getByTestId('cmp-remeasure')).toHaveCount(0)
 

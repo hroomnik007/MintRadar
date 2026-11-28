@@ -127,7 +127,7 @@ test.describe('Add a mint dialog', () => {
     const ok = page.locator('.submit-ok-btn')
     await input.fill(ALPHA)
     const tracked = page.getByTestId('submit-tracked')
-    await expect(tracked).toContainText('Already tracked')
+    await expect(tracked).toContainText('Already on MintRadar')
     await expect(tracked).toContainText(MOCK_MINTS[0]!.name)
     // the mint's icon component, as on the mint cards: this mock has no icon, so the monogram fallback shows
     await expect(tracked.getByRole('img', { name: /mint icon placeholder/ })).toBeVisible()
@@ -180,9 +180,14 @@ test.describe('Add a mint dialog', () => {
     await page.locator('#submit-input').fill('https://fresh.mint.example')
     await expect(page.locator('.submit-probe-name')).toHaveText('Fresh mint')
     await expect(page.getByTestId('submit-tracked')).toHaveCount(0)
+    // A1/A5 (2026-11-28): facts without a "v" before the version, and "Answers as a Cashu mint"
+    const preview = page.getByTestId('submit-preview')
+    await expect(preview.locator('.submit-probe-meta')).toHaveText(/^(?!v)\S.* · \d+ of 14 NUTs/)
+    await expect(preview).toContainText('Answers as a Cashu mint')
     await expect(page.locator('.submit-ok-btn')).toHaveAttribute('aria-disabled', 'false')
     await page.locator('.submit-ok-btn').click()
-    await expect(page.locator('.submit-result.success')).toBeVisible()
+    await expect(page.locator('.submit-result.success')).toHaveText(/^Added .+\. Its first check runs within 5 minutes\.$/)
+    await expect(page.locator('.submit-modal').getByRole('link', { name: 'Open mint page' })).toHaveAttribute('href', `/mint/${encodeURIComponent('https://fresh.mint.example')}`)
     expect(probed).toEqual(['https://fresh.mint.example'])
     expect(sent.map(b => JSON.parse(b) as { url: string })).toEqual([{ url: 'https://fresh.mint.example' }])
   })
@@ -190,9 +195,11 @@ test.describe('Add a mint dialog', () => {
   test('the hints say what the field accepts', async ({ page }) => {
     await homeAt(page, 1440, 900)
     await openDialog(page)
-    await expect(page.locator('#submit-helper')).toHaveText('https:// is added to a bare address, http:// is not accepted · 20 per hour.')
+    await expect(page.locator('#submit-helper')).toHaveText('https:// is added for you. Up to 20 mints an hour.')
+    await expect(page.locator('#submit-input')).toHaveAttribute('placeholder', 'mint.example.com or npub1…')
+    await expect(page.locator('#submit-desc')).toHaveText("Paste the mint's address, or the npub of its Nostr announcement. We check that it answers as a Cashu mint before adding it.")
     await page.locator('#submit-tab-bulk').click()
-    await expect(page.locator('#bulk-limits')).toHaveText('https:// is added to a bare address, http:// is not accepted · up to 100 mints · 10 per hour.')
+    await expect(page.locator('#bulk-limits')).toHaveText('https:// is added for you. Up to 100 mints at once, 10 times an hour.')
     // and it is true: a bare address is taken, http:// is refused
     await page.locator('#submit-tab-single').click()
     await page.locator('#submit-input').fill('http://fresh.mint.example')
@@ -251,7 +258,7 @@ test.describe('Add a mint dialog', () => {
 // ── Mint QR ───────────────────────────────────────────────────────────────────────────────────────────────────────
 test.describe('Mint QR dialog', () => {
   for (const width of [360, 390]) {
-    test(`${width}px: one-line title, the URL as plain text in a box with a 44px copy icon, a 44px close area, a 4-module quiet zone`, async ({ browser }) => {
+    test(`${width}px: one-line title, the URL as plain text in a box, a full-width Copy mint URL, a 44px close area, a 4-module quiet zone and no extra white`, async ({ browser }) => {
       const { page, close } = await phoneHome(browser, width, 844, PATH)
       await page.getByRole('button', { name: 'Mint QR' }).click()
       const dialog = page.getByRole('dialog')
@@ -274,22 +281,20 @@ test.describe('Mint QR dialog', () => {
       expect(u.sw, 'the URL is not cut sideways').toBeLessThanOrEqual(u.cw + 1)
       expect(u.wrap).toBe('anywhere')
       expect(u.font).toMatch(/mono/i)
-      // the copy icon sits inside the box on the right, with a 44px touch area
-      await expect(page.getByRole('button', { name: 'Copy mint URL' })).toBeVisible()
-      const g = await page.locator('.qr-modal-url-row').evaluate(row => {
-        const b = row.getBoundingClientRect()
-        const c = row.querySelector('.qr-modal-copy')!
+      // Since 2026-11-28 (owner): a full-width copper "Copy mint URL" under the URL box, at every width; "Copied" after a click
+      const copy = page.getByRole('button', { name: 'Copy mint URL' })
+      await expect(copy).toBeVisible()
+      const g = await page.evaluate(() => {
+        const row = document.querySelector('.qr-modal-url-row')!.getBoundingClientRect()
+        const c = document.querySelector('.qr-modal-copy')!
         const r = c.getBoundingClientRect()
-        const q = getComputedStyle(c, '::before')
-        return { inside: r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom, rightHalf: r.left > b.left + b.width / 2, w: r.width, hitW: parseFloat(q.width), hitH: parseFloat(q.height), boxRadius: getComputedStyle(row).borderRadius }
+        return { below: r.top >= row.bottom, w: r.width, rowW: row.width, h: r.height, bg: getComputedStyle(c).backgroundColor, boxRadius: getComputedStyle(document.querySelector('.qr-modal-url-row')!).borderRadius }
       })
-      expect(g.inside, 'the icon is inside the URL box').toBe(true)
-      expect(g.rightHalf).toBe(true)
-      expect(g.w, 'a small icon button, not a full-width button').toBeLessThan(44)
-      expect(g.hitW).toBeGreaterThanOrEqual(44)
-      expect(g.hitH).toBeGreaterThanOrEqual(44)
+      expect(g.below, 'the button is under the URL box').toBe(true)
+      expect(Math.abs(g.w - g.rowW), 'as wide as the URL box').toBeLessThanOrEqual(1)
+      expect(g.h).toBeGreaterThanOrEqual(44)
+      expect(g.bg, 'filled copper').toBe('rgb(217, 138, 90)')
       expect(g.boxRadius).not.toBe('0px')
-      await expect(page.locator('.qr-modal-copy', { hasText: /\S/ })).toHaveCount(0) // an icon, no "Copy" word
       // the close button keeps its 44px area
       const closeArea = await page.locator('.qr-modal-close').evaluate(e => { const b = getComputedStyle(e, '::before'); return { w: parseFloat(b.width), h: parseFloat(b.height) } })
       expect(closeArea.w).toBeGreaterThanOrEqual(44)
@@ -304,6 +309,10 @@ test.describe('Mint QR dialog', () => {
       })
       expect(q.firstX).toBe(4)
       expect(q.px / q.size, 'a module is at least 4 CSS px wide').toBeGreaterThanOrEqual(4)
+      // the white frame adds nothing to the quiet zone (2026-11-28)
+      const frame = await page.locator('.qr-modal-code-frame').evaluate(e => { const f = e.getBoundingClientRect(); const v = e.querySelector('svg')!.getBoundingClientRect(); return { dx: v.left - f.left, dy: v.top - f.top } })
+      expect(frame.dx).toBeLessThanOrEqual(0.5)
+      expect(frame.dy).toBeLessThanOrEqual(0.5)
       // the dialog fits the screen
       const box = await page.locator('.qr-modal').boundingBox()
       expect(box!.x).toBeGreaterThanOrEqual(0)
@@ -343,9 +352,12 @@ test.describe('Mint QR dialog', () => {
     await page.goto(PATH)
     await expect(page.locator('.md-tabs')).toBeVisible()
     await page.getByRole('button', { name: 'Mint QR' }).click()
-    const copy = page.getByRole('button', { name: 'Copy mint URL' })
+    // The worded button (2026-11-28): its name becomes "Copied" for a moment, so it is held by its class.
+    const copy = page.locator('.qr-modal-copy')
+    await expect(copy).toHaveText('Copy mint URL')
     await expect(copy.locator('svg.lucide-check')).toHaveCount(0)
     await copy.click()
+    await expect(copy).toHaveText('Copied')
     await expect(copy.locator('svg.lucide-check')).toHaveCount(1)
     await expect(page.locator('.qr-modal [role="status"]')).toHaveText('Copied')
     const clip = await page.evaluate(() => navigator.clipboard.readText())
@@ -356,7 +368,8 @@ test.describe('Mint QR dialog', () => {
 
   for (const width of [360, 390]) {
     test(`${width}px: a long path URL wraps after / or ., not mid-word, and copy is the exact URL`, async ({ browser }) => {
-      const LONG = 'https://alpha.mint.example/Bitcoin'
+      // Long enough to wrap in the 400 px dialog (2026-11-28; the old 34 characters fit on one line there).
+      const LONG = 'https://alpha.mint.example/cashu/api/v1/Bitcoin'
       const ctx = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: true, isMobile: true })
       await ctx.grantPermissions(['clipboard-read', 'clipboard-write'])
       const page = await ctx.newPage()

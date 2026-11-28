@@ -764,3 +764,26 @@ heights re-measured in `stats-layout-shift.spec.ts` (390: 3514, 320: 3687).
   `LOADED` table of `e2e/stats-layout-shift.spec.ts` follow. Re-measured again after the geography sentence went
   (same day): 1024 board 2178.8 (`boardMin` 2178.8, the note adds nothing there), 390 board 3270.8, 320 board 3441.8;
   board reservations 2128 px (769 to 1279: 2178.8 minus the 50 px note, which adds nothing to the board at 1024) and 3211 px (up to 767, the band's smallest at 767).
+
+### Add a mint dialog, 2026-11-28 (owner-approved mockup `~/Claude/refs/mintradar-compare-mockup-1128`, A1-A6)
+
+- Text: "Paste the mint's address, or the npub of its Nostr announcement. We check that it answers as a Cashu mint before
+  adding it."; placeholder "mint.example.com or npub1…"; helper "https:// is added for you. Up to 20 mints an hour."
+  (Bulk: "… Up to 100 mints at once, 10 times an hour."). An http:// address still gets its own reason line.
+- One copper ring while typing (`.submit-modal-input:focus` border + 1 px shadow in `--action`, no second outline).
+- Preview of a mint that answers (`data-testid="submit-preview"`): initials (`MintFavicon` with `iconUrl={null}`, an
+  untracked mint's icon is never fetched), name, "cdk-mintd 0.18.3 · 14 of 14 NUTs · sat · 132 ms" (the version as
+  the mint sends it, the first "/" shown as a space; the old "v" in front is gone; units from the probe's active
+  keysets) and a green "Answers as a Cashu mint". A tracked mint reads "Already on MintRadar" with "Open mint page".
+- After adding: "Added <name>. Its first check runs within 5 minutes." and an "Open mint page" link beside Close.
+
+### Compare, second pass 2026-11-28 (same mockup, C1-C8)
+
+One card per mint (icon first, name with the status dot, host, "97 /100", the 30-day bars of `UptimeBars` with "30 days"
+/ "today"; the score and bars sit at the bottom so they line up when a name wraps); on a phone with 3 or 4 mints the
+host, bars and "/100" are hidden and BEST goes under its value. Section headings are bands (`.cx-h` on `--raised`), the
+speed section is "Latency", the "N mints side by side" hint is gone and the "rows differ" sentence is screen-reader only.
+Words in value cells ("not offered", "no limits declared") have the numbers' weight in `--text2`. Limits use short exact
+amounts (`compactAmount`: 10k, 5M, 1.5k; 12,345 stays) with a small "in" / "out" prefix (`MethodLine.side`). The modal
+is at most 90dvh (92dvh on phones) with `overscroll-behavior: contain` and the overlay does not scroll, so on a phone
+with the browser bar nothing but the modal scrolls (the "only black" below History).

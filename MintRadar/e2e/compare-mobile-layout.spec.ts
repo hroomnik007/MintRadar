@@ -155,3 +155,23 @@ test('desktop: the same layout as on the phone, with the switch off by default',
   await expect(page.locator('table.cmp-m-table, .cmp-grid')).toHaveCount(0)
   await expect(page.getByRole('switch', { name: 'Only differences' })).toHaveAttribute('aria-checked', 'false')
 })
+
+// C7 (owner, 2026-11-28: "I can scroll further down where I only see black"): the screen-reader-only texts far down the
+// modal used to stretch the OVERLAY's scroll area (their containing block was the fixed overlay), so the dark page behind
+// could be scrolled. Only the modal scrolls now, also with History open, and the modal fits the visible height.
+for (const vp of [{ width: 390, height: 664 }, { width: 1440, height: 900 }]) {
+  test(`${vp.width}px: only the modal scrolls, the overlay behind it never does (History open)`, async ({ page }) => {
+    await page.setViewportSize(vp)
+    await openCompare(page, ['Delta Mint'])
+    await page.locator('.cx-fold summary', { hasText: 'History' }).click()
+    await expect(page.locator('.cx-legend, .cx-note').first()).toBeVisible()
+    const m = await page.evaluate(() => {
+      const o = document.querySelector('.cmp-overlay')!, d = document.querySelector('.cmp-modal')!
+      return { overlayExtra: o.scrollHeight - o.clientHeight, overflow: getComputedStyle(o).overflowY, modalBottom: d.getBoundingClientRect().bottom, vh: innerHeight, modalScrolls: d.scrollHeight > d.clientHeight }
+    })
+    expect(m.overlayExtra, 'nothing stretches the overlay').toBeLessThanOrEqual(1)
+    expect(m.overflow).toBe('hidden')
+    expect(m.modalBottom).toBeLessThanOrEqual(m.vh + 0.5)
+    expect(m.modalScrolls, 'the long content scrolls inside the modal').toBe(true)
+  })
+}

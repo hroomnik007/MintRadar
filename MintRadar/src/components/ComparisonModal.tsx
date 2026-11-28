@@ -6,6 +6,7 @@ import {
   Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts'
 import { MintFavicon } from '@/components/mint/MintFavicon'
+import { UptimeBars } from '@/components/mint/UptimeBars'
 import { useModalFocus } from '@/hooks/useModalFocus'
 import { offeredNutKeys } from '@/utils/nutSupport'
 import { type KnownMint } from '@/hooks/useKnownMints'
@@ -33,7 +34,9 @@ import { COMPARE_UPTIME_LABEL, COMPARE_UPTIME_30D_LABEL, COMPARE_LATENCY_LABEL, 
 import { measureMintLatency } from '@/utils/browserLatency'
 
 // Compare, redesign of 2026-11-28 (owner-approved mockup ~/Claude/refs/mintradar-compare-mockup-1127, inspired by
-// cashu.info/compare): mint cards on top (icon, name with its status dot, host, score), a slim bar with the names that
+// cashu.info/compare; second pass the same day, mockup ~/Claude/refs/mintradar-compare-mockup-1128 C1-C8: one card per
+// mint with "97 /100" and the 30-day bars, section headings as bands, "Latency", no status sentence, every value in one
+// weight, short limits): mint cards on top (icon, name with its status dot, host, score), a slim bar with the names that
 // sticks once the cards have scrolled away, then sections as panels where each row's label sits ABOVE its values and
 // the values sit in the columns of the cards. One layout for every width: phones get the same columns, nothing scrolls
 // sideways. BEST marks the single best value of a row (not on the community rating). "Only differences" is unchanged
@@ -92,7 +95,7 @@ type HistoryMetric = 'latency' | 'uptime' | 'reliability'
 type SectionId = 'reliability' | 'speed' | 'money' | 'features' | 'operator' | 'points'
 const SECTIONS: ReadonlyArray<{ id: Exclude<SectionId, 'points'>; heading: string }> = [
   { id: 'reliability', heading: 'Reliability' },
-  { id: 'speed', heading: 'Speed' },
+  { id: 'speed', heading: 'Latency' },
   { id: 'money', heading: 'Deposits and withdrawals' },
   { id: 'features', heading: 'Features' },
   { id: 'operator', heading: 'Operator' },
@@ -366,7 +369,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
       id: r.id, section: 'money', label: r.label, keys: r.keys,
       cell: i => (
         <span className="cx-lines">
-          {r.cells[i]!.map((l, j) => <span key={j} className={l.muted ? 'cx-muted' : undefined}>{l.text}</span>)}
+          {r.cells[i]!.map((l, j) => (
+            <span key={j} className={`cx-line${l.muted ? ' cx-muted' : ''}`}>{l.side && <span className="cx-side">{l.side} </span>}{l.text}</span>
+          ))}
         </span>
       ),
     })),
@@ -512,8 +517,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
         </div>
 
         <div className="cx-body">
+          {/* No "N mints side by side" and no visible "12 of 19 rows differ" sentence (owner, 2026-11-28, C4): the switch
+              alone; the sentence stays for screen readers. */}
           <div className="cx-toolbar">
-            <span className="cx-hint">{n} mints side by side</span>
             <button
               type="button"
               role="switch"
@@ -525,14 +531,14 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               Only differences
             </button>
           </div>
-          <p className="cmp-m-status cx-status" role="status" aria-live="polite">{onlyDiffStatusText}</p>
+          <p className="cmp-m-status cx-status sr-only" role="status" aria-live="polite">{onlyDiffStatusText}</p>
 
           <div className="cx-cards cx-cols" style={colsStyle} ref={cardsRef}>
             {mints.map((mint, i) => {
               const d = allData[i]!
               return (
                 <div key={mint.url} className="cx-card" data-testid="cmp-card">
-                  <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={isMobile ? 24 : 30} radius={7} />
+                  <MintFavicon url={mint.url} name={mint.name} iconUrl={mint.iconUrl} size={isMobile ? 28 : 34} radius={8} />
                   <div className="cx-name">
                     {/* The status dot right after the name (owner, 2026-11-28), held to its last word so it never wraps
                         onto a line of its own; its word is read, and shown when the mint is not online. */}
@@ -548,9 +554,17 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
                     <span className="cx-score-num" style={{ color: d.isOnline ? (best.reliability[i] ? 'var(--accent)' : scoreColor(d.reliabilityScore)) : 'var(--text3)' }}>
                       {d.isOnline ? d.reliabilityScore : '—'}
                     </span>
-                    <span className="cx-score-lbl">Reliability Score</span>
+                    <span className="cx-score-lbl"><span aria-hidden="true">/100</span><span className="sr-only">Reliability Score out of 100</span></span>
                     {best.reliability[i] && <BestTag />}
                   </div>
+                  {/* The last 30 days, the same bars and colours as "Last 30 days" on Mint Detail (C1). Hidden on a phone
+                      with three or four mints, where a column is about 80 px wide (CSS). */}
+                  {mint.uptimeDaily30 && mint.uptimeDaily30.length > 0 && (
+                    <div className="cx-days" data-testid="cmp-days">
+                      <UptimeBars days={mint.uptimeDaily30} className="cx-bars" />
+                      <div className="cx-days-lbl" aria-hidden="true"><span>30 days</span><span>today</span></div>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -572,7 +586,9 @@ export function ComparisonModal({ mints, onClose }: { mints: KnownMint[]; onClos
               return (
                 <section key={s.id} className="cx-panel" aria-labelledby={`cx-h-${s.id}`}>
                   <h3 id={`cx-h-${s.id}`} className="cx-h">{s.heading}</h3>
+                  <div className="cx-panel-body">
                   {renderRows(list)}
+                  </div>
                 </section>
               )
             })}

@@ -53,17 +53,16 @@ async function placedTooltip(page: Page): Promise<Locator> {
 test.describe('Uptime row of the Reliability Score breakdown: desktop panel', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('no breakdown line: one source line under the heading, like the Audit row; value, points and bar stay', async ({ page }) => {
+  test('no breakdown line and no source line under the heading; value, points and bar stay', async ({ page }) => {
     await open(page, FULL)
     const panel = page.locator('.md-reliability-panel')
     const uptime = rowIn(panel, UPTIME_ROW_LABEL)
     const audit = rowIn(panel, AUDIT_ROW_LABEL)
     await expect(uptime).toHaveCount(1)
     await expect(audit).toHaveCount(1)
-    await expect(uptime.locator('.rb-row-source')).toHaveText(/^our probes from .+ · 24 h · \d+ checks · last probe .+$/)
-    await expect(audit.locator('.rb-row-source')).toHaveCount(1)
-    await expect(linesUnder(audit)).toHaveCount(1)
-    await expect(linesUnder(uptime)).toHaveCount(1)
+    // No source line under a row since 2026-11-28 (owner): value, points and bar only.
+    await expect(linesUnder(audit)).toHaveCount(0)
+    await expect(linesUnder(uptime)).toHaveCount(0)
     await expect(uptime.locator('.rb-row-detail')).toHaveCount(0)
     await expect(uptime).not.toContainText('longest outage')
     await expect(uptime).not.toContainText('20/20')
@@ -71,9 +70,9 @@ test.describe('Uptime row of the Reliability Score breakdown: desktop panel', ()
     await expect(uptime.locator('.rb-row-display')).toHaveText(/^\d+% · 30d 100%$/)
     await expect(uptime.locator('.rb-row-score')).toHaveText('40/40')
     await expect(uptime.locator('.rb-row-bar')).toHaveCount(1)
-    // every row of the panel: at most the source line plus (audit only, while neutral) one explanation
+    // every row of the panel: no source line; (audit only, while neutral) one explanation
     await expect(panel.locator('.rb-row')).toHaveCount(5)
-    await expect(panel.locator('.rb-row-source')).toHaveCount(5)
+    await expect(panel.locator('.rb-row-source')).toHaveCount(0)
     await expect(panel.locator('.rb-row-detail')).toHaveCount(0)
   })
 
@@ -112,7 +111,7 @@ test.describe('Uptime row of the Reliability Score breakdown: desktop panel', ()
   test('a stored record without the uptime parts keeps the general explanation and the same row structure', async ({ page }) => {
     await open(page, OLD)
     const uptime = rowIn(page.locator('.md-reliability-panel'), UPTIME_ROW_LABEL)
-    await expect(linesUnder(uptime)).toHaveCount(1)
+    await expect(linesUnder(uptime)).toHaveCount(0)
     await uptime.locator('.rb-row-label [data-tooltip-trigger]').hover()
     await expect(await placedTooltip(page)).toHaveText(uptimeRowText())
   })
@@ -142,8 +141,8 @@ for (const width of [320, 390, 768]) {
     const { ctx, page, scope, dialog } = await openRows(browser, width)
     const uptime = rowIn(scope, UPTIME_ROW_LABEL)
     const audit = rowIn(scope, AUDIT_ROW_LABEL)
-    await expect(linesUnder(uptime)).toHaveCount(1)
-    await expect(linesUnder(audit)).toHaveCount(1)
+    await expect(linesUnder(uptime)).toHaveCount(0)
+    await expect(linesUnder(audit)).toHaveCount(0)
     await expect(uptime.locator('.rb-row-detail')).toHaveCount(0)
 
     const trigger = uptime.locator('.rb-row-label [data-tooltip-trigger]')
